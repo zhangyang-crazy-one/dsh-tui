@@ -1,5 +1,5 @@
 ---
-description: "The interactive terminal profile layer for users composing deepseek-tui over dsh-base and operating sessions, tools, approvals, and notifications."
+description: "The interactive DeepSeek Harness terminal profile layer, for users running the shipped TUI and contributors integrating terminal behavior with DSH services."
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The deepseek-tui profile bundle and runtime plugin lets a user run the interactive terminal over `dsh-base`. `dsh --profile deepseek-tui` waits for application readiness, validates the terminal, creates or resumes an Agent, and flushes the owned session before exit. The layer owns terminal lifecycle and user actions while capability packages continue to own agents, persistence, tools, and model behavior.
+`@deepseek-ai/dsh-tui` lets a user run the interactive DeepSeek Harness terminal over `dsh-base`. The shipped `deepseek-tui` profile creates or resumes an Agent, presents session history and tools, handles terminal interactions, and flushes its owned session before exit. DSH capability packages continue to own model providers, tools, persistence, permissions, settings, workflows, and subagents. Use this package inside the matching DSH monorepo; this private mirror is not a standalone installable distribution.
 
 ## Table of Contents
 
@@ -25,48 +25,36 @@ The deepseek-tui profile bundle and runtime plugin lets a user run the interacti
 <a id="use-this-package"></a>
 ## Use this package
 
-### Configuration
+### Run the shipped profile
 
-The bundle patch reads the optional `task` seed, optional `resume`, and optional `cwd` from `tuiStartup`. The startup provider accepts an optional task positional, `--resume <id>`, and `--cwd <dir>`; with no task (or with `--resume <id>` alone) the profile boots the full-screen loop idle with an empty focused composer (dim placeholder `输入消息`, status `cwd · badge · / 命令 · @ 提及`), and `Enter` on the empty composer is a no-op.
+The DSH source checkout includes the `deepseek-tui` profile and resolves this bundle from the same installation. Verify the application entry point from the DSH repository root:
 
-The shipped profile is `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-tui'], patchReload: 'startup' }`. Profile and home patch edits take effect on the next process start; they do not recompose a running terminal, Agent, or session. Settings-file reload remains owned by the settings service.
-
-`--frame-stats <path>` opts into per-commit render-cost measurement. The target resolves to an absolute path at startup and must be writable — an unwritable target fails the launch (never silently skipped). On orderly exit the runtime writes one JSON file to that path and nothing else:
-
-```json
-{
-  "renderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0 },
-  "brandRenderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0 },
-  "pacing": { "commits": 0, "elapsedMs": 0 },
-  "brandRevealTimers": 0,
-  "environment": { "platform": "", "node": "", "arch": "" },
-  "path": ""
-}
+```text
+pnpm dsh --profile deepseek-tui --help
 ```
 
-`renderMs` is the React render-phase cost of each committed root-subtree render (Profiler `onRender` `actualDuration`, bounded 120-sample ring, `p95` is the sorted quantile) — **not** a wall-clock terminal-paint measurement and not including the Ink host-diff/commit phase. `brandRenderMs` applies the same measurement to the generated idle-home subtree, while `brandRevealTimers` is the number of its live owned timeouts at the orderly-exit sample. `pacing` gives the root commit count and elapsed time for rhythm context. The payload carries statistics and environment only — no session or message content — and never reaches stdout.
+The command prints the optional task positional plus `--resume`, `--cwd`, and `--frame-stats`. Start the full-screen application with `pnpm dsh --profile deepseek-tui`; the process requires an interactive TTY, and model-backed turns require provider credentials.
 
-### Contract
+This private source mirror has no external `dsh plugin add` path. The package is not published in the npm registry, and installing its directory outside DSH cannot resolve the retained `workspace:^` dependencies. Develop and run it through the matching DSH checkout.
 
-- The runtime owns the live Agent handle, session projection and session-directory state; the render package receives only the controller interface. The top-bar title is a folded `session/title` except a `fallback` title that coexists with a human user message; before a provider or rename title the loop shows the compact mount name `DeepSeek · deepseek-tui`. Directory rows still use the first-human-message fallback. An empty idle window paints the generated official FishLogo, `DeepSeek`, and `有什么可以帮忙的` in the conversation column. The environment selects half-block, full-block, ASCII, or plain output independently of color; `brandAnimation` stores `auto | on | off`, and every input, history, overlay, resize, completion, or unmount stop clears the one-shot reveal timer. The runtime answers `approval/request` for that live agent and calls `next()` for every other agent: `y`/`a` resolve `'allowed-once'`, `n`/`d`/Esc resolve `'rejected'`, and abort (including Ctrl+C cancelling generation) resolves `'cancelled'` via the request signal. Policy `'never'` is decided by the host before this listener runs, so no ApprovalPane appears. Ctrl+E flips the current window's tool-card fold (`toolCardsExpanded`; no session event). Empty `/permission` opens the preset overlay; parameterized `/permission <name>` runs `ctx.commands.execute`. Empty `/settings` opens the settings overlay on every top-level `describe()` field (including `llm-deepseek · models` and `llm-pi-ai · providers` as JSON); Enter apply writes the selected field through `ctx.settings.update`. Browse `e` reports `prepareDocument()` and `r` rereads rows (`✓ 已重载设置`). Empty `/resume` opens the session list. `/reload` is a local command: it flushes the live session, unmounts, disposes that session, then spawns a replacement Node with the same launcher flags plus `--resume <id>`, dropping the original task positional so the first message is not sent again. Overlay `r` only rereads settings rows. Idle boot with no configured `DEEPSEEK_API_KEY` opens `首次设置`; Enter saves through `ctx.credentials.set` and then opens the model pane. Esc skips without opening it. The `tui` section owns `colorTier`, `submitOnEnter` (Enter inserts a newline when false), `notify` (`off | attention | every-turn`, default `attention`), `notifyQuietInputSeconds` (non-negative integer, default 10), and `brandAnimation` (shown as `自动 / 开启 / 关闭`). A `user-questions/request` waterfall listener is registered in the current runtime-root Agent scope; it delegates foreign and child requests with `next()`, while accepted requests paint `AskUserPane`, bind abort/replacement/disposal to one cleanup, and notify exactly once at admission. ↑↓/jk move the highlight, and digit then Enter returns the original option label. The slash directory includes each command's `description`.
-- `g s` toggles the persisted session directory when the composer buffer is exactly `g`; `/resume` opens the same list and does not close it. Left/right move the composer caret one grapheme. ↑/k shift the conversation toward older rows and ↓/j return toward live; arrows scroll even with composer text, while j/k insert when the buffer is not empty. The mouse wheel uses the same motion as ↑/k on the conversation and as j/k on list panes. Ctrl+N starts a new session, and directory actions switch, rename or delete sessions through the owned services. Delete calls the persistence service, which rejects live, reserved, or borrowed identities and removes derived projection-cache state after durable deletion.
-- The terminal, fallback titles, and `/export` Markdown include only direct human `user/message` events (`source.kind === 'user'`) plus assistant replies. Durable model context from agent instructions, plugins, and skill catalogs is intentionally absent from this human transcript.
-- Ctrl+K search requests `literal-substring` matching from `ctx.sessionQuery` and filters to `user`/`assistant` transcript roles, so a query such as `回复` finds visible `只回复` text without surfacing injected model context; other service callers retain the default token-phrase mode and complete semantic corpus.
-- SIGINT follows the interaction state machine; SIGTERM and SIGHUP request exit. Exit flushes the owned session before the process exit request; `--frame-stats` writes its JSON in the same orderly-exit path.
-- A non-TTY output stream or unsupported terminal is rejected before the render tree mounts. On a TTY pair the render layer enables SGR mouse and OSC 8; `/help` lists wheel, click-to-open, and drag-copy.
+### Startup inputs
 
-### Advanced entries and evidence
+The startup plugin parses application arguments and provides them to the runtime row in `cordis.patch.yml`.
 
-- [`RuntimeController`](src/index.ts) supplies running subagents to the renderer's [`Mention`](../tui-render/src/mention.tsx) and all owned children to [`AgentHubPane`](../tui-render/src/agent-hub-pane.tsx). In mention selection, Up/Down or j/k change the highlighted target, Enter inserts it with exactly one trailing space without submitting, and Escape dismisses the menu. `g a` opens Agent Hub. The session directory renders the exact controller-owned parent as `会话 ID · {parentId}` and Agent Hub renders exact children as `子会话 ID · {childId}` through [`SessionPane`](../tui-render/src/session-pane.tsx) and [`AgentHubPane`](../tui-render/src/agent-hub-pane.tsx); the assembled PTY compares those rows with ownership-derived model-admission markers, and no fixture configuration supplies either id. After this identity conversion, the controller enriches render-only Hub rows from `sessionProjections.snapshot()` for live children. Cold children first use `sessionProjectionCache.cachedSnapshot(header, keys)`; a miss borrows one exact persistence observation, folds its immutable metadata and complete ordered events through `coldSnapshot(meta, events)`, and always disposes the borrow. It sums the four durable token buckets, derives context occupancy only from measured pressure plus capacity, and uses the durable subagent timing projection; a model appears only when a registered child projection provides one, so the current projection set omits it rather than copying the parent's model. Missing services, failed cold reads, and absent values omit their segments without failing the identity table or inventing zeroes. The `Σ 子代理` row aggregates known token/duration fields and reports coverage. `SubagentListEntry` remains unchanged, and base composes the persisted projection cache exactly once.
-- Empty `/plan` opens the plan directory; plan review remains the unique user-questions dialog, where `y` submits the host label `Approve` and `n` submits `Keep planning`. The goal footer, Todo HUD, jobs HUD, and workflow HUD/`g w` overlay are controller projections and leave the composer active. `g t` opens the workspace tree, and `g f` reads and writes message feedback through its sidecar service. Presenter-tagged tool results select generic, terminal, diff, search, read, or web cards; [`stream-view.tsx`](../tui-render/src/stream-view.tsx) adds the dense digest, completion boundary, and TurnTail produced paths.
-- [`deepseek-tui-advanced-entry.expected.e2e.ts`](../../../apps/cli/tests/deepseek-tui-advanced-entry.expected.e2e.ts) drives the runnable profile. Its [`session.expected.jsonl`](../../../apps/cli/tests/snapshots/deepseek-tui-advanced-entry/session.expected.jsonl) contains session-owned durable events, [`fixture-audit.expected.jsonl`](../../../apps/cli/tests/snapshots/deepseek-tui-advanced-entry/fixture-audit.expected.jsonl) records message-feedback sidecar reads and transient workflow events, and [`terminal.expected.txt`](../../../apps/cli/tests/snapshots/deepseek-tui-advanced-entry/terminal.expected.txt) records settled 80x24/200x50 cells plus normalized cold-child Hub row and aggregate evidence. Eleven `*.expected.e2e.ts` files own terminal transcripts under `test:expected`; top-level recorded-session snapshots separately own model replay and durable session output. The [advanced-capability Agent Note](../../../.agents/notes/implemented/feature/2026-08-18-tui-advanced-capability-entries.md) owns the rationale and verification distinctions.
+| Input | Meaning | Failure or fallback |
+|---|---|---|
+| `[task...]` | Joins the positional words into the first user message | Missing or whitespace-only input opens the composer without sending a message |
+| `--resume <id>` | Resumes one existing session | Session lookup and ownership errors fail through the owning DSH services |
+| `--cwd <dir>` | Selects the working directory exposed to the session | Filesystem and workspace operations report resolution or access failures through their owning DSH services |
+| `--frame-stats <path>` | Writes render-cost statistics on orderly exit | A directory or unwritable target fails before the render tree mounts |
 
-### Terminal-native interactions
+### What the terminal owns
 
-- Ctrl+Y copies the latest non-empty assistant message through OSC52 and an available host clipboard helper; the final closed backtick-fenced body wins over the whole message. Ctrl+G resolves `$VISUAL` before `$EDITOR`, prepares a private draft, leaves the alternate screen, runs the editor directly on `/dev/tty`, and remounts the same controller. Missing configuration and failed editor/readback paths keep the original composer text.
-- A bracketed paste containing one local image path, or Ctrl+P with an image clipboard, adds a memory-only `[图片 #N]` segment to the structured draft. Send-time admission commits all unsaved segments through one ordered `saveImages()` batch and appends the interleaved text and durable `ImageBlock` references through the existing `user/message` event. Provider serializers resolve those references to transient request bytes; [`projection.ts`](../tui-render/src/projection.ts) renders only the message-local ordinal and optional path-stripped name, persistence loads the same blocks unchanged, and compaction preserves image-bearing prefixes while rejecting image summary output. The dedicated [`deepseek-tui-image.expected.e2e.ts`](../../../apps/cli/tests/deepseek-tui-image.expected.e2e.ts) proves composer intake, terminal replay, durable reference-only JSONL, and text/image/text provider order through the assembled profile. This path changes neither agent-loop nor `SessionEventMap`, so it adds no TypeScript or Python SDK upload operation or expected-output change.
-- During a running turn, the first submitted immutable structured draft enters the existing `agent.steer()` path; later drafts remain in an in-memory FIFO. The HUD shows only not-yet-handed-off FIFO items as `待发 {n} · ↑ 取出`; Up restores the oldest item only while the composer is empty and no modal owner has captured the key. Inbox claim/discard, matching durable `user/message`, `turn/end`, and Agent idle events own cleanup and one-at-a-time FIFO promotion. Compaction events add a non-accent `✂ 已压缩` divider without deleting projected rows; Ctrl+K toggles the latest divider when present and otherwise keeps its session-search behavior. The [terminal-native interaction Agent Note](../../../.agents/notes/implemented/feature/2026-08-21-tui-terminal-native-polish.md) owns the rationale and trade-offs.
-- Notifications fire on attention events, not every turn end: an approval ask or ask-user question pops the moment it enqueues, and a run settling to `agent/status` `'idle'` pops one summary line picked by the last `turn/end` reason (`✅ 任务完成`, `❌ 回合失败:{error}`, `⚠ 输出达到上限`, `⛔ 回合被策略阻塞`, `⚠ 异常中断收尾`; a user-initiated abort stays silent). Intermediate turn ends never notify, so an orchestration burst collapses into one popup. Input within `tui.notifyQuietInputSeconds` (non-negative integer, default 10s) downgrades the popup to BEL. The body carries `· {session title}` so parallel instances are distinguishable; `notify-send` receives `-u critical|normal`. iTerm2, VTE and Konsole use OSC 99; Windows Terminal uses OSC 9; other terminals receive BEL plus one best-effort literal `notify-send` attempt. Helper absence never changes turn settlement. `tui.notify` selects `off | attention | every-turn` (default `attention`; `every-turn` keeps the legacy per-turn popup).
+- The runtime owns one live Agent handle, its session projection, terminal signals, overlays, and the orderly flush-and-exit path.
+- The controller maps approvals, questions, settings, sessions, plans, jobs, workflows, subagents, search, export, feedback, and draft submission to their public DSH services.
+- The renderer receives controller state and actions; it does not acquire persistence or agent ownership.
+- Transcript presentation and export include direct human messages and assistant replies. Model-only context remains durable and model-visible without appearing as human-authored terminal text.
+- A non-TTY stream is rejected before Ink mounts. Supported terminals receive bounded color, hyperlink, mouse, clipboard, and notification behavior with capability-based fallback.
 
 -----
 
@@ -76,7 +64,16 @@ The shipped profile is `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-t
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-[`cordis.patch.yml`](cordis.patch.yml) adds terminal-owned providers and runtime glue over the base bundle without duplicating base storage services. [`src/index.ts`](src/index.ts) owns controller and lifecycle integration, while [`../tui-render/`](../tui-render/README.md) owns terminal projection and painting.
+The bundle patch layers terminal-specific rows over `dsh-base`. The startup plugin parses the application arguments, Loader resolves the runtime row after `tuiStartup` is available, and the runtime builds a controller over injected DSH services. The controller then mounts `dsh-tui-render` and retains ownership of session and process lifecycle.
+
+| Source | Responsibility |
+|---|---|
+| [`cordis.patch.yml`](cordis.patch.yml) | Profile rows, system prompt contribution, providers, and runtime wiring |
+| [`src/startup.ts`](src/startup.ts) | Application argument parser and `tuiStartup` provider |
+| [`src/index.ts`](src/index.ts) | Runtime controller, service integration, terminal lifecycle, and orderly exit |
+| [`../tui-render/`](../tui-render/README.md) | Ink projection, layout, terminal capabilities, and input rendering |
+
+Exact cross-package assembly and real-PTY evidence remain in the [DSH CLI test tree](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/apps/cli/tests).
 
 </details>
 
@@ -85,40 +82,48 @@ The shipped profile is `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-t
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [TUI package map](../README.md) — terminal runtime and renderer ownership.
-- [TUI renderer](../tui-render/README.md) — bounded layout, input rendering, and terminal capabilities.
-- [Terminal subsystem](../../../docs/subsystems/terminal.md) — terminal lifecycle and generated Cordis declarations.
-- [Alpha.1 TUI compatibility decision](../../../.agents/notes/implemented/architecture/2026-08-28-alpha1-tui-compatibility.md) — composition and lifecycle rationale.
+- [TUI repository map](../README.md) — package ownership and the DSH development workflow.
+- [TUI renderer](../tui-render/README.md) — renderer entry points, terminal ownership, and layout limits.
+- [Terminal subsystem](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/docs/subsystems/terminal.md) — generated Cordis declarations and lifecycle relationships.
+- [CLI profile reference](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/apps/cli/reference/README.md) — profile composition and application-argument routing.
 
 -----
 
 <a id="model-experience"></a>
 ## Model Experience
 
-### Terminal application request
+### Terminal profile system prompt
 
 #### What the model sees
 
-The profile's system prompt identifies the terminal interface, while the runtime sends user input through the ordinary Agent APIs and reconstructs visible history from the session log. Source filtering affects only terminal presentation and export: non-human context messages remain in the durable log and in model request construction.
+The bundle owns the following stable profile text after `{{model}}` and `{{cwd}}` are resolved:
+
+##### Terminal identity
+
+```markdown
+You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+You are interacting with the user through the deepseek-tui terminal interface.
+```
 
 #### Token effect
 
-The runtime adds no model-visible text beyond the profile's `system-prompt` configuration and ordinary user turns.
+The resolved two-sentence profile text is present in each request assembled under this profile. Ordinary user turns and all other context remain owned by their DSH producers.
 
 #### KV Cache effect
 
-New turns append through the Agent's normal request construction; resuming reconstructs the session history before the next request, so cache reuse remains provider-dependent.
+The profile text is prefix-stable while the selected model and working directory stay unchanged. A different model, working directory, profile layer, or earlier model-visible context can change the reusable prefix; provider cache availability and eviction remain outside this package.
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Interactive terminal required** — non-TTY launches fail before mounting because the alternate-screen interface needs terminal control.
-- **Cross-process session ownership** — one runtime owns one live Agent handle; switching waits for the previous owned handle to settle before another session is resumed.
-- **Provider cache behavior** — the bundle preserves session history but cannot guarantee a provider's KV-cache retention across a resumed process.
-- **`/reload` stacks a waiting Node** — the parent cannot `execve` in-place, so it waits until the child exits. Repeated `/reload` nests processes until you quit the innermost TUI.
-- **Fatal-memory diagnosis is absent** — a fatal failure that reaches controller feedback or status is rendered as terminal-native one-line text. The keyless TUI suite does not reproduce or attribute the observed out-of-memory failure, so it provides neither memory profiling nor causal coverage for that failure.
-- **Draft FIFO is process-local** — later-turn drafts are not crash-recovered; only messages handed to the Agent inbox or appended to the session log have durable ownership.
+- **DSH workspace required** — this private mirror cannot resolve or build its `workspace:^` dependencies by itself.
+- **Interactive terminal required** — the application rejects non-TTY input or output before mounting the alternate-screen interface.
+- **Process-local drafts** — queued drafts that have not entered the Agent inbox or session log are not recovered after a crash.
+- **Reload process nesting** — `/reload` starts a replacement Node process and the parent waits for it; repeated reloads nest waiting processes until the innermost TUI exits.
+- **Provider cache behavior** — the bundle reconstructs session history but cannot guarantee provider-side KV-cache retention after process restart.
+- **Fatal-memory diagnosis** — the TUI has no built-in heap profiler; a process-level out-of-memory termination can occur before controller feedback is rendered.
+- **Frame statistics scope** — `--frame-stats` measures React render cost and commit pacing, not wall-clock terminal paint or Ink host commit cost.
 
 <a id="dev-note"></a>
 ### Dev Note
