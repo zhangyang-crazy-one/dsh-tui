@@ -1,5 +1,5 @@
 ---
-description: "Private source mirror for the DeepSeek Harness terminal interface, for contributors developing or reviewing the TUI against a matching DSH checkout."
+description: "Installable source-runtime launcher and private source mirror for the DeepSeek Harness terminal interface."
 kind: "package-group"
 ---
 
@@ -9,23 +9,91 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This private repository contains the terminal interface developed for DeepSeek Harness (DSH). It mirrors the `packages/tui/` source family: the `@deepseek-ai/dsh-tui` profile bundle owns terminal lifecycle and user interaction, while `@deepseek-ai/dsh-tui-render` renders the Ink interface. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly. Build and validation therefore run in the matching DSH monorepo rather than in this source-only mirror.
+`@crazyhappyone/dsh-tui` provides the `dsh-tui` command for running and safely updating the DeepSeek Harness terminal interface. The launcher manages a dedicated DSH source checkout, so it never pulls, resets, stashes, or cleans a contributor's development checkout. This repository also mirrors the `packages/tui/` bundle and renderer sources for review. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
 ## Table of Contents
 
+- [Install the launcher](#install-the-launcher)
+- [Run and update](#run-and-update)
+- [Configure the source runtime](#configure-the-source-runtime)
 - [Relationship to DSH](#relationship-to-dsh)
 - [Packages](#packages)
 - [Development workflow](#development-workflow)
-- [Related documentation](#related-documentation)
+- [Publish the npm package](#publish-the-npm-package)
 - [Known limitations](#known-limitations)
 - [Dev Note](#dev-note)
+
+-----
+
+<a id="install-the-launcher"></a>
+## Install the launcher
+
+The unscoped `dsh-tui` package belongs to another maintainer. This project publishes only under the authenticated `crazyhappyone` npm scope.
+
+After a prerelease is published:
+
+```text
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui version
+```
+
+Installation creates only the launcher. It does not clone DSH, run `pnpm install`, prompt for Git credentials, or execute a postinstall script. Run `dsh-tui update` explicitly to create the source runtime.
+
+-----
+
+<a id="run-and-update"></a>
+## Run and update
+
+Initialize the dedicated runtime, then start the TUI:
+
+```text
+dsh-tui update
+dsh-tui
+```
+
+Ordinary arguments pass to the `deepseek-tui` profile unchanged:
+
+```text
+dsh-tui "review this repository"
+dsh-tui --resume <session-id>
+dsh-tui --cwd <directory>
+```
+
+`dsh-tui update` clones the configured source when the runtime is absent. For an existing runtime it requires a clean worktree, fetches the configured ref, proves the current HEAD is its ancestor, applies only `git merge --ff-only`, and runs `pnpm install --frozen-lockfile`. Dirty or divergent history stops before HEAD changes.
+
+`dsh-tui version` reports the launcher version, runtime directory, runtime Git SHA, and DSH version without network access. The exact words `update` and `version` are launcher commands; use `dsh-tui -- update` or `dsh-tui -- version` to send either word as a TUI task.
+
+Updating the launcher and updating the runtime are separate operations:
+
+```text
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui update
+```
+
+-----
+
+<a id="configure-the-source-runtime"></a>
+## Configure the source runtime
+
+The defaults track the owner's private `feat/deepseek-tui` branch. Git authorization for that repository is required. Other users can select a compatible accessible repository and ref.
+
+| Environment variable | Default | Purpose |
+|---|---|---|
+| `DSH_TUI_RUNTIME_DIR` | `~/.local/share/dsh-tui/runtime` | Dedicated clone used only by the launcher |
+| `DSH_TUI_SOURCE_URL` | `https://github.com/zhangyang-crazy-one/deepseek-harness.git` | Git remote cloned and fetched by `update` |
+| `DSH_TUI_SOURCE_REF` | `feat/deepseek-tui` | Branch or ref fetched by `update` |
+| `DSH_TUI_PNPM` | `pnpm` | pnpm executable used for install and launch |
+
+Values must be non-empty, and the runtime directory must be absolute. The launcher refuses a symbolic-link runtime path and an existing directory that is not a Git checkout. Child commands receive argument arrays without shell interpolation.
+
+If dependency refresh fails after a fast-forward, the runtime stays at the reported new SHA but is not ready. Run the exact recovery command printed by the launcher. For dirty or divergent state, inspect only the dedicated runtime directory or select a new empty `DSH_TUI_RUNTIME_DIR`; the launcher never discards it automatically.
 
 -----
 
 <a id="relationship-to-dsh"></a>
 ## Relationship to DSH
 
-The TUI is a DSH profile layer, not a separate agent runtime. The assembled application follows this ownership chain:
+The TUI is a DSH profile layer, not a separate agent runtime:
 
 ```text
 @deepseek-ai/dsh-base
@@ -33,14 +101,12 @@ The TUI is a DSH profile layer, not a separate agent runtime. The assembled appl
        └─ @deepseek-ai/dsh-tui-render   Ink projection and terminal I/O
 ```
 
-The integration source lives on the private [`feat/deepseek-tui` DSH branch](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui). Changes that affect DSH services, profile composition, assembled CLI snapshots, or Agent Notes belong in that monorepo and must follow its `AGENTS.md`, architecture, testing, and documentation rules.
+The integration source lives on the private [`feat/deepseek-tui` DSH branch](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui). Changes that affect DSH services, profile composition, assembled CLI snapshots, or Agent Notes belong in that monorepo and follow its architecture, testing, and documentation rules.
 
 -----
 
 <a id="packages"></a>
 ## Packages
-
-The repository keeps the two direct TUI packages at its root.
 
 | Package | DSH shape | Responsibility |
 |---|---|---|
@@ -52,34 +118,50 @@ The repository keeps the two direct TUI packages at its root.
 <a id="development-workflow"></a>
 ## Development workflow
 
-Use the complete DSH checkout for implementation and verification:
+Implement TUI behavior in the complete DSH checkout, run the checks selected by the changed behavior, and export the confirmed `packages/tui/` tree here. Develop the launcher in this repository with `npm test`; test installation through a packed tarball rather than a workspace link.
 
-1. Check out [`feat/deepseek-tui`](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui).
-2. Make TUI changes under `packages/tui/tui/` and `packages/tui/tui-render/`.
-3. Run the narrow DSH checks selected by the changed behavior. Terminal-visible behavior requires the owning real-PTY or expected-output scenario; package behavior requires its focused tests; documentation changes require the DSH documentation gates.
-4. Run `pnpm dsh --profile deepseek-tui --help` to verify the source entry point. Starting the full-screen application requires an interactive TTY; model-backed turns also require provider credentials.
-5. Export the confirmed `packages/tui/` tree to this private repository after the DSH branch is ready.
-
-Do not install dependencies or run package builds from this mirror. Its manifests intentionally retain DSH `workspace:^` dependencies and its TypeScript projects reference the monorepo compiler configuration.
+The launcher runtime must remain separate from the development checkout. To test against another source safely, point `DSH_TUI_RUNTIME_DIR` at a temporary absolute directory and configure `DSH_TUI_SOURCE_URL` and `DSH_TUI_SOURCE_REF`.
 
 -----
 
-<a id="related-documentation"></a>
-## Related documentation
+<a id="publish-the-npm-package"></a>
+## Publish the npm package
 
-- [DSH architecture](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md) — plugin composition, capability ownership, and the agent loop.
-- [DSH terminal subsystem](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/docs/subsystems/terminal.md) — terminal lifecycle and generated Cordis declarations.
-- [DSH CLI reference](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/apps/cli/reference/README.md) — profile boot, plugin management, and configuration layering.
-- [TUI assembled evidence](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/apps/cli/tests) — real-PTY scenarios and expected terminal output.
+The operator authenticates through npm's browser flow and verifies the selected account:
+
+```text
+npm config delete //registry.npmjs.org/:_authToken
+npm config set registry https://registry.npmjs.org/
+npm login --registry=https://registry.npmjs.org/ --auth-type=web
+npm whoami
+```
+
+`npm whoami` must print `crazyhappyone`. Never place the password, OTP, or npm token in this repository, an issue, command output captured for review, or an AI conversation.
+
+After tests and packed-install verification pass, publish a prerelease only with explicit operator approval:
+
+```text
+npm publish --access public --tag next
+```
+
+When npm requires two-factor authentication, the operator supplies the current code locally:
+
+```text
+npm publish --access public --tag next --otp=<six-digit-code>
+```
+
+Promotion to `latest` is a separate release decision. Local implementation and verification never create or change a registry package automatically.
 
 -----
 
 <a id="known-limitations"></a>
 ## Known limitations
 
-- **Source-only mirror** — this repository does not include the DSH workspace, CLI assembly, cross-package tests, generated catalogs, or Agent Notes.
-- **No standalone package install** — `@deepseek-ai/dsh-tui` is not published in the npm registry, and a direct local install cannot resolve its `workspace:^` dependencies outside the DSH monorepo.
-- **Integration owns release readiness** — a commit in this repository is not release evidence until the corresponding DSH branch passes the checks required by its affected behavior.
+- **Private default source** — npm installation is public, but the default DSH runtime remote requires repository authorization; anonymous users must configure an accessible compatible source.
+- **Source toolchain required** — runtime initialization requires Git, pnpm, and a DSH-supported Node version.
+- **No automatic conflict resolution** — dirty or non-fast-forward runtime history requires explicit human action or a new runtime directory.
+- **Runtime update is not launcher update** — `dsh-tui update` refreshes DSH source and dependencies; npm updates the launcher package.
+- **Integration owns release readiness** — launcher success does not replace the DSH branch's behavior, snapshot, build, or hygiene checks.
 
 <a id="dev-note"></a>
 ## Dev Note

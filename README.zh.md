@@ -1,5 +1,5 @@
 ---
-description: "DeepSeek Harness 终端界面的私有源码镜像，供贡献者基于匹配的 DSH checkout 开发或审查 TUI。"
+description: "DeepSeek Harness 终端界面的可安装源码运行时 launcher 与 private 源码镜像。"
 kind: "package-group"
 ---
 
@@ -9,23 +9,91 @@ kind: "package-group"
 
 ## 概述
 
-本 private 仓库包含为 DeepSeek Harness（DSH）开发的终端界面。它镜像 `packages/tui/` 源码族：`@deepseek-ai/dsh-tui` profile bundle 拥有终端生命周期与用户交互，`@deepseek-ai/dsh-tui-render` 负责渲染 Ink 界面。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。因此，构建与验证在匹配的 DSH monorepo 中运行，而不在这个仅含源码的镜像中运行。
+`@crazyhappyone/dsh-tui` 提供 `dsh-tui` 命令，用于运行和安全更新 DeepSeek Harness 终端界面。Launcher 管理专用 DSH 源码 checkout，因此不会 pull、reset、stash 或 clean 贡献者的开发 checkout。本仓库还镜像 `packages/tui/` bundle 与 renderer 源码以供审查。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
 ## 目录
 
+- [安装 launcher](#install-the-launcher)
+- [运行与更新](#run-and-update)
+- [配置源码运行时](#configure-the-source-runtime)
 - [与 DSH 的关系](#relationship-to-dsh)
 - [包](#packages)
 - [开发工作流](#development-workflow)
-- [相关文档](#related-documentation)
+- [发布 npm 包](#publish-the-npm-package)
 - [已知限制](#known-limitations)
 - [开发备注](#dev-note)
+
+-----
+
+<a id="install-the-launcher"></a>
+## 安装 launcher
+
+无 scope 的 `dsh-tui` 包属于另一位 maintainer。本项目只在已认证的 `crazyhappyone` npm scope 下发布。
+
+发布 prerelease 后运行：
+
+```text
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui version
+```
+
+安装只创建 launcher。它不会 clone DSH、运行 `pnpm install`、请求 Git 凭据或执行 postinstall script。请显式运行 `dsh-tui update` 创建源码运行时。
+
+-----
+
+<a id="run-and-update"></a>
+## 运行与更新
+
+初始化专用运行时，然后启动 TUI：
+
+```text
+dsh-tui update
+dsh-tui
+```
+
+普通参数会原样传递给 `deepseek-tui` profile：
+
+```text
+dsh-tui "review this repository"
+dsh-tui --resume <session-id>
+dsh-tui --cwd <directory>
+```
+
+运行时不存在时，`dsh-tui update` 会 clone 配置的源码。对于现有运行时，它要求工作树干净、fetch 配置的 ref、证明当前 HEAD 是该 ref 的祖先、只应用 `git merge --ff-only`，再运行 `pnpm install --frozen-lockfile`。Dirty 或 divergent history 会在 HEAD 改变前停止。
+
+`dsh-tui version` 会报告 launcher 版本、运行时目录、运行时 Git SHA 与 DSH 版本，并且不访问网络。精确单词 `update` 与 `version` 是 launcher 命令；使用 `dsh-tui -- update` 或 `dsh-tui -- version` 将其作为 TUI task 发送。
+
+更新 launcher 与更新运行时是不同操作：
+
+```text
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui update
+```
+
+-----
+
+<a id="configure-the-source-runtime"></a>
+## 配置源码运行时
+
+默认值跟踪所有者的 private `feat/deepseek-tui` 分支。该仓库需要 Git authorization。其他用户可以选择一个兼容且可访问的仓库与 ref。
+
+| 环境变量 | 默认值 | 用途 |
+|---|---|---|
+| `DSH_TUI_RUNTIME_DIR` | `~/.local/share/dsh-tui/runtime` | 仅供 launcher 使用的专用 clone |
+| `DSH_TUI_SOURCE_URL` | `https://github.com/zhangyang-crazy-one/deepseek-harness.git` | `update` clone 和 fetch 的 Git remote |
+| `DSH_TUI_SOURCE_REF` | `feat/deepseek-tui` | `update` fetch 的 branch 或 ref |
+| `DSH_TUI_PNPM` | `pnpm` | 安装和启动所用的 pnpm executable |
+
+所有值都不得为空，运行时目录必须是绝对路径。Launcher 会拒绝 symbolic-link runtime path，也会拒绝不是 Git checkout 的现有目录。Child command 接收参数数组，不使用 shell interpolation。
+
+如果 fast-forward 后的依赖刷新失败，运行时会停留在报告的新 SHA，但不会被声明为 ready。请运行 launcher 打印的精确恢复命令。对于 dirty 或 divergent 状态，只检查专用运行时目录，或选择新的空 `DSH_TUI_RUNTIME_DIR`；launcher 不会自动丢弃它。
 
 -----
 
 <a id="relationship-to-dsh"></a>
 ## 与 DSH 的关系
 
-TUI 是 DSH profile 层，而不是独立的 agent 运行时。组装后的应用遵循以下所有权链：
+TUI 是 DSH profile 层，而不是独立的 agent 运行时：
 
 ```text
 @deepseek-ai/dsh-base
@@ -33,14 +101,12 @@ TUI 是 DSH profile 层，而不是独立的 agent 运行时。组装后的应�
        └─ @deepseek-ai/dsh-tui-render   Ink projection and terminal I/O
 ```
 
-集成源码位于 private [`feat/deepseek-tui` DSH 分支](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui)。影响 DSH 服务、profile 组合、组装后 CLI snapshot 或 Agent Note 的变更归该 monorepo 所有，并且必须遵循其中的 `AGENTS.md`、架构、测试与文档规则。
+集成源码位于 private [`feat/deepseek-tui` DSH 分支](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui)。影响 DSH 服务、profile 组合、组装后 CLI snapshot 或 Agent Note 的变更归该 monorepo 所有，并遵循其中的架构、测试与文档规则。
 
 -----
 
 <a id="packages"></a>
 ## 包
-
-本仓库在根目录保留两个直接 TUI 包。
 
 | 包 | DSH 形态 | 职责 |
 |---|---|---|
@@ -52,34 +118,50 @@ TUI 是 DSH profile 层，而不是独立的 agent 运行时。组装后的应�
 <a id="development-workflow"></a>
 ## 开发工作流
 
-使用完整的 DSH checkout 实现与验证：
+在完整 DSH checkout 中实现 TUI 行为，运行受变更行为影响的检查，并将确认后的 `packages/tui/` tree 导出到这里。在本仓库中使用 `npm test` 开发 launcher；通过 packed tarball 测试安装，不使用 workspace link。
 
-1. Checkout [`feat/deepseek-tui`](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui)。
-2. 在 `packages/tui/tui/` 与 `packages/tui/tui-render/` 中修改 TUI。
-3. 按变更行为运行范围最小的 DSH 检查。终端可见行为需要其所属的 real-PTY 或预期输出场景；包行为需要 focused test；文档变更需要 DSH 文档检查。
-4. 运行 `pnpm dsh --profile deepseek-tui --help` 验证源码入口。启动全屏应用需要交互式 TTY；使用模型的轮次还需要 provider 凭据。
-5. DSH 分支就绪后，将已确认的 `packages/tui/` tree 导出到本 private 仓库。
-
-不要在这个镜像中安装依赖或运行包构建。它的 manifest 有意保留 DSH `workspace:^` 依赖，TypeScript project 也引用 monorepo 编译器配置。
+Launcher runtime 必须与开发 checkout 分离。要安全测试其他源码，请将 `DSH_TUI_RUNTIME_DIR` 指向临时绝对目录，并配置 `DSH_TUI_SOURCE_URL` 与 `DSH_TUI_SOURCE_REF`。
 
 -----
 
-<a id="related-documentation"></a>
-## 相关文档
+<a id="publish-the-npm-package"></a>
+## 发布 npm 包
 
-- [DSH 架构](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.zh.md) — 插件组合、能力所有权与 agent loop。
-- [DSH 终端子系统](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/docs/subsystems/terminal.zh.md) — 终端生命周期与生成的 Cordis 声明。
-- [DSH CLI 参考](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/apps/cli/reference/README.zh.md) — profile 启动、插件管理与配置分层。
-- [TUI 组装证据](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/apps/cli/tests) — real-PTY 场景与预期终端输出。
+Operator 通过 npm browser flow 认证，并验证所选账号：
+
+```text
+npm config delete //registry.npmjs.org/:_authToken
+npm config set registry https://registry.npmjs.org/
+npm login --registry=https://registry.npmjs.org/ --auth-type=web
+npm whoami
+```
+
+`npm whoami` 必须打印 `crazyhappyone`。绝不要把密码、OTP 或 npm token 放入本仓库、issue、供审查捕获的命令输出或 AI conversation。
+
+测试与 packed-install 验证通过后，仅在 operator 显式批准时发布 prerelease：
+
+```text
+npm publish --access public --tag next
+```
+
+npm 要求双因素认证时，operator 在本地提供当前验证码：
+
+```text
+npm publish --access public --tag next --otp=<six-digit-code>
+```
+
+提升到 `latest` 是单独的 release 决策。本地实现与验证绝不会自动创建或更改 registry package。
 
 -----
 
 <a id="known-limitations"></a>
 ## 已知限制
 
-- **仅含源码的镜像** — 本仓库不包含 DSH workspace、CLI 组装、跨包测试、生成的 catalog 或 Agent Note。
-- **没有独立安装路径** — `@deepseek-ai/dsh-tui` 未发布到 npm registry，直接本地安装也无法在 DSH monorepo 外解析其 `workspace:^` 依赖。
-- **集成分支拥有发布就绪状态** — 本仓库中的 commit 只有在对应 DSH 分支通过受影响行为所需检查后，才能作为发布证据。
+- **Private 默认源码** — npm 安装是 public，但默认 DSH runtime remote 需要仓库授权；匿名用户必须配置一个可访问的兼容源码。
+- **需要源码工具链** — 初始化运行时需要 Git、pnpm 与 DSH 支持的 Node 版本。
+- **不自动解决冲突** — dirty 或 non-fast-forward runtime history 需要显式人工操作或新的运行时目录。
+- **运行时更新不是 launcher 更新** — `dsh-tui update` 刷新 DSH 源码与依赖；npm 更新 launcher package。
+- **集成分支拥有发布就绪状态** — launcher 成功不能替代 DSH 分支的行为、snapshot、build 或 hygiene 检查。
 
 <a id="dev-note"></a>
 ## 开发备注

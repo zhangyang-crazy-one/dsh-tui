@@ -1,0 +1,38 @@
+{
+  "name": "@crazyhappyone/dsh-tui",
+  "version": "0.1.0-alpha.1",
+  "description": "Source-runtime launcher for the DeepSeek Harness terminal interface",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "dsh-tui": "bin/dsh-tui.js"
+  },
+  "files": [
+    "bin/dsh-tui.js",
+    "src/**/*.js",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run --json"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhangyang-crazy-one/dsh-tui.git"
+  },
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "tui",
+    "terminal"
+  ]
+}
