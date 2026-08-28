@@ -1,0 +1,77 @@
+# The deepseek-tui bundle patch: terminal-surface mode directly over dsh-base.
+# It mounts no Host, HTTP server, Web runtime, or browser plugin. An ordinary
+# provider plugin parses --resume/--cwd and the task positional, then the
+# terminal driver creates an Agent through the core registry and prints its
+# durable result. Unlike the web surface, the agent plane stays process-wide:
+# dsh-base keeps tool-bash/tool-fs/tool-todo and friends because the TUI is
+# single-session and composes its agent process-wide.
+
+- id: system-prompt
+  config:
+    persona: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+      You are interacting with the user through the deepseek-tui terminal interface.
+
+# The shared module-reload HMR row stays off; the launcher's watch-only
+# fallback still keeps the user patch layers live until the run exits.
+- id: hmr
+  disabled: true
+
+- id: tools
+  config:
+    # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
+    mode: !!js process.env.DSH_TOOLS_MODE
+
+- id: approval
+  config:
+    policy: !!js "(process.env.DSH_PERMISSION_MODE ?? 'workspace-write') === 'danger-full-access' ? 'never' : 'ask'"
+
+# Full-text session search stays disabled until the first Ctrl+K search (the
+# base row's `openAt: never`). The TUI has no browser-latency concern, so the
+# node:sqlite import and in-memory handle open lazily on first search.
+- id: session-query-sqlite
+  config:
+    path: ':memory:'
+    openAt: first-search
+
+- insert:
+    # Code Mode is a core execution capability, not a Web component.
+    - id: code-runtime
+      name: "@deepseek-ai/dsh-code-runtime-worker-thread"
+
+    # Per-round token/duration stats for the terminal status line.
+    - id: session-stats
+      name: "@deepseek-ai/dsh-session-stats"
+
+    # Base owns the shared storage/domain/projection-cache stack. This layer
+    # contributes only the TUI-facing feedback consumer over that stack.
+    - id: message-feedback
+      name: "@deepseek-ai/dsh-message-feedback"
+      config:
+        maxNoteBytes: 8192
+
+    - id: tool-ask-user
+      name: "@deepseek-ai/dsh-tool-ask-user"
+
+    - id: tui-startup
+      name: "@deepseek-ai/dsh-tui/startup"
+
+    # Zero-config official OpenAI/Anthropic routes. They register
+    # openai-official / anthropic-official so they do not collide with the
+    # dormant llm-pi-ai catalog keys openai / anthropic that the Web Models
+    # page already owns.
+    - id: llm-openai
+      name: "@deepseek-ai/dsh-llm-openai"
+
+    - id: llm-anthropic
+      name: "@deepseek-ai/dsh-llm-anthropic"
+
+    # Reads its task from the ordinary tuiStartup provider.
+    - id: tui-runtime
+      name: "@deepseek-ai/dsh-tui"
+      inject: [tuiStartup]
+      config:
+        task: !!js ctx.tuiStartup.task
+        resume: !!js ctx.tuiStartup.resume
+        cwd: !!js ctx.tuiStartup.cwd
+        frameStats: !!js ctx.tuiStartup.frameStats

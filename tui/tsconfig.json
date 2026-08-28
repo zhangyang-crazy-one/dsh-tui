@@ -1,0 +1,114 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../../../vendor/loader"
+    },
+    {
+      "path": "../../../vendor/schemastery"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/agent-default-model"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../llm/llm-retry"
+    },
+    {
+      "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../session/session-persistence"
+    },
+    {
+      "path": "../../session/session-persistence-jsonl"
+    },
+    {
+      "path": "../../session/session-title"
+    },
+    {
+      "path": "../../session-query/session-query"
+    },
+    {
+      "path": "../../session-query/session-query-sqlite"
+    },
+    {
+      "path": "../../interaction/commands"
+    },
+    {
+      "path": "../../credentials/credentials"
+    },
+    {
+      "path": "../../fs/fs"
+    },
+    {
+      "path": "../../skill/skill"
+    },
+    {
+      "path": "../../subagent/subagent"
+    },
+    {
+      "path": "../../plan/plan-mode"
+    },
+    {
+      "path": "../tui-render"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../boot/cmdline"
+    },
+    {
+      "path": "../../interaction/permission-presets"
+    },
+    {
+      "path": "../../interaction/user-approval"
+    },
+    {
+      "path": "../../interaction/user-questions"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../goal/goal"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../todo/tool-todo"
+    },
+    {
+      "path": "../../jobs/jobs"
+    },
+    {
+      "path": "../../workflow/workflow"
+    },
+    {
+      "path": "../../feedback/message-feedback"
+    },
+    {
+      "path": "../../session/session-stats"
+    }
+  ]
+}
