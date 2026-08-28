@@ -5,7 +5,9 @@ import { render, renderToString } from 'ink'
 import { createElement } from 'react'
 import {
   activeBrandRevealTimerCount,
+  BRAND_ART_ROWS,
   BRAND_FRAME_MS,
+  BRAND_HOME_ROWS,
   PixelFishHome,
   selectBrandRenderTier,
 } from '../src/pixel-fish-home.tsx'
@@ -36,12 +38,15 @@ afterEach(() => {
 
 describe('selectBrandRenderTier', () => {
   it('keeps the closed capability order and falls back to the wordmark on size failure', () => {
+    expect(BRAND_ART_ROWS).toBe(16)
+    expect(BRAND_HOME_ROWS).toBe(19)
     expect(selectBrandRenderTier('half-block', 88, 38)).toBe('half-block')
     expect(selectBrandRenderTier('full-block', 88, 38)).toBe('full-block')
     expect(selectBrandRenderTier('ascii', 88, 38)).toBe('ascii')
     expect(selectBrandRenderTier('plain', 88, 38)).toBe('plain')
     expect(selectBrandRenderTier('half-block', 43, 38)).toBe('plain')
-    expect(selectBrandRenderTier('half-block', 88, 21)).toBe('plain')
+    expect(selectBrandRenderTier('half-block', 88, 19)).toBe('half-block')
+    expect(selectBrandRenderTier('half-block', 88, 18)).toBe('plain')
   })
 })
 
@@ -67,7 +72,7 @@ describe('PixelFishHome', () => {
     applyTheme('none')
     const out = renderToString(createElement(PixelFishHome, props({ tier: 'ascii' })))
     expect(out).not.toContain('\x1b')
-    expect(out).toContain('###@@@@@##@@@@@#')
+    expect(out).toContain('###@@@@@@@@@@@@@')
     expect(out).toContain('DeepSeek')
   })
 
@@ -104,7 +109,7 @@ describe('PixelFishHome', () => {
     for (const stopped of [
       props({ animate: true, visible: false }),
       props({ animate: false }),
-      props({ animate: true, maxRows: 21 }),
+      props({ animate: true, maxRows: 18 }),
     ]) {
       const instance = render(createElement(PixelFishHome, props({ animate: true })), {
         stdout: fakeTtyStdout(),

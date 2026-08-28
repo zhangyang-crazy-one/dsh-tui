@@ -26,7 +26,7 @@ import type { FrameProbeHandle } from './frame-stats.ts'
 export const BRAND_FRAME_MS = 320
 
 /** Generated contour height shared by the three visual tiers. */
-export const BRAND_ART_ROWS = 19
+export const BRAND_ART_ROWS = BRAND_HALF_BLOCK.length
 
 /** Art plus wordmark, one spacer, and prompt. */
 export const BRAND_HOME_ROWS = BRAND_ART_ROWS + 3

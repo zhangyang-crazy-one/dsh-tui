@@ -513,7 +513,7 @@ describe('StreamView', () => {
     )
     try {
       await instance.waitUntilRenderFlush()
-      expect(stripAnsi(chunks.join(''))).toContain('▄▄▄█████▄▄█████▀')
+      expect(stripAnsi(chunks.join(''))).toContain('▄▄▄█████████████')
       expect(activeBrandRevealTimerCount()).toBe(1)
       instance.rerender(createElement(StreamView, {
         model: model({

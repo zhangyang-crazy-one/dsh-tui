@@ -14,10 +14,10 @@ describe('DeepSeek brand copy', () => {
     expect(BRAND_PLAIN_WORDMARK).toBe('DeepSeek')
     expect(BRAND_HOME_LINE).toBe('有什么可以帮忙的')
     expect(BRAND_APP_TITLE).toBe('DeepSeek · deepseek-tui')
-    expect(BRAND_HALF_BLOCK).toHaveLength(19)
+    expect(BRAND_HALF_BLOCK).toHaveLength(16)
     expect(BRAND_HALF_BLOCK_FRAMES).toHaveLength(4)
-    expect(BRAND_FULL_BLOCK).toHaveLength(19)
-    expect(BRAND_ASCII).toHaveLength(19)
+    expect(BRAND_FULL_BLOCK).toHaveLength(16)
+    expect(BRAND_ASCII).toHaveLength(16)
     expect(JSON.stringify({
       BRAND_HALF_BLOCK,
       BRAND_HALF_BLOCK_FRAMES,
