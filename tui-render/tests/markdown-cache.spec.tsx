@@ -25,9 +25,6 @@ function model(history: ViewModel['history']): ViewModel {
     history,
     activeTurn: undefined,
     status: 'idle',
-    scrollOffset: 0,
-    follow: true,
-    unseenCount: 0,
     reasoningExpanded: false,
     toolCardsExpanded: false,
   }
@@ -88,16 +85,16 @@ describe('Markdown render caches', () => {
     expect(stats.tokenHits / (stats.tokenHits + stats.tokenMisses)).toBeGreaterThan(0.9)
   })
 
-  it('does not revisit stable settled Markdown for a viewport-margin commit', async () => {
+  it('does not revisit stable settled Markdown for a viewport-command commit', async () => {
     const history: ViewModel['history'] = [{
       id: 1,
       kind: 'assistant',
       text: '**stable history**',
       timestamp: 1,
     }]
-    const element = (viewShift: number) => createElement(StreamView, {
+    const element = (sequence: number) => createElement(StreamView, {
       model: model(history),
-      viewShift,
+      viewportCommand: { sequence, kind: 'scroll' as const, delta: 1 },
     })
     const instance = render(element(0), {
       stdout: fakeTtyStdout(),

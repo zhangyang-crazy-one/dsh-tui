@@ -1,21 +1,15 @@
 /**
- * Full-frame background fill and caret anchoring. The Grok contract is a
- * uniformly pure-black frame, but Ink only emits rows that carry content:
- * gutters, inter-block blanks, and the region below the last frame row keep
- * the terminal's default background. BCE-capable terminals (xterm, iTerm2,
- * kitty, alacritty, Windows Terminal) fill erased cells with the SGR
- * background current at erase time, so this module wraps the frame stream:
- * every erase sequence that fills *visible* cells — log-update's per-row
- * `ESC[2K` / `ESC[K`, and `clearTerminal`'s `ESC[2J` — is bracketed by the
- * `bg` token and a bg reset, and entering the alternate screen is followed
- * by a full erase-display so never-painted rows land on black as well.
- * `ESC[3J` (erase saved lines / scrollback) is left unbracketed: a BCE
- * terminal fills erased cells with the current background, and wrapping
- * that sequence would paint the whole scrollback black on every overflowing
- * frame, filling the PTY and stalling Ink's writes. The `none` tier leaves
- * styling bytes untouched (zero-ANSI contract). Terminals without BCE still
- * show their default background on untouched rows; the per-row paintRow
- * strips remain the fallback there.
+ * Full-frame background fill and caret anchoring. The product frame is a
+ * uniformly pure-black plane, but Ink emits centered leading spaces and whole
+ * overflow frames as ordinary bytes without a per-row erase. This wrapper
+ * keeps the `bg` token active for every colored-tier string write, restores it
+ * immediately after content resets, and returns to the terminal default after
+ * the write. Visible-line and screen erases therefore use black BCE, while
+ * `ESC[3J` temporarily switches to the terminal default so a scrollback wipe
+ * cannot paint and fill the saved buffer. Entering the alternate screen still
+ * triggers a black full-display erase for never-painted rows. The `none` tier
+ * leaves styling bytes untouched (zero-ANSI contract). Terminals without BCE
+ * still rely on printed background cells for regions an erase cannot paint.
  *
  * The caret anchor works around a React-reconciler ordering fact:
  * `resetAfterCommit` — where Ink renders frames — runs right after the
@@ -35,15 +29,11 @@ import type { ColorTier } from './terminal-capabilities.ts'
 /** Resets the active background to the terminal default. */
 const BG_OFF = '\x1b[49m'
 
-/**
- * Erase sequences that fill *visible* cells, in line form from log-update
- * (`eraseLine`, `eraseEndLine`) and in display form from `clearTerminal`'s
- * `eraseScreen`. No entry is a substring of another, so plain replacement
- * order is safe. `ESC[3J` is deliberately absent: it erases scrollback, not
- * the current screen, and bracketing it with `bg` makes BCE terminals paint
- * the whole saved buffer on every overflowing frame.
- */
-const ERASE_SEQUENCES = ['\x1b[2K', '\x1b[K', '\x1b[2J'] as const
+/** Complete SGR reset emitted by product styling and Ink. */
+const SGR_RESET = '\x1b[0m'
+
+/** Erase saved lines / scrollback; it must run on the terminal default bg. */
+const ERASE_SCROLLBACK = '\x1b[3J'
 
 /** Enter-alternate-screen sequence Ink writes when mounting with `alternateScreen: true`. */
 const ENTER_ALTERNATE_SCREEN = '\x1b[?1049h'
@@ -107,36 +97,40 @@ export function publishedCaretBytes(): string {
 }
 
 /**
- * Bracket every visible-cell erase sequence in one output chunk with the
- * tier's `bg` activator and a background reset, append a full
- * display erase right
- * after an alternate-screen entry, and — whenever the chunk is a frame
+ * Keep the frame background active across every colored-tier string chunk and
+ * content reset, protect scrollback erasure with the terminal default, append
+ * a full display erase right after an alternate-screen entry, and — whenever the chunk is a frame
  * carrying cursor bytes — append the published caret position after Ink's
  * own cursor suffix so the freshest position wins. Content bytes pass
  * through unchanged; at the `none` tier styling stays zero-ANSI while the
  * caret anchor still applies.
  * @param chunk - raw bytes about to be written to the terminal.
  * @param tier - tier to map at (defaults to the installed tier).
- * @returns the chunk with erase bracketing and caret anchoring applied.
+ * @returns the chunk with frame-background and caret anchoring applied.
  */
 export function transformFrameChunk(
   chunk: string,
   tier: ColorTier = currentTier(),
 ): string {
-  if (!chunk.includes('\x1b')) return chunk
   let out = chunk
   const on = bgSequence(tier)
   if (on !== '') {
-    for (const sequence of ERASE_SEQUENCES) {
-      out = out.replaceAll(sequence, `${on}${sequence}${BG_OFF}`)
+    if (out.includes('\x1b')) {
+      out = out
+        .replaceAll(SGR_RESET, `${SGR_RESET}${on}`)
+        .replaceAll(BG_OFF, `${BG_OFF}${on}`)
+        .replaceAll(
+          ERASE_SCROLLBACK,
+          `${BG_OFF}${ERASE_SCROLLBACK}${on}`,
+        )
     }
-    // Runs after the loop so the erase it inserts is not bracketed twice.
     if (out.includes(ENTER_ALTERNATE_SCREEN)) {
       out = out.replaceAll(
         ENTER_ALTERNATE_SCREEN,
-        `${ENTER_ALTERNATE_SCREEN}${on}${ERASE_DISPLAY}${BG_OFF}`,
+        `${ENTER_ALTERNATE_SCREEN}${on}${ERASE_DISPLAY}`,
       )
     }
+    out = `${on}${out}${BG_OFF}`
   }
   if (
     out.includes(END_SYNC) ||

@@ -3,7 +3,9 @@ import {
   applyTheme,
   bgSequence,
   currentTier,
+  inkColor,
   installTheme,
+  paintBackgroundRow,
   styled,
   THEME_LEVELS,
 } from '../src/theme.ts'
@@ -68,6 +70,32 @@ describe('styled', () => {
 
   it('passes text through unchanged at none', () => {
     expect(styled('hi', 'accent', 'none')).toBe('hi')
+  })
+})
+
+describe('inkColor', () => {
+  it('maps package tokens into Ink color properties', () => {
+    expect(inkColor('bg', 'truecolor')).toBe('#000000')
+    expect(inkColor('bg', '256')).toBe('ansi256(16)')
+    expect(inkColor('fgDim', '256')).toBe('ansi256(245)')
+    expect(inkColor('bg', '16')).toBe('black')
+    expect(inkColor('bg', 'none')).toBeUndefined()
+  })
+})
+
+describe('paintBackgroundRow', () => {
+  it('reopens the panel background around reset-terminated parts', () => {
+    const output = paintBackgroundRow([
+      styled('x', 'fg', 'truecolor'),
+      styled('y', 'accent', 'truecolor'),
+    ], 'codeBg', 4, 'truecolor')
+    expect(output.match(/\x1b\[48;2;15;17;21m/gu)).toHaveLength(3)
+    expect(output).toContain('  \x1b[0m')
+    expect(output).not.toContain('\x1b[K')
+  })
+
+  it('adds no ANSI at the none tier', () => {
+    expect(paintBackgroundRow(['x'], 'codeBg', 80, 'none')).toBe('x')
   })
 })
 

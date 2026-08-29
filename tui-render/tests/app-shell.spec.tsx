@@ -5,13 +5,15 @@
  * out without absolute-column assumptions.
  */
 
-import { describe, expect, it, vi } from 'vitest'
-import { renderToString, useWindowSize } from 'ink'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Box, renderToString, useWindowSize } from 'ink'
 import { createElement } from 'react'
 import { Text } from 'ink'
 import { AppShell, layoutTitleBar } from '../src/app-shell.tsx'
 import { displayWidth } from '../src/content.ts'
 import { BRAND_APP_TITLE } from '../src/brand.ts'
+import { applyTheme, styled } from '../src/theme.ts'
+import { transformFrameChunk } from '../src/frame-fill.ts'
 
 vi.mock('ink', async importOriginal => ({
   ...await importOriginal<typeof import('ink')>(),
@@ -28,9 +30,23 @@ function shell(title: string, badge = 'provider · model'): string {
   )
 }
 
+function centeredShell(content: string): string {
+  return renderToString(createElement(
+    AppShell,
+    { title: 't', badge: 'p' },
+    createElement(
+      Box,
+      { width: 20, alignSelf: 'center' },
+      createElement(Text, null, content),
+    ),
+  ))
+}
+
 function stripAnsi(text: string): string {
   return text.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
 }
+
+afterEach(() => { applyTheme('truecolor') })
 
 describe('layoutTitleBar', () => {
   it('keeps both runs and fills the remainder with a gap', () => {
@@ -98,6 +114,30 @@ describe('layoutTitleBar', () => {
 })
 
 describe('AppShell', () => {
+  it.each([
+    ['truecolor', '\x1b[48;2;0;0;0m'],
+    ['256', '\x1b[48;5;16m'],
+    ['16', '\x1b[40m'],
+  ] as const)('paints the complete AppShell output at the %s tier', (tier, bg) => {
+    applyTheme(tier)
+    const out = transformFrameChunk(centeredShell('CENTERED_BODY'), tier)
+    expect(out.startsWith(bg)).toBe(true)
+    expect(out).toContain(`${' '.repeat(30)}CENTERED_BODY`)
+    expect(out.endsWith('\x1b[49m')).toBe(true)
+  })
+
+  it('uses the terminal default background without SGR at the none tier', () => {
+    applyTheme('none')
+    const out = shell('t')
+    expect(out).not.toContain('\x1b[48;')
+    expect(out).not.toContain('\x1b[40m')
+  })
+
+  it('preserves an explicit code background inside the root frame background', () => {
+    const out = centeredShell(styled('code', 'codeBg'))
+    expect(out).toContain('\x1b[48;2;15;17;21mcode')
+  })
+
   it('draws a thin fgDim separator spanning the window below the top bar', () => {
     const out = shell('t')
     // renderToString reports the default 80-column window.

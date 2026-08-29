@@ -268,14 +268,9 @@ describe('interactive loop', () => {
     const push = vi.fn((event: SessionEvent) => {
       delegate.push(event)
     })
-    const scrollToOldest = vi.fn(() => { delegate.scrollToOldest() })
-    const followLatest = vi.fn(() => { delegate.followLatest() })
     Reflect.set(controller, 'projector', {
       push,
       seed: (events: readonly SessionEvent[]) => { delegate.seed(events) },
-      setScroll: (delta: number) => { delegate.setScroll(delta) },
-      scrollToOldest,
-      followLatest,
       snapshot: () => delegate.snapshot(),
     } satisfies Projector)
     const reduce = vi.spyOn(
@@ -286,11 +281,6 @@ describe('interactive loop', () => {
     test.ctx.on('session/flush', (session) => {
       flushed.push(session.id)
     })
-
-    controller.dispatch({ kind: 'scroll-edge', edge: 'oldest' })
-    controller.dispatch({ kind: 'scroll-edge', edge: 'latest' })
-    expect(scrollToOldest).toHaveBeenCalledOnce()
-    expect(followLatest).toHaveBeenCalledOnce()
 
     controller.dispatch({ kind: 'send', text: 'pending-live-input' })
     expect(controller.getModel().status).toBe('generating')

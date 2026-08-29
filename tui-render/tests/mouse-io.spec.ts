@@ -8,6 +8,8 @@ import {
   attachMouseIo,
   MouseSession,
   notifyMouseScroll,
+  setMouseRailListener,
+  setMouseRailRegion,
   setMouseScrollListener,
 } from '../src/mouse-io.ts'
 import { DISABLE_SGR_MOUSE, ENABLE_SGR_MOUSE } from '../src/sgr-mouse.ts'
@@ -15,6 +17,8 @@ import { setFrameCaret } from '../src/frame-fill.ts'
 
 afterEach(() => {
   setMouseScrollListener(undefined)
+  setMouseRailListener(undefined)
+  setMouseRailRegion(undefined)
   setFrameCaret(undefined)
 })
 
@@ -140,6 +144,38 @@ describe('MouseSession', () => {
     expect(session.feedStdout('')).toBe('')
     session.handle({ kind: 'release', button: 'left', col: 2, row: 1 })
     expect(copy).toHaveBeenCalledWith('')
+  })
+
+  it('gives a visible rail priority over selection and maps press-drag-release positions', () => {
+    const onRail = vi.fn()
+    const copy = vi.fn()
+    const onScroll = vi.fn()
+    setMouseRailRegion({ col: 80, topRow: 3, rows: 10 })
+    const session = new MouseSession({ onRail, copyText: copy, onScroll })
+
+    session.handle({ kind: 'press', button: 'left', col: 80, row: 3 })
+    session.handle({ kind: 'drag', button: 'left', col: 80, row: 7 })
+    session.handle({ kind: 'release', button: 'left', col: 80, row: 12 })
+
+    expect(onRail.mock.calls).toEqual([[0], [4 / 9], [1]])
+    expect(copy).not.toHaveBeenCalled()
+    expect(onScroll).not.toHaveBeenCalled()
+    expect(session.feedStdout('frame')).toBe('frame')
+  })
+
+  it('retains text selection outside the published rail column', () => {
+    const onRail = vi.fn()
+    const copy = vi.fn()
+    setMouseRailRegion({ col: 8, topRow: 1, rows: 4 })
+    const session = new MouseSession({ columns: 8, rows: 4, onRail, copyText: copy })
+    session.feedStdout('\x1b[Habcd')
+
+    session.handle({ kind: 'press', button: 'left', col: 7, row: 1 })
+    session.handle({ kind: 'drag', button: 'left', col: 8, row: 1 })
+    session.handle({ kind: 'release', button: 'left', col: 8, row: 1 })
+
+    expect(onRail).not.toHaveBeenCalled()
+    expect(copy).toHaveBeenCalledTimes(1)
   })
 
   it('notifies the module scroll listener by default', () => {

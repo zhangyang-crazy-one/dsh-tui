@@ -1,11 +1,9 @@
 /**
- * Frame-fill (full-frame pure-black background): erase-in-line and the
- * visible-screen erase (`ESC[2J`) are bracketed with the tier's bg activator
- * so BCE terminals fill erased cells black. Scrollback wipe (`ESC[3J`) is
- * not bracketed. Entering the alternate screen triggers a full display
- * erase for never-painted rows, content bytes pass through untouched, and
- * the `none` tier keeps the zero-ANSI contract. The stdout wrapper delegates
- * every non-write property to the real stream.
+ * Frame-fill (full-frame pure-black background): every colored-tier string
+ * write keeps bg active across centered spaces, content resets, and visible
+ * erases. Scrollback wipe (`ESC[3J`) temporarily uses the terminal default.
+ * Entering the alternate screen triggers a full display erase, while the
+ * `none` tier keeps the zero-ANSI contract.
  */
 
 import { Writable } from 'node:stream'
@@ -25,26 +23,28 @@ const TIERS = [
 ] as const
 
 describe('transformFrameChunk', () => {
-  it('returns plain chunks before running any replacement scan', () => {
+  it('paints plain chunks without running any replacement scan', () => {
     const replaceAll = vi.spyOn(String.prototype, 'replaceAll')
     try {
-      expect(transformFrameChunk('plain frame bytes', 'truecolor')).toBe('plain frame bytes')
+      expect(transformFrameChunk('plain frame bytes', 'truecolor')).toBe(
+        '\x1b[48;2;0;0;0mplain frame bytes\x1b[49m',
+      )
       expect(replaceAll).not.toHaveBeenCalled()
     } finally {
       replaceAll.mockRestore()
     }
   })
 
-  it.each(TIERS)('brackets eraseLine at the $tier tier', ({ tier, on }) => {
+  it.each(TIERS)('paints eraseLine at the $tier tier', ({ tier, on }) => {
     const chunk = '\x1b[2K\x1b[1A\x1b[2Khello'
     expect(transformFrameChunk(chunk, tier)).toBe(
-      on + '\x1b[2K\x1b[49m\x1b[1A' + on + '\x1b[2K\x1b[49mhello',
+      on + chunk + '\x1b[49m',
     )
   })
 
-  it.each(TIERS)('brackets eraseEndLine at the $tier tier', ({ tier, on }) => {
+  it.each(TIERS)('paints eraseEndLine at the $tier tier', ({ tier, on }) => {
     expect(transformFrameChunk('text\x1b[K', tier)).toBe(
-      'text' + on + '\x1b[K\x1b[49m',
+      on + 'text\x1b[K\x1b[49m',
     )
   })
 
@@ -55,19 +55,22 @@ describe('transformFrameChunk', () => {
       // visible screen; 3J is scrollback and must stay unbracketed so BCE
       // terminals do not paint the whole saved buffer on every overflow frame.
       expect(transformFrameChunk('\x1b[2J\x1b[3J\x1b[Hrow', tier)).toBe(
-        `${on}\x1b[2J\x1b[49m\x1b[3J\x1b[Hrow`,
+        `${on}\x1b[2J\x1b[49m\x1b[3J${on}\x1b[Hrow\x1b[49m`,
       )
     },
   )
 
-  it('does not bracket eraseDown or a lone scrollback wipe', () => {
-    expect(transformFrameChunk('\x1b[J\x1b[3J', 'truecolor')).toBe('\x1b[J\x1b[3J')
+  it('keeps visible erase black and protects a scrollback wipe', () => {
+    const on = '\x1b[48;2;0;0;0m'
+    expect(transformFrameChunk('\x1b[J\x1b[3J', 'truecolor')).toBe(
+      `${on}\x1b[J\x1b[49m\x1b[3J${on}\x1b[49m`,
+    )
   })
 
   it('erases the display right after entering the alternate screen', () => {
     const out = transformFrameChunk('\x1b[?1049h\x1b[?25l', 'truecolor')
     expect(out).toBe(
-      '\x1b[?1049h\x1b[48;2;0;0;0m\x1b[2J\x1b[H\x1b[49m\x1b[?25l',
+      '\x1b[48;2;0;0;0m\x1b[?1049h\x1b[48;2;0;0;0m\x1b[2J\x1b[H\x1b[?25l\x1b[49m',
     )
   })
 
@@ -76,9 +79,21 @@ describe('transformFrameChunk', () => {
     expect(transformFrameChunk(chunk, 'none')).toBe(chunk)
   })
 
-  it('leaves content bytes and non-erase sequences alone', () => {
+  it('restores the frame background after content resets', () => {
     const chunk = '\x1b[38;2;255;0;0mred text\x1b[0m\x1b[?25h'
-    expect(transformFrameChunk(chunk, 'truecolor')).toBe(chunk)
+    const on = '\x1b[48;2;0;0;0m'
+    expect(transformFrameChunk(chunk, 'truecolor')).toBe(
+      `${on}\x1b[38;2;255;0;0mred text\x1b[0m${on}\x1b[?25h\x1b[49m`,
+    )
+  })
+
+  it('keeps centered gutters black across reset-separated physical rows', () => {
+    const on = '\x1b[48;2;0;0;0m'
+    const gutter = ' '.repeat(12)
+    const chunk = `${gutter}Hero\x1b[0m\n${gutter}Composer`
+    expect(transformFrameChunk(chunk, 'truecolor')).toBe(
+      `${on}${gutter}Hero\x1b[0m${on}\n${gutter}Composer\x1b[49m`,
+    )
   })
 })
 
@@ -98,7 +113,7 @@ describe('wrapStdoutForFrameBg', () => {
     const { sink, chunks } = collect()
     const wrapped = wrapStdoutForFrameBg(sink, () => '256')
     wrapped.write('\x1b[2Krow')
-    expect(chunks).toEqual(['\x1b[48;5;16m\x1b[2K\x1b[49mrow'])
+    expect(chunks).toEqual(['\x1b[48;5;16m\x1b[2Krow\x1b[49m'])
   })
 
   it('passes non-string chunks through', () => {

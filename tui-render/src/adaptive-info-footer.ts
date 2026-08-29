@@ -1,5 +1,6 @@
 /** Pure width-adaptive footer formatting for authoritative TUI status data. */
 
+import { formatCacheHitPercent } from '@deepseek-ai/dsh-token-meter/client'
 import { displayWidth, escapeContent } from './content.ts'
 import { truncateDisplay } from './tool-cards.ts'
 
@@ -43,28 +44,30 @@ function join(parts: readonly string[]): string {
   return parts.join(' · ')
 }
 
-function fitSegments(parts: readonly string[], columns: number): string | undefined {
-  const kept = [...parts]
-  while (kept.length > 0 && displayWidth(join(kept)) > columns) kept.pop()
-  return kept.length === 0 ? undefined : join(kept)
-}
-
-function primaryLine(view: AdaptiveInfoFooterView, columns: number): string {
-  const identity = `${escapeContent(view.provider)}/${escapeContent(view.model)}`
+function workspaceLine(view: AdaptiveInfoFooterView, columns: number): string {
+  const environment = view.environment === undefined
+    ? undefined
+    : escapeContent(view.environment)
   const status = `状态 ${escapeContent(view.status)}`
-  const effort = view.effort === undefined ? undefined : `强度 ${escapeContent(view.effort)}`
-  const complete = join([identity, status, ...(effort === undefined ? [] : [effort])])
-  if (displayWidth(complete) <= columns) return complete
-  const core = join([identity, status])
-  if (displayWidth(core) <= columns) return core
-  const statusWidth = displayWidth(` · ${status}`)
-  if (statusWidth < columns) {
-    return `${truncateDisplay(identity, columns - statusWidth)} · ${status}`
+  let core = environment === undefined ? status : join([environment, status])
+  if (displayWidth(core) > columns && environment !== undefined) {
+    const statusWidth = displayWidth(` · ${status}`)
+    core = statusWidth < columns
+      ? `${truncateDisplay(environment, columns - statusWidth)} · ${status}`
+      : truncateDisplay(status, columns)
+  }
+  const retry = view.retry === undefined ? undefined : retryText(view.retry)
+  for (const segment of [retry, view.tip === undefined ? undefined : escapeContent(view.tip)]) {
+    if (segment !== undefined && segment !== '' && displayWidth(`${core} · ${segment}`) <= columns) {
+      core = `${core} · ${segment}`
+    }
   }
   return truncateDisplay(core, columns)
 }
 
-function metricLine(view: AdaptiveInfoFooterView, columns: number): string | undefined {
+function identityMetricsLine(view: AdaptiveInfoFooterView, columns: number): string {
+  const identity = `${escapeContent(view.provider)}/${escapeContent(view.model)}`
+  const effort = view.effort === undefined ? undefined : `强度 ${escapeContent(view.effort)}`
   const pressure = view.contextPressure
   const used = pressure?.projectedTokens ?? pressure?.pressureTokens
   const context = used === undefined
@@ -73,40 +76,34 @@ function metricLine(view: AdaptiveInfoFooterView, columns: number): string | und
       ? `上下文 ${String(used)}`
       : `上下文 ${String(used)}/${String(pressure.contextWindow)}`
   const usage = view.tokenUsage
-  const tokens = usage === undefined
-    ? undefined
-    : `tokens ${String(usage.uncachedInputTokens + usage.outputTokens)}`
-  const cache = usage === undefined
-    ? undefined
-    : `cache ${String(usage.cacheReadTokens + usage.cacheWriteTokens)}`
-  return fitSegments(
-    [context, tokens, cache].filter((value): value is string => value !== undefined),
-    columns,
-  )
+  const promptTokens = usage === undefined
+    ? 0
+    : usage.uncachedInputTokens + usage.cacheReadTokens + usage.cacheWriteTokens
+  const input = usage === undefined ? undefined : `↑${String(promptTokens)}`
+  const output = usage === undefined ? undefined : `↓${String(usage.outputTokens)}`
+  const cacheHit = usage === undefined
+    ? null
+    : formatCacheHitPercent(usage.cacheReadTokens, promptTokens)
+  const cache = cacheHit === null ? undefined : `缓存命中 ${cacheHit}%`
+  let line = truncateDisplay(identity, columns)
+  for (const segment of [effort, context, input, output, cache]) {
+    if (segment !== undefined && displayWidth(`${line} · ${segment}`) <= columns) {
+      line = `${line} · ${segment}`
+    }
+  }
+  return line
 }
 
-function tertiaryLine(view: AdaptiveInfoFooterView, columns: number): string | undefined {
-  if (view.retry !== undefined) {
-    const retry = view.retry
-    const attempt = retry.maxRetries === undefined
-      ? String(retry.retry)
-      : `${String(retry.retry)}/${String(retry.maxRetries)}`
-    const seconds = Math.max(0, Math.ceil(retry.remainingMs / 1000))
-    return truncateDisplay(
-      `重试 ${attempt} · ${String(seconds)}s · ${escapeContent(retry.failureCode)}`,
-      columns,
-    )
-  }
-  return fitSegments(
-    [view.environment, view.tip]
-      .filter((value): value is string => value !== undefined)
-      .map(escapeContent),
-    columns,
-  )
+function retryText(retry: AdaptiveRetryView): string {
+  const attempt = retry.maxRetries === undefined
+    ? String(retry.retry)
+    : `${String(retry.retry)}/${String(retry.maxRetries)}`
+  const seconds = Math.max(0, Math.ceil(retry.remainingMs / 1000))
+  return `重试 ${attempt} · ${String(seconds)}s · ${escapeContent(retry.failureCode)}`
 }
 
 /**
- * Format at most three physical footer lines. Whole low-priority segments
+ * Format at most two physical footer lines. Whole low-priority segments
  * disappear before core provider/model/status data is truncated; no cost
  * field exists because the runtime has no authoritative billing projection.
  * @param view - authoritative footer values.
@@ -119,9 +116,8 @@ export function formatAdaptiveInfoFooter(
 ): readonly string[] {
   const width = Math.max(1, columns)
   const lines = [
-    primaryLine(view, width),
-    metricLine(view, width),
-    tertiaryLine(view, width),
-  ].filter((line): line is string => line !== undefined && line !== '')
+    workspaceLine(view, width),
+    identityMetricsLine(view, width),
+  ].filter(line => line !== '')
   return Object.freeze(lines)
 }

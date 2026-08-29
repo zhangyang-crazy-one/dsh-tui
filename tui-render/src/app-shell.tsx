@@ -1,6 +1,6 @@
 /**
  * AppShell — the terminal surface frame: one top bar, the content slot, the
- * status slot, and the input slot, laid out relative to the terminal width.
+ * input slot, and the status slot, laid out relative to the terminal width.
  * @module @deepseek-ai/dsh-tui-render/app-shell
  */
 
@@ -116,7 +116,7 @@ export interface AppShellProps {
   badge: string
   /** Main scrollable area. */
   children: ReactNode
-  /** Status area under the content; the adaptive footer uses up to three rows. */
+  /** Status area under the input; the adaptive footer uses up to two rows. */
   status?: ReactNode
   /** Fixed input area at the bottom. */
   input?: ReactNode
@@ -125,16 +125,17 @@ export interface AppShellProps {
 /**
  * The shell frame. All sizes are relative (percent width or window-derived
  * columns), so a terminal resize re-lays out without absolute-column
- * assumptions. The frame owns the DeepSeek bg wiring (gap audit blocker#1):
- * every row the shell renders itself is painted through the bg token via
- * {@link paintRow}, so the pure-black strip survives each row's own SGR
- * resets and light terminals still show black-on-white body text. The title
+ * assumptions. The frame-output wrapper owns the full terminal background
+ * plane; centered gutters, blank rows, and short row tails therefore use the
+ * same `bg` token as content cells. Rows the shell renders itself also use
+ * {@link paintRow}, so nested SGR resets cannot expose the terminal default
+ * background. The title
  * and badge are fitted by {@link layoutTitleBar} so the top bar never
  * overflows the window. The thin `─` separator under the top bar is the L5
- * line vocabulary (thin only, no `═ ║`). Content/status/input slots paint
+ * line vocabulary (thin only, no `═ ║`). Content/input/status slots paint
  * their own rows (StreamView owns the conversation rows; a slot's own
  * subtree owns its lines). The frame is
- * exactly the terminal height so the composer pins to the screen bottom
+ * exactly the terminal height so the bottom workspace pins to the screen bottom
  * (Ink sizes its root by width only, so `height="100%"` cannot do this);
  * the content slot's flexGrow absorbs the leftover rows and its blank rows
  * stay black through the frame-fill erase bracketing.
@@ -164,14 +165,14 @@ export function AppShell({ title, badge, children, status, input }: AppShellProp
       <Box flexDirection="column" flexGrow={1} width="100%" overflow="hidden">
         {children}
       </Box>
-      {status !== undefined ? (
-        <Box flexDirection="row" width="100%" flexShrink={0}>
-          {status}
-        </Box>
-      ) : null}
       {input !== undefined ? (
         <Box flexDirection="row" width="100%" flexShrink={0}>
           {input}
+        </Box>
+      ) : null}
+      {status !== undefined ? (
+        <Box flexDirection="row" width="100%" flexShrink={0}>
+          {status}
         </Box>
       ) : null}
     </Box>

@@ -21,7 +21,22 @@ import { openUrl } from './open-url.ts'
 /** Scroll callback the loop registers for wheel and edge auto-scroll. */
 export type MouseScrollListener = (delta: number) => void
 
+/** Absolute terminal cells owned by the visible transcript rail. */
+export interface MouseRailRegion {
+  /** One-based terminal column. */
+  readonly col: number
+  /** One-based first rail row. */
+  readonly topRow: number
+  /** Number of interactive rail rows. */
+  readonly rows: number
+}
+
+/** Rail pointer position, zero at the oldest edge and one at the live edge. */
+export type MouseRailListener = (fraction: number) => void
+
 let scrollListener: MouseScrollListener | undefined
+let railListener: MouseRailListener | undefined
+let railRegion: MouseRailRegion | undefined
 
 /**
  * Register the loop's wheel/edge-scroll handler. `undefined` clears it.
@@ -41,6 +56,35 @@ export function notifyMouseScroll(delta: number): void {
   scrollListener?.(delta)
 }
 
+/**
+ * Register the loop's absolute rail-position handler.
+ * @param listener - next handler, or `undefined` to clear it.
+ */
+export function setMouseRailListener(listener: MouseRailListener | undefined): void {
+  railListener = listener
+}
+
+/**
+ * Publish the rail cells measured by the current StreamView.
+ * @param region - visible terminal cells, or `undefined` when no rail exists.
+ */
+export function setMouseRailRegion(region: MouseRailRegion | undefined): void {
+  railRegion = region
+}
+
+function railFraction(region: MouseRailRegion, row: number): number {
+  if (region.rows <= 1) return 1
+  return Math.max(0, Math.min((row - region.topRow) / (region.rows - 1), 1))
+}
+
+function hitRail(col: number, row: number): MouseRailRegion | undefined {
+  const region = railRegion
+  if (region === undefined || col !== region.col) return undefined
+  return row >= region.topRow && row < region.topRow + region.rows
+    ? region
+    : undefined
+}
+
 /** Drag and copy/click owner for one mounted TUI. */
 export class MouseSession {
   /** Cell atlas of bytes written through {@link feedStdout}. */
@@ -51,10 +95,12 @@ export class MouseSession {
   private selection:
     | { start: ScreenPoint; end: ScreenPoint }
     | undefined
+  private railDrag: MouseRailRegion | undefined
   private edgeTimer: ReturnType<typeof setInterval> | undefined
   private readonly openHref: (href: string) => void
   private readonly copy: (text: string) => void
   private readonly onScroll: MouseScrollListener
+  private readonly onRail: MouseRailListener
   private readonly startInterval: typeof setInterval
   private readonly stopInterval: typeof clearInterval
 
@@ -67,6 +113,7 @@ export class MouseSession {
     openUrl?: (href: string) => void
     copyText?: (text: string) => void
     onScroll?: MouseScrollListener
+    onRail?: MouseRailListener
     setInterval?: typeof setInterval
     clearInterval?: typeof clearInterval
   } = {}) {
@@ -76,6 +123,7 @@ export class MouseSession {
       // Production attachMouseIo always injects copyText; tests inject a spy.
     })
     this.onScroll = options.onScroll ?? notifyMouseScroll
+    this.onRail = options.onRail ?? (fraction => railListener?.(fraction))
     this.startInterval = options.setInterval ?? setInterval
     this.stopInterval = options.clearInterval ?? clearInterval
   }
@@ -92,8 +140,25 @@ export class MouseSession {
     const point: ScreenPoint = { col: event.col, row: event.row }
     if (event.kind === 'press' && event.button === 'left') {
       this.stopEdge()
+      const region = hitRail(event.col, event.row)
+      if (region !== undefined) {
+        this.railDrag = region
+        this.drag = undefined
+        this.selection = undefined
+        this.onRail(railFraction(region, event.row))
+        return
+      }
       this.drag = { start: point, moved: false }
       this.selection = { start: point, end: point }
+      return
+    }
+    if (event.kind === 'drag' && this.railDrag !== undefined && event.button === 'left') {
+      this.onRail(railFraction(this.railDrag, event.row))
+      return
+    }
+    if (event.kind === 'release' && this.railDrag !== undefined) {
+      this.onRail(railFraction(this.railDrag, event.row))
+      this.railDrag = undefined
       return
     }
     if (event.kind === 'drag' && this.drag !== undefined && event.button === 'left') {
@@ -147,6 +212,7 @@ export class MouseSession {
   /** Clear timers. */
   dispose(): void {
     this.stopEdge()
+    this.railDrag = undefined
   }
 
   private syncEdge(row: number): void {

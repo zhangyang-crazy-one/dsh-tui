@@ -2304,13 +2304,9 @@ export class RuntimeController implements TuiController {
         return
       }
       case 'scroll':
-        this.projector.setScroll(action.delta)
-        this.emit()
-        return
+      case 'scroll-page':
       case 'scroll-edge':
-        if (action.edge === 'oldest') this.projector.scrollToOldest()
-        else this.projector.followLatest()
-        this.emit()
+        // Transcript navigation is consumed by TuiLoop's measured viewport.
         return
       case 'command':
         this.runCommand(action.query)

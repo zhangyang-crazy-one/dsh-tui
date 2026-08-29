@@ -173,12 +173,6 @@ export interface ViewModel {
   activeTurn: ActiveTurn | undefined
   /** Rendering status. */
   status: 'generating' | 'stopped' | 'idle'
-  /** Scroll offset applied to the history window (j/k). */
-  scrollOffset: number
-  /** Whether new transcript rows keep the viewport attached to the live edge. */
-  follow: boolean
-  /** Rows appended while the viewport is away from the bottom. */
-  unseenCount: number
   /** Whether the reasoning fold is force-expanded (Ctrl+O toggle). */
   reasoningExpanded: boolean
   /** Whether tool cards in the current window are expanded (Ctrl+E toggle). */
@@ -192,9 +186,6 @@ export const EMPTY_VIEW: ViewModel = {
   expandedCompactionId: undefined,
   activeTurn: undefined,
   status: 'idle',
-  scrollOffset: 0,
-  follow: true,
-  unseenCount: 0,
   reasoningExpanded: false,
   toolCardsExpanded: false,
 }
@@ -212,24 +203,11 @@ export interface Projector {
    */
   seed(events: readonly SessionEvent[]): void
   /**
-   * Move the history viewport relative to the latest row, clamped to the available
-   * 60-row window; returning to the bottom clears the unread count.
-   * @param delta - signed row offset, where positive values move away from the bottom.
-   */
-  setScroll(delta: number): void
-  /** Detach and move to the oldest available transcript window. */
-  scrollToOldest(): void
-  /** Reattach to the live edge and clear unseen-row state. */
-  followLatest(): void
-  /**
    * Read the current projection without copying the frozen history array.
-   * @returns the latest history, active turn, render status, viewport anchor, unread count, and fold-display state.
+   * @returns the latest history, active turn, render status, and fold-display state.
    */
   snapshot(): ViewModel
 }
-
-/** Maximum frozen rows shown by the conversation viewport. */
-export const HISTORY_WINDOW_SIZE = 60
 
 /** Assistant blocks split into visible/reasoning content and live tool calls. */
 interface ProjectedAssistantBlocks {
@@ -318,9 +296,6 @@ export function createProjector(): Projector {
   let lastUsageOutputTokens: number | undefined
   let lastStepWallMs: number | undefined
   let assistantTurnCount = 0
-  let scrollOffset = 0
-  let follow = true
-  let unseenCount = 0
   let turnContent: ProjectedTurnContent[] = []
   let stepContent: ProjectedTurnContent[] = []
   let stepToolCalls: ProjectedToolCall[] = []
@@ -328,26 +303,12 @@ export function createProjector(): Projector {
   const reasoningStarts: number[] = []
   const reasoningEnds: number[] = []
 
-  function maxScrollOffset(): number {
-    return Math.max(0, history.length + compactionDividers.length - HISTORY_WINDOW_SIZE)
-  }
-
   function appendHistory(message: FrozenMessage): void {
-    const anchored = !follow
     history.push(deepFreeze(message))
-    if (anchored) {
-      scrollOffset = Math.min(scrollOffset + 1, maxScrollOffset())
-      unseenCount += 1
-    }
   }
 
   function appendCompaction(divider: CompactionDivider): void {
-    const anchored = !follow
     compactionDividers.push(deepFreeze(divider))
-    if (anchored) {
-      scrollOffset = Math.min(scrollOffset + 1, maxScrollOffset())
-      unseenCount += 1
-    }
   }
 
   function stampReasoningDurations(
@@ -573,22 +534,6 @@ export function createProjector(): Projector {
     seed(events: readonly SessionEvent[]) {
       for (const event of events) push(event)
     },
-    setScroll(delta: number) {
-      if (delta > 0) follow = false
-      scrollOffset = Math.min(
-        maxScrollOffset(),
-        Math.max(0, scrollOffset + delta),
-      )
-    },
-    scrollToOldest() {
-      follow = false
-      scrollOffset = maxScrollOffset()
-    },
-    followLatest() {
-      follow = true
-      scrollOffset = 0
-      unseenCount = 0
-    },
     snapshot(): ViewModel {
       return {
         history,
@@ -596,9 +541,6 @@ export function createProjector(): Projector {
         expandedCompactionId: undefined,
         activeTurn,
         status,
-        scrollOffset,
-        follow,
-        unseenCount,
         reasoningExpanded: false,
         toolCardsExpanded: false,
       }

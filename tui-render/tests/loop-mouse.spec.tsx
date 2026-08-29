@@ -25,7 +25,6 @@ const IDLE_MODEL: ViewModel = {
   history: [],
   activeTurn: undefined,
   status: 'idle',
-  scrollOffset: 0,
   reasoningExpanded: false,
   toolCardsExpanded: false,
 }
@@ -102,13 +101,13 @@ async function mount(ctrl: TuiController) {
 }
 
 describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
-  it('dispatches conversation scroll', async () => {
+  it('keeps conversation scroll inside the measured viewport', async () => {
     const dispatch = vi.fn()
     const instance = await mount(controller({ dispatch }))
     try {
       notifyMouseScroll(1)
       await instance.waitUntilRenderFlush()
-      expect(dispatch).toHaveBeenCalledWith({ kind: 'scroll', delta: 1 })
+      expect(dispatch).not.toHaveBeenCalled()
     } finally {
       instance.unmount()
     }

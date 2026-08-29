@@ -14,6 +14,7 @@ import { homedir } from 'node:os'
 import { Box, Text, useInput, usePaste, useWindowSize } from 'ink'
 import {
   createElement,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -49,16 +50,17 @@ import { TimelineView } from './timeline-view.tsx'
 import { TIMELINE_WINDOW } from './timeline-view.tsx'
 import { HELP_WINDOW } from './help-pane.tsx'
 import { InputBar } from './input-bar.tsx'
+import type { InputBarProps } from './input-bar.tsx'
 import { CommandMenu, completeFirst, completeSelected, filterCommands, moveSelectionIndex, resolveEnterQuery, COMMAND_MENU_WINDOW } from './command-menu.tsx'
 import type { CommandItem } from './command-menu.tsx'
 import { Mention, normalizeMentionInsertion } from './mention.tsx'
 import type { ListMentions, MentionCandidate, MentionPhase } from './mention.tsx'
 import { clampCaretIndex, moveCaretByGrapheme } from './composer-cursor.ts'
-import { setMouseScrollListener } from './mouse-io.ts'
+import { setMouseRailListener, setMouseScrollListener } from './mouse-io.ts'
 import { escapeContent, displayWidth } from './content.ts'
-import { paintRow, styled } from './theme.ts'
-import { HISTORY_WINDOW_SIZE } from './projection.ts'
+import { inkColor, paintBackgroundRow, paintRow, styled } from './theme.ts'
 import type { ViewModel } from './projection.ts'
+import type { TranscriptViewportCommand } from './transcript-viewport.ts'
 import type { InteractionState } from './interaction-state.ts'
 import type { ToolPresenterLookup } from './tool-cards.ts'
 import { truncateDisplay } from './tool-cards.ts'
@@ -82,6 +84,10 @@ import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
 import { keyActionFor } from './keymap.ts'
 import { QueueChip } from './queue-chip.tsx'
+import { conversationWidth } from './conversation-layout.ts'
+
+type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
+type TranscriptViewportCommandInput = WithoutSequence<TranscriptViewportCommand>
 
 /** The g-s chord window: a lone `g` arms the list toggle for this long. */
 export const CHORD_WINDOW_MS = 600
@@ -98,6 +104,7 @@ export type LoopAction =
   | { kind: 'toggle-compaction-divider' }
   | { kind: 'take-queued-draft' }
   | { kind: 'scroll'; delta: number }
+  | { kind: 'scroll-page'; delta: -1 | 1 }
   | { kind: 'scroll-edge'; edge: 'oldest' | 'latest' }
   | { kind: 'command'; query: string }
   | { kind: 'session-pane' }
@@ -1498,10 +1505,10 @@ export function mapKeyEvent(
     }
   }
   if (keyInfo.pageUp) {
-    return holdComposer(state, { kind: 'scroll', delta: HISTORY_WINDOW_SIZE })
+    return holdComposer(state, { kind: 'scroll-page', delta: 1 })
   }
   if (keyInfo.pageDown) {
-    return holdComposer(state, { kind: 'scroll', delta: -HISTORY_WINDOW_SIZE })
+    return holdComposer(state, { kind: 'scroll-page', delta: -1 })
   }
   if (keyInfo.home) {
     return holdComposer(state, { kind: 'scroll-edge', edge: 'oldest' })
@@ -1669,15 +1676,29 @@ export function statusLine(interaction: InteractionState): string {
 export const STATUS_HINT = '↑↓/jk 滚动'
 
 /**
+ * Plain status hint for width calculation and adaptive-footer formatting.
+ * @param interaction - the interaction state.
+ * @param occupied - whether a dialog owns input.
+ * @returns plain hint copy, or an empty string when hidden.
+ */
+export function statusHintText(
+  interaction: InteractionState,
+  occupied = false,
+): string {
+  if (occupied) return ''
+  if (interaction !== 'generating' && interaction !== 'stopped') return ''
+  return STATUS_HINT
+}
+
+/**
  * The fgDim key hint, shown only beside the generating/stopped status rows
  * (W2-T6); the exit-armed and idle states carry no hint.
  * @param interaction - the interaction state.
  * @returns the styled hint, or '' when the state shows none.
  */
 export function statusHint(interaction: InteractionState, occupied = false): string {
-  if (occupied) return ''
-  if (interaction !== 'generating' && interaction !== 'stopped') return ''
-  return styled(escapeContent(STATUS_HINT), 'fgDim')
+  const hint = statusHintText(interaction, occupied)
+  return hint === '' ? '' : styled(escapeContent(hint), 'fgDim')
 }
 
 /**
@@ -1765,20 +1786,6 @@ export function composeIdleComposerStatus(
   return truncateDisplay(line, Math.max(1, columns))
 }
 
-/** Loop-owned conversation view-shift cap in rows (↑/k paging a tall turn). */
-export const MAX_VIEW_SHIFT = 400
-
-/**
- * Clamp one loop-owned view-shift delta into [0, {@link MAX_VIEW_SHIFT}].
- * @param current - current shift in rows.
- * @param delta - +1 older (up), -1 newer (down).
- * @returns the clamped next shift.
- */
-export function clampViewShift(current: number, delta: number): number {
-  return Math.max(0, Math.min(current + delta, MAX_VIEW_SHIFT))
-}
-
-
 /**
  * The feedback row styled against the installed tier. The glyph is the
  * state symbol (03-UI-SPEC §5): a `✓`-prefixed line renders in success, any
@@ -1847,7 +1854,14 @@ export function TuiLoop({
   const [timelineOffset, setTimelineOffset] = useState(0)
   const [helpOffset, setHelpOffset] = useState(0)
   const [planReviewOffset, setPlanReviewOffset] = useState(0)
-  const [viewShift, setViewShift] = useState(0)
+  const viewportSequenceRef = useRef(0)
+  const [viewportCommand, setViewportCommand] = useState<TranscriptViewportCommand>()
+  const issueViewportCommand = useCallback((
+    command: TranscriptViewportCommandInput,
+  ): void => {
+    viewportSequenceRef.current += 1
+    setViewportCommand({ ...command, sequence: viewportSequenceRef.current })
+  }, [])
   const brandRevealStartedRef = useRef(false)
   const brandRevealStoppedRef = useRef(false)
   // The input and paste handlers fold and write the loop buffer. React runs
@@ -2063,16 +2077,17 @@ export function TuiLoop({
         )
         return
       }
-      // Mirror the key-scroll path: viewShift pages a tall visible turn before
-      // the 60-row projector window has anything to scroll.
-      setViewShift(previous => clampViewShift(previous, delta))
-      controller.dispatch({ kind: 'scroll', delta })
+      issueViewportCommand({ kind: 'scroll', delta })
     }
     setMouseScrollListener(listener)
+    setMouseRailListener((fraction) => {
+      issueViewportCommand({ kind: 'position', fraction })
+    })
     return () => {
       setMouseScrollListener(undefined)
+      setMouseRailListener(undefined)
     }
-  }, [controller])
+  }, [controller, issueViewportCommand])
   useInput((key, keyInfo) => {
     controller.noteUserActivity()
     const current = stateRef.current
@@ -2177,16 +2192,17 @@ export function TuiLoop({
           Math.max(0, Math.min(previous + action.delta, maxOffset)),
         )
       } else if (action.kind === 'scroll') {
-        // A loop-owned view-shift pages a tall turn before the 60-row
-        // projector window can; the controller still windows history.
-        setViewShift(previous => clampViewShift(previous, action.delta))
-        controller.dispatch(action)
+        issueViewportCommand({ kind: 'scroll', delta: action.delta })
+      } else if (action.kind === 'scroll-page') {
+        issueViewportCommand({ kind: 'page', delta: action.delta })
+      } else if (action.kind === 'scroll-edge') {
+        issueViewportCommand({ kind: 'edge', edge: action.edge })
       } else if (
-        action.kind === 'scroll-edge'
-        || action.kind === 'send'
+        action.kind === 'send'
         || action.kind === 'new-session'
+        || action.kind === 'select-session'
       ) {
-        setViewShift(0)
+        issueViewportCommand({ kind: 'reset' })
         controller.dispatch(action)
       } else if (action.kind === 'intake-clipboard-image') {
         void controller.intakeClipboardImage().then((result) => {
@@ -2351,7 +2367,7 @@ export function TuiLoop({
     sessionStats === undefined
       ? undefined
       : `${sessionStats.turns} turns · ${sessionStats.decodeTokens} tok · ${sessionStats.llmMs} ms`
-  const scrollHint = statusHint(interaction, statusOccupied)
+  const scrollHint = statusHintText(interaction, statusOccupied)
   let restPlain = identityStatus
   if (statusLabel !== '') {
     restPlain = scrollHint === '' ? statusLabel : `${statusLabel} · ${scrollHint}`
@@ -2366,17 +2382,6 @@ export function TuiLoop({
     )
     goalRuns = goalFooterRuns(goalFooter, budget)
   }
-  // The idle row never wraps: goal stays first, then cwd/provider-model, with
-  // aggregate stats and `/` `@` hints dropping before the row truncates.
-  const goalWidth =
-    goalRuns === undefined ? 0 : displayWidth(`${goalRuns.head} · ${goalRuns.objective} · `)
-  const idleTail = composeIdleComposerStatus(
-    Math.max(1, columns - goalWidth),
-    controller.getCwd(),
-    badge,
-    homedir(),
-    statsText,
-  )
   const adaptiveLines = adaptiveInfoFooter === undefined
     ? []
     : formatAdaptiveInfoFooter({
@@ -2385,42 +2390,80 @@ export function TuiLoop({
       tip: statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
     }, columns)
   let status: ReactNode
+  let statusRowCount: number
   if (feedback !== undefined) {
-    status = createElement('ink-text', null, paintRow([feedbackLine(feedback) as string]))
+    statusRowCount = 1
+    status = createElement(
+      Box,
+      {
+        flexDirection: 'column',
+        width: '100%',
+        backgroundColor: inkColor('codeBg'),
+      },
+      createElement(
+        Text,
+        null,
+        paintBackgroundRow([feedbackLine(feedback) as string], 'codeBg', columns),
+      ),
+    )
   } else if (adaptiveLines.length > 0) {
     const goalLine = goalRuns === undefined
       ? undefined
       : `${goalRuns.head} · ${goalRuns.objective}`
-    const primaryAdaptiveLine = adaptiveLines[0]
     const visibleLines = goalLine === undefined
       ? adaptiveLines
       : [
-        goalLine,
-        primaryAdaptiveLine,
-        adaptiveLines.find(line => line.startsWith('重试 ')) ?? adaptiveLines[1],
-      ].filter((line): line is string => line !== undefined)
+        truncateDisplay(`${goalLine} · ${adaptiveLines[0] ?? ''}`, Math.max(1, columns)),
+        adaptiveLines[1],
+      ].filter((line): line is string => line !== undefined && line !== '')
+    statusRowCount = visibleLines.length
     status = createElement(
       Box,
-      { flexDirection: 'column', width: '100%' },
+      {
+        flexDirection: 'column',
+        width: '100%',
+        backgroundColor: inkColor('codeBg'),
+      },
       ...visibleLines.map((line, index) => createElement(
         Text,
         { key: `adaptive-footer-${String(index)}` },
-        paintRow([styled(line, line.startsWith('重试 ') ? 'accent' : 'fgDim')]),
+        paintBackgroundRow([
+          styled(line, line.includes('重试 ') ? 'accent' : 'fgDim'),
+        ], 'codeBg', columns),
       )),
     )
-  } else if (statusLabel === '') {
-    status = createElement(
-      'ink-text',
-      null,
-      paintRow([
-        ...(goalRuns === undefined
-          ? []
-          : [styled(goalRuns.head, 'fg'), styled(` · ${goalRuns.objective} · `, 'fgDim')]),
-        styled(escapeContent(idleTail), 'fgDim'),
-      ]),
-    )
   } else {
-    status = createElement('ink-text', null, statusSlot(interaction, statusOccupied, goalRuns))
+    const goal = goalRuns === undefined
+      ? undefined
+      : `${goalRuns.head} · ${goalRuns.objective}`
+    const workspace = [
+      goal,
+      escapeContent(shortenHomePath(controller.getCwd(), homedir())),
+      statusLabel === '' ? '状态 空闲' : statusLabel,
+    ].filter((part): part is string => part !== undefined && part !== '')
+    const identity = [
+      badge === '' ? undefined : escapeContent(badge),
+      statsText,
+      statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
+    ].filter((part): part is string => part !== undefined && part !== '')
+    const visibleLines = [
+      truncateDisplay(workspace.join(' · '), Math.max(1, columns)),
+      truncateDisplay(identity.join(' · '), Math.max(1, columns)),
+    ].filter(line => line !== '')
+    statusRowCount = visibleLines.length
+    status = createElement(
+      Box,
+      {
+        flexDirection: 'column',
+        width: '100%',
+        backgroundColor: inkColor('codeBg'),
+      },
+      ...visibleLines.map((line, index) => createElement(
+        Text,
+        { key: `fallback-footer-${String(index)}` },
+        paintBackgroundRow([styled(line, 'fgDim')], 'codeBg', columns),
+      )),
+    )
   }
   const brandBlocked =
     state.text !== ''
@@ -2461,17 +2504,18 @@ export function TuiLoop({
     brandTier,
     brandAnimation,
     brandFrameProbe,
-    viewShift,
+    viewportCommand,
   })
+  const conversationColumns = conversationWidth(columns)
   const hudRows: ReactNode[] = []
   if (todoHud !== undefined && todoHud.length > 0) {
-    hudRows.push(createElement(TodoHud, { todos: todoHud, maxCols: columns }))
+    hudRows.push(createElement(TodoHud, { todos: todoHud, maxCols: conversationColumns }))
   }
   if (jobsHud !== undefined && jobsHud.length > 0) {
-    hudRows.push(createElement(JobsHud, { jobs: jobsHud, maxCols: columns }))
+    hudRows.push(createElement(JobsHud, { jobs: jobsHud, maxCols: conversationColumns }))
   }
   if (workflowHud !== undefined) {
-    hudRows.push(createElement(WorkflowHud, { run: workflowHud, maxCols: columns }))
+    hudRows.push(createElement(WorkflowHud, { run: workflowHud, maxCols: conversationColumns }))
   }
   if (composerHud !== undefined && composerHud !== '') {
     hudRows.push(createElement(Text, null, paintRow([styled(escapeContent(composerHud), 'fg')])))
@@ -2482,7 +2526,16 @@ export function TuiLoop({
   const conversation =
     hudRows.length === 0
       ? streamView
-      : createElement(Box, { flexDirection: 'column', width: '100%' }, streamView, ...hudRows)
+      : createElement(
+        Box,
+        { flexDirection: 'column', width: '100%' },
+        streamView,
+        createElement(
+          Box,
+          { flexDirection: 'column', alignItems: 'center', width: '100%' },
+          createElement(Box, { flexDirection: 'column', width: conversationColumns }, ...hudRows),
+        ),
+      )
   const overlayBrowseOpen =
     agentHubPane.open
     || planDirectoryPane.open
@@ -2569,6 +2622,10 @@ export function TuiLoop({
   } else {
     content = conversation
   }
+  const inputBar = (props: InputBarProps): ReactNode => createElement(InputBar, {
+    ...props,
+    rowsBelow: (props.rowsBelow ?? 0) + statusRowCount,
+  })
   let inputSlot: ReactNode
   if (approvalPane.open) {
     inputSlot = createElement(ApprovalPane, {
@@ -2608,7 +2665,7 @@ export function TuiLoop({
   ) {
     // The model-panel filter, the search query, and the workspace path draft
     // live in the composer slot.
-    inputSlot = createElement(InputBar, {
+    inputSlot = inputBar({
       text: state.text,
       commandMode: false,
       mentionMode: false,
@@ -2630,7 +2687,7 @@ export function TuiLoop({
     inputSlot = createElement(
       Box,
       { flexDirection: 'column', width: '100%' },
-      createElement(InputBar, {
+      inputBar({
         text: state.text,
         commandMode,
         mentionMode,
@@ -2644,13 +2701,27 @@ export function TuiLoop({
       }),
     )
   } else if (mentionMode) {
-    inputSlot = createElement(Mention, {
-      phase: mentionPhase,
-      candidates: mentionCandidates,
-      selectedIndex: state.mentionSelectedIndex,
-    })
+    const mentionRows = mentionPhase === 'loading' || mentionCandidates.length === 0
+      ? 1
+      : mentionCandidates.length + new Set(mentionCandidates.map(candidate => candidate.kind)).size
+    inputSlot = createElement(
+      Box,
+      { flexDirection: 'column', width: '100%' },
+      inputBar({
+        text: state.text,
+        commandMode,
+        mentionMode,
+        caretIndex: state.caretIndex,
+        rowsBelow: mentionRows,
+      }),
+      createElement(Mention, {
+        phase: mentionPhase,
+        candidates: mentionCandidates,
+        selectedIndex: state.mentionSelectedIndex,
+      }),
+    )
   } else {
-    inputSlot = createElement(InputBar, {
+    inputSlot = inputBar({
       text: state.text,
       commandMode,
       mentionMode,

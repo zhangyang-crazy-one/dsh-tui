@@ -48,11 +48,8 @@ const IDLE_MODEL: ViewModel = {
   history: [],
   activeTurn: undefined,
   status: 'idle',
-  scrollOffset: 0,
-  follow: true,
   reasoningExpanded: false,
   toolCardsExpanded: false,
-  unseenCount: 0,
 }
 const EMPTY_PANE: SessionPaneState = {
   rows: [],
@@ -245,7 +242,7 @@ describe('TuiLoop real input path', () => {
     }
   })
 
-  it('dispatches each key action exactly once, outside the render phase', async () => {
+  it('keeps viewport navigation local and dispatches controller actions once', async () => {
     const dispatch = vi.fn()
     const owners: (string | null)[] = []
     const { instance, stdin } = mount(stubController(dispatch, owners))
@@ -254,10 +251,9 @@ describe('TuiLoop real input path', () => {
       await press(stdin, 'j')
       await press(stdin, '\x03')
       await instance.waitUntilRenderFlush()
-      expect(dispatch).toHaveBeenCalledWith({ kind: 'scroll', delta: -1 })
       expect(dispatch).toHaveBeenCalledWith({ kind: 'sigint' })
-      expect(dispatch).toHaveBeenCalledTimes(2)
-      expect(owners).toEqual([null, null])
+      expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(owners).toEqual([null])
       expect(renderPhaseErrors()).toEqual([])
     } finally {
       instance.unmount()
@@ -879,7 +875,7 @@ describe('TuiLoop real input path', () => {
     )
     expect(out).toContain('· 待办 写快照')
     expect(out).toContain('待发 2 · ↑ 取出')
-    expect(out).toContain('\x1b[38;2;77;107;254m> ')
+    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
   })
   it('paints the goal footer and todo HUD while the composer keeps input', async () => {
     applyTheme('truecolor')
@@ -941,7 +937,7 @@ describe('TuiLoop real input path', () => {
       expect(noteUserActivity).toHaveBeenCalledTimes(2)
       // The activity stamp precedes the dispatch in the loop, mirroring the
       // product path so the quiet-input window arms before the action fires.
-      expect(dispatch).toHaveBeenCalledTimes(2)
+      expect(dispatch).toHaveBeenCalledTimes(1)
       expect(renderPhaseErrors()).toEqual([])
     } finally {
       instance.unmount()

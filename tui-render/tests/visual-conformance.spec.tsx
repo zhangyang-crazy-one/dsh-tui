@@ -50,7 +50,6 @@ const IDLE_MODEL: ViewModel = {
   history: [],
   activeTurn: undefined,
   status: 'idle',
-  scrollOffset: 0,
   reasoningExpanded: false,
   toolCardsExpanded: false,
 }
@@ -185,31 +184,31 @@ describe('dynamic title hierarchy', () => {
 })
 
 describe('conversation column', () => {
-  it('uses the bounded transcript width on wide terminals', () => {
-    expect(conversationWidth(80)).toBe(57)
-    expect(conversationWidth(120)).toBe(86)
-    expect(conversationWidth(123)).toBe(88)
-    expect(conversationWidth(200)).toBe(88)
+  it('uses near-full width on wide terminals', () => {
+    expect(conversationWidth(80)).toBe(76)
+    expect(conversationWidth(120)).toBe(116)
+    expect(conversationWidth(123)).toBe(119)
+    expect(conversationWidth(200)).toBe(196)
     expect(conversationWidth(1)).toBe(1)
   })
 
   it('never collapses to zero columns', () => {
     expect(conversationWidth(0)).toBe(1)
     expect(conversationWidth(10)).toBe(10)
-    expect(conversationWidth(40)).toBe(40)
-    expect(conversationWidth(79)).toBe(79)
+    expect(conversationWidth(39)).toBe(39)
+    expect(conversationWidth(40)).toBe(36)
+    expect(conversationWidth(79)).toBe(75)
   })
 
-  it('left-aligns user and assistant rows and keeps two blank rows between blocks', () => {
+  it('centers user and assistant rows and keeps two blank rows between blocks', () => {
     const history: ViewModel['history'] = [
-      { kind: 'user', text: 'hello', timestamp: 1_000 },
-      { kind: 'assistant', text: 'world', timestamp: 2_000 },
+      { id: 1, kind: 'user', text: 'hello', timestamp: 1_000 },
+      { id: 2, kind: 'assistant', text: 'world', timestamp: 2_000 },
     ]
     const out = renderStream({
       history,
       activeTurn: undefined,
       status: 'idle',
-      scrollOffset: 0,
       reasoningExpanded: false,
       toolCardsExpanded: false,
     })
@@ -225,7 +224,7 @@ describe('conversation column', () => {
     const userLead = userPlain.length - userPlain.trimStart().length
     const assistantLead = assistantPlain.length - assistantPlain.trimStart().length
     expect(userLead).toBe(assistantLead)
-    expect(userLead).toBe(0)
+    expect(userLead).toBe(Math.ceil((80 - conversationWidth(80)) / 2))
     expect(userPlain.trim()).toBe('> hello')
     expect(assistantPlain.trim()).toBe('● world')
     // Exactly two blank rows between message blocks (02-UI-SPEC §1.2 T2).
@@ -243,7 +242,6 @@ describe('conversation column', () => {
         reasoningDurationMs: 100,
       },
       status: 'idle',
-      scrollOffset: 0,
       reasoningExpanded: false,
       toolCardsExpanded: false,
     })
@@ -321,7 +319,6 @@ describe('theme tiers', () => {
       history: [{ kind: 'user', text: 'hi', timestamp: 1_000 }],
       activeTurn: undefined,
       status: 'idle',
-      scrollOffset: 0,
       reasoningExpanded: false,
       toolCardsExpanded: false,
     })
@@ -363,18 +360,17 @@ describe('frame bg/fg wiring', () => {
     }
   })
 
-  it('left-aligns user rows in the conversation column with fgDim marker plus fg body', () => {
+  it('centers user rows in the conversation column with fgDim marker plus fg body', () => {
     applyTheme('16')
     const out = renderStream({
       history: [{ kind: 'user', text: 'hello', timestamp: 1_000 }],
       activeTurn: undefined,
       status: 'idle',
-      scrollOffset: 0,
       reasoningExpanded: false,
       toolCardsExpanded: false,
     })
     const line = out.split('\n').find(l => stripAnsi(l).includes('> hello'))
-    expect(stripAnsi(line ?? '')).toBe('> hello')
+    expect(stripAnsi(line ?? '').trimStart()).toBe('> hello')
     const prefix = (line ?? '').slice(0, (line ?? '').indexOf('>'))
     expect(prefix).toContain('\x1b[40m')
     expect(line).toContain('\x1b[90m> ')
@@ -393,7 +389,6 @@ describe('frame bg/fg wiring', () => {
         reasoningDurationMs: 100,
       },
       status: 'generating',
-      scrollOffset: 0,
       reasoningExpanded: false,
       toolCardsExpanded: false,
     })
@@ -446,9 +441,30 @@ describe('status copy and hint', () => {
         controller: stubController({ getInteraction: () => 'generating' }),
       }),
     )
-    expect(out).toContain('\x1b[38;2;77;107;254m⏹ Ctrl+C 停止')
+    expect(out).toContain('\x1b[48;2;15;17;21m')
+    expect(out).toContain('/workspace · ⏹ Ctrl+C 停止')
     expect(out).toContain('↑↓/jk 滚动')
     expect(out).not.toContain('/ 命令')
+  })
+
+  it('keeps the adaptive scroll hint plain until the final style layer', () => {
+    const adaptive = {
+      provider: 'deepseek-official',
+      model: 'deepseek-v4-flash',
+      status: '生成中',
+    }
+    const out = renderToString(
+      createElement(TuiLoop, {
+        title: 't',
+        controller: stubController({
+          getInteraction: () => 'generating',
+          getAdaptiveInfoFooter: () => adaptive,
+        }),
+      }),
+    )
+    const plain = stripAnsi(out)
+    expect(plain).toContain('↑↓/jk 滚动')
+    expect(plain).not.toContain('\\x1b[')
   })
 
   it('paints cwd, badge, and command hints on the idle status row', () => {
@@ -458,7 +474,8 @@ describe('status copy and hint', () => {
         controller: stubController(),
       }),
     )
-    expect(out).toContain('/workspace · provider · model · / 命令 · @ 提及')
+    expect(out).toContain('/workspace · 状态 空闲')
+    expect(out).toContain('provider · model · / 命令 · @ 提及')
     expect(out).toContain('输入消息')
     expect(out).toContain('\x1b[38;2;138;143;152m')
   })

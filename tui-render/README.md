@@ -1,5 +1,5 @@
 ---
-description: "The Ink terminal rendering library for DSH callers projecting bounded conversation state, panels, Markdown, tool cards, and terminal input."
+description: "The Ink terminal rendering library for callers projecting bounded session history, panels, Markdown, tool cards, and terminal input."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-tui-render` lets the DSH terminal runtime render bounded conversation state, Markdown, tool cards, overlays, status rows, and input through Ink. A caller supplies controller state and actions, then receives an alternate-screen interface and a disposer that releases the mounted terminal resources. The library does not register a Cordis service, own an Agent, read persistence, or issue a model request. Use it from `@deepseek-ai/dsh-tui` or another terminal host that already owns those responsibilities.
+`@deepseek-ai/dsh-tui-render` lets the terminal runtime project bounded session history, panels, Markdown, tool cards, and input through Ink. Callers supply a controller snapshot and receive terminal rendering and input actions without giving the library ownership of agents or persistence. The package registers no Cordis service and issues no model request.
 
 ## Table of Contents
 
@@ -25,30 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-### When to use it
-
-Use the library when a DSH runtime already owns terminal lifecycle inputs, session projection, persistence access, and controller actions but needs an Ink presentation layer. Do not install it as a profile bundle and do not mount it as a Cordis plugin; it exports plain rendering functions and types.
-
-### Entry point
-
-`mountTuiRender` mounts a React node on the alternate screen and returns the matching disposer:
-
-```text
-import { Text } from 'ink'
-import { createElement } from 'react'
-import { mountTuiRender } from '@deepseek-ai/dsh-tui-render'
-
-const dispose = mountTuiRender(createElement(Text, null, 'ready'))
-try {
-  // The terminal host owns its controller and application lifecycle here.
-} finally {
-  dispose()
-}
-```
-
-`mountTuiLoop(controller, options)` is the assembled TUI entry when the caller already implements `TuiController`. The mount configures the alternate screen, detected color and hyperlink tiers, frame background handling, and mouse I/O. The disposer unmounts Ink and releases the mouse adapter; the host must call it during normal shutdown and error cleanup.
-
-Pure exports such as projection, width measurement, Markdown rendering, terminal capability detection, and panel components support focused consumers and tests without mounting a full application. The source entry point owns the exact export list.
+The `dsh-tui` runtime imports this library when it already owns terminal lifecycle and a `TuiController`. Use [`mountTuiRender`](src/index.ts) to mount the Ink tree and dispose the returned handle during runtime teardown; use the pure projection and layout exports for owner tests and alternate terminal hosts.
 
 -----
 
@@ -58,20 +35,26 @@ Pure exports such as projection, width measurement, Markdown rendering, terminal
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The renderer follows a one-way ownership model. The DSH runtime folds durable events and live services into controller snapshots; `TuiLoop` observes those snapshots, projects bounded view state, renders it through Ink, and sends input actions back to the controller. No renderer component reaches into persistence or an Agent.
+### Contract
 
-The layout keeps one conversation column, pins the composer and status area to the bottom, and windows long histories. Terminal capabilities are resolved before presentation: content is escaped before styling, display width is measured in terminal columns, and unsupported color, hyperlink, brand, mouse, clipboard, or notification features degrade without changing the underlying text.
+- `TuiLoop` observes a `TuiController` snapshot and dispatches input actions without accessing agent or persistence services. The top-bar title is `controller.getTitle()`: a folded `session/title` except a `fallback` title that coexists with a human user message (that echo is a directory-row label only). Before a provider or rename title exists the loop shows the compact mount title `DeepSeek · deepseek-tui`; the large generated FishLogo remains in the empty home rather than the top bar. While `getApprovalPane().open` is true the composer slot is `ApprovalPane` (`等待审批`, footnote `y 允许一次 · n 拒绝 · i 详情`); while `getAskUserPane().open` is true it is `AskUserPane` (numbered labels, footnote `↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问`). StreamView stays in `children` in both cases; `g s` (composer buffer exactly `g`) / Ctrl+K / Ctrl+T / `/help` / empty `/permission` / empty `/settings` do not open browse panels. While `getSettingsPane().open` is true the conversation column is `SettingsPane` (`设置`, or `首次设置` when `onboarding` is set; `namespace · field` rows such as `llm-deepseek · baseURL`); browse leaves the composer empty (`↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭`) and edit uses `InputBar`. `getSubmitOnEnter()` is false when Enter should insert a newline. `InputBar` segments ordinary text, slash commands, `@` mentions, and durable `[图片 #N]` placeholders into exact, lossless slices; styling changes only their presentation and the `none` color tier preserves the same literal text. `CommandMenu` paints under it as a two-column list (`/{name}` left, description right), both sides escaped; command and mention menus share Up/Down and j/k selection, and the selected row uses an accent `›` and an `fg` name. Enter on a non-empty `/` query executes the highlighted name-prefix match and keeps trailing arguments; empty `/` plus Enter does not fire a directory item.
+- `createProjector()` treats only `user/message` events with `source.kind === 'user'` as human transcript rows. Agent instructions, plugin context, skill catalogs, and future non-user sources remain durable and model-visible without appearing as user-authored terminal messages.
+- `SessionPane` renders supplied session rows, selection and delete confirmation state; persistence reads and mutations remain runtime-owned.
+- **AppShell / StreamView layout** — the top bar sits above a thin full-width `─` separator; thick `═ ║` chrome is not used. `layoutTitleBar` fits the title and badge into the window width (badge truncates first when the title still fits; a one-column `…` marks a cut; wide glyphs stay whole). `conversationWidth` uses the complete width below 40 columns and otherwise leaves two safe columns on each side, while the generated official FishLogo, `DeepSeek` wordmark, and greeting remain independently centered. The transcript, reasoning, Markdown tables, tool cards, and related HUDs use this near-full-width reading area so structured output is not forced through an 88-column cap. A Markdown table satisfies natural column widths first and assigns the remaining row budget to its final column, aligning the complete box with the reading area's right axis. Markdown subtracts its painted speaker/indent prefix and streaming cursor from the wrap budget before laying out body text, so Ink truncation cannot remove characters from long output. `InputBar` is a separate full-width `codeBg` workspace with an accent left rail, title/hint row, and draft rows; the full-width status band follows it and uses at most two rows for workspace/status and provider/model/metrics. Resize reflows both areas, and low height selects a smaller brand tier before it can displace the bottom workspace. StreamView clips one fixed content slot and owns the only transcript scroll coordinate in wrapped physical terminal rows. ↑/k and ↓/j move one physical row, PageUp/PageDown move one viewport minus one row, Home reaches the oldest row, and End or an empty-composer `G` atomically reattaches to the latest row. Ordinary downward navigation and a rail jump to the live edge also restore follow mode and clear unseen rows. A detached viewport retains `{blockId,rowWithinBlock,viewportRow}` while streaming, freeze, tool completion, compaction, measurement refinement, or resize changes surrounding layout. `↓ 最新消息 · {n}` is a fixed bottom-right control-layer notice and counts only appended physical rows; the overflow-only rail occupies the terminal's rightmost control column without covering the reading area, and primary-button click or drag maps that rail to the oldest-through-live range before text selection can start. The complete history retains estimated layouts while only the viewport plus one-screen overscan is mounted; measured heights are cached by block version and width/theme/fold scope. User and assistant rows left-align in the reading area; `>` / `●` distinguish speakers without a background plate or opposite edges. An assistant turn paints chronological reasoning, prose, and tool cards; settled reasoning and tools stay compact, only the current reasoning run remains live, final Markdown remains the strongest content, and TurnTail/completion metadata stays dim. Message blocks retain two blank rows between them and one inside the active turn. In colored tiers, `frame-fill` keeps the `bg` token active for each complete Ink string write and reapplies it after SGR resets. The input and status bands use Ink full-width Box geometry, while `paintBackgroundRow` restores `codeBg` around reset-terminated content runs and emits the remaining measured background cells; every layout cell is therefore painted without depending on Text-embedded line erasure, terminal BCE, or Ink retaining Box-tail spaces. Visible-screen and line erases inherit the page background; scrollback erasure temporarily restores the terminal default, and the write ends with the default restored. The `none` tier adds no background ANSI.
+- `mountTuiRender()` owns the Ink alternate-screen lifecycle and returns the matching unmount disposer; before the first render it installs the color tier detected from the environment (`installTheme(env)`, default `process.env`, injectable for tests), so every `styled()` call in the tree maps through the detected tier (truecolor → 256 → 16 → none). The same snapshot installs OSC 8 (`installHyperlinks(env)`). When given a `frameProbe` it wraps the tree in a `FrameProbe` so every React commit records its render cost.
+- **Mouse and OSC 8** — on a TTY pair `mountTuiRender` enables SGR mouse (`1000`/`1002`/`1006`), strips reports from Ink's stdin, and disables tracking on unmount even when `render` throws. Unknown terminals and tmux/screen that do not advertise hyperlink forwarding keep plain text, with a dim `(href)` when the label differs from the href (`mailto:` compared without the scheme). Markdown links and collapsed tool-card summaries wrap already-styled text in OSC 8 after `escapeContent`/`styled`; only `http(s):`/`mailto:`/`file:` hrefs wrap or open. Every painted stdout chunk feeds the selection `ScreenAtlas` through one grapheme traversal; CSI and OSC readers advance absolute offsets in that original string, preserving split-sequence carry-over without allocating the remaining frame per cell. Wheel maps to the visible pane's j/k action (one line per event; settings edit/onboarding ignore it). A primary-button press in the published rail cells owns click and drag positioning until release and never copies transcript text; outside the rail, primary-button drag copies reading-order text via OSC 52 (capped at 100_000 characters) then a host clipboard helper, while a click opens the href under the cell through the host opener.
+- **Generated brand and theme styling** — `scripts/gen-tui-brand.ts` reads the exact `viewBox`, path data, and `currentColor` fill from the repository-owned `FishLogo.tsx` source without importing client runtime code. Deterministic nonzero-fill rasterization preserves the viewBox ratio within 2% on a 44×32 logical bitmap and packs it into the 44×16 A half-block tier; generation rejects stretched dimensions before emitting an artifact. B full-block and C ASCII derive from that same bitmap, followed by the plain `DeepSeek` wordmark. Four A-tier reveal frames keep every contour cell byte-identical and vary only exterior particles. `verify-tui-brand`, included in `doc-sync`, rejects any stale generated artifact. The generic whale emoji is not a brand or fallback tier. `styled(escapeContent(text), token)` is the single styling path: content is escaped before styling, and each token (`accent`/`success`/`error`/`fgDim`/…, the closed `THEME_LEVELS` set) maps through the installed tier. Truecolor `accent` is DeepSeek logo blue `#4D6BFE`, not Grok/Tailwind `#3B82F6`. At `none` the text renders unstyled, so 16-color and no-color terminals stay readable. `formatAdaptiveInfoFooter` paints exactly the available subset of at most two physical rows from controller-provided workspace/status, provider/model, optional effort, context pressure, complete input/output token totals, cache-hit percentage, and a durable retry countdown. Input is uncached input plus cache-read and cache-write tokens; the percentage divides cache-read by that same total, disappears without prompt input, and never substitutes an opaque raw cache-token total. It drops whole low-priority segments as width narrows, escapes provider and failure text, and has no cost field because the runtime exposes no authoritative billing projection. The feedback row (`feedbackLine` — `✓` copy renders success, `✗` and other failure copy renders error), selected/list/timeline-current markers (accent), the generated idle contour and wordmark, the full-width input workspace, and panel footers (fgDim) complete the styled semantic matrix. Markdown renders through the same path: code spans map to tier tokens over a per-line `codeBg` strip (no hard-coded truecolor); inline emphasis, headings, GFM table headers, and links use accent (links then take the OSC 8 wrap above). Overlay pane titles stay bold fg.
+- `escapeContent`, `displayWidth`, `wcwidthSafeSlice`, `padDisplayEnd`, and `wrapDisplayLines` — the render layer owns control-byte escaping, display-width measurement, column padding, and column wrapping (the `string-width` dependency lives here); the host re-exports `escapeContent`, `displayWidth`, and `wcwidthSafeSlice` so host-side imports keep working. GFM tables share a display-width maximum per column (`padDisplayEnd`), wrap cells inside a box-drawing grid (`┌─┬─┐` / `├─┼─┤` / `└─┴─┘`), assign unused width to the final column, and fall back to wrapped ` | ` lines when the window cannot hold the chrome; markdown rows set Ink `wrap="truncate"` so a fitted line cannot wrap a second time and overwrite the row below.
+- `composerCursorPosition` / `composerFrameAnchor` / `clampCaretIndex` / `moveCaretByGrapheme` — pure composer caret geometry (row/col on the buffer's display grid: multiline, CJK/emoji width, no wide-glyph splits), grapheme-safe caret steps, and the CSI origin appended after Ink's frame write. `InputBar` publishes that origin during render onto the frame-fill stream at `caretIndex` (the end of the buffer if omitted). A TTY fullscreen frame (AppShell height equals the viewport, no trailing newline) leaves the cursor on the last output row, so the last composer line is `up = 0`; palette rows under the composer add `rowsBelow` to `up`; a non-TTY trailing-newline frame needs `up = 1`. Left/right that does not change the painted buffer still writes an absolute CUP so the hardware cursor follows `caretIndex` when Ink skips the frame. Ink 7.1.1 exposes no runtime IME composition state, so nothing detects composition and no key yields to it.
+- `FrameProbe` — commit-driven render-cost instrumentation: each React commit in the wrapped subtree records its Profiler `onRender` `actualDuration` into a bounded 120-sample ring summarized as `count`/`mean`/`max`/`p95` (read-only `frameStatsSnapshot()`). `renderMs` is the React render-phase cost of the root commit, while the dedicated `PixelFishHome` probe supplies `brandRenderMs`; neither is a wall-clock terminal-paint claim or includes the Ink host-diff/commit phase. `activeBrandRevealTimerCount()` supplies the matching owned-timeout sample. The Profiler wrapper fires `onRender` for every commit in the subtree even when its own props stay referentially stable, so a stable mount cannot hide child commits.
+- **Performance bounds** — immutable frozen assistant Markdown passes `settled` and reuses a parsed mdast; changing streaming sources always parse without entering that cache. Frozen Markdown rows are memoized by source, width, and theme tier. The mdast and syntax-token maps use independent 2,000-entry least-recently-used limits, exposed read-only through `markdownCacheInternals` for occupancy and hit/eviction tests. `transformFrameChunk` skips replacement scans for chunks without `ESC` and applies only the frame-background prefix and suffix in colored tiers.
 
-| Source | Responsibility |
-|---|---|
-| [`src/index.ts`](src/index.ts) | Public entry points, mount adapters, and the disposer contract |
-| [`src/loop.tsx`](src/loop.tsx) | Controller observation, interaction ownership, overlays, and input routing |
-| [`src/projection.ts`](src/projection.ts) | Durable session events to bounded terminal view state |
-| [`src/stream-view.tsx`](src/stream-view.tsx) | Ordered conversation, reasoning, tool, and completion rendering |
-| [`src/content.ts`](src/content.ts) | Control-byte escaping and terminal-column width operations |
-| [`src/terminal-capabilities.ts`](src/terminal-capabilities.ts) | Brand and notification capability selection |
+### Advanced interaction contract
 
-Exact rendered-cell evidence remains in the [assembled DSH TUI scenarios](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/apps/cli/tests).
+- Dialogs keep StreamView in the content slot and occupy the input slot; browse overlays replace the content and suppress the composer except during their editing states. Todo, jobs, and workflow HUD rows never capture input. The adaptive status band keeps workspace/status and provider/model, drops cache-hit/input/output and effort as complete segments when width requires it, and shows retry copy only between the matching durable `llm/retry` and `llm/retry-started` records. A current goal remains visible within the same two-line cap.
+- [`SessionPane`](src/session-pane.tsx) renders the controller-owned current parent as `会话 ID · {parentId}`, and [`AgentHubPane`](src/agent-hub-pane.tsx) renders each child as `子会话 ID · {childId}`. `SessionRow.id`, `SessionPaneState.currentId`, and `AgentHubRow.id` retain the exported `SessionId` type; fixture configuration does not supply these identities. [`session-pane.spec.tsx`](tests/session-pane.spec.tsx) and [`agent-hub-pane.spec.tsx`](tests/agent-hub-pane.spec.tsx) pin exact values and escaping.
+- The [`Mention`](src/mention.tsx) selection in [`loop.tsx`](src/loop.tsx) uses Up/Down or j/k to change the highlighted candidate. Enter inserts that target with exactly one trailing space and does not submit it; Escape dismisses the selection menu. [`composer-tokens.spec.ts`](tests/composer-tokens.spec.ts), [`mention.spec.tsx`](tests/mention.spec.tsx), and [`loop-input.spec.tsx`](tests/loop-input.spec.tsx) own lossless tokenization and the focused key behavior.
+- [`StreamView`](src/stream-view.tsx), [`ToolCard`](src/tool-card.tsx), and [`turn-tail.ts`](src/turn-tail.ts) render presenter-tagged folded cards, a width-aware dense digest, `── 已完成 ──`, and first-seen produced paths. [`visual-conformance.spec.tsx`](tests/visual-conformance.spec.tsx) owns the bounded layout rules; the assembled [`terminal.expected.txt`](../../../apps/cli/tests/snapshots/deepseek-tui-advanced-entry/terminal.expected.txt) owns settled 80x24 and 200x50 ScreenAtlas cells. The rationale and evidence ownership are recorded in the [advanced-capability Agent Note](../../../.agents/notes/implemented/feature/2026-08-18-tui-advanced-capability-entries.md).
 
 </details>
 
@@ -80,21 +63,22 @@ Exact rendered-cell evidence remains in the [assembled DSH TUI scenarios](https:
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [TUI repository map](../README.md) — package ownership and the DSH development workflow.
-- [TUI profile bundle](../tui/README.md) — controller, lifecycle, profile composition, and model-visible text.
-- [Terminal subsystem](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/docs/subsystems/terminal.md) — generated Cordis declarations and runtime relationships.
-- [Renderer tests in DSH](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui/tui-render/tests) — focused layout, input, terminal, and projection evidence.
+- [TUI package map](../README.md) — terminal runtime and renderer ownership.
+- [TUI profile layer](../tui/README.md) — controller, lifecycle, persistence, and assembled evidence.
+- [Terminal subsystem](../../../docs/subsystems/terminal.md) — terminal types and generated Cordis declarations.
+- [Advanced capability decision](../../../.agents/notes/implemented/feature/2026-08-18-tui-advanced-capability-entries.md) — rendering rationale and evidence ownership.
+- [Physical-row viewport and full-width workspace](../../../.agents/notes/implemented/bug-fix/2026-08-28-tui-physical-row-viewport-and-centered-layout.md) — the single scroll coordinate and HTML-design translation.
 
 -----
 
 <a id="model-experience"></a>
 ## Model Experience
 
-### Terminal presentation
+### Terminal conversation display
 
 #### What the model sees
 
-The renderer adds no prompt text, tool schema, session event, or model request. It displays the controller state supplied by the DSH runtime.
+The renderer adds no prompt text, tool schema, session event or model request; it only displays the runtime's `ViewModel`.
 
 #### Token effect
 
@@ -108,12 +92,11 @@ The renderer does not alter request prefixes or issue model requests, so it has 
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **DSH workspace required** — this private mirror retains DSH peer dependencies and TypeScript project references, so it is not a standalone build workspace.
-- **Capability fallback** — unavailable color, OSC 8, mouse, clipboard, notification, and brand features degrade to a lower terminal tier; the renderer does not emulate missing host capabilities.
-- **Mouse selection ownership** — SGR mouse mode replaces native terminal selection while mounted; copy uses the renderer's selection overlay and clipboard transports.
-- **Bounded history geometry** — the scroll rail represents the projected message window rather than exact wrapped physical rows, and one turn taller than the content slot can still be clipped.
-- **Caret geometry** — cursor placement assumes the application shell pins the composer to the bottom and does not model host soft-wrapping beyond the measured terminal columns.
-- **Runtime-owned data** — session search, timeline, export, settings, permissions, and persistence operations must be supplied by the host controller.
+- **Terminal capability fallback** — color, OSC 8, and syntax highlighting degrade to lower terminal tiers; the renderer does not emulate unavailable terminal features.
+- **SGR mouse owns the pointer** — mode `1002` replaces the terminal's native selection; copy is the in-process reverse overlay plus OSC 52.
+- **Session directory data** — search, timeline and export data remain runtime-owned so this package can render them without owning storage or lifecycle.
+- **Composer caret is layout-approximate** — the fullscreen vs trailing-newline origin assumes AppShell pins the bottom workspace to the terminal edge (`rowsBelow` counts menus and status rows below the draft) and does not model terminal soft-wrapping of over-wide lines.
+- **Offscreen row heights begin as estimates** — virtualized blocks are refined when mounted, so a newly visited region can adjust the rail thumb while the stable block anchor preserves the reading row.
 
 <a id="dev-note"></a>
 ### Dev Note

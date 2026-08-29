@@ -1,6 +1,6 @@
 /**
- * InputBar: the bottom composer row — accent prompt marker, buffered text, and mode
- * hints. Purely presentational: every key routes through {@link mapKeyEvent}
+ * InputBar: the full-width bottom input panel — title hint, accent left rail,
+ * buffered text, and mode hints. Purely presentational: every key routes through {@link mapKeyEvent}
  * in the loop owner, which is the single input listener, so Enter and the
  * panel actions dispatch exactly once. The terminal cursor is anchored at the
  * composer caret ({@link composerFrameAnchor} + frame-stream CSI): Ink 7.1.1
@@ -17,7 +17,7 @@ import { composerFrameAnchor } from './composer-cursor.ts'
 import { tokenizeComposer } from './composer-tokens.ts'
 import { escapeContent } from './content.ts'
 import { hideFrameCaret, setFrameCaret } from './frame-fill.ts'
-import { paintRow, styled } from './theme.ts'
+import { inkColor, paintBackgroundRow, styled } from './theme.ts'
 
 /** Input state handed between the state machine steps. */
 export interface InputState {
@@ -121,7 +121,7 @@ const PROMPT_WIDTH = 2
 export const COMPOSER_PLACEHOLDER = '输入消息'
 
 /**
- * The composer row: accent prompt marker, buffered text, and mode hints, with the
+ * The composer panel: title, accent prompt marker, buffered text, and mode hints, with the
  * terminal cursor anchored at the composer caret. AppShell pins the frame to
  * the terminal height, so a TTY write is Ink's fullscreen path (no trailing
  * newline, cursor left on the last output row). {@link composerFrameAnchor}
@@ -143,7 +143,7 @@ export function InputBar({
   const { stdout } = useStdout()
   const { columns, rows } = useWindowSize()
   const anchor = composerFrameAnchor(text, caretIndex ?? text.length, {
-    promptWidth: PROMPT_WIDTH,
+    promptWidth: 2 + PROMPT_WIDTH,
     columns,
     rows,
     fullscreen: stdout.isTTY,
@@ -171,26 +171,42 @@ export function InputBar({
       hideFrameCaret()
     }
   }, [])
-  const tokenParts = tokenizeComposer(text).map(token => styled(
-    escapeContent(token.text),
-    token.kind === 'command' || token.kind === 'mention'
-      ? 'accent'
-      : token.kind === 'image'
-        ? 'fgDim'
-        : 'fg',
-  ))
+  const lines = text.split('\n')
   return (
-    <Box flexDirection="row">
-      <Text>
-        {paintRow([
-          styled(escapeContent('> '), 'accent'),
-          ...(text === ''
-            ? [styled(escapeContent(COMPOSER_PLACEHOLDER), 'fgDim')]
-            : tokenParts),
-          ...(commandMode ? [styled(escapeContent(' /'), 'fgDim')] : []),
-          ...(mentionMode ? [styled(escapeContent(' @'), 'fgDim')] : []),
-        ])}
+    <Box
+      flexDirection="column"
+      width="100%"
+      backgroundColor={inkColor('codeBg')}
+    >
+      <Text wrap="truncate">
+        {paintBackgroundRow([
+          styled(escapeContent('│ '), 'accent'),
+          styled(escapeContent(`› ${COMPOSER_PLACEHOLDER}`), 'fg'),
+          styled(escapeContent(' · Enter 发送'), 'fgDim'),
+        ], 'codeBg', columns)}
       </Text>
+      {lines.map((line, lineIndex) => {
+        const tokenParts = tokenizeComposer(line).map(token => styled(
+          escapeContent(token.text),
+          token.kind === 'command' || token.kind === 'mention'
+            ? 'accent'
+            : token.kind === 'image'
+              ? 'fgDim'
+              : 'fg',
+        ))
+        const last = lineIndex === lines.length - 1
+        return (
+          <Text key={lineIndex} wrap="truncate">
+            {paintBackgroundRow([
+              styled(escapeContent('│ '), 'accent'),
+              styled(escapeContent(lineIndex === 0 ? '> ' : '  '), 'accent'),
+              ...tokenParts,
+              ...(last && commandMode ? [styled(escapeContent(' /'), 'fgDim')] : []),
+              ...(last && mentionMode ? [styled(escapeContent(' @'), 'fgDim')] : []),
+            ], 'codeBg', columns)}
+          </Text>
+        )
+      })}
     </Box>
   )
 }

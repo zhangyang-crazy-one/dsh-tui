@@ -92,23 +92,4 @@ describe('compaction divider projection and rendering', () => {
     )
   })
 
-  it('keeps an anchored viewport stable when a divider arrives', () => {
-    const projector = createProjector()
-    for (let index = 0; index < 61; index += 1) {
-      projector.push({
-        type: 'user/message', seq: index, time: index,
-        data: createUserMessage({
-          content: [{ type: 'text', text: `row ${String(index)}` }],
-          source: { kind: 'user' },
-        }),
-        surfaceOp: 'append',
-      })
-    }
-    projector.setScroll(1)
-    projector.push({
-      type: 'compaction/start', seq: 100, time: 100,
-      data: { compactionId: CompactionId('anchored-divider'), turn: null },
-    })
-    expect(projector.snapshot()).toMatchObject({ scrollOffset: 2, unseenCount: 1 })
-  })
 })

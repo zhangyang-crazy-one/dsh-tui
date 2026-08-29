@@ -1,7 +1,7 @@
 /** mapKeyEvent against Ink's real input contract (boolean flags, '\r' Enter). */
 
 import { describe, expect, it } from 'vitest'
-import { feedbackLabel, feedbackLine, mapKeyEvent, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, clampViewShift, MAX_VIEW_SHIFT, activeMentionQuery } from '../src/loop.tsx'
+import { feedbackLabel, feedbackLine, mapKeyEvent, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, activeMentionQuery } from '../src/loop.tsx'
 import type { MentionCandidate } from '../src/mention.tsx'
 import type { LoopInputState } from '../src/loop.tsx'
 
@@ -213,8 +213,8 @@ describe('text input delivery', () => {
 
   it('routes page and edge navigation through explicit scroll actions', () => {
     const cases = [
-      [keyInfo({ pageUp: true }), { kind: 'scroll', delta: 60 }],
-      [keyInfo({ pageDown: true }), { kind: 'scroll', delta: -60 }],
+      [keyInfo({ pageUp: true }), { kind: 'scroll-page', delta: 1 }],
+      [keyInfo({ pageDown: true }), { kind: 'scroll-page', delta: -1 }],
       [keyInfo({ home: true }), { kind: 'scroll-edge', edge: 'oldest' }],
       [keyInfo({ end: true }), { kind: 'scroll-edge', edge: 'latest' }],
     ] as const
@@ -3077,14 +3077,5 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
     expect(enter.kind === 'dispatch' ? enter.action : enter).toEqual({
       kind: 'plan-directory-apply',
     })
-  })
-})
-
-describe('clampViewShift', () => {
-  it('clamps a conversation view-shift into [0, MAX_VIEW_SHIFT]', () => {
-    expect(clampViewShift(0, 1)).toBe(1)
-    expect(clampViewShift(0, -1)).toBe(0)
-    expect(clampViewShift(MAX_VIEW_SHIFT, 1)).toBe(MAX_VIEW_SHIFT)
-    expect(clampViewShift(MAX_VIEW_SHIFT, -1)).toBe(MAX_VIEW_SHIFT - 1)
   })
 })

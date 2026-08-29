@@ -38,7 +38,6 @@ const IDLE_MODEL: ViewModel = {
   history: [],
   activeTurn: undefined,
   status: 'idle',
-  scrollOffset: 0,
   reasoningExpanded: false,
   toolCardsExpanded: false,
 }

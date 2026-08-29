@@ -18,8 +18,6 @@ function model(status: ViewModel['status']): ViewModel {
         }
         : undefined,
     status,
-    scrollOffset: 0,
-    unseenCount: 0,
     reasoningExpanded: false,
     toolCardsExpanded: false,
   }

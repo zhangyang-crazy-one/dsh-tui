@@ -9,6 +9,7 @@
  * @module @deepseek-ai/dsh-tui-render/theme
  */
 
+import { displayWidth } from './content.ts'
 import { detectColorSupport, type ColorTier } from './terminal-capabilities.ts'
 
 /** Theme token names available to render code. */
@@ -177,6 +178,23 @@ export function bgSequence(tier: ColorTier = activeTier): string {
 }
 
 /**
+ * Map one theme token to Ink's color-property vocabulary. Ink accepts hex,
+ * named ANSI colors, and `ansi256(n)` rather than this package's numeric
+ * 256-color storage form. Empty NO_COLOR values remain absent properties.
+ * @param token - theme token used by an Ink color or backgroundColor prop.
+ * @param tier - tier to map at (defaults to the installed tier).
+ * @returns an Ink color value, or undefined at the none tier.
+ */
+export function inkColor(
+  token: StyleToken,
+  tier: ColorTier = activeTier,
+): string | undefined {
+  const value = THEME_LEVELS[tier][token]
+  if (value === '') return undefined
+  return /^\d+$/u.test(value) ? `ansi256(${value})` : value
+}
+
+/**
  * Wrap escaped plain text in the paired sequence for one theme token. The
  * optional bold flag is the strong tier of the accent brightness matrix
  * (PITFALLS C3: gradient → bold/普通/dim 三档): it prepends SGR 1 so
@@ -215,4 +233,26 @@ export function paintRow(
   tier: ColorTier = activeTier,
 ): string {
   return parts.map(part => styled(part, 'bg', tier)).join('')
+}
+
+/**
+ * Paint a complete layout row through one background token. Each part reopens
+ * the background after its own SGR reset; explicit background cells cover the
+ * remaining measured width because Ink may omit a Box's trailing spaces.
+ * @param parts - escaped and optionally foreground-styled row segments.
+ * @param background - background token shared with the owning Ink Box.
+ * @param columns - measured width of the owning full-width Ink Box.
+ * @param tier - tier to map at (defaults to the installed tier).
+ * @returns background-painted row content and remaining cells.
+ */
+export function paintBackgroundRow(
+  parts: readonly string[],
+  background: 'bg' | 'codeBg',
+  columns: number,
+  tier: ColorTier = activeTier,
+): string {
+  const content = parts.map(part => styled(part, background, tier)).join('')
+  const padding = Math.max(0, columns - displayWidth(parts.join('')))
+  if (padding === 0 || tokenSequence(background, tier) === '') return content
+  return `${content}${styled(' '.repeat(padding), background, tier)}`
 }

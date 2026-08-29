@@ -1,5 +1,6 @@
-# Bilingual-pair consistency record: both languages carry equal authority.
-# This source-only mirror has no DSH pairing runner. Recompute with:
-#   git hash-object README.md README.zh.md
-README.md: 4812889117c029528f2c3305602b78a851e37854
-README.zh.md: 1cab41f2cf3298d2a459feaaddb337cf81ca1474
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/tui/tui/README.md
+README.md: 25116c5a8faf4a472adee0caf1c347275db87e59
+README.zh.md: b4bff1eccac01788372de26fda946e3a758b31c4

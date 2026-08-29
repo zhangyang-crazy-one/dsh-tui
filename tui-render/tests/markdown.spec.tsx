@@ -132,6 +132,21 @@ describe('MarkdownBlock', () => {
     expect(plain).toContain('┌')
   })
 
+  it('expands a short table through the complete markdown row budget', () => {
+    const maxCols = 40
+    const out = renderToString(
+      createElement(MarkdownBlock, {
+        source: '| item | status |\n| --- | --- |\n| memory | enabled |',
+        maxCols,
+        prefix: { first: '● ', rest: '  ' },
+      }),
+    )
+    const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
+    const tableLines = plain.split('\n').filter(line => /[┌│├└]/u.test(line))
+    expect(tableLines.length).toBeGreaterThan(0)
+    expect(tableLines.every(line => displayWidth(line) === maxCols)).toBe(true)
+  })
+
   it('shrinks a wider later column before a short first column', () => {
     const out = renderToString(
       createElement(MarkdownBlock, {
@@ -195,6 +210,22 @@ describe('MarkdownBlock', () => {
     const lines = plain.split('\n').filter(line => line.trim() !== '')
     expect(lines[0]?.endsWith('one')).toBe(true)
     expect(lines.at(-1)?.endsWith('two▌')).toBe(true)
+  })
+
+  it('reserves marker and cursor columns before wrapping streamed prose', () => {
+    const source = `${'tok '.repeat(10)}TUI_PERF_STREAM_COMPLETE`
+    const out = renderToString(
+      createElement(MarkdownBlock, {
+        source,
+        maxCols: 20,
+        prefix: { first: '● ', rest: '  ' },
+        tail: '▌',
+      }),
+    )
+    const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
+    const joined = plain.split('\n').map(line => line.slice(2)).join('')
+    expect(plain).not.toContain('…')
+    expect(joined).toBe(`${source}▌`)
   })
 
   it('keeps the cursor tail on the last row of a streamed code fence', () => {

@@ -65,7 +65,9 @@ describe('PixelFishHome', () => {
       PixelFishHome,
       props({ tier: 'plain' }),
     )))
-    expect(plainOnly).toBe('DeepSeek\n \n有什么可以帮忙的')
+    expect(plainOnly.split('\n').map(line => line.trim()).join('\n')).toBe(
+      'DeepSeek\n\n有什么可以帮忙的',
+    )
   })
 
   it('keeps the generated ASCII contour literal under NO_COLOR', () => {

@@ -6,10 +6,11 @@
  * @module @deepseek-ai/dsh-tui-render/mention
  */
 
-import { Box, Text } from 'ink'
+import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { escapeContent } from './content.ts'
 import { styled } from './theme.ts'
+import { conversationWidth } from './conversation-layout.ts'
 
 /** One `@` candidate: a file, directory, skill, or running child. */
 export interface MentionCandidate {
@@ -76,11 +77,13 @@ export function Mention({
   candidates,
   selectedIndex,
 }: MentionProps): ReactNode {
+  const { columns } = useWindowSize()
+  const width = conversationWidth(columns > 0 ? columns : 80)
   if (phase === 'loading') {
-    return <Text dimColor>加载中…</Text>
+    return <Box width="100%" alignItems="center"><Box width={width}><Text dimColor>加载中…</Text></Box></Box>
   }
   if (candidates.length === 0) {
-    return <Text dimColor>无匹配</Text>
+    return <Box width="100%" alignItems="center"><Box width={width}><Text dimColor>无匹配</Text></Box></Box>
   }
   const clampedIndex = Math.max(0, Math.min(selectedIndex, candidates.length - 1))
   const sections = new Map<MentionCandidate['kind'], MentionCandidate[]>()
@@ -120,5 +123,9 @@ export function Mention({
       rowIndex += 1
     }
   }
-  return <Box flexDirection="column">{rows}</Box>
+  return (
+    <Box flexDirection="column" alignItems="center" width="100%">
+      <Box flexDirection="column" width={width}>{rows}</Box>
+    </Box>
+  )
 }

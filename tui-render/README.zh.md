@@ -1,5 +1,5 @@
 ---
-description: "面向 DSH 调用方的 Ink 终端渲染库，用于投影有界对话状态、面板、Markdown、工具卡与终端输入。"
+description: "Ink 终端渲染库：面向投影有界会话历史、面板、Markdown、工具卡与终端输入的调用方。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`@deepseek-ai/dsh-tui-render` 让 DSH 终端运行时通过 Ink 渲染有界对话状态、Markdown、工具卡、overlay、状态行与输入。调用方提供控制器状态与动作，并获得备用屏幕界面以及释放已挂载终端资源的 disposer。本库不注册 Cordis 服务、不拥有 Agent、不读取持久化，也不发起模型请求。请从 `@deepseek-ai/dsh-tui` 或已经拥有这些职责的其他终端 host 使用它。
+`@deepseek-ai/dsh-tui-render` 让终端运行时通过 Ink 投影有界会话历史、面板、Markdown、工具卡与输入。调用方提供控制器快照，并获得终端渲染与输入动作，无需让本库拥有 agent 或持久化。本包不注册 Cordis 服务，也不发起模型请求。
 
 ## 目录
 
@@ -25,30 +25,7 @@ kind: "package-library"
 <a id="use-this-package"></a>
 ## 使用本包
 
-### 何时使用
-
-当 DSH 运行时已经拥有终端生命周期输入、会话投影、持久化访问与控制器动作，但需要 Ink 呈现层时使用本库。不要将它安装为 profile bundle，也不要将它挂载为 Cordis 插件；它导出普通渲染函数与类型。
-
-### 入口
-
-`mountTuiRender` 在备用屏幕上挂载 React node，并返回对应 disposer：
-
-```text
-import { Text } from 'ink'
-import { createElement } from 'react'
-import { mountTuiRender } from '@deepseek-ai/dsh-tui-render'
-
-const dispose = mountTuiRender(createElement(Text, null, 'ready'))
-try {
-  // The terminal host owns its controller and application lifecycle here.
-} finally {
-  dispose()
-}
-```
-
-当调用方已经实现 `TuiController` 时，`mountTuiLoop(controller, options)` 是组装后的 TUI 入口。挂载过程会配置备用屏幕、检测到的颜色与超链接等级、frame background 处理和鼠标 I/O。Disposer 会卸载 Ink 并释放鼠标 adapter；host 必须在正常关闭与错误清理期间调用它。
-
-投影、宽度测量、Markdown 渲染、终端能力检测与 panel component 等纯导出支持 focused consumer 和测试，无需挂载完整应用。源码入口拥有精确 export list。
+`dsh-tui` 运行时已拥有终端生命周期与 `TuiController` 时导入本库。使用 [`mountTuiRender`](src/index.ts) 挂载 Ink 树，并在运行时拆卸期间处置返回的句柄；所有者测试与其他终端宿主可使用纯投影与布局导出。
 
 -----
 
@@ -58,20 +35,26 @@ try {
 <details>
 <summary>实现内部 — 点击展开</summary>
 
-Renderer 遵循单向所有权模型。DSH 运行时将持久事件与 live 服务折叠为控制器快照；`TuiLoop` 观察这些快照、投影有界 view state、通过 Ink 渲染，并将输入动作发回控制器。Renderer component 不会访问持久化或 Agent。
+### 约定
 
-布局保留一个对话列，将 composer 与状态区域固定在底部，并对长历史使用窗口。终端能力在呈现前解析：内容先转义再应用样式，显示宽度按终端列测量，不受支持的颜色、超链接、品牌、鼠标、剪贴板或通知功能会降级，但不会改变底层文本。
+- `TuiLoop` 观察 `TuiController` 快照并分发输入动作，不访问 agent 或持久化服务。顶栏标题来自 `controller.getTitle()`：已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外（那是目录行标签）。在出现 provider 或重命名标题之前，循环显示紧凑挂载标题 `DeepSeek · deepseek-tui`；大型生成 FishLogo 留在空闲首页，而不进入顶栏。`getApprovalPane().open` 为真时组合器槽是 `ApprovalPane`（`等待审批`，脚注 `y 允许一次 · n 拒绝 · i 详情`）；`getAskUserPane().open` 为真时是 `AskUserPane`（编号选项，脚注 `↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问`）。两种情况下 StreamView 都仍在 `children`；`g s`（组合器缓冲恰好为 `g`）/ Ctrl+K / Ctrl+T / `/help` / 空 `/permission` / 空 `/settings` 不打开浏览面板。`getSettingsPane().open` 为真时对话列是 `SettingsPane`（`设置`，`onboarding` 时为 `首次设置`；`namespace · field` 行，例如 `llm-deepseek · baseURL`）；浏览态组合器为空（`↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭`），编辑态使用 `InputBar`。`getSubmitOnEnter()` 为 false 时 Enter 插入换行。`InputBar` 将普通文本、斜杠命令、`@` 提及和持久 `[图片 #N]` 占位符分割为精确且无损的片段；样式只改变展示，`none` 颜色档位保留相同的字面文本。`CommandMenu` 画在它下方，两列（左 `/{name}`、右描述），两侧都转义；命令与提及菜单共用 Up/Down 与 j/k 选择，选中行用 accent `›` 和 `fg` 名称。非空 `/` 查询上按 Enter 执行高亮的名称前缀匹配并保留尾随参数；空 `/` 再 Enter 不会触发目录项。
+- `createProjector()` 只把 `source.kind === 'user'` 的 `user/message` 事件视为人类 transcript（文本记录）行。agent 指令、插件上下文、skill 目录以及未来的非用户来源仍会持久化且对模型可见，但不会作为用户撰写的终端消息出现。
+- `SessionPane` 渲染传入的会话行、选择和删除确认状态；持久化读取与变更仍由运行时拥有。
+- **AppShell / StreamView 布局** — 顶栏下方有一条全宽细线 `─` 分隔；不使用粗线 `═ ║` 铬。`layoutTitleBar` 把标题和徽标装进窗口宽度（标题仍能放下时先截断徽标；截断用一列 `…`；不切开宽字形）。`conversationWidth` 在小于 40 列时使用完整宽度，其他宽度左右各保留 2 列安全留白；生成的官方 FishLogo、`DeepSeek` 字标与问候语则独立居中。Transcript、推理、Markdown 表格、工具卡和相关 HUD 使用这块近全宽阅读区，结构化输出不再被压进 88 列上限。Markdown 表格会先满足各列自然宽度，再把剩余行宽交给末列，使完整边框与阅读区右轴对齐。Markdown 在布局正文前会从换行预算中扣除已绘制的说话者/缩进前缀与流式光标，因此 Ink 截断不会再删除长输出字符。`InputBar` 是独立的全宽 `codeBg` 工作区，包含 accent 左竖线、标题提示行和 draft 行；其下的全宽状态带最多用两行展示工作区/状态与 provider/model/指标。Resize 会重排两个区域，低高度会先选择更小的品牌档位，不能挤出底部工作区。StreamView 裁切一个固定内容槽，并在换行后的终端物理行上拥有唯一 transcript 滚动坐标。↑/k 与 ↓/j 移动一个物理行，PageUp/PageDown 移动视口减一行，Home 到达最旧行，End 或空组合器下的 `G` 原子地重新跟随最新行。普通向下导航或轨道跳到 live 端也会恢复 follow 并清除未见行。脱离态在流式追加、活动回合冻结、工具完成、compaction、测量修正或 resize 改变周边布局时保持 `{blockId,rowWithinBlock,viewportRow}`。`↓ 最新消息 · {n}` 是固定在右下的控制层提示，只统计追加的物理行；仅溢出时出现的轨道占用终端最右控制列且不覆盖阅读区，左键点击或拖动会在文本选择开始前把该轨道映射到最旧至 live 的范围。完整历史保留估算布局，只挂载视口加前后各一屏的 overscan；实测高度按 block 版本及宽度/主题/折叠 scope 缓存。用户与助手行在阅读区内靠左；`>` / `●` 区分说话方，不用底色板块或左右对贴。助手回合按时间顺序绘制推理、正文和工具卡；已结束推理与工具保持紧凑，只有当前推理段保持 live，最终 Markdown 是最强内容，TurnTail 与完成元数据保持 dim。消息块之间保留两个空行，活动回合内部保留一个空行。彩色 tier 下，`frame-fill` 会在每次完整 Ink 字符串写入期间保持 `bg` 令牌，并在 SGR reset 后重新应用。输入与状态带使用 Ink 的全宽 Box 几何，`paintBackgroundRow` 则在 reset 结束的内容片段之间恢复 `codeBg`，并输出剩余实测背景单元；因此每个布局单元都由背景覆盖，不依赖 Text 内嵌行尾清除、终端 BCE 或 Ink 保留 Box 末尾空格。可见屏幕与行清除继承页面背景；scrollback 清除会临时恢复终端默认背景，写入结束时也恢复默认值。`none` tier 不增加背景 ANSI。
+- `mountTuiRender()` 拥有 Ink 备用屏幕生命周期，并返回对应的卸载 disposer（释放函数）；首次渲染前它从环境安装检测到的颜色档位（`installTheme(env)`，默认 `process.env`，可注入以便测试），使渲染树中的每个 `styled()` 调用都映射到检测到的档位（truecolor → 256 → 16 → none）。同一快照安装 OSC 8（`installHyperlinks(env)`）。传入 `frameProbe` 时它用 `FrameProbe` 包裹渲染树，使每个 React 提交都记录其渲染成本。
+- **鼠标与 OSC 8** — 在 TTY 对上 `mountTuiRender` 启用 SGR 鼠标（`1000`/`1002`/`1006`），从 Ink 的 stdin 剥掉报告，并在卸载时关闭跟踪（即使 `render` 抛错）。未知终端以及不声明转发超链接的 tmux/screen 保持纯文本；标签与 href 不同时追加 dim 的 `(href)`（`mailto:` 比较时去掉 scheme）。Markdown 链接与折叠工具卡摘要在 `escapeContent`/`styled` 之后把已上样式的文本包进 OSC 8；只有 `http(s):`/`mailto:`/`file:` href 会包装或打开。每个已绘制 stdout 分片都通过一次字素遍历进入选区 `ScreenAtlas`；CSI 与 OSC 读取器在原始字符串上推进绝对偏移，既保留拆分序列续接，也不为每个单元格分配剩余整帧。滚轮映射为当前可见面板的 j/k 动作（每次一行；设置编辑/引导忽略滚轮）。在已发布轨道单元格内按下左键后，点击和拖动定位会持续拥有该指针直至 release，且绝不复制 transcript 文本；轨道外的左键拖动按阅读顺序复制文本，先写 OSC 52（上限 100_000 字符）再走主机剪贴板助手，点击则通过主机打开器打开单元格下的 href。
+- **生成品牌与主题样式** — `scripts/gen-tui-brand.ts` 从仓库拥有的 `FishLogo.tsx` 源文件读取精确 `viewBox`、path 数据和 `currentColor` fill，不导入客户端运行时代码。确定性的 nonzero-fill 栅格化在 44×32 逻辑位图上把 viewBox 比例误差控制在 2% 内，再打包为 44×16 的 A half-block 档；生成器会在输出产物前拒绝拉伸尺寸。B full-block 与 C ASCII 从同一位图派生，最后才是纯 `DeepSeek` 字标。四个 A 档 reveal 帧的每个轮廓单元逐字相同，只有外部粒子变化。`doc-sync` 包含的 `verify-tui-brand` 会拒绝任何过期生成产物。通用鲸鱼 emoji 不是品牌或降级档。`styled(escapeContent(text), token)` 是唯一样式路径：内容先转义再上样式，每个 token（`accent`/`success`/`error`/`fgDim`/…，封闭的 `THEME_LEVELS` 集合）都经已安装档位映射。truecolor `accent` 是 DeepSeek 标志蓝 `#4D6BFE`，不是 Grok/Tailwind `#3B82F6`。`none` 档位下文本不带样式渲染，因此 16 色与无色终端保持可读。`formatAdaptiveInfoFooter` 从控制器提供的工作区/状态、provider/model、可选 effort、上下文压力、完整的输入/输出 token 总量、缓存命中率与持久 retry 倒计时中绘制当前可用内容，物理行数最多为两行。输入是未缓存输入、cache-read 和 cache-write token 之和；命中率以 cache-read token 为分子、以同一总量为分母。没有提示侧输入时缺席，且绝不以缺少直觉意义的原始缓存 token 合计替代。宽度收窄时它按完整 segment（分段）丢弃低优先级内容，转义 provider 与失败文本；运行时没有权威计费投影，因此 formatter 不包含费用字段。feedback 行（`feedbackLine` — `✓` 文案渲染为 success，`✗` 及其他失败文案渲染为 error）、选中/列表/timeline-current 标记（accent）、生成的空闲轮廓与字标、全宽输入工作区与面板脚注（fgDim）共同构成语义样式矩阵。Markdown 走同一路径：代码 span 在每行 `codeBg` 条带上映射到 tier token（无硬编码 truecolor）；行内强调、标题、GFM 表头和链接使用 accent（链接再按上面的 OSC 8 规则包装）。覆盖层面板标题保持粗体 fg。
+- `escapeContent`、`displayWidth`、`wcwidthSafeSlice`、`padDisplayEnd` 与 `wrapDisplayLines` — 渲染层拥有控制字节转义、显示宽度测量、列对齐补齐和按列换行（`string-width` 依赖归属本包）；宿主 re-export `escapeContent`、`displayWidth` 和 `wcwidthSafeSlice` 以保持宿主侧导入不变。GFM 表格按每列最大显示宽度补齐（`padDisplayEnd`），在盒式网格（`┌─┬─┐` / `├─┼─┤` / `└─┴─┘`）内折单元格，并把未使用宽度交给末列；窗口放不下边框时退回已换行的 ` | ` 拼接行；markdown 行设置 Ink `wrap="truncate"`，已量好的行不会二次换行并覆盖下一行。
+- `composerCursorPosition` / `composerFrameAnchor` / `clampCaretIndex` / `moveCaretByGrapheme` — 纯组合器光标几何（caret 在缓冲显示网格上的行/列：多行、CJK/emoji 宽度、不切宽字形）、按字素步进，以及 Ink 写帧后追加的 CSI 原点。`InputBar` 在 render 期间把该原点按 `caretIndex`（省略则为缓冲末尾）发布到 frame-fill 流。TTY 全屏帧（AppShell 高度等于视口、无尾随换行）把光标留在最后一行输出上，因此组合器末行是 `up = 0`；命令目录画在组合器下方时，`rowsBelow` 计入 `up`；非 TTY 的尾随换行帧需要 `up = 1`。左右移动若不改变已绘制缓冲，仍写入绝对 CUP，使硬件光标在 Ink 跳过该帧时仍跟随 `caretIndex`。Ink 7.1.1 不提供运行时 IME 组合状态，因此没有任何组合检测，也没有按键让位。
+- `FrameProbe` — 提交驱动的渲染成本仪器：被包裹子树中的每个 React 提交经其 Profiler `onRender` `actualDuration` 记入有界 120 样本环形缓冲，汇总为 `count`/`mean`/`max`/`p95`（只读 `frameStatsSnapshot()`）。`renderMs` 是根提交的 React 渲染阶段成本，专用 `PixelFishHome` 探针提供 `brandRenderMs`；两者都不是墙钟终端绘制声明，也不含 Ink host diff/commit 阶段。`activeBrandRevealTimerCount()` 提供配套的自有 timeout 采样。Profiler 包装器在自身 props 保持引用稳定时仍对每个子树提交触发 `onRender`，因此稳定挂载不会漏掉子提交。
+- **性能界限** — 不可变的冻结 assistant Markdown 传入 `settled` 并复用已解析 mdast；持续变化的流式源始终解析且不进入该缓存。冻结 Markdown 行按源文本、宽度和主题档位 memo。mdast 与语法 token map 各自使用 2,000 项的 least-recently-used（最近最少使用）上限，并通过只读 `markdownCacheInternals` 向占用量和命中／淘汰测试公开。`transformFrameChunk` 对不含 `ESC` 的分片跳过替换扫描，并在彩色 tier 下只增加帧背景前缀与后缀。
 
-| 源码 | 职责 |
-|---|---|
-| [`src/index.ts`](src/index.ts) | Public 入口、mount adapter 与 disposer contract |
-| [`src/loop.tsx`](src/loop.tsx) | 控制器观察、交互所有权、overlay 与输入路由 |
-| [`src/projection.ts`](src/projection.ts) | 将持久会话事件转换为有界终端 view state |
-| [`src/stream-view.tsx`](src/stream-view.tsx) | 按顺序渲染对话、推理、工具与完成状态 |
-| [`src/content.ts`](src/content.ts) | 控制字节转义与终端列宽操作 |
-| [`src/terminal-capabilities.ts`](src/terminal-capabilities.ts) | 品牌与通知能力选择 |
+### 高级交互约定
 
-精确的渲染单元格证据保留在[组装后的 DSH TUI 场景](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/apps/cli/tests)中。
+- Dialog 把 StreamView 留在内容槽并占用输入槽；浏览覆盖层替换内容，除编辑态外隐藏组合器。Todo、jobs 与 workflow HUD 行绝不捕获输入。自适应状态带保留工作区/状态与 provider/model，在宽度需要时把缓存命中率、输入/输出与 effort 作为完整 segment 丢弃，并只在匹配的持久 `llm/retry` 与 `llm/retry-started` 记录之间显示 retry 文案。当前 goal 仍在同一个两行上限内可见。
+- [`SessionPane`](src/session-pane.tsx) 把控制器拥有的当前父会话渲染为 `会话 ID · {parentId}`，[`AgentHubPane`](src/agent-hub-pane.tsx) 把每个子会话渲染为 `子会话 ID · {childId}`。`SessionRow.id`、`SessionPaneState.currentId` 与 `AgentHubRow.id` 保留导出的 `SessionId` 类型；fixture（测试前置数据）配置不提供这些身份。[`session-pane.spec.tsx`](tests/session-pane.spec.tsx) 与 [`agent-hub-pane.spec.tsx`](tests/agent-hub-pane.spec.tsx) 固定精确值和转义行为。
+- [`Mention`](src/mention.tsx) 在 [`loop.tsx`](src/loop.tsx) 中的选择用 Up/Down 或 j/k 改变高亮候选项。Enter 插入该目标并带恰好一个 trailing space（尾随空格），但不提交；Escape 关闭选择菜单。[`composer-tokens.spec.ts`](tests/composer-tokens.spec.ts)、[`mention.spec.tsx`](tests/mention.spec.tsx) 与 [`loop-input.spec.tsx`](tests/loop-input.spec.tsx) 拥有无损 token 分割和聚焦按键行为验证。
+- [`StreamView`](src/stream-view.tsx)、[`ToolCard`](src/tool-card.tsx) 与 [`turn-tail.ts`](src/turn-tail.ts) 渲染带展示转换器标签的折叠卡、宽度自适应过程摘要、`── 已完成 ──` 和按首次出现排序的产物路径。[`visual-conformance.spec.tsx`](tests/visual-conformance.spec.tsx) 拥有有界布局规则；组装后的 [`terminal.expected.txt`](../../../apps/cli/tests/snapshots/deepseek-tui-advanced-entry/terminal.expected.txt) 拥有 80x24 与 200x50 的稳定 ScreenAtlas 单元格。[高级能力 Agent Note](../../../.agents/notes/implemented/feature/2026-08-18-tui-advanced-capability-entries.zh.md)记录其理由和证据归属。
 
 </details>
 
@@ -80,40 +63,40 @@ Renderer 遵循单向所有权模型。DSH 运行时将持久事件与 live 服�
 <a id="further-exploration"></a>
 ## 进一步探索
 
-- [TUI 仓库映射](../README.zh.md) — 包所有权与 DSH 开发工作流。
-- [TUI profile bundle](../tui/README.zh.md) — 控制器、生命周期、profile 组合与模型可见文本。
-- [终端子系统](https://github.com/zhangyang-crazy-one/deepseek-harness/blob/feat/deepseek-tui/docs/subsystems/terminal.zh.md) — 生成的 Cordis 声明与运行时关系。
-- [DSH 中的 renderer 测试](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui/tui-render/tests) — focused 布局、输入、终端与投影证据。
+- [TUI 包映射](../README.zh.md) — 终端运行时与渲染器所有权。
+- [TUI profile 层](../tui/README.zh.md) — 控制器、生命周期、持久化与组装证据。
+- [终端子系统](../../../docs/subsystems/terminal.zh.md) — 终端类型与生成的 Cordis 声明。
+- [高级能力决策](../../../.agents/notes/implemented/feature/2026-08-18-tui-advanced-capability-entries.zh.md) — 渲染理由与证据所有权。
+- [物理行视口与全宽工作区](../../../.agents/notes/implemented/bug-fix/2026-08-28-tui-physical-row-viewport-and-centered-layout.zh.md) — 唯一滚动坐标与 HTML 设计转译。
 
 -----
 
 <a id="model-experience"></a>
 ## 模型体验
 
-### 终端呈现
+### 终端对话展示
 
 #### 模型看到的内容
 
-Renderer 不添加 prompt 文本、工具 schema、会话事件或模型请求。它显示 DSH 运行时提供的控制器状态。
+渲染器不添加提示词文本、工具 schema（模式）、会话事件或模型请求；它只显示运行时提供的 `ViewModel`。
 
 #### Token 影响
 
-本包的输出仅在终端可见，因此没有直接 Token 影响。
+该包的输出仅在终端可见，因此没有直接 Token 影响。
 
 #### KV Cache 影响
 
-Renderer 不改变请求前缀，也不发起模型请求，因此不会影响 KV Cache。
+渲染器不改变请求前缀，也不发起模型请求，因此不会影响 KV Cache。
 
 ## 已知限制与延后工作
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **需要 DSH workspace** — 这个 private 镜像保留 DSH peer dependency 与 TypeScript project reference，因此不是独立 build workspace。
-- **能力降级** — 不可用的颜色、OSC 8、鼠标、剪贴板、通知与品牌功能会降级到较低终端等级；renderer 不模拟缺少的 host 能力。
-- **鼠标选择所有权** — 挂载期间 SGR mouse mode 会替代终端原生选择；复制使用 renderer 选择 overlay 与剪贴板 transport。
-- **有界历史几何** — 滚动轨道表示投影消息窗口，而不是精确的换行后物理行；高于内容槽的单个轮次仍可能被裁切。
-- **Caret 几何** — 光标位置假设 application shell 将 composer 固定在底部，并且不会在测量的终端列之外建模 host 软换行。
-- **运行时拥有的数据** — 会话搜索、timeline、导出、设置、权限与持久化操作必须由 host 控制器提供。
+- **终端能力降级** — 颜色、OSC 8 与语法高亮会降级到较低终端等级；渲染器不会模拟不可用的终端功能。
+- **SGR 鼠标占用指针** — `1002` 模式替代终端原生选择；复制走进程内反色叠加再加 OSC 52。
+- **会话目录数据** — 搜索、时间线和导出数据仍由运行时拥有，使该包能渲染它们而不拥有存储或生命周期。
+- **组合器光标为布局近似** — 全屏与尾随换行两种原点都假设 AppShell 把底部工作区钉在终端边缘（`rowsBelow` 计入 draft 下方的菜单与状态行），且不建模超宽行的终端软换行。
+- **离屏行高起初是估算值** — 虚拟化 block 在挂载时修正，因此首次访问某个区域时轨道滑块可能调整；稳定 block 锚点会保持阅读行。
 
 <a id="dev-note"></a>
 ### 开发备注

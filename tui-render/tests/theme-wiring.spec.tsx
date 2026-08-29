@@ -49,7 +49,6 @@ function renderUserRow(): string {
         history: [{ kind: 'user', text: 'hello', timestamp: 1 }],
         activeTurn: undefined,
         status: 'idle',
-        scrollOffset: 0,
         reasoningExpanded: false,
         toolCardsExpanded: false,
       } satisfies ViewModel,
@@ -71,7 +70,6 @@ function renderActiveTurn(): string {
           reasoningDurationMs: 100,
         },
         status: 'generating',
-        scrollOffset: 0,
         reasoningExpanded: false,
         toolCardsExpanded: false,
       } satisfies ViewModel,
@@ -154,11 +152,11 @@ describe('AppShell frame painting', () => {
 })
 
 describe('StreamView body rows', () => {
-  it('left-aligns user rows in the conversation column with fgDim marker plus fg body', () => {
+  it('centers user rows in the conversation column with fgDim marker plus fg body', () => {
     applyTheme('16')
     const sixteen = renderUserRow()
     const line = sixteen.split('\n').find(l => stripAnsi(l).includes('> hello'))
-    expect(stripAnsi(line ?? '')).toBe('> hello')
+    expect(stripAnsi(line ?? '').trimStart()).toBe('> hello')
     const prefix = (line ?? '').slice(0, (line ?? '').indexOf('>'))
     expect(prefix).toContain('\x1b[40m')
     expect(line).toContain('\x1b[90m> ')
@@ -187,7 +185,7 @@ describe('StreamView body rows', () => {
     expect(stripAnsi(active)).toContain('● answer▌')
 
     applyTheme('none')
-    expect(renderActiveTurn()).toBe(
+    expect(renderActiveTurn().trimStart()).toBe(
       '● answer▌',
     )
   })
@@ -219,15 +217,16 @@ describe('StreamView body rows', () => {
 })
 
 describe('conversation column width', () => {
-  it('uses the bounded transcript width on wide terminals', () => {
+  it('uses two-column gutters on wide terminals', () => {
     expect(conversationWidth(0)).toBe(1)
     expect(conversationWidth(1)).toBe(1)
     expect(conversationWidth(10)).toBe(10)
-    expect(conversationWidth(40)).toBe(40)
-    expect(conversationWidth(79)).toBe(79)
-    expect(conversationWidth(80)).toBe(57)
-    expect(conversationWidth(88)).toBe(63)
-    expect(conversationWidth(123)).toBe(88)
-    expect(conversationWidth(200)).toBe(88)
+    expect(conversationWidth(39)).toBe(39)
+    expect(conversationWidth(40)).toBe(36)
+    expect(conversationWidth(79)).toBe(75)
+    expect(conversationWidth(80)).toBe(76)
+    expect(conversationWidth(88)).toBe(84)
+    expect(conversationWidth(123)).toBe(119)
+    expect(conversationWidth(200)).toBe(196)
   })
 })

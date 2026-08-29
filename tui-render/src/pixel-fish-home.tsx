@@ -165,12 +165,19 @@ export function PixelFishHome({
     : selected === 'half-block' && frameIndex !== undefined
       ? BRAND_HALF_BLOCK_FRAMES[frameIndex]
       : rowsForTier(selected)
+  const artWidth = rows === undefined
+    ? 0
+    : Math.max(0, ...rows.map(displayWidth))
 
   const home = (
-    <Box flexDirection="column" width="100%">
-      {rows?.map((row, index) => (
-        <Text key={`fish-${String(index)}`}>{paintRow([styled(row, 'accent')])}</Text>
-      ))}
+    <Box flexDirection="column" alignItems="center" width="100%">
+      {rows === undefined ? null : (
+        <Box flexDirection="column" width={artWidth}>
+          {rows.map((row, index) => (
+            <Text key={`fish-${String(index)}`}>{paintRow([styled(row, 'accent')])}</Text>
+          ))}
+        </Box>
+      )}
       <Text>{paintRow([styled(BRAND_PLAIN_WORDMARK, 'accent', undefined, true)])}</Text>
       <Text>{paintRow([styled(' ', 'bg')])}</Text>
       <Text>{paintRow([styled(BRAND_HOME_LINE, 'fg')])}</Text>

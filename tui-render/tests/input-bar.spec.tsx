@@ -109,20 +109,20 @@ describe('handleInput', () => {
 })
 
 describe('InputBar caret publish', () => {
-  it('does not cursor-up on a fullscreen TTY empty composer', async () => {
-    expect(await publishedCaret('', true)).toBe('\x1b[?2026l\x1b[3G\x1b[?25h')
+  it('anchors the fullscreen caret on the full-width panel input row', async () => {
+    expect(await publishedCaret('', true)).toBe('\x1b[?2026l\x1b[5G\x1b[?25h')
   })
 
   it('places the fullscreen TTY caret after the buffered text', async () => {
-    expect(await publishedCaret('hi', true)).toBe('\x1b[?2026l\x1b[5G\x1b[?25h')
+    expect(await publishedCaret('hi', true)).toBe('\x1b[?2026l\x1b[7G\x1b[?25h')
   })
 
   it('places the fullscreen TTY caret at a mid-buffer index', async () => {
     expect(await publishedCaret('hello', true, 0)).toBe(
-      '\x1b[?2026l\x1b[3G\x1b[?25h',
+      '\x1b[?2026l\x1b[5G\x1b[?25h',
     )
     expect(await publishedCaret('hello', true, 1)).toBe(
-      '\x1b[?2026l\x1b[4G\x1b[?25h',
+      '\x1b[?2026l\x1b[6G\x1b[?25h',
     )
   })
 
@@ -157,7 +157,7 @@ describe('InputBar caret publish', () => {
         }),
       )
       await instance.waitUntilRenderFlush()
-      expect(chunks.join('')).toContain('\x1b[24;3H')
+      expect(chunks.join('')).toContain('\x1b[24;5H')
     } finally {
       instance.unmount()
       setFrameCaret(undefined)
@@ -166,7 +166,7 @@ describe('InputBar caret publish', () => {
 
   it('cursor-ups once after a non-TTY trailing-newline frame', async () => {
     expect(await publishedCaret('', false)).toBe(
-      '\x1b[?2026l\x1b[1A\x1b[3G\x1b[?25h',
+      '\x1b[?2026l\x1b[1A\x1b[5G\x1b[?25h',
     )
   })
 
@@ -189,7 +189,7 @@ describe('InputBar caret publish', () => {
     try {
       await instance.waitUntilRenderFlush()
       expect(transformFrameChunk('\x1b[?2026l', 'none')).toBe(
-        '\x1b[?2026l\x1b[4G\x1b[?25h',
+        '\x1b[?2026l\x1b[6G\x1b[?25h',
       )
     } finally {
       instance.unmount()
@@ -207,11 +207,12 @@ describe('InputBar prompt', () => {
         mentionMode: false,
       }),
     )
-    expect(out).toContain('\x1b[38;2;77;107;254m> ')
+    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
     expect(out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')).toContain('> hi')
+    expect(out).toContain('\x1b[48;2;15;17;21m')
   })
 
-  it('paints a dim placeholder when the buffer is empty', () => {
+  it('paints a title hint and leaves the empty input row at the prompt', () => {
     const out = renderToString(
       createElement(InputBar, {
         text: '',
@@ -219,9 +220,9 @@ describe('InputBar prompt', () => {
         mentionMode: false,
       }),
     )
-    expect(out).toContain('输入消息')
-    expect(out).toContain('\x1b[38;2;138;143;152m输入消息')
-    expect(out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')).toContain('> 输入消息')
+    const plain = out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
+    expect(plain).toContain('› 输入消息 · Enter 发送')
+    expect(plain).toContain('\n│ > ')
   })
 
   it('paints a slash command in accent', () => {
@@ -232,7 +233,7 @@ describe('InputBar prompt', () => {
         mentionMode: false,
       }),
     )
-    expect(out).toContain('\x1b[38;2;77;107;254m> /settings')
+    expect(out).toContain('\x1b[38;2;77;107;254m│ > /settings')
   })
 
   it('paints semantic segments while preserving the exact composer text', () => {

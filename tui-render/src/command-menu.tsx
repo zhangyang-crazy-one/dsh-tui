@@ -9,6 +9,7 @@ import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
 import { paintRow, styled } from './theme.ts'
+import { conversationWidth } from './conversation-layout.ts'
 
 /** One selectable command entry. */
 export interface CommandItem {
@@ -174,7 +175,7 @@ export function CommandMenu({
   selectedIndex = 0,
 }: CommandMenuProps): ReactNode {
   const { columns } = useWindowSize()
-  const width = columns > 0 ? columns : 80
+  const width = conversationWidth(columns > 0 ? columns : 80)
   const allMatches = filterCommands(items, query)
   const clampedIndex = moveSelectionIndex(selectedIndex, 0, allMatches.length)
   const offset = Math.max(0, clampedIndex - COMMAND_MENU_WINDOW + 1)
@@ -186,14 +187,16 @@ export function CommandMenu({
     if (widthName > nameCols) nameCols = widthName
   }
   return (
-    <Box flexDirection="column" width="100%">
-      {matches.map((item, index) => (
-        <Box key={item.name} width="100%">
-          <Text>
-            {paintRow(paletteRow(item, offset + index === clampedIndex, nameCols, width))}
-          </Text>
-        </Box>
-      ))}
+    <Box flexDirection="column" alignItems="center" width="100%">
+      <Box flexDirection="column" width={width}>
+        {matches.map((item, index) => (
+          <Box key={item.name} width="100%">
+            <Text>
+              {paintRow(paletteRow(item, offset + index === clampedIndex, nameCols, width))}
+            </Text>
+          </Box>
+        ))}
+      </Box>
     </Box>
   )
 }

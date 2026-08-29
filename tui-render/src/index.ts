@@ -50,6 +50,22 @@ export { escapeContent, displayWidth, wcwidthSafeSlice } from './content.ts'
 export { isHumanUserMessage } from './message-visibility.ts'
 export { StreamView } from './stream-view.tsx'
 export type { StreamViewProps } from './stream-view.tsx'
+export { conversationLeft, conversationWidth } from './conversation-layout.ts'
+export {
+  EMPTY_TRANSCRIPT_VIEWPORT,
+  physicalScrollRailGeometry,
+  reduceTranscriptViewport,
+} from './transcript-viewport.ts'
+export type {
+  PhysicalScrollRailGeometry,
+  TranscriptBlockLayout,
+  TranscriptViewportAction,
+  TranscriptViewportAnchor,
+  TranscriptViewportCommand,
+  TranscriptViewportState,
+} from './transcript-viewport.ts'
+export { TranscriptLayoutCache } from './transcript-layout-cache.ts'
+export type { TranscriptLayoutCacheInput } from './transcript-layout-cache.ts'
 export { SessionPane, relativeTime, LIST_WINDOW } from './session-pane.tsx'
 export type {
   SessionRow,

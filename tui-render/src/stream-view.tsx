@@ -1,7 +1,7 @@
 /**
  * Renders the current dynamic conversation window and active turn. History rows
- * use stable event ids; a nonzero scroll offset replaces the visible rows,
- * preserves the caller-managed anchor, and shows the projection's unread marker.
+ * use stable event ids; the physical-row viewport preserves a measured anchor
+ * while detached and paints a fixed latest-message notice for appended rows.
  *
  * One turn paints as a timeline in retained event order: consecutive text and
  * reasoning merge into parts, and each tool call becomes one card that already
@@ -11,20 +11,20 @@
  * sibling span would leave unstyled gap cells), and only the last reasoning
  * run stays live while generating.
  *
- * The conversation column stays full width only on narrow terminals; at 80
- * columns and above it follows the 72%/88-column cap while remaining
- * left-aligned inside the AppShell content slot. An empty idle window paints
+ * The conversation uses the full width on narrow terminals and otherwise
+ * reserves two columns on each side. The rail owns the terminal's rightmost
+ * control column outside that content width. An empty idle window paints
  * the DeepSeek home in the vertical center of that slot; a transcript packs
  * rows to the bottom so the latest message sits above the status and composer
  * rows.
  * @module @deepseek-ai/dsh-tui-render/stream-view
  */
 
-import { Box, Text, useWindowSize } from 'ink'
-import { memo } from 'react'
+import { Box, Text, measureElement, useStdout, useWindowSize } from 'ink'
+import type { DOMElement } from 'ink'
+import { memo, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { HISTORY_WINDOW_SIZE } from './projection.ts'
 import type {
   ActiveTurn,
   CompactionDivider,
@@ -32,7 +32,7 @@ import type {
   ProjectedTurnContent,
   ViewModel,
 } from './projection.ts'
-import { displayWidth, escapeContent } from './content.ts'
+import { displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
 import { producedPathsForTurn } from './turn-tail.ts'
 import { pathToFileURL } from 'node:url'
@@ -50,10 +50,22 @@ import type { ToolCardModel, ToolPresenterLookup } from './tool-cards.ts'
 import { PixelFishHome } from './pixel-fish-home.tsx'
 import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
+import { conversationLeft, conversationWidth } from './conversation-layout.ts'
+import {
+  EMPTY_TRANSCRIPT_VIEWPORT,
+  physicalScrollRailGeometry,
+  reduceTranscriptViewport,
+} from './transcript-viewport.ts'
+import type {
+  TranscriptBlockLayout,
+  TranscriptViewportCommand,
+} from './transcript-viewport.ts'
+import { TranscriptLayoutCache } from './transcript-layout-cache.ts'
+import { setMouseRailRegion } from './mouse-io.ts'
 
 /** Conversation projection inputs. */
 export interface StreamViewProps {
-  /** Folded view model containing stable history rows, the active turn, viewport offset, unread count, and reasoning-display state. */
+  /** Folded view model containing stable history rows, the active turn, and reasoning-display state. */
   model: ViewModel
   /** Optional tools-registry lookup for presenter titles; omitted stays generic. */
   presenters?: ToolPresenterLookup | undefined
@@ -63,11 +75,8 @@ export interface StreamViewProps {
   brandAnimation?: boolean | undefined
   /** Optional dedicated render-cost probe for the generated home subtree. */
   brandFrameProbe?: FrameProbeHandle | undefined
-  /**
-   * Extra bottom margin rows that shift a tall transcript up inside the
-   * overflow-hidden, flex-end column. Omitted means 0 (pinned to the live edge).
-   */
-  viewShift?: number
+  /** Latest loop-owned physical-row navigation command. */
+  viewportCommand?: TranscriptViewportCommand | undefined
 }
 
 /** Fixed-width scroll-rail cells for one transcript viewport. */
@@ -93,30 +102,16 @@ export function scrollRailGeometry(
   viewportRows: number,
   scrollOffset: number,
 ): ScrollRailGeometry | undefined {
-  if (contentRows <= HISTORY_WINDOW_SIZE) return undefined
-  const rows = Math.max(3, viewportRows)
-  const thumbRows = Math.min(
-    rows,
-    Math.max(3, Math.floor(rows * HISTORY_WINDOW_SIZE / contentRows)),
-  )
-  const travel = rows - thumbRows
-  const maxOffset = contentRows - HISTORY_WINDOW_SIZE
-  const fromBottom = maxOffset === 0
-    ? 0
-    : Math.round(Math.min(maxOffset, Math.max(0, scrollOffset)) / maxOffset * travel)
-  return { rows, thumbStart: travel - fromBottom, thumbRows }
+  return physicalScrollRailGeometry(contentRows, viewportRows, scrollOffset)
 }
 
 /**
- * The conversation column width: full width below 80 columns; otherwise a
- * left-aligned 72% column capped at 88 columns.
+ * The conversation column width: full width below 40 columns; otherwise two
+ * terminal columns inset per side.
  * @param columns - the current terminal width in columns.
  * @returns the column width, at least one column.
  */
-export function conversationWidth(columns: number): number {
-  if (columns < 80) return Math.max(1, columns)
-  return Math.max(1, Math.min(Math.floor(columns * 0.72), 88))
-}
+export { conversationWidth } from './conversation-layout.ts'
 
 function isVisiblePart(part: TurnPart): boolean {
   if (part.kind === 'card') return true
@@ -172,6 +167,84 @@ type TurnPart =
 type TranscriptRow =
   | { readonly kind: 'message'; readonly id: number; readonly message: FrozenMessage }
   | { readonly kind: 'compaction'; readonly id: number; readonly divider: CompactionDivider }
+
+function transcriptBlockId(row: TranscriptRow): string {
+  if (row.kind === 'compaction') return `compaction-${row.divider.compactionId}`
+  if (row.message.kind === 'assistant' && row.message.turnOrdinal !== undefined) {
+    return `assistant-turn-${String(row.message.turnOrdinal)}`
+  }
+  return `message-${String(row.message.id)}`
+}
+
+function transcriptBlockVersion(row: TranscriptRow): string {
+  if (row.kind === 'compaction') {
+    return `${String(row.divider.shadowedCount ?? '')}:${row.divider.summary}`
+  }
+  return row.message.kind === 'user'
+    ? row.message.text
+    : `${row.message.text}\u0000${row.message.reasoningText ?? ''}\u0000${String(row.message.content?.length ?? 0)}`
+}
+
+function activeTurnVersion(turn: ActiveTurn): string {
+  const toolVersion = turn.content?.map((item) => {
+    switch (item.kind) {
+      case 'text':
+      case 'reasoning':
+        return `${item.kind}:${item.text}`
+      case 'tool-call':
+        return `${item.kind}:${item.callId}:${item.name}:${item.arguments}`
+      case 'tool-result':
+        return `${item.kind}:${item.callId}:${item.text}:${String(item.isError)}`
+    }
+  }).join('\u0000') ?? ''
+  return `${turn.assistantText}\u0000${turn.reasoningText}\u0000${toolVersion}`
+}
+
+function estimatedWrappedRows(text: string, maxCols: number, prefixCols = 0): number {
+  return Math.max(1, wrapDisplayLines(
+    escapeContent(text),
+    Math.max(1, maxCols - prefixCols),
+  ).length)
+}
+
+function estimatedMessageRows(
+  message: FrozenMessage,
+  maxCols: number,
+  reasoningExpanded: boolean,
+  toolCardsExpanded: boolean,
+): number {
+  if (message.kind === 'user') return estimatedWrappedRows(message.text, maxCols, 2)
+  let rows = estimatedWrappedRows(message.text, maxCols, 2)
+  const reasoning = message.content?.filter(item => item.kind === 'reasoning') ?? []
+  rows += reasoning.reduce((total, item) => total + (
+    reasoningExpanded ? 1 + estimatedWrappedRows(item.text, maxCols, 2) : 1
+  ), 0)
+  const tools = message.content?.filter(item => item.kind === 'tool-call').length ?? 0
+  rows += tools * (toolCardsExpanded ? 4 : 2)
+  if (
+    message.usageOutputTokens !== undefined
+    || message.stepWallMs !== undefined
+    || message.turnOrdinal !== undefined
+  ) rows += 1
+  return Math.max(1, rows)
+}
+
+function estimatedActiveRows(
+  turn: ActiveTurn,
+  maxCols: number,
+  reasoningExpanded: boolean,
+  toolCardsExpanded: boolean,
+): number {
+  const textRows = estimatedWrappedRows(turn.assistantText, maxCols, 3)
+  const reasoningRows = turn.reasoningText === ''
+    ? 0
+    : reasoningExpanded
+      ? 1 + estimatedWrappedRows(turn.reasoningText, maxCols, 2)
+      : Math.min(5, 1 + estimatedWrappedRows(turn.reasoningText, maxCols, 2))
+  const toolRows = (turn.content?.filter(item => item.kind === 'tool-call').length
+    ?? turn.toolCalls.length) * (toolCardsExpanded ? 4 : 2)
+  return Math.max(1, textRows + reasoningRows + toolRows)
+}
 
 /**
  * Locked non-accent divider label for one compaction marker.
@@ -371,8 +444,8 @@ const SettledMarkdownBlock = memo(function SettledMarkdownBlock(
 /**
  * User transcript glyphs: fgDim marker plus fg body, painted through the
  * frame `bg` so the run matches the black frame. 02-UI-SPEC C5 distinguishes
- * user rows by the `>` marker in the same left-aligned conversation column
- * as assistant rows, not by right alignment or a background plate.
+ * user rows by the `>` marker in the same centered conversation column as
+ * assistant rows, with both bodies left-aligned inside that column.
  * @param text - unescaped user body.
  * @returns the painted marker and body.
  */
@@ -401,18 +474,12 @@ function activeMarker(): string {
 }
 
 /**
- * Render at most {@link HISTORY_WINDOW_SIZE} historical rows ending at the
- * supplied bottom-relative offset, followed by any unread marker and active
- * turn. Rows use stable projection ids, historical reasoning is collapsed by
- * default, tool cards are collapsed, and the viewport is dynamic rather than
- * append-only.
- *
- * The caller owns key routing and projection updates. Terminal scroll and
- * reasoning-toggle keys bypass this presentation component.
- * Overflow clips from the top of the slot (oldest of the current window)
- * because the stack is bottom-packed against the composer.
+ * Render the measured transcript inside one fixed physical-row viewport.
+ * Stable block refs feed the viewport reducer after each Ink layout; navigation
+ * moves only the absolutely positioned transcript inside the clipped slot.
+ * Historical reasoning and tool cards remain collapsed by default.
  * @param props - projected conversation state and interaction callbacks.
- * @returns the full-width Ink element tree for the current window.
+ * @returns the centered Ink element tree for the current physical viewport.
  */
 export function StreamView({
   model,
@@ -420,42 +487,245 @@ export function StreamView({
   brandTier = 'plain',
   brandAnimation = false,
   brandFrameProbe,
-  viewShift = 0,
+  viewportCommand,
 }: StreamViewProps): ReactNode {
   const { columns, rows } = useWindowSize()
+  const { stdout } = useStdout()
+  const physicalViewport = stdout.isTTY
   const contentWidth = conversationWidth(columns)
+  const contentLeft = conversationLeft(columns, contentWidth)
+  const viewportRef = useRef<DOMElement | null>(null)
+  const blockRefs = useRef(new Map<string, DOMElement>())
+  const layoutCache = useRef(new TranscriptLayoutCache())
+  const lastCommandSequence = useRef(-1)
+  const [layoutRevision, setLayoutRevision] = useState(0)
+  const [viewport, dispatchViewport] = useReducer(
+    reduceTranscriptViewport,
+    EMPTY_TRANSCRIPT_VIEWPORT,
+  )
   const {
     history,
     compactionDividers = [],
     expandedCompactionId,
     activeTurn,
     status,
-    scrollOffset,
-    follow,
-    unseenCount,
     reasoningExpanded,
     toolCardsExpanded,
   } = model
-  const transcript: TranscriptRow[] = [
+  const compactionVersion = compactionDividers.map(divider => (
+    `${divider.id}:${String(divider.shadowedCount ?? '')}:${divider.summary}`
+  )).join('\u0000')
+  const transcript = useMemo<TranscriptRow[]>(() => [
     ...history.map(message => ({ kind: 'message' as const, id: message.id, message })),
     ...compactionDividers.map(divider => ({
       kind: 'compaction' as const,
       id: divider.id,
       divider,
     })),
-  ].sort((left, right) => left.id - right.id)
-  const end = Math.min(
-    transcript.length,
-    Math.max(0, transcript.length - scrollOffset),
+  ].sort((left, right) => left.id - right.id), [
+    compactionDividers,
+    compactionDividers.length,
+    compactionVersion,
+    history,
+    history.length,
+  ])
+  const activeVersion = activeTurn === undefined ? '' : activeTurnVersion(activeTurn)
+  const renderEntries = useMemo(() => [
+    ...transcript.map((row, index) => {
+      const gapRows = index < transcript.length - 1 || activeTurn !== undefined ? 2 : 0
+      return {
+        kind: 'row' as const,
+        id: transcriptBlockId(row),
+        version: `${transcriptBlockVersion(row)}\u0000${gapRows === 0 ? 'tail' : 'gap'}`,
+        gapRows,
+        estimatedRows: estimatedMessageRows(
+          row.kind === 'message'
+            ? row.message
+            : {
+              id: row.id,
+              kind: 'assistant' as const,
+              text: row.divider.summary,
+              timestamp: 0,
+            },
+          contentWidth,
+          reasoningExpanded,
+          toolCardsExpanded,
+        ) + gapRows,
+        row,
+      }
+    }),
+    ...(activeTurn === undefined
+      ? []
+      : [{
+        kind: 'active' as const,
+        id: `assistant-turn-${String(activeTurn.turn)}`,
+        version: activeVersion,
+        gapRows: 0,
+        estimatedRows: estimatedActiveRows(
+          activeTurn,
+          contentWidth,
+          reasoningExpanded,
+          toolCardsExpanded,
+        ),
+        turn: activeTurn,
+      }]),
+  ], [
+    activeTurn,
+    activeVersion,
+    contentWidth,
+    reasoningExpanded,
+    toolCardsExpanded,
+    transcript,
+  ])
+  const layoutScope = [
+    contentWidth,
+    currentTier(),
+    reasoningExpanded ? 'reasoning-open' : 'reasoning-closed',
+    toolCardsExpanded ? 'tools-open' : 'tools-closed',
+    expandedCompactionId ?? '',
+  ].join(':')
+  const layoutInputs = useMemo(
+    () => renderEntries.map(({ id, version, estimatedRows }) => ({
+      id,
+      version,
+      estimatedRows,
+    })),
+    [renderEntries],
   )
-  const start = Math.max(0, end - HISTORY_WINDOW_SIZE)
-  const windowed = transcript.slice(start, end)
-  const rail = scrollRailGeometry(transcript.length, Math.max(3, rows - 6), scrollOffset)
-  const idleHome = windowed.length === 0 && activeTurn === undefined
+  const contentRevision = renderEntries.length === 0
+    ? 'empty'
+    : `${String(renderEntries.length)}:${renderEntries.at(-1)?.id ?? ''}:${renderEntries.at(-1)?.version ?? ''}`
+  const lastContentRevision = useRef(contentRevision)
+  const virtualLayouts = useMemo(
+    () => layoutCache.current.layouts(layoutScope, layoutInputs),
+    [layoutInputs, layoutRevision, layoutScope],
+  )
+  const virtualContentRows = virtualLayouts.at(-1) === undefined
+    ? 0
+    : (virtualLayouts.at(-1) as TranscriptBlockLayout).top
+      + (virtualLayouts.at(-1) as TranscriptBlockLayout).rows
+  const effectiveViewportRows = viewport.viewportRows > 0
+    ? viewport.viewportRows
+    : Math.max(1, rows - 7)
+  const effectiveOffset = viewport.follow
+    ? 0
+    : Math.min(
+      viewport.offsetFromBottom,
+      Math.max(0, virtualContentRows - effectiveViewportRows),
+    )
+  const visibleTop = Math.max(
+    0,
+    virtualContentRows - effectiveViewportRows - effectiveOffset,
+  )
+  const visibleBottom = visibleTop + effectiveViewportRows
+  const overscanTop = Math.max(0, visibleTop - effectiveViewportRows)
+  const overscanBottom = Math.min(
+    virtualContentRows,
+    visibleBottom + effectiveViewportRows,
+  )
+  const visibleIndexes = physicalViewport
+    ? virtualLayouts.flatMap((layout, index) => (
+      layout.top + layout.rows > overscanTop && layout.top < overscanBottom ? [index] : []
+    ))
+    : renderEntries.map((_entry, index) => index)
+  const firstVisibleIndex = visibleIndexes[0]
+  const lastVisibleIndex = visibleIndexes.at(-1)
+  const leadingRows = firstVisibleIndex === undefined
+    ? 0
+    : (virtualLayouts[firstVisibleIndex]?.top ?? 0)
+  const lastVisibleLayout = lastVisibleIndex === undefined
+    ? undefined
+    : virtualLayouts[lastVisibleIndex]
+  const trailingRows = lastVisibleLayout === undefined
+    ? 0
+    : Math.max(
+      0,
+      virtualContentRows - lastVisibleLayout.top - lastVisibleLayout.rows,
+    )
+  const visibleEntries = visibleIndexes.flatMap((index) => {
+    const entry = renderEntries[index]
+    return entry === undefined ? [] : [entry]
+  })
+  const idleHome = transcript.length === 0 && activeTurn === undefined
   const generating = status === 'generating'
   const latestSettledAssistantId = activeTurn === undefined
-    ? [...history].reverse().find(message => message.kind === 'assistant')?.id
+    ? history.findLast(message => message.kind === 'assistant')?.id
     : undefined
+
+  useLayoutEffect(() => {
+    if (viewportCommand === undefined) return
+    if (viewportCommand.sequence === lastCommandSequence.current) return
+    lastCommandSequence.current = viewportCommand.sequence
+    switch (viewportCommand.kind) {
+      case 'scroll':
+        dispatchViewport({ kind: 'scroll', delta: viewportCommand.delta })
+        return
+      case 'page':
+        dispatchViewport({
+          kind: 'scroll',
+          delta: viewportCommand.delta * Math.max(1, viewport.viewportRows - 1),
+        })
+        return
+      case 'position':
+        dispatchViewport({ kind: 'position', fraction: viewportCommand.fraction })
+        return
+      case 'edge':
+        dispatchViewport({ kind: 'edge', edge: viewportCommand.edge })
+        return
+      case 'reset':
+        dispatchViewport({ kind: 'reset' })
+    }
+  }, [viewport.viewportRows, viewportCommand])
+
+  useLayoutEffect(() => {
+    const viewportElement = viewportRef.current
+    if (viewportElement === null) return
+    const viewportBox = measureElement(viewportElement)
+    let changed = false
+    for (const entry of visibleEntries) {
+      const element = blockRefs.current.get(entry.id)
+      if (element === undefined) continue
+      const measured = measureElement(element)
+      changed = layoutCache.current.record(
+        layoutScope,
+        entry.id,
+        entry.version,
+        measured.height,
+      ) || changed
+    }
+    const layouts = layoutCache.current.layouts(layoutScope, layoutInputs)
+    const contentRows = layouts.at(-1) === undefined
+      ? 0
+      : (layouts.at(-1) as TranscriptBlockLayout).top
+        + (layouts.at(-1) as TranscriptBlockLayout).rows
+    const contentChanged = contentRevision !== lastContentRevision.current
+    lastContentRevision.current = contentRevision
+    dispatchViewport({
+      kind: 'layout',
+      contentRows,
+      viewportRows: viewportBox.height,
+      blocks: layouts,
+      unseenRowsAdded: contentChanged
+        ? Math.max(0, contentRows - viewport.contentRows)
+        : 0,
+    })
+    if (changed) setLayoutRevision(revision => revision + 1)
+  })
+
+  const rail = physicalScrollRailGeometry(
+    viewport.contentRows,
+    viewport.viewportRows,
+    viewport.offsetFromBottom,
+  )
+
+  useLayoutEffect(() => {
+    if (!physicalViewport || rail === undefined) {
+      setMouseRailRegion(undefined)
+      return
+    }
+    setMouseRailRegion({ col: columns, topRow: 3, rows: rail.rows })
+    return () => { setMouseRailRegion(undefined) }
+  }, [columns, physicalViewport, rail?.rows])
 
   const renderReasoning = (
     part: Extract<TurnPart, { kind: 'reasoning' }>,
@@ -503,7 +773,7 @@ export function StreamView({
     let rowRuns = [styled('产物 · ', 'fg')]
     let rowWidth = displayWidth('产物 · ')
     let pathsInRow = 0
-    const tailWidth = Math.min(columns, 88)
+    const tailWidth = contentWidth
     for (const path of produced) {
       let prefix = pathsInRow === 0 && producedRows.length === 0 ? '' : ' · '
       if (pathsInRow > 0 && rowWidth + displayWidth(`${prefix}${path}`) > tailWidth) {
@@ -651,13 +921,16 @@ export function StreamView({
     )
   }
 
-  const transcriptColumn = (
+  const transcriptViewport = (
     <Box
+      ref={viewportRef}
       flexDirection="column"
+      position="relative"
       width="100%"
       flexGrow={1}
       overflow="hidden"
-      justifyContent={idleHome ? 'center' : 'flex-end'}
+      justifyContent={idleHome ? 'center' : 'flex-start'}
+      alignItems={idleHome ? 'center' : 'flex-start'}
     >
       {idleHome
         ? (
@@ -666,56 +939,87 @@ export function StreamView({
             animate={brandAnimation}
             visible
             maxColumns={contentWidth}
-            maxRows={Math.max(0, rows - 4)}
+            maxRows={viewport.viewportRows > 0
+              ? viewport.viewportRows
+              : Math.max(0, rows - 7)}
             frameProbe={brandFrameProbe}
           />
         )
         : (
           <Box
             flexDirection="column"
-            width="100%"
+            position={physicalViewport ? 'absolute' : 'relative'}
+            bottom={physicalViewport ? -effectiveOffset : undefined}
+            left={physicalViewport ? contentLeft : undefined}
+            marginLeft={physicalViewport ? undefined : contentLeft}
+            width={contentWidth}
             flexShrink={0}
-            marginBottom={viewShift}
           >
-            {windowed.map(row => (
-              <Box
-                key={`${row.kind}-${String(row.id)}`}
-                flexDirection="column"
-                width="100%"
-                marginBottom={2}
-                flexShrink={0}
-              >
-                {row.kind === 'compaction'
-                  ? renderCompaction(row.divider)
-                  : row.message.kind === 'user'
-                    ? <Text wrap="wrap">{userRun(row.message.text)}</Text>
-                    : renderFrozenMessage(row.message)}
-              </Box>
-            ))}
-            {!follow && unseenCount > 0 ? (
-              <Box width="100%">
-                <Text>{styled(`↓ 最新消息 · ${String(unseenCount)}`, 'accent')}</Text>
-              </Box>
-            ) : null}
-            {activeTurn !== undefined ? renderActiveTurn(activeTurn) : null}
+            {leadingRows > 0 ? <Box height={leadingRows} flexShrink={0} /> : null}
+            {visibleEntries.map((entry) => {
+              const blockId = entry.id
+              if (entry.kind === 'active') {
+                return (
+                  <Box
+                    key={blockId}
+                    ref={(element) => {
+                      if (element === null) blockRefs.current.delete(blockId)
+                      else blockRefs.current.set(blockId, element)
+                    }}
+                    flexDirection="column"
+                    width="100%"
+                    flexShrink={0}
+                  >
+                    {renderActiveTurn(entry.turn)}
+                  </Box>
+                )
+              }
+              const row = entry.row
+              return (
+                <Box
+                  key={blockId}
+                  ref={(element) => {
+                    if (element === null) blockRefs.current.delete(blockId)
+                    else blockRefs.current.set(blockId, element)
+                  }}
+                  flexDirection="column"
+                  width="100%"
+                  paddingBottom={entry.gapRows}
+                  flexShrink={0}
+                >
+                  {row.kind === 'compaction'
+                    ? renderCompaction(row.divider)
+                    : row.message.kind === 'user'
+                      ? <Text wrap="wrap">{userRun(row.message.text)}</Text>
+                      : renderFrozenMessage(row.message)}
+                </Box>
+              )
+            })}
+            {trailingRows > 0 ? <Box height={trailingRows} flexShrink={0} /> : null}
           </Box>
         )}
+      {!viewport.follow && viewport.unseenRows > 0 ? (
+        <Box position="absolute" right={rail === undefined ? 0 : 2} bottom={0}>
+          <Text>{styled(`↓ 最新消息 · ${String(viewport.unseenRows)}`, 'accent')}</Text>
+        </Box>
+      ) : null}
+      {rail === undefined ? null : (
+        <Box position="absolute" right={0} top={0} flexDirection="column" width={1}>
+          {Array.from({ length: rail.rows }, (_unused, index) => {
+            const thumb = index >= rail.thumbStart
+              && index < rail.thumbStart + rail.thumbRows
+            return (
+              <Text key={index}>
+                {styled(thumb ? '█' : '·', thumb ? 'accent' : 'fgDim')}
+              </Text>
+            )
+          })}
+        </Box>
+      )}
     </Box>
   )
 
-  if (rail === undefined) return transcriptColumn
   return (
-    <Box flexDirection="row" width="100%" flexGrow={1} overflow="hidden">
-      <Box flexDirection="column" flexGrow={1} overflow="hidden">
-        {transcriptColumn}
-      </Box>
-      <Box flexDirection="column" width={1} flexShrink={0}>
-        {Array.from({ length: rail.rows }, (_unused, index) => {
-          const thumb = index >= rail.thumbStart
-            && index < rail.thumbStart + rail.thumbRows
-          return <Text key={index}>{styled(thumb ? '█' : '·', thumb ? 'accent' : 'fgDim')}</Text>
-        })}
-      </Box>
-    </Box>
+    transcriptViewport
   )
 }

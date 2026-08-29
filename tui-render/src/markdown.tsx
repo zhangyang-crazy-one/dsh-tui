@@ -445,6 +445,9 @@ function fitColumnWidths(
     }
     index = (index + 1) % widths.length
   }
+  if (leftover > 0) {
+    widths[widths.length - 1] = (widths.at(-1) as number) + leftover
+  }
   return widths
 }
 
@@ -802,7 +805,8 @@ export interface MarkdownRowPrefix {
 /**
  * Render GFM markdown source into Ink elements.
  * @param source - markdown source (untrusted; escaped inside).
- * @param maxCols - wrap budget; defaults to the current window width.
+ * @param maxCols - complete row budget, including marker and cursor affixes;
+ * defaults to the current window width.
  * @param prefix - painted marker/indent runs; settled and streaming rows use
  * the same layout so a finishing turn does not reflow.
  * @param tail - painted run appended to the last painted row (the streaming
@@ -825,6 +829,11 @@ export function MarkdownBlock({
 }): ReactNode {
   const { columns } = useWindowSize()
   const width = Math.max(1, maxCols ?? columns)
+  const prefixWidth = Math.max(
+    displayWidth(prefix?.first ?? ''),
+    displayWidth(prefix?.rest ?? ''),
+  )
+  const bodyWidth = Math.max(1, width - prefixWidth - displayWidth(tail ?? ''))
   const root = parseMarkdown(source, settled)
   const children = root.children
   if (children.length === 0) {
@@ -841,7 +850,7 @@ export function MarkdownBlock({
   return (
     <Box flexDirection="column" width="100%">
       {children.map((node, index) =>
-        renderNode(node, index, width, {
+        renderNode(node, index, bodyWidth, {
           lead: index === 0 ? prefix?.first ?? '' : prefix?.rest ?? '',
           rest: prefix?.rest ?? '',
           tail: index === lastIndex ? tail : undefined,

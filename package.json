@@ -1,6 +1,6 @@
 {
   "name": "@crazyhappyone/dsh-tui",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Source-runtime launcher for the DeepSeek Harness terminal interface",
   "type": "module",
   "license": "MIT",

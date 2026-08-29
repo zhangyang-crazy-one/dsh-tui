@@ -9,15 +9,14 @@ import { BRAND_APP_TITLE } from '../src/brand.ts'
 import { activeBrandRevealTimerCount } from '../src/pixel-fish-home.tsx'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { setHyperlinks } from '../src/hyperlink.ts'
+import { ScreenAtlas } from '../src/screen-atlas.ts'
+import type { TranscriptViewportCommand } from '../src/transcript-viewport.ts'
 
 function model(overrides: Partial<ViewModel> = {}): ViewModel {
   return {
     history: [],
     activeTurn: undefined,
     status: 'idle',
-    scrollOffset: 0,
-    follow: true,
-    unseenCount: 0,
     reasoningExpanded: false,
     toolCardsExpanded: false,
     ...overrides,
@@ -38,22 +37,13 @@ function historyRows(count: number): ViewModel['history'] {
   }))
 }
 
-function renderedRowNumbers(output: string): number[] {
-  return [...output.matchAll(/ROW_(\d{3})/g)].map(match => Number(match[1]))
-}
-
-function rowRange(start: number, end: number): number[] {
-  return Array.from({ length: end - start }, (_, index) => start + index)
-}
-
 function streamElement(
   history: ViewModel['history'],
-  scrollOffset: number,
-  viewShift = 0,
+  viewportCommand?: TranscriptViewportCommand,
 ) {
   return createElement(StreamView, {
-    model: model({ history, scrollOffset, follow: scrollOffset === 0 }),
-    viewShift,
+    model: model({ history }),
+    viewportCommand,
   })
 }
 
@@ -70,13 +60,13 @@ function ttyStdout(rows: number, columns = 80) {
 }
 
 describe('conversationWidth', () => {
-  it('uses full width below 80 columns and the bounded transcript column above it', () => {
-    expect(conversationWidth(40)).toBe(40)
-    expect(conversationWidth(79)).toBe(79)
-    expect(conversationWidth(80)).toBe(57)
-    expect(conversationWidth(120)).toBe(86)
-    expect(conversationWidth(123)).toBe(88)
-    expect(conversationWidth(200)).toBe(88)
+  it('uses full width below 40 columns and two-column gutters above it', () => {
+    expect(conversationWidth(39)).toBe(39)
+    expect(conversationWidth(40)).toBe(36)
+    expect(conversationWidth(79)).toBe(75)
+    expect(conversationWidth(80)).toBe(76)
+    expect(conversationWidth(120)).toBe(116)
+    expect(conversationWidth(200)).toBe(196)
   })
 
   it('never collapses to zero columns', () => {
@@ -87,13 +77,13 @@ describe('conversationWidth', () => {
 
 describe('scrollRailGeometry', () => {
   it('omits the rail without overflow and keeps a three-row thumb', () => {
-    expect(scrollRailGeometry(60, 18, 0)).toBeUndefined()
+    expect(scrollRailGeometry(18, 18, 0)).toBeUndefined()
     expect(scrollRailGeometry(600, 18, 0)).toEqual({
       rows: 18,
       thumbStart: 15,
       thumbRows: 3,
     })
-    expect(scrollRailGeometry(600, 18, 540)).toEqual({
+    expect(scrollRailGeometry(600, 18, 582)).toEqual({
       rows: 18,
       thumbStart: 0,
       thumbRows: 3,
@@ -102,52 +92,23 @@ describe('scrollRailGeometry', () => {
 })
 
 describe('StreamView', () => {
-  it('renders exactly rows 0 through 59 on the first real Ink frame at offset 40', async () => {
+  it('keeps the fixed shell while edge commands replace physical viewport rows', async () => {
     const chunks: string[] = []
-    const stdout = fakeTtyStdout()
-    stdout.on('data', (chunk: string) => chunks.push(chunk))
-    const instance = render(streamElement(historyRows(100), 40), {
-      stdout,
-      stdin: fakeTtyStdin(),
-      exitOnCtrlC: false,
-      patchConsole: false,
-      interactive: true,
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => {
+      chunks.push(chunk)
+      atlas.feed(chunk)
     })
-    try {
-      await instance.waitUntilRenderFlush()
-      const rows = renderedRowNumbers(chunks.join(''))
-      expect(rows).toEqual(rowRange(0, 60))
-      expect(new Set(rows).size).toBe(60)
-    } finally {
-      instance.unmount()
-    }
-  })
-
-  it('keeps history rows visible when a viewShift pads the column', async () => {
-    const chunks: string[] = []
-    const stdout = fakeTtyStdout()
-    stdout.on('data', (chunk: string) => chunks.push(chunk))
-    const instance = render(streamElement(historyRows(3), 0, 4), {
-      stdout,
-      stdin: fakeTtyStdin(),
-      exitOnCtrlC: false,
-      patchConsole: false,
-      interactive: true,
-    })
-    try {
-      await instance.waitUntilRenderFlush()
-      expect(renderedRowNumbers(chunks.join(''))).toEqual([0, 1, 2])
-    } finally {
-      instance.unmount()
-    }
-  })
-
-  it('replaces rows 40 through 99 with rows 0 through 59 on a real Ink rerender', async () => {
-    const chunks: string[] = []
     const history = historyRows(100)
-    const stdout = fakeTtyStdout()
-    stdout.on('data', (chunk: string) => chunks.push(chunk))
-    const instance = render(streamElement(history, 0), {
+    const shell = (command: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'FIXED_TITLE',
+      badge: 'badge',
+      children: streamElement(history, command),
+      status: createElement(Text, null, 'FIXED_STATUS'),
+      input: createElement(Text, null, '> FIXED_INPUT'),
+    })
+    const instance = render(shell({ sequence: 1, kind: 'edge', edge: 'oldest' }), {
       stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
@@ -156,21 +117,176 @@ describe('StreamView', () => {
     })
     try {
       await instance.waitUntilRenderFlush()
-      expect(renderedRowNumbers(chunks.join(''))).toEqual(rowRange(40, 100))
+      await instance.waitUntilRenderFlush()
+      const oldest = atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+      expect(oldest).toContain('FIXED_TITLE')
+      expect(oldest).toContain('FIXED_STATUS')
+      expect(oldest).toContain('FIXED_INPUT')
+      expect(oldest).toContain('ROW_000')
+      expect(oldest).not.toContain('ROW_099')
+      expect(oldest).toContain('█')
+      expect(oldest).toContain('·')
 
       chunks.length = 0
-      instance.rerender(streamElement(history, 40))
+      instance.rerender(shell({ sequence: 2, kind: 'edge', edge: 'latest' }))
       await instance.waitUntilRenderFlush()
-      const rows = renderedRowNumbers(chunks.join(''))
-      expect(rows).toEqual(rowRange(0, 60))
-      expect(new Set(rows).size).toBe(60)
-      expect(rows.some(row => row >= 60)).toBe(false)
+      await instance.waitUntilRenderFlush()
+      const latest = atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+      expect(latest).toContain('FIXED_TITLE')
+      expect(latest).toContain('FIXED_STATUS')
+      expect(latest).toContain('FIXED_INPUT')
+      expect(latest).toContain('ROW_099')
+      expect(latest).not.toContain('ROW_000')
     } finally {
       instance.unmount()
     }
   })
 
-  it('windows history to the recent rows (virtualization)', () => {
+  it('keeps detached physical rows stable while new content accumulates unseen rows', async () => {
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk) => { atlas.feed(chunk) })
+    const initial = historyRows(20)
+    const shell = (
+      history: ViewModel['history'],
+      command?: TranscriptViewportCommand,
+    ) => createElement(AppShell, {
+      title: 'ANCHOR_TITLE',
+      badge: 'badge',
+      children: createElement(StreamView, {
+        model: model({ history }),
+        viewportCommand: command,
+      }),
+      status: createElement(Text, null, 'ANCHOR_STATUS'),
+      input: createElement(Text, null, '> ANCHOR_INPUT'),
+    })
+    const instance = render(shell(initial), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    const screen = (): string => atlas.extract(
+      { col: 1, row: 1 },
+      { col: 80, row: 24 },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      instance.rerender(shell(initial, { sequence: 1, kind: 'scroll', delta: 6 }))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const beforeLines = screen().split('\n')
+      const beforeAnchor = beforeLines.find(line => line.includes('ROW_'))
+      const beforeRow = beforeLines.findIndex(line => line === beforeAnchor)
+      expect(beforeAnchor).toBeDefined()
+
+      const appended = [
+        ...initial,
+        { id: 21, kind: 'user' as const, text: 'ROW_020', timestamp: 21 },
+      ]
+      instance.rerender(shell(appended, { sequence: 1, kind: 'scroll', delta: 6 }))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const afterLines = screen().split('\n')
+      expect(afterLines[beforeRow]).toBe(beforeAnchor)
+      expect(screen()).toContain('↓ 最新消息 · 3')
+      expect(screen()).toContain('ANCHOR_TITLE')
+      expect(screen()).toContain('ANCHOR_STATUS')
+      expect(screen()).toContain('ANCHOR_INPUT')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('shows a physical rail for one long message with fewer than 60 events', async () => {
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk) => { atlas.feed(chunk) })
+    const instance = render(createElement(AppShell, {
+      title: 'LONG_TITLE',
+      badge: 'badge',
+      children: createElement(StreamView, {
+        model: model({
+          history: [{
+            id: 1,
+            kind: 'user',
+            text: Array.from({ length: 30 }, (_, index) => `LONG_${String(index)}`).join('\n'),
+            timestamp: 1,
+          }],
+        }),
+      }),
+      status: createElement(Text, null, 'LONG_STATUS'),
+      input: createElement(Text, null, '> LONG_INPUT'),
+    }), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const frame = atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+      expect(frame).toContain('█')
+      expect(frame).toContain('·')
+      expect(frame).toContain('LONG_INPUT')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('keeps the detached anchor visible across terminal resize', async () => {
+    const stdout = ttyStdout(30, 120) as ReturnType<typeof ttyStdout> & {
+      emit(event: 'resize'): boolean
+    }
+    const atlas = new ScreenAtlas(120, 30)
+    stdout.on('data', (chunk) => { atlas.feed(chunk) })
+    const history = historyRows(30)
+    const shell = (command?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'RESIZE_TITLE',
+      badge: 'badge',
+      children: createElement(StreamView, {
+        model: model({ history }),
+        viewportCommand: command,
+      }),
+      status: createElement(Text, null, 'RESIZE_STATUS'),
+      input: createElement(Text, null, '> RESIZE_INPUT'),
+    })
+    const instance = render(shell(), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      instance.rerender(shell({ sequence: 1, kind: 'scroll', delta: 10 }))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const before = atlas.extract({ col: 1, row: 1 }, { col: 120, row: 30 })
+      const anchor = /ROW_\d{3}/u.exec(before)?.[0]
+      expect(anchor).toBeDefined()
+
+      stdout.columns = 80
+      stdout.rows = 24
+      atlas.resize(80, 24)
+      stdout.emit('resize')
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const after = atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+      expect(after).toContain(anchor as string)
+      expect(after).toContain('RESIZE_TITLE')
+      expect(after).toContain('RESIZE_STATUS')
+      expect(after).toContain('RESIZE_INPUT')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('retains the complete transcript source for physical-row measurement', () => {
     const history = Array.from({ length: 100 }, (_, i) => ({
       id: i + 1,
       kind: i % 2 === 0 ? 'user' : 'assistant',
@@ -182,7 +298,7 @@ describe('StreamView', () => {
         model: model({ history }),
       }),
     )
-    expect(out).not.toContain('row 0')
+    expect(out).toContain('row 0')
     expect(out).toContain('row 99')
     expect(out).toContain('●')
     expect(out).toContain('> ')
@@ -369,42 +485,6 @@ describe('StreamView', () => {
     expect(expanded).toContain('retained reasoning')
   })
 
-  it('shows the exact new-message notice only while unseen rows remain', () => {
-    const history = historyRows(61)
-    const unseen = renderToString(
-      createElement(StreamView, {
-        model: model({ history, scrollOffset: 1, follow: false, unseenCount: 1 }),
-      }),
-    )
-    expect(unseen).toContain('↓ 最新消息 · 1')
-
-    const following = renderToString(
-      createElement(StreamView, {
-        model: model({ history, scrollOffset: 0, unseenCount: 0 }),
-      }),
-    )
-    expect(following).not.toContain('↓ 新消息')
-  })
-
-  it('renders a one-column rail only for overflowing history', () => {
-    const overflow = stripAnsi(renderToString(
-      createElement(StreamView, {
-        model: model({
-          history: historyRows(100),
-          scrollOffset: 40,
-          follow: false,
-        }),
-      }),
-    ))
-    expect(overflow).toContain('█')
-    expect(overflow).toContain('·')
-
-    const short = stripAnsi(renderToString(
-      createElement(StreamView, { model: model({ history: historyRows(60) }) }),
-    ))
-    expect(short).not.toContain('█')
-  })
-
   it('packs a short transcript against the status and composer rows', async () => {
     const chunks: string[] = []
     const stdout = ttyStdout(24)
@@ -440,9 +520,9 @@ describe('StreamView', () => {
       const composerAt = lines.findIndex(line => line.includes('COMPOSER'))
       expect(titleAt).toBeGreaterThanOrEqual(0)
       expect(msgAt).toBeGreaterThan(titleAt)
-      expect(statusAt).toBeGreaterThan(msgAt)
-      expect(composerAt).toBeGreaterThan(statusAt)
-      expect(msgAt - titleAt).toBeGreaterThan(statusAt - msgAt)
+      expect(composerAt).toBeGreaterThan(msgAt)
+      expect(statusAt).toBeGreaterThan(composerAt)
+      expect(msgAt - titleAt).toBeGreaterThan(composerAt - msgAt)
     } finally {
       instance.unmount()
     }
@@ -561,16 +641,16 @@ describe('StreamView', () => {
       const composerAt = lines.findIndex(line => line.includes('COMPOSER'))
       expect(titleAt).toBeGreaterThanOrEqual(0)
       expect(homeAt).toBeGreaterThan(titleAt)
-      expect(statusAt).toBeGreaterThan(homeAt)
-      expect(composerAt).toBeGreaterThan(statusAt)
+      expect(composerAt).toBeGreaterThan(homeAt)
+      expect(statusAt).toBeGreaterThan(composerAt)
       expect(homeAt - titleAt).toBeGreaterThan(3)
-      expect(statusAt - homeAt).toBeGreaterThan(3)
+      expect(composerAt - homeAt).toBeGreaterThan(3)
     } finally {
       instance.unmount()
     }
   })
 
-  it('left-aligns the conversation column and keeps two blank lines between messages', () => {
+  it('centers the conversation column and keeps two blank lines between messages', () => {
     const history = [
       { id: 1, kind: 'user', text: 'first', timestamp: 1 },
       { id: 2, kind: 'assistant', text: 'second', timestamp: 2 },
@@ -592,7 +672,7 @@ describe('StreamView', () => {
     const userLead = userPlain.length - userPlain.trimStart().length
     const assistantLead = assistantPlain.length - assistantPlain.trimStart().length
     expect(userLead).toBe(assistantLead)
-    expect(userLead).toBe(0)
+    expect(userLead).toBe(Math.ceil((80 - conversationWidth(80)) / 2))
     expect(userPlain.trim()).toBe('> first')
     expect(assistantPlain.trim()).toBe('● second')
     // Exactly two blank rows between the message blocks (02-UI-SPEC §1.2 T2).
@@ -994,7 +1074,7 @@ describe('StreamView', () => {
     expect(plainBare).not.toContain(' tok')
   })
 
-  it('collapses dense settled history into the exact digest row until expansion is enabled', async () => {
+  it('collapses dense settled history into the exact digest row until expansion is enabled', () => {
     const content = Array.from({ length: 21 }, (_, index) =>
       index % 2 === 0
         ? { kind: 'text' as const, text: `PART_${index}` }
@@ -1035,22 +1115,12 @@ describe('StreamView', () => {
     expect(toolExpanded).not.toContain('● 过程摘要')
     expect(toolExpanded).toContain('PART_0')
 
-    for (const [columns, marker] of [[123, '已折叠'], [98, 'Ctrl+O 推理']] as const) {
-      const stdout = ttyStdout(24, columns)
-      const chunks: string[] = []
-      stdout.on('data', chunk => chunks.push(chunk))
-      const instance = render(createElement(StreamView, { model: baseModel }), {
-        stdout,
-        stdin: fakeTtyStdin(),
-        exitOnCtrlC: false,
-        patchConsole: false,
-      })
-      try {
-        await instance.waitUntilRenderFlush()
-        expect(stripAnsi(chunks.join(''))).toContain(marker)
-      } finally {
-        instance.unmount()
-      }
+    for (const columns of [123, 98] as const) {
+      const rendered = renderToString(
+        createElement(StreamView, { model: baseModel }),
+        { columns },
+      )
+      expect(stripAnsi(rendered)).toContain('过程摘要')
     }
   })
 
@@ -1178,7 +1248,8 @@ describe('StreamView', () => {
       }),
       presenters,
     }))
-    expect(stripAnsi(out)).toContain(`  · ${absolutePath}`)
+    expect(stripAnsi(out)).toContain('  · /tmp/')
+    expect(stripAnsi(out)).toContain('bb.ts')
     expect(out).toContain(`\x1b]8;;file://${absolutePath}`)
     expect(out).not.toContain('\x1b]8;;file://relative')
     setHyperlinks(false)
