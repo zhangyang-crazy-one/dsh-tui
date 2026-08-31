@@ -322,4 +322,44 @@ describe('transcript differential clearing', () => {
     setFrameRail(undefined)
     setFrameCaret(undefined)
   })
+
+  it('does not clear a screen row that a different transcript row now occupies', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    const row = (id: string, terminalRow: number, text: string) => createFrameSnapshotRow({
+      id,
+      row: terminalRow,
+      col: 2,
+      line: createPhysicalLine({
+        blockId: id,
+        spans: [{ text, token: 'fg' }],
+        sourceStart: 0,
+        sourceEnd: text.length,
+        blockRow: 0,
+      }),
+    })
+    setVisibleFrameSnapshot({
+      revision: 'before-scroll',
+      geometry,
+      rows: [row('a', 2, 'AAAA'), row('b', 3, 'BBBB')],
+    })
+    atlas.feed(transformFrameChunk(
+      '\x1b[2;2HAAAA\x1b[3;2HBBBB\x1b[?2026l',
+      'none',
+    ))
+
+    setVisibleFrameSnapshot({
+      revision: 'after-scroll',
+      geometry,
+      rows: [row('b', 2, 'BBBB'), row('c', 3, 'CCCC')],
+    })
+    atlas.feed(transformFrameChunk(
+      '\x1b[2;2HBBBB\x1b[3;2HCCCC\x1b[?2026l',
+      'none',
+    ))
+
+    expect(atlas.extract({ col: 2, row: 2 }, { col: 5, row: 2 })).toBe('BBBB')
+    expect(atlas.extract({ col: 2, row: 3 }, { col: 5, row: 3 })).toBe('CCCC')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
 })

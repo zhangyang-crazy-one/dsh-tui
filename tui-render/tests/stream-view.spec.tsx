@@ -134,6 +134,7 @@ describe('StreamView', () => {
       expect(oldest).toContain('FIXED_INPUT')
       expect(oldest).toContain('ROW_000')
       expect(oldest).not.toContain('ROW_099')
+      expect(oldest.match(/ROW_\d{3}/gu)?.length ?? 0).toBeGreaterThanOrEqual(5)
       expect(oldest).toContain('█')
       expect(oldest).toContain('·')
 
@@ -147,6 +148,7 @@ describe('StreamView', () => {
       expect(latest).toContain('FIXED_INPUT')
       expect(latest).toContain('ROW_099')
       expect(latest).not.toContain('ROW_000')
+      expect(latest.match(/ROW_\d{3}/gu)?.length ?? 0).toBeGreaterThanOrEqual(5)
     } finally {
       instance.unmount()
     }

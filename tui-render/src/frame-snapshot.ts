@@ -114,9 +114,15 @@ function geometryIdentity(geometry: FrameGeometry): string {
   return JSON.stringify(geometry)
 }
 
+function screenRowKey(row: Pick<FrameSnapshotRow, 'row' | 'col'>): string {
+  return `${String(row.row)}:${String(row.col)}`
+}
+
 /**
- * Compare adjacent visible frames. Shortened and removed rows carry an
- * explicit `clearColumns` width so the terminal adapter erases stale cells.
+ * Compare adjacent visible frames by terminal coordinate. Shortened and
+ * removed rows carry an explicit `clearColumns` width so the terminal adapter
+ * erases stale cells without clearing a different row that moved into the
+ * same screen position.
  * @param previous - prior frame, or undefined on first paint.
  * @param next - frame to publish.
  * @returns minimal row changes, or a forced visible-region repaint.
@@ -127,17 +133,16 @@ export function diffVisibleFrameSnapshots(
 ): FrameSnapshotDiff {
   const forced = previous === undefined
     || geometryIdentity(previous.geometry) !== geometryIdentity(next.geometry)
-  const oldRows = new Map(previous?.rows.map(row => [row.id, row]) ?? [])
+  const oldRows = new Map(previous?.rows.map(row => [screenRowKey(row), row]) ?? [])
   const changes: FrameRowChange[] = []
   let unchangedRows = 0
   for (const row of next.rows) {
-    const old = oldRows.get(row.id)
-    oldRows.delete(row.id)
+    const key = screenRowKey(row)
+    const old = oldRows.get(key)
+    oldRows.delete(key)
     if (
       !forced
       && old !== undefined
-      && old.row === row.row
-      && old.col === row.col
       && old.identity === row.identity
     ) {
       unchangedRows += 1
