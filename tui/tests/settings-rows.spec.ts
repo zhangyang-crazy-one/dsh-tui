@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { settingsNamespace, type SettingsDescriptor } from '@deepseek-ai/dsh-settings'
+import type { SettingsDescriptor } from '@deepseek-ai/dsh-settings'
 import {
   parseSettingValue,
   parseSettingsFieldValue,
@@ -14,7 +14,7 @@ import {
 
 function descriptor(ns: string, secrets: SettingsDescriptor['secrets'] = []): SettingsDescriptor {
   return {
-    ns: settingsNamespace(ns),
+    ns: ns as SettingsDescriptor['ns'],
     schema: {},
     value: {},
     revision: 0,
@@ -64,10 +64,10 @@ describe('brandAnimation setting vocabulary', () => {
 
 describe('settingsRowsFromDescribe', () => {
   it('orders leading namespaces and stringifies nested catalogs', () => {
-    const deepseek = settingsNamespace('llm-deepseek')
-    const openai = settingsNamespace('llm-openai')
-    const pi = settingsNamespace('llm-pi-ai')
-    const shell = settingsNamespace('shell')
+    const deepseek = 'llm-deepseek'
+    const openai = 'llm-openai'
+    const pi = 'llm-pi-ai'
+    const shell = 'shell'
     const values: Record<string, unknown> = {
       [deepseek]: {
         baseURL: 'https://api.deepseek.com',
@@ -110,7 +110,7 @@ describe('settingsRowsFromDescribe', () => {
   })
 
   it('omits secret heads from redacted descriptors', () => {
-    const ns = settingsNamespace('llm-deepseek')
+    const ns = 'llm-deepseek'
     const rows = settingsRowsFromDescribe(
       [descriptor('llm-deepseek', [{ path: ['apiKey'], set: true }])],
       () => ({ apiKey: 'sk-hidden', baseURL: 'https://api.deepseek.com' }),
@@ -131,8 +131,8 @@ describe('settingsRowsFromDescribe', () => {
   })
 
   it('accepts null-prototype objects and sorts remaining namespaces', () => {
-    const shell = settingsNamespace('shell')
-    const fs = settingsNamespace('fs')
+    const shell = 'shell'
+    const fs = 'fs'
     const values: Record<string, unknown> = {
       [shell]: Object.assign(Object.create(null) as Record<string, unknown>, { timeoutMs: 30, graceMs: 3 }),
       [fs]: { maxBytes: 1 },

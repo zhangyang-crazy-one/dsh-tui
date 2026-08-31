@@ -3,7 +3,7 @@ import { render, renderToString, Text } from 'ink'
 import { createElement } from 'react'
 import { AppShell } from '../src/app-shell.tsx'
 import { StreamView, conversationWidth, scrollRailGeometry } from '../src/stream-view.tsx'
-import type { ViewModel } from '../src/projection.ts'
+import type { ProjectedTurnContent, ViewModel } from '../src/projection.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 import { BRAND_APP_TITLE } from '../src/brand.ts'
 import { activeBrandRevealTimerCount } from '../src/pixel-fish-home.tsx'
@@ -11,6 +11,9 @@ import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { setHyperlinks } from '../src/hyperlink.ts'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import type { TranscriptViewportCommand } from '../src/transcript-viewport.ts'
+import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
+import { createFrameMetrics } from '../src/frame-metrics.ts'
+import { renderPolicyDefaults } from '../src/render-policy.ts'
 
 function model(overrides: Partial<ViewModel> = {}): ViewModel {
   return {
@@ -57,6 +60,10 @@ function ttyStdout(rows: number, columns = 80) {
   stream.columns = columns
   stream.rows = rows
   return stream
+}
+
+function ttyFrame(atlas: ScreenAtlas, columns: number, rows: number): string {
+  return atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
 }
 
 describe('conversationWidth', () => {
@@ -109,7 +116,10 @@ describe('StreamView', () => {
       input: createElement(Text, null, '> FIXED_INPUT'),
     })
     const instance = render(shell({ sequence: 1, kind: 'edge', edge: 'oldest' }), {
-      stdout,
+      stdout: wrapStdoutForFrameBg(
+        stdout,
+        () => 'none',
+      ) as unknown as typeof stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -167,13 +177,10 @@ describe('StreamView', () => {
       patchConsole: false,
       interactive: true,
     })
-    const screen = (): string => atlas.extract(
-      { col: 1, row: 1 },
-      { col: 80, row: 24 },
-    )
+    const screen = (): string => ttyFrame(atlas, 80, 24)
     try {
       await instance.waitUntilRenderFlush()
-      instance.rerender(shell(initial, { sequence: 1, kind: 'scroll', delta: 6 }))
+      instance.rerender(shell(initial, { sequence: 1, kind: 'position', fraction: 0.5 }))
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const beforeLines = screen().split('\n')
@@ -185,7 +192,7 @@ describe('StreamView', () => {
         ...initial,
         { id: 21, kind: 'user' as const, text: 'ROW_020', timestamp: 21 },
       ]
-      instance.rerender(shell(appended, { sequence: 1, kind: 'scroll', delta: 6 }))
+      instance.rerender(shell(appended, { sequence: 1, kind: 'position', fraction: 0.5 }))
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const afterLines = screen().split('\n')
@@ -194,6 +201,78 @@ describe('StreamView', () => {
       expect(screen()).toContain('ANCHOR_TITLE')
       expect(screen()).toContain('ANCHOR_STATUS')
       expect(screen()).toContain('ANCHOR_INPUT')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('keeps a detached history anchor while the active turn becomes settled history', async () => {
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk) => { atlas.feed(chunk) })
+    const initialHistory = historyRows(30)
+    const active = {
+      turn: 7,
+      assistantText: 'ACTIVE_SETTLEMENT_TAIL',
+      reasoningText: 'working',
+      toolCalls: [],
+      reasoningDurationMs: 100,
+    }
+    const shell = (
+      viewModel: ViewModel,
+      command?: TranscriptViewportCommand,
+    ) => createElement(AppShell, {
+      title: 'SETTLE_ANCHOR_TITLE',
+      badge: 'badge',
+      children: createElement(StreamView, {
+        model: viewModel,
+        viewportCommand: command,
+      }),
+      status: createElement(Text, null, 'SETTLE_ANCHOR_STATUS'),
+      input: createElement(Text, null, '> SETTLE_ANCHOR_INPUT'),
+    })
+    const activeModel = model({
+      history: initialHistory,
+      activeTurn: active,
+      status: 'generating',
+    })
+    const command = { sequence: 1, kind: 'position', fraction: 0.5 } as const
+    const instance = render(shell(activeModel), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    const screen = (): string => ttyFrame(atlas, 80, 24)
+    try {
+      await instance.waitUntilRenderFlush()
+      instance.rerender(shell(activeModel, command))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const beforeLines = screen().split('\n')
+      const anchorRow = beforeLines.findIndex(line => line.includes('ROW_'))
+      const anchor = beforeLines[anchorRow]
+      expect(anchorRow).toBeGreaterThan(1)
+      expect(anchor).toBeDefined()
+
+      const settledModel = model({
+        history: [
+          ...initialHistory,
+          {
+            id: 31,
+            kind: 'assistant',
+            text: 'FINAL_SETTLEMENT_TAIL',
+            timestamp: 31,
+            turnOrdinal: 7,
+          },
+        ],
+      })
+      instance.rerender(shell(settledModel, command))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      expect(screen().split('\n')[anchorRow]).toBe(anchor)
+      expect(screen()).toContain('SETTLE_ANCHOR_INPUT')
     } finally {
       instance.unmount()
     }
@@ -219,7 +298,10 @@ describe('StreamView', () => {
       status: createElement(Text, null, 'LONG_STATUS'),
       input: createElement(Text, null, '> LONG_INPUT'),
     }), {
-      stdout,
+      stdout: wrapStdoutForFrameBg(
+        stdout,
+        () => 'none',
+      ) as unknown as typeof stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -1253,5 +1335,326 @@ describe('StreamView', () => {
     expect(out).toContain(`\x1b]8;;file://${absolutePath}`)
     expect(out).not.toContain('\x1b]8;;file://relative')
     setHyperlinks(false)
+  })
+})
+
+describe('StreamView physical-row virtualization', () => {
+  it('reserves the assistant marker columns before projecting physical rows', async () => {
+    const columns = 80
+    const rows = 24
+    const body = `${'x'.repeat(conversationWidth(columns) - 1)}Z`
+    const stdout = ttyStdout(rows, columns)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const instance = render(
+      createElement(AppShell, {
+        title: 'PREFIX_WIDTH_TITLE',
+        badge: 'b',
+        children: createElement(StreamView, {
+          model: model({
+            history: [{
+              id: 1,
+              kind: 'assistant',
+              text: body,
+              timestamp: 1,
+            }],
+          }),
+        }),
+        status: createElement(Text, null, 'PREFIX_WIDTH_STATUS'),
+        input: createElement(Text, null, '> PREFIX_WIDTH_INPUT'),
+      }),
+      {
+        stdout,
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const frame = ttyFrame(atlas, columns, rows)
+      expect(frame).toContain('Z')
+      expect(frame).not.toContain('…')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('reserves the streaming cursor column before projecting active physical rows', async () => {
+    const columns = 80
+    const rows = 24
+    const body = `${'y'.repeat(conversationWidth(columns) - 3)}Z`
+    const stdout = ttyStdout(rows, columns)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const instance = render(
+      createElement(AppShell, {
+        title: 'CURSOR_WIDTH_TITLE',
+        badge: 'b',
+        children: createElement(StreamView, {
+          model: model({
+            activeTurn: {
+              turn: 1,
+              assistantText: body,
+              reasoningText: '',
+              toolCalls: [],
+              reasoningDurationMs: 0,
+            },
+            status: 'generating',
+          }),
+        }),
+        status: createElement(Text, null, 'CURSOR_WIDTH_STATUS'),
+        input: createElement(Text, null, '> CURSOR_WIDTH_INPUT'),
+      }),
+      {
+        stdout,
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const frame = ttyFrame(atlas, columns, rows)
+      expect(frame).toContain('Z▌')
+      expect(frame).not.toContain('…')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('mounts only viewport+overscan rows for a 10,000-line single Markdown block', async () => {
+    // Build a single settled assistant message whose source is 10,000
+    // short lines so the block-rows projector emits 10,000 `MarkdownRenderLine`
+    // records but the slice path should only mount the ones in the visible
+    // viewport plus the policy overscan.
+    const tenThousand = Array.from({ length: 10_000 }, (_, index) => `line_${String(index).padStart(5, '0')}`)
+      .join('\n')
+    const history: ViewModel['history'] = [{
+      id: 1,
+      kind: 'assistant',
+      text: tenThousand,
+      timestamp: 1,
+    }]
+    const stdout = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
+      isTTY: boolean
+      columns: number
+      rows: number
+    }
+    stdout.isTTY = true
+    stdout.columns = 80
+    stdout.rows = 24
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const metrics = createFrameMetrics()
+    const policy = renderPolicyDefaults()
+    const instance = render(
+      createElement(AppShell, {
+        title: 'T',
+        badge: 'b',
+        children: createElement(StreamView, {
+          model: { history, activeTurn: undefined, status: 'idle', reasoningExpanded: false, toolCardsExpanded: false },
+          renderPolicy: policy,
+          frameMetrics: metrics,
+        }),
+        status: createElement(Text, null, 'STATUS'),
+        input: createElement(Text, null, '> INPUT'),
+      }),
+      {
+        stdout,
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const mountedRows = metrics.snapshot().mountedRows.total
+      // The slice budget is roughly one viewport + a bounded overscan
+      // for both directions; the legacy full-block mount path would have
+      // reported a number close to 10,000.
+      expect(mountedRows).toBeLessThan(500)
+      expect(mountedRows).toBeGreaterThan(0)
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('slices a growing active turn and preserves detached mid-block geometry', async () => {
+    const source = Array.from({ length: 1_000 }, (_, index) => (
+      `live_${String(index).padStart(5, '0')}`
+    )).join('\n')
+    const activeModel = model({
+      activeTurn: {
+        turn: 7,
+        assistantText: source,
+        reasoningText: '',
+        toolCalls: [],
+        reasoningDurationMs: 0,
+      },
+      status: 'generating',
+    })
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const metrics = createFrameMetrics()
+    const shell = (command?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'ACTIVE_SLICE_TITLE',
+      badge: 'b',
+      children: createElement(StreamView, {
+        model: activeModel,
+        viewportCommand: command,
+        frameMetrics: metrics,
+      }),
+      status: createElement(Text, null, 'ACTIVE_SLICE_STATUS'),
+      input: createElement(Text, null, '> ACTIVE_SLICE_INPUT'),
+    })
+    const instance = render(shell(), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const follow = ttyFrame(atlas, 80, 24)
+      const tail = follow.split('\n').find(line => line.includes('live_00999'))
+      expect(tail).toContain('▌')
+      expect(tail).not.toContain('●')
+      expect(metrics.snapshot().mountedRows.total).toBeLessThan(500)
+
+      instance.rerender(shell({ sequence: 1, kind: 'position', fraction: 0.5 }))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const detached = ttyFrame(atlas, 80, 24)
+      const indexes = [...detached.matchAll(/live_(\d{5})/g)].map(match => Number(match[1]))
+      expect(indexes.length).toBeGreaterThan(0)
+      expect(Math.max(...indexes)).toBeGreaterThan(500)
+      expect(Math.max(...indexes)).toBeLessThan(700)
+      expect(detached).not.toContain('live_00999')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('reports mounted row counts even on small blocks', async () => {
+    const history: ViewModel['history'] = [
+      { id: 1, kind: 'user', text: 'ping', timestamp: 1 },
+      { id: 2, kind: 'user', text: 'pong', timestamp: 2 },
+    ]
+    const stdout = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
+      isTTY: boolean
+      columns: number
+      rows: number
+    }
+    stdout.isTTY = true
+    stdout.columns = 80
+    stdout.rows = 24
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const metrics = createFrameMetrics()
+    const instance = render(
+      createElement(StreamView, {
+        model: { history, activeTurn: undefined, status: 'idle', reasoningExpanded: false, toolCardsExpanded: false },
+        frameMetrics: metrics,
+      }),
+      {
+        stdout,
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const total = metrics.snapshot().mountedRows.total
+      expect(total).toBeGreaterThan(0)
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('keeps the same row references across an active→settled transition for an assistant block', () => {
+    const assistantId = 99
+    const text = 'Settle-stable stream content that should keep its line refs intact.'
+    const active = {
+      turn: 7,
+      assistantText: text,
+      reasoningText: '',
+      toolCalls: [],
+      reasoningDurationMs: 0,
+    }
+    const baseModel: ViewModel = {
+      history: [],
+      activeTurn: active,
+      status: 'generating' as const,
+      reasoningExpanded: false,
+      toolCardsExpanded: false,
+    }
+    const activeOut = renderToString(createElement(StreamView, { model: baseModel }))
+    expect(stripAnsi(activeOut)).toContain(text)
+    const settledModel: ViewModel = {
+      ...baseModel,
+      activeTurn: undefined,
+      status: 'idle' as const,
+      history: [{
+        id: assistantId,
+        kind: 'assistant' as const,
+        text,
+        timestamp: 1,
+        turnOrdinal: 7,
+      }],
+    }
+    const settledOut = renderToString(createElement(StreamView, { model: settledModel }))
+    expect(stripAnsi(settledOut)).toContain(text)
+  })
+
+  it('does not re-render invisible settled rows while the active turn grows', () => {
+    const settledHistory: ViewModel['history'] = [
+      { id: 1, kind: 'user', text: 'older', timestamp: 0 },
+      { id: 2, kind: 'assistant', text: 'STABLE SETTLED ANSWER', timestamp: 1 },
+    ]
+    const initialActive = {
+      turn: 1,
+      assistantText: 'streaming answer',
+      reasoningText: '',
+      toolCalls: [],
+      reasoningDurationMs: 0,
+    }
+    const out1 = renderToString(createElement(StreamView, {
+      model: {
+        history: settledHistory,
+        activeTurn: initialActive,
+        status: 'generating',
+        reasoningExpanded: false,
+        toolCardsExpanded: false,
+      },
+    }))
+    const grownActive = { ...initialActive, assistantText: 'streaming answer expanded' }
+    const out2 = renderToString(createElement(StreamView, {
+      model: {
+        history: settledHistory,
+        activeTurn: grownActive,
+        status: 'generating',
+        reasoningExpanded: false,
+        toolCardsExpanded: false,
+      },
+    }))
+    const plain1 = stripAnsi(out1)
+    const plain2 = stripAnsi(out2)
+    expect(plain1).toContain('STABLE SETTLED ANSWER')
+    expect(plain2).toContain('STABLE SETTLED ANSWER')
+    expect(plain1).toContain('streaming answer')
+    expect(plain2).toContain('streaming answer expanded')
   })
 })

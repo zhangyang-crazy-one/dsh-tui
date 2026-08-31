@@ -31,12 +31,14 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 
 随产品交付的 profile 为 `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-tui'], patchReload: 'startup' }`。profile 与 home patch 的修改在下次进程启动时生效，不会重新组合正在运行的终端、Agent 或会话。设置文件热更新仍由 settings 服务拥有。
 
+可选 `renderPolicy` 配置在启动时解析一次，并显式传给渲染器。`transcriptOverscan` 与 `cache.maxRows`/`cache.maxBytes` 限制物理行投影和重建缓存；`stream` 拥有 smooth/catch-up 队列阈值与单帧工作量；`scroll` 拥有 latest-target 节奏与追赶步长。Config schema 要求帧间隔和缓存上限为正、overscan/缓存预算有界，且退出阈值严格小于对应进入阈值，因此无效组合会在插件加载时失败。随产品交付的值位于 [`cordis.patch.yml`](cordis.patch.yml)，`pnpm run test:tui:perf` 运行严格的真实 PTY 性能门禁。
+
 `--frame-stats <path>` 选择提交级渲染成本测量。目标在启动时解析为绝对路径且必须可写——不可写目标会使启动失败（绝不静默跳过）。有序退出时运行时向该路径写入一个 JSON 文件，且只写这个文件：
 
 ```json
 {
-  "renderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0 },
-  "brandRenderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0 },
+  "renderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0, "samples": [] },
+  "brandRenderMs": { "count": 0, "mean": 0, "max": 0, "p95": 0, "samples": [] },
   "pacing": { "commits": 0, "elapsedMs": 0 },
   "brandRevealTimers": 0,
   "environment": { "platform": "", "node": "", "arch": "" },
@@ -44,11 +46,11 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 }
 ```
 
-`renderMs` 是每个已提交根子树渲染的 React 渲染阶段成本（Profiler `onRender` `actualDuration`，有界 120 样本环形缓冲，`p95` 为排序分位数）——**不是**墙钟终端绘制测量，也不含 Ink host diff/commit 阶段。`brandRenderMs` 对生成的空闲首页子树执行相同测量，`brandRevealTimers` 是有序退出采样时该首页仍存活的自有 timeout 数。`pacing` 提供根提交数与经过时间作为节奏上下文。载荷只含统计与 environment——不含任何会话或消息内容——且绝不写入 stdout。
+`renderMs` 是每个已提交根子树渲染的 React 渲染阶段成本（Profiler `onRender` `actualDuration`，有界 120 样本环形缓冲，`p95` 为排序分位数）——**不是**墙钟终端绘制测量，也不含 Ink host diff/commit 阶段。首次生成或 viewport 命令开始工作负载窗口时，启动与历史恢复样本会被一次性丢弃；`samples` 保留该窗口内的有界时长，供回归诊断。`brandRenderMs` 独立测量生成的空闲首页子树，`brandRevealTimers` 是有序退出采样时该首页仍存活的自有 timeout 数。`pacing` 提供工作负载窗口内的根提交数与经过时间。输出载荷还包含 `frameMetrics`：delta-ingress-to-stdout-drain 与 scroll-input-to-paint 延迟环形缓冲，Markdown 解析字节数，稳定行、尾部行、挂载行和写出单元计数，队列深度/年龄，以及缓存字节数/淘汰次数。载荷只含统计与 environment——不含任何会话或消息内容——且绝不写入 stdout。
 
 ### 约定
 
-- 运行时拥有 live Agent 句柄、会话投影和会话目录状态；渲染包只接收 controller 接口。顶栏标题是已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外；在出现 provider 或重命名标题之前循环显示紧凑挂载名 `DeepSeek · deepseek-tui`。目录行仍使用第一条人类消息作为回退。空闲无消息时，对话列绘制生成的官方 FishLogo、`DeepSeek` 与 `有什么可以帮忙的`。环境独立于颜色选择 half-block、full-block、ASCII 或纯字标输出；`brandAnimation` 保存 `auto | on | off`，任何输入、历史、覆盖层、resize、播放完成或卸载 stop 都会清除一次性 reveal timer。运行时只为已绑定的 live agent 回答 `approval/request`，其他 agent 调用 `next()`。`y`/`a` 得到 `'allowed-once'`，`n`/`d`/Esc 得到 `'rejected'`，中止（含 Ctrl+C 停止生成）经请求 signal 得到 `'cancelled'`。策略 `'never'` 由 host 在该 listener 之前决定，因此不会出现 ApprovalPane。Ctrl+E 翻转当前窗口的工具卡折叠（`toolCardsExpanded`；不写 session 事件）。空 `/permission` 打开预设覆盖层；带参 `/permission <name>` 走 `ctx.commands.execute`。空 `/settings` 打开设置覆盖层，列出 `describe()` 的每个顶层字段（含 JSON 编辑的 `llm-deepseek · models` 与 `llm-pi-ai · providers`）；Enter 应用经 `ctx.settings.update` 写入所选字段。浏览态 `e` 报告 `prepareDocument()`，`r` 重读行（`✓ 已重载设置`）。空 `/resume` 打开会话列表。`/reload` 是本地命令：flush 当前会话、卸载终端、dispose 该会话，再以相同启动器标志加上 `--resume <id>` 拉起新的 Node，并丢掉原来的任务位置参数，以免首条消息再发一次。覆盖层上的 `r` 只重读设置行。空闲启动且未配置 `DEEPSEEK_API_KEY` 时打开 `首次设置`；Enter 经 `ctx.credentials.set` 保存后打开模型面板，Esc 跳过且不打开。`tui` 分节拥有 `colorTier`、`submitOnEnter`（为 false 时 Enter 插入换行）、`notify`（`off | attention | every-turn`，默认 `attention`）、`notifyQuietInputSeconds`（非负整数，默认 10）与 `brandAnimation`（显示为 `自动 / 开启 / 关闭`）。当前 runtime root Agent 的 scope 注册 `user-questions/request` waterfall listener；它用 `next()` 委托外部 root 与 child 请求，被接纳的请求则绘制 `AskUserPane`，把中止、Agent 替换与释放归并到同一清理，并只在准入时通知一次。↑↓/jk 移动高亮，数字键再 Enter 返回选项的原始 label。斜杠目录包含每条命令的 `description`。
+- 运行时拥有 live Agent 句柄、会话投影和会话目录状态；渲染包只接收 controller 接口。顶栏标题是已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外；在出现 provider 或重命名标题之前循环显示紧凑挂载名 `DeepSeek · deepseek-tui`。目录行仍使用第一条人类消息作为回退。空闲无消息时，对话列绘制生成的官方 FishLogo、`DeepSeek` 与 `有什么可以帮忙的`。环境独立于颜色选择 half-block、full-block、ASCII 或纯字标输出；`brandAnimation` 保存 `auto | on | off`，任何输入、历史、覆盖层、resize、播放完成或卸载 stop 都会清除一次性 reveal timer。运行时只为已绑定的 live agent 回答 `approval/request`，其他 agent 调用 `next()`。`y`/`a` 得到 `'allowed-once'`，`n`/`d`/Esc 得到 `'rejected'`，中止（含 Ctrl+C 停止生成）经请求 signal 得到 `'cancelled'`。策略 `'never'` 由 host 在该 listener 之前决定，因此不会出现 ApprovalPane。Ctrl+E 翻转当前窗口的工具卡折叠（`toolCardsExpanded`；不写 session 事件）。空 `/permission` 打开预设覆盖层；带参 `/permission <name>` 走 `ctx.commands.execute`。空 `/settings` 打开设置覆盖层，列出 `describe()` 的每个顶层字段（含 JSON 编辑的 `llm-deepseek · models` 与 `llm-pi-ai · providers`）；Enter 应用经 `ctx.settings.update` 写入所选字段。浏览态 `e` 报告 `prepareDocument()`，`r` 重读行（`✓ 已重载设置`）。空 `/resume` 打开会话列表。`/reload` 是本地命令：flush 当前会话、卸载终端、dispose 该会话，再以相同启动器标志加上 `--resume <id>` 拉起新的 Node，并丢掉原来的任务位置参数，以免首条消息再发一次。覆盖层上的 `r` 只重读设置行。空闲启动且未配置 `DEEPSEEK_API_KEY` 时打开 `首次设置`；Enter 经 `ctx.credentials.set` 保存后打开模型面板，Esc 跳过且不打开。`tui` 分节拥有 `colorTier`、`submitOnEnter`（为 false 时 Enter 插入换行）、`notify`（`off | attention | every-turn`，默认 `attention`）、`notifyQuietInputSeconds`（非负整数，默认 10）、`brandAnimation`（显示为 `自动 / 开启 / 关闭`）以及上文所述已验证的 `renderPolicy`。当前 runtime root Agent 的 scope 注册 `user-questions/request` waterfall listener；它用 `next()` 委托外部 root 与 child 请求，被接纳的请求则绘制 `AskUserPane`，把中止、Agent 替换与释放归并到同一清理，并只在准入时通知一次。↑↓/jk 移动高亮，数字键再 Enter 返回选项的原始 label。斜杠目录包含每条命令的 `description`。
 - `g s` 在组合器缓冲恰好为 `g` 时切换已持久化的会话目录；`/resume` 打开同一列表且不会关掉已打开的列表。左右方向键按字素移动组合器 caret。↑/k 把对话移向更旧的行，↓/j 回到 live 边缘；有输入时方向键仍滚动，j/k 则插入字母。鼠标滚轮在对话上与 ↑/k 同向，在列表面板上与 j/k 同向。Ctrl+N 新建会话，目录动作通过所拥有的服务切换、重命名或删除会话。删除调用 persistence 服务；该服务拒绝 live、已预留或已借用的身份，并在持久删除后移除派生的投影缓存状态。
 - 终端、回退标题和 `/export` Markdown 只包含直接人类输入的 `user/message` 事件（`source.kind === 'user'`）与 assistant 回复。来自 agent 指令、插件和 skill 目录的持久模型上下文有意不进入这份人类 transcript（文本记录）。
 - Ctrl+K 搜索向 `ctx.sessionQuery` 请求 `literal-substring` 匹配，并过滤到 `user`/`assistant` transcript 角色，因此查询 `回复` 可以找到可见的 `只回复` 文本，同时不会显示注入的模型上下文；其他服务调用方仍保持默认的 token-phrase 模式与完整语义语料库。

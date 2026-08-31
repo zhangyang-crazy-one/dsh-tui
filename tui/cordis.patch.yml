@@ -75,3 +75,26 @@
         resume: !!js ctx.tuiStartup.resume
         cwd: !!js ctx.tuiStartup.cwd
         frameStats: !!js ctx.tuiStartup.frameStats
+        # Render policy (overscan + stream pacing + scroll pacing + cache budgets).
+        # Loaded by the runtime Config schema; the values below mirror the
+        # schema defaults so the deployment layer owns the tunables. Override
+        # here to retune without touching the plugin.
+        renderPolicy:
+          transcriptOverscan: 16
+          stream:
+            frameIntervalMs: 16
+            entryDepth: 64
+            exitDepth: 32
+            entryOldestAgeMs: 500
+            exitOldestAgeMs: 250
+            entryDrainBackpressureMs: 100
+            exitDrainBackpressureMs: 50
+            catchUpRowsPerFrame: 16
+          scroll:
+            frameIntervalMs: 16
+            stepPerFrame: 1
+            catchUpThreshold: 10
+            maxCatchUpStep: 8
+          cache:
+            maxRows: 4096
+            maxBytes: 4194304

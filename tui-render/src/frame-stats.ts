@@ -39,6 +39,8 @@ export interface FrameProbeHandle {
   record(renderMs: number): void
   /** Read-only bounded stats for the Profiler channel. */
   snapshot(): FrameStatsSnapshot
+  /** Start the first workload window, discarding launch and history-hydration samples. */
+  beginMeasurement(): void
   /** Total commits recorded (one per Profiler onRender). */
   readonly commits: number
   /** Elapsed ms since the probe was created (pacing context). */
@@ -82,8 +84,9 @@ export function createFrameProbe(
   capacity: number = FRAME_STATS_CAPACITY,
 ): FrameProbeHandle {
   const samples: number[] = []
-  const startedAt = now()
+  let startedAt = now()
   let commits = 0
+  let measurementStarted = false
   return {
     record(renderMs: number) {
       commits += 1
@@ -92,6 +95,13 @@ export function createFrameProbe(
     },
     snapshot() {
       return summarize(samples)
+    },
+    beginMeasurement() {
+      if (measurementStarted) return
+      measurementStarted = true
+      samples.length = 0
+      commits = 0
+      startedAt = now()
     },
     get commits() {
       return commits

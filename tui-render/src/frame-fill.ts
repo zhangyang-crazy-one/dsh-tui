@@ -1,8 +1,9 @@
 /**
- * Full-frame background fill and caret anchoring. The product frame is a
- * uniformly pure-black plane, but Ink emits centered leading spaces and whole
- * overflow frames as ordinary bytes without a per-row erase. This wrapper
- * keeps the `bg` token active for every colored-tier string write, restores it
+ * Full-frame background fill, fixed-column rail painting, and caret
+ * anchoring. The product frame is a uniformly pure-black plane, but Ink emits
+ * centered leading spaces and whole overflow frames as ordinary bytes without
+ * a per-row erase. This wrapper keeps the `bg` token active for every
+ * colored-tier string write, restores it
  * immediately after content resets, and returns to the terminal default after
  * the write. Visible-line and screen erases therefore use black BCE, while
  * `ESC[3J` temporarily switches to the terminal default so a scrollback wipe
@@ -20,11 +21,24 @@
  * sequence after Ink's own (stale) cursor suffix — last write wins. On a
  * fullscreen TTY frame Ink leaves the cursor on the last output row, so the
  * last composer line is `up = 0`; a trailing-newline frame needs `up = 1`.
+ * The transcript rail follows the same frame-suffix path but uses absolute
+ * CUP coordinates. It therefore stays in one physical terminal column even
+ * when a preceding emoji sequence has a different width in Ink and the host
+ * terminal. The overlay clears cells from a prior position before repainting
+ * the current track, then restores the composer caret last.
  * @module @deepseek-ai/dsh-tui-render/frame-fill
  */
 
-import { bgSequence, currentTier } from './theme.ts'
+import { bgSequence, currentTier, styled } from './theme.ts'
 import type { ColorTier } from './terminal-capabilities.ts'
+import { displayWidth } from './content.ts'
+import { completeDeltaStdoutDrain } from './frame-metrics.ts'
+import type { FrameMetricsHandle } from './frame-metrics.ts'
+import {
+  diffVisibleFrameSnapshots,
+  visibleFrameSnapshot,
+} from './frame-snapshot.ts'
+import type { VisibleFrameSnapshot } from './frame-snapshot.ts'
 
 /** Resets the active background to the terminal default. */
 const BG_OFF = '\x1b[49m'
@@ -48,6 +62,9 @@ const END_SYNC = '\x1b[?2026l'
 const SHOW_CURSOR = '\x1b[?25h'
 const HIDE_CURSOR = '\x1b[?25l'
 
+/** Raw overlay writer installed on the wrapped stdout. */
+const WRITE_FRAME_OVERLAY = Symbol('dsh.tui.write-frame-overlay')
+
 /**
  * The composer's caret, in frame-suffix terms: `up` counts rows above the
  * frame's bottom edge (the line just after the last output row) and `col` is
@@ -56,7 +73,24 @@ const HIDE_CURSOR = '\x1b[?25l'
  */
 export type FrameCaret = { readonly up: number; readonly col: number } | 'hide'
 
+/** Absolute terminal geometry and thumb position for one transcript rail. */
+export interface FrameRail {
+  /** One-based terminal column. */
+  readonly col: number
+  /** One-based first terminal row. */
+  readonly topRow: number
+  /** Number of track rows. */
+  readonly rows: number
+  /** Zero-based first thumb row within the track. */
+  readonly thumbStart: number
+  /** Number of thumb rows. */
+  readonly thumbRows: number
+}
+
 let frameCaret: FrameCaret | undefined
+let frameRail: FrameRail | undefined
+let paintedFrameRail: FrameRail | undefined
+let paintedVisibleFrame: VisibleFrameSnapshot | undefined
 
 /**
  * Publish the composer caret for the next frame writes. Called during the
@@ -73,6 +107,95 @@ export function setFrameCaret(
 /** Park the cursor invisible from the next frame on (sticky until set). */
 export function hideFrameCaret(): void {
   frameCaret = 'hide'
+}
+
+/**
+ * Publish fixed terminal cells for the next frame write. StreamView calls this
+ * during render so the frame suffix and pointer region derive from the same
+ * measured geometry.
+ * @param rail - current rail geometry, or undefined without overflow.
+ */
+export function setFrameRail(rail: FrameRail | undefined): void {
+  frameRail = rail
+}
+
+function railCell(
+  row: number,
+  col: number,
+  text: string,
+  tier: ColorTier,
+): string {
+  return `\x1b[${String(row)};${String(col)}H${text === ' '
+    ? styled(text, 'bg', tier)
+    : styled(styled(text, text === '█' ? 'accent' : 'fgDim', tier), 'bg', tier)}`
+}
+
+/** Paint one rail cell and clear the guard cell that can retain a wide glyph. */
+function railRow(
+  row: number,
+  col: number,
+  text: string,
+  tier: ColorTier,
+): string {
+  const guard = col > 1 ? railCell(row, col - 1, ' ', tier) : ''
+  return guard + railCell(row, col, text, tier)
+}
+
+/** Absolute rail bytes for this frame, including stale-position clearing. */
+function railOverlay(tier: ColorTier): string {
+  let cells = ''
+  const next = frameRail
+  const previous = paintedFrameRail
+  if (
+    previous !== undefined
+    && (next === undefined || previous.col !== next.col)
+  ) {
+    for (let index = 0; index < previous.rows; index += 1) {
+      cells += railRow(previous.topRow + index, previous.col, ' ', tier)
+    }
+  } else if (
+    previous !== undefined
+    && next !== undefined
+    && previous.col === next.col
+  ) {
+    const nextStart = next.topRow
+    const nextEnd = next.topRow + next.rows
+    for (let index = 0; index < previous.rows; index += 1) {
+      const row = previous.topRow + index
+      if (row < nextStart || row >= nextEnd) {
+        cells += railRow(row, previous.col, ' ', tier)
+      }
+    }
+  }
+  if (next !== undefined) {
+    for (let index = 0; index < next.rows; index += 1) {
+      const thumb = index >= next.thumbStart
+        && index < next.thumbStart + next.thumbRows
+      cells += railRow(next.topRow + index, next.col, thumb ? '█' : '·', tier)
+    }
+  }
+  paintedFrameRail = next
+  return cells === '' ? '' : `\x1b7${cells}\x1b8`
+}
+
+/** Explicitly blank stale suffix cells for shortened or removed rows. */
+function staleTranscriptOverlay(tier: ColorTier): string {
+  const next = visibleFrameSnapshot()
+  if (next === undefined) {
+    paintedVisibleFrame = undefined
+    return ''
+  }
+  const diff = diffVisibleFrameSnapshots(paintedVisibleFrame, next)
+  paintedVisibleFrame = next
+  let cells = ''
+  for (const change of diff.changes) {
+    const nextWidth = change.line?.displayWidth ?? 0
+    const staleColumns = change.clearColumns - nextWidth
+    if (staleColumns <= 0) continue
+    cells += `\x1b[${String(change.row)};${String(change.col + nextWidth)}H`
+      + styled(' '.repeat(staleColumns), 'bg', tier)
+  }
+  return cells === '' ? '' : `\x1b7${cells}\x1b8`
 }
 
 /** The appended caret bytes for the current anchor, or '' when unset. */
@@ -97,13 +220,36 @@ export function publishedCaretBytes(): string {
 }
 
 /**
+ * Paint a newly measured rail even when Ink's visible frame is unchanged.
+ * Wrapped streams bypass their ordinary frame transform for these already
+ * styled absolute cells; direct test streams receive the same bytes.
+ * @param stdout - the stdout exposed by Ink's render context.
+ * @param tier - color tier used for track and thumb cells.
+ */
+export function writePublishedFrameRail(
+  stdout: NodeJS.WriteStream,
+  tier: ColorTier = currentTier(),
+): void {
+  const overlay = railOverlay(tier)
+  if (overlay === '') return
+  const bytes = overlay + caretSuffix()
+  const writer = (stdout as FrameOverlayStream)[WRITE_FRAME_OVERLAY]
+  if (writer === undefined) {
+    stdout.write(bytes)
+    return
+  }
+  writer(bytes)
+}
+
+/**
  * Keep the frame background active across every colored-tier string chunk and
  * content reset, protect scrollback erasure with the terminal default, append
- * a full display erase right after an alternate-screen entry, and — whenever the chunk is a frame
- * carrying cursor bytes — append the published caret position after Ink's
- * own cursor suffix so the freshest position wins. Content bytes pass
- * through unchanged; at the `none` tier styling stays zero-ANSI while the
- * caret anchor still applies.
+ * a full display erase right after an alternate-screen entry, and paint the
+ * fixed-column rail before synchronized output ends whenever the chunk carries
+ * frame cursor bytes. It appends the published caret after Ink's own cursor
+ * suffix so the freshest position wins. Content bytes pass through unchanged;
+ * at the `none` tier styling stays zero-ANSI while the caret anchor still
+ * applies.
  * @param chunk - raw bytes about to be written to the terminal.
  * @param tier - tier to map at (defaults to the installed tier).
  * @returns the chunk with frame-background and caret anchoring applied.
@@ -132,11 +278,25 @@ export function transformFrameChunk(
     }
     out = `${on}${out}${BG_OFF}`
   }
-  if (
+  const isFrame =
     out.includes(END_SYNC) ||
     out.includes(SHOW_CURSOR) ||
     out.includes(HIDE_CURSOR)
-  ) {
+  if (isFrame) {
+    const stale = staleTranscriptOverlay(tier)
+    if (stale !== '') {
+      const syncIndex = out.lastIndexOf(END_SYNC)
+      out = syncIndex < 0
+        ? out + stale
+        : out.slice(0, syncIndex) + stale + out.slice(syncIndex)
+    }
+    const overlay = railOverlay(tier)
+    if (overlay !== '') {
+      const syncIndex = out.lastIndexOf(END_SYNC)
+      out = syncIndex < 0
+        ? out + overlay
+        : out.slice(0, syncIndex) + overlay + out.slice(syncIndex)
+    }
     out += caretSuffix()
   }
   return out
@@ -145,25 +305,67 @@ export function transformFrameChunk(
 /** Loose call shape covering the WriteStream write overloads. */
 type WriteCall = (chunk: unknown, ...args: unknown[]) => boolean
 
+/** Wrapped stdout with a raw path for an already transformed rail overlay. */
+type FrameOverlayStream = NodeJS.WriteStream & {
+  [WRITE_FRAME_OVERLAY]?: (chunk: string) => boolean
+}
+
 /**
  * Wrap a stdout stream so every written chunk passes through
  * {@link transformFrameChunk} at the tier current at write time. The wrapper
  * prototypes the real stream so size, resize events, and TTY flags stay live.
  * @param stdout - the stream Ink writes frames to.
  * @param getTier - tier source evaluated per write (defaults to {@link currentTier}).
+ * @param frameMetrics - optional written-cell and stdout-drain measurements.
  * @returns the stream to hand to Ink's `render` options.
  */
 export function wrapStdoutForFrameBg(
   stdout: NodeJS.WriteStream,
   getTier: () => ColorTier = currentTier,
+  frameMetrics?: FrameMetricsHandle,
 ): NodeJS.WriteStream {
   const write = stdout.write.bind(stdout) as WriteCall
   const wrapped = Object.create(stdout) as NodeJS.WriteStream
-  const transformingWrite: WriteCall = (chunk, ...args) =>
-    write(
-      typeof chunk === 'string' ? transformFrameChunk(chunk, getTier()) : chunk,
-      ...args,
-    )
+  const transformingWrite: WriteCall = (chunk, ...args) => {
+    const transformed = typeof chunk === 'string'
+      ? transformFrameChunk(chunk, getTier())
+      : chunk
+    if (frameMetrics !== undefined && typeof transformed === 'string') {
+      frameMetrics.addWrittenCells(countWrittenCells(transformed))
+      const last = args.at(-1)
+      const onDrain = (): void => {
+        completeDeltaStdoutDrain(frameMetrics)
+      }
+      if (typeof last === 'function') {
+        const original = last as (...callbackArgs: unknown[]) => void
+        args[args.length - 1] = (...callbackArgs: unknown[]) => {
+          onDrain()
+          original(...callbackArgs)
+        }
+      } else {
+        args.push(onDrain)
+      }
+    }
+    return write(transformed, ...args)
+  }
   wrapped.write = transformingWrite
+  const overlayStream = wrapped as FrameOverlayStream
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk: string) => write(chunk)
   return wrapped
+}
+
+/** ANSI/OSC controls do not occupy cells in a completed terminal write. */
+const TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu
+
+/**
+ * Count printable display cells carried by one terminal write. Cursor moves,
+ * SGR, OSC, CR/LF and other C0 controls are excluded.
+ * @param chunk - transformed bytes handed to the actual stdout stream.
+ * @returns printable display-cell count.
+ */
+export function countWrittenCells(chunk: string): number {
+  const printable = chunk
+    .replace(TERMINAL_CONTROL_PATTERN, '')
+    .replace(/[\u0000-\u001f\u007f]/gu, '')
+  return displayWidth(printable)
 }

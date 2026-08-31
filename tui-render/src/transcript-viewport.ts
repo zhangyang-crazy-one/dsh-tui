@@ -56,6 +56,7 @@ export type TranscriptViewportAction =
     unseenRowsAdded?: number | undefined
   }>
   | Readonly<{ kind: 'scroll'; delta: number }>
+  | Readonly<{ kind: 'offset'; offsetFromBottom: number }>
   | Readonly<{ kind: 'position'; fraction: number }>
   | Readonly<{ kind: 'edge'; edge: 'oldest' | 'latest' }>
   | Readonly<{ kind: 'reset' }>
@@ -252,6 +253,22 @@ export function reduceTranscriptViewport(
         : action.delta > 0
           ? false
           : state.follow
+      const nextTop = topRow({ ...state, offsetFromBottom })
+      return {
+        ...state,
+        follow,
+        offsetFromBottom,
+        unseenRows: follow ? 0 : state.unseenRows,
+        anchor: follow ? undefined : anchorForRow(nextTop, state.blocks),
+      }
+    }
+    case 'offset': {
+      const offsetFromBottom = clampOffset(
+        action.offsetFromBottom,
+        state.contentRows,
+        state.viewportRows,
+      )
+      const follow = offsetFromBottom === 0
       const nextTop = topRow({ ...state, offsetFromBottom })
       return {
         ...state,

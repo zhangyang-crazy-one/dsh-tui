@@ -13,8 +13,9 @@
 
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
-import { BlockAssembler, deepFreeze } from '@deepseek-ai/dsh-llm'
+import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import type { ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm'
+import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
 
 /** One tool call observed inside the active turn. */

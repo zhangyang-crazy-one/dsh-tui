@@ -9,12 +9,21 @@
 import { Writable } from 'node:stream'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  countWrittenCells,
   hideFrameCaret,
   publishedCaretBytes,
   setFrameCaret,
+  setFrameRail,
   transformFrameChunk,
   wrapStdoutForFrameBg,
 } from '../src/frame-fill.ts'
+import { createFrameMetrics, markDeltaIngress } from '../src/frame-metrics.ts'
+import { ScreenAtlas } from '../src/screen-atlas.ts'
+import {
+  createFrameSnapshotRow,
+  setVisibleFrameSnapshot,
+} from '../src/frame-snapshot.ts'
+import { createPhysicalLine } from '../src/physical-line.ts'
 
 const TIERS = [
   { tier: 'truecolor', on: '\x1b[48;2;0;0;0m' },
@@ -129,6 +138,27 @@ describe('wrapStdoutForFrameBg', () => {
     expect(wrapped.writable).toBe(sink.writable)
     expect(wrapped.destroyed).toBe(false)
   })
+
+  it('counts printable cells and records the next write callback as drain', async () => {
+    const { sink } = collect()
+    const metrics = createFrameMetrics()
+    markDeltaIngress(metrics, performance.now() - 5)
+    const wrapped = wrapStdoutForFrameBg(sink, () => 'none', metrics)
+    await new Promise<void>((resolve, reject) => {
+      wrapped.write('\x1b[31m中a\x1b[0m\n', (error) => {
+        if (error !== undefined && error !== null) reject(error)
+        else resolve()
+      })
+    })
+    expect(metrics.snapshot().writtenCells.total).toBe(3)
+    expect(metrics.snapshot().deltaIngressToStdoutDrainMs.count).toBe(1)
+  })
+})
+
+describe('countWrittenCells', () => {
+  it('excludes CSI, OSC 8, cursor controls, and line breaks', () => {
+    expect(countWrittenCells('\x1b[2J\x1b]8;;https://example.com\x07中a\x1b]8;;\x07\r\n')).toBe(3)
+  })
 })
 
 describe('caret anchoring', () => {
@@ -178,6 +208,118 @@ describe('caret anchoring', () => {
     expect(publishedCaretBytes()).toBe('\x1b[?25l')
     setFrameCaret({ up: 2, col: 4 })
     expect(publishedCaretBytes()).toBe('\x1b[2A\x1b[4G\x1b[?25h')
+    setFrameCaret(undefined)
+  })
+})
+
+describe('fixed-column transcript rail', () => {
+  it('paints every rail cell at the absolute column across a VS16 emoji row', () => {
+    const atlas = new ScreenAtlas(40, 8)
+    setFrameRail({
+      col: 40,
+      topRow: 3,
+      rows: 4,
+      thumbStart: 1,
+      thumbRows: 2,
+    })
+    const frame = '\x1b[4;1H## ⚠️ 两点说明\x1b[?2026l'
+    atlas.feed(transformFrameChunk(frame, 'none'))
+
+    expect(atlas.cellAt(40, 3)?.ch).toBe('·')
+    expect(atlas.cellAt(40, 4)?.ch).toBe('█')
+    expect(atlas.cellAt(40, 5)?.ch).toBe('█')
+    expect(atlas.cellAt(40, 6)?.ch).toBe('·')
+    expect(atlas.cellAt(39, 4)?.ch).not.toBe('█')
+  })
+
+  it('clears the prior track when overflow disappears and restores the caret last', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    setFrameRail({
+      col: 20,
+      topRow: 2,
+      rows: 3,
+      thumbStart: 0,
+      thumbRows: 3,
+    })
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+    setFrameRail(undefined)
+    setFrameCaret({ up: 0, col: 4 })
+    const cleared = transformFrameChunk('\x1b[?2026l', 'none')
+    atlas.feed(cleared)
+
+    expect(atlas.cellAt(20, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 3)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 4)?.ch).toBe(' ')
+    expect(atlas.cellAt(19, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(19, 3)?.ch).toBe(' ')
+    expect(atlas.cellAt(19, 4)?.ch).toBe(' ')
+    expect(cleared.endsWith('\x1b[4G\x1b[?25h')).toBe(true)
+    setFrameCaret(undefined)
+  })
+
+  it('clears a wide-glyph guard and the old column when the rail moves', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    atlas.feed('\x1b[2;19H前')
+    setFrameRail({ col: 20, topRow: 2, rows: 1, thumbStart: 0, thumbRows: 1 })
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+
+    expect(atlas.cellAt(19, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 2)?.ch).toBe('█')
+
+    setFrameRail({ col: 18, topRow: 2, rows: 1, thumbStart: 0, thumbRows: 1 })
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+
+    expect(atlas.cellAt(19, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(17, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(18, 2)?.ch).toBe('█')
+    setFrameRail(undefined)
+  })
+})
+
+describe('transcript differential clearing', () => {
+  const geometry = {
+    columns: 20,
+    rows: 6,
+    transcriptTop: 2,
+    transcriptLeft: 2,
+    transcriptWidth: 18,
+    transcriptRows: 3,
+  }
+  const snapshot = (revision: string, text: string) => ({
+    revision,
+    geometry,
+    rows: [createFrameSnapshotRow({
+      id: 'tail:0',
+      row: 2,
+      col: 2,
+      line: createPhysicalLine({
+        blockId: 'tail',
+        spans: [{ text, token: 'fg' as const }],
+        sourceStart: 0,
+        sourceEnd: text.length,
+        blockRow: 0,
+      }),
+    })],
+  })
+
+  it('inserts an absolute stale-tail clear before rail/sync and caret restoration', () => {
+    setVisibleFrameSnapshot(snapshot('long', 'abcdef'))
+    transformFrameChunk('frame\x1b[?2026l', 'none')
+    setFrameRail({ col: 20, topRow: 2, rows: 1, thumbStart: 0, thumbRows: 1 })
+    setFrameCaret({ up: 0, col: 4 })
+    setVisibleFrameSnapshot(snapshot('short', 'ab'))
+    const out = transformFrameChunk('next\x1b[?2026l', 'none')
+    const clear = out.indexOf('\x1b[2;4H    ')
+    const rail = out.indexOf('\x1b[2;20H')
+    const sync = out.indexOf('\x1b[?2026l')
+    const caret = out.lastIndexOf('\x1b[4G')
+    expect(clear).toBeGreaterThan(out.indexOf('next'))
+    expect(rail).toBeGreaterThan(clear)
+    expect(sync).toBeGreaterThan(rail)
+    expect(caret).toBeGreaterThan(sync)
+    setVisibleFrameSnapshot(undefined)
+    setFrameRail(undefined)
     setFrameCaret(undefined)
   })
 })

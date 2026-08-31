@@ -2,11 +2,16 @@
  * Cell atlas of the last painted frame: characters and active OSC 8 URLs at
  * 1-based SGR coordinates. Mouse click looks up a URL; drag-select copies
  * reading-order text. Ink does not own a grid, so this parser consumes the
- * bytes actually written to stdout after frame-fill.
+ * bytes actually written to stdout after frame-fill, including absolute CUP
+ * overlays and DEC cursor save/restore pairs.
  * @module @deepseek-ai/dsh-tui-render/screen-atlas
  */
 
 import { displayWidth } from './content.ts'
+import type { FrameSnapshotRow, VisibleFrameSnapshot } from './frame-snapshot.ts'
+import { hyperlinksEnabled, wrapOsc8 } from './hyperlink.ts'
+import type { PhysicalLine } from './physical-line.ts'
+import { paintBackgroundRow, paintRow, styled } from './theme.ts'
 
 /** One terminal cell. Empty `ch` marks the trailing half of a wide glyph. */
 export interface ScreenCell {
@@ -14,6 +19,8 @@ export interface ScreenCell {
   ch: string
   /** Active OSC 8 href, if any. */
   url: string | undefined
+  /** Whether output wrote this cell rather than leaving untouched background. */
+  written: boolean
 }
 
 /** Inclusive 1-based drag endpoints. */
@@ -25,6 +32,17 @@ export interface ScreenPoint {
 }
 
 const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+
+function paintSnapshotLine(line: PhysicalLine): string {
+  const parts = line.spans.map((span) => {
+    const painted = styled(span.text, span.token, undefined, span.bold)
+    const href = span.href ?? line.osc8?.href
+    return href === undefined || !hyperlinksEnabled() ? painted : wrapOsc8(painted, href)
+  })
+  return line.background === 'codeBg'
+    ? paintBackgroundRow(parts, 'codeBg', Math.max(1, line.displayWidth))
+    : paintRow(parts)
+}
 
 /**
  * Ordered start/end so `start` precedes `end` in reading order.
@@ -53,9 +71,14 @@ export class ScreenAtlas {
   private cells: ScreenCell[]
   private cursorCol = 0
   private cursorRow = 0
+  private savedCursorCol = 0
+  private savedCursorRow = 0
   private wrapPending = false
   private activeUrl: string | undefined
   private leftover = ''
+  private snapshotRanges: { row: number; col: number; width: number }[] = []
+  private snapshotRows = new Map<number, FrameSnapshotRow>()
+  private snapshotRail: VisibleFrameSnapshot['geometry']['rail']
 
   /**
    * @param width - terminal columns.
@@ -83,7 +106,11 @@ export class ScreenAtlas {
           row < this.height && col < this.width
             ? this.cells[row * this.width + col]
             : undefined
-        next[row * nextWidth + col] = previous ?? { ch: ' ', url: undefined }
+        next[row * nextWidth + col] = previous ?? {
+          ch: ' ',
+          url: undefined,
+          written: false,
+        }
       }
     }
     this.width = nextWidth
@@ -91,7 +118,11 @@ export class ScreenAtlas {
     this.cells = next
     this.cursorCol = Math.min(this.cursorCol, this.width - 1)
     this.cursorRow = Math.min(this.cursorRow, this.height - 1)
+    this.savedCursorCol = Math.min(this.savedCursorCol, this.width - 1)
+    this.savedCursorRow = Math.min(this.savedCursorRow, this.height - 1)
     this.wrapPending = false
+    this.snapshotRows.clear()
+    this.snapshotRail = undefined
   }
 
   /**
@@ -99,6 +130,8 @@ export class ScreenAtlas {
    * @param chunk - bytes written to the terminal.
    */
   feed(chunk: string): void {
+    this.snapshotRows.clear()
+    this.snapshotRail = undefined
     const text = this.leftover + chunk
     this.leftover = ''
     const segments = GRAPHEME.segment(text)[Symbol.iterator]()
@@ -139,6 +172,14 @@ export class ScreenAtlas {
           index = osc
           continue
         }
+        if (text[index + 1] === '7') {
+          this.savedCursorCol = this.cursorCol
+          this.savedCursorRow = this.cursorRow
+        } else if (text[index + 1] === '8') {
+          this.cursorCol = this.savedCursorCol
+          this.cursorRow = this.savedCursorRow
+          this.wrapPending = false
+        }
         index += 2
         continue
       }
@@ -174,6 +215,76 @@ export class ScreenAtlas {
   }
 
   /**
+   * Apply renderer-owned transcript rows directly. This is the normal product
+   * geometry path; {@link feed} remains the fallback for external bytes and
+   * shells that do not publish physical rows.
+   * @param snapshot - shared visible frame from the transcript renderer.
+   */
+  applyFrameSnapshot(snapshot: VisibleFrameSnapshot): void {
+    for (const range of this.snapshotRanges) {
+      for (let offset = 0; offset < range.width; offset += 1) {
+        const col = range.col - 1 + offset
+        const row = range.row - 1
+        if (col < 0 || col >= this.width || row < 0 || row >= this.height) continue
+        this.cells[row * this.width + col] = {
+          ch: ' ',
+          url: undefined,
+          written: false,
+        }
+      }
+    }
+    this.snapshotRanges = []
+    this.snapshotRows.clear()
+    this.snapshotRail = snapshot.geometry.rail
+    const saved = {
+      col: this.cursorCol,
+      row: this.cursorRow,
+      url: this.activeUrl,
+      wrap: this.wrapPending,
+    }
+    for (const row of snapshot.rows) {
+      this.snapshotRows.set(row.row, row)
+      this.cursorCol = Math.max(0, row.col - 1)
+      this.cursorRow = Math.max(0, row.row - 1)
+      this.wrapPending = false
+      for (const span of row.line.spans) {
+        this.activeUrl = span.href
+        for (const part of GRAPHEME.segment(span.text)) this.writeGrapheme(part.segment)
+      }
+      this.snapshotRanges.push({
+        row: row.row,
+        col: row.col,
+        width: row.line.displayWidth,
+      })
+    }
+    const rail = snapshot.geometry.rail
+    if (rail !== undefined) {
+      for (let index = 0; index < rail.rows; index += 1) {
+        const col = rail.col - 1
+        const row = rail.topRow - 1 + index
+        if (col < 0 || col >= this.width || row < 0 || row >= this.height) continue
+        if (col > 0) {
+          this.cells[row * this.width + col - 1] = {
+            ch: ' ',
+            url: undefined,
+            written: false,
+          }
+        }
+        const thumb = index >= rail.thumbStart && index < rail.thumbStart + rail.thumbRows
+        this.cells[row * this.width + col] = {
+          ch: thumb ? '█' : '·',
+          url: undefined,
+          written: true,
+        }
+      }
+    }
+    this.cursorCol = saved.col
+    this.cursorRow = saved.row
+    this.activeUrl = saved.url
+    this.wrapPending = saved.wrap
+  }
+
+  /**
    * OSC 8 href at a 1-based SGR coordinate.
    * @param col - 1-based column.
    * @param row - 1-based row.
@@ -197,8 +308,8 @@ export class ScreenAtlas {
   }
 
   /**
-   * Reading-order plain text between two inclusive endpoints. Trailing spaces
-   * on each row are trimmed; rows join with `\n`.
+   * Reading-order plain text between two inclusive endpoints. Published rail
+   * cells are excluded, trailing spaces are trimmed, and rows join with `\n`.
    * @param a - one endpoint.
    * @param b - the other endpoint.
    * @returns selected text.
@@ -211,6 +322,7 @@ export class ScreenAtlas {
       const to = row === end.row ? end.col : this.width
       let line = ''
       for (let col = from; col <= to; col++) {
+        if (this.isSnapshotRailControlCell(col, row)) continue
         const cell = this.cellAt(col, row)
         if (cell === undefined || cell.ch === '') continue
         line += cell.ch
@@ -221,8 +333,8 @@ export class ScreenAtlas {
   }
 
   /**
-   * Reverse-video overlay that rewrites the selected cells. Empty when the
-   * range has no glyphs.
+   * Reverse-video overlay that rewrites selectable cells. Published rail cells
+   * are excluded. Empty when the range has no glyphs.
    * @param a - one endpoint.
    * @param b - the other endpoint.
    * @returns CUP + reverse SGR bytes.
@@ -242,8 +354,62 @@ export class ScreenAtlas {
         runCol = 0
       }
       for (let col = from; col <= to; col++) {
+        if (this.isSnapshotRailControlCell(col, row)) {
+          flush()
+          continue
+        }
         const cell = this.cellAt(col, row)
-        if (cell === undefined || cell.ch === '') {
+        if (cell === undefined || !cell.written || cell.ch === '') {
+          flush()
+          continue
+        }
+        if (run === '') runCol = col
+        run += cell.ch
+      }
+      flush()
+    }
+    return out
+  }
+
+  /**
+   * Repaint the written cells in a former selection with the normal page
+   * foreground/background so reverse-video cells do not survive a range
+   * change or release.
+   * @param a - one endpoint.
+   * @param b - the other endpoint.
+   * @returns CUP + normal painted runs for the occupied cells.
+   */
+  restoreOverlay(a: ScreenPoint, b: ScreenPoint): string {
+    const { start, end } = orderedPoints(a, b)
+    let out = ''
+    for (let row = start.row; row <= end.row; row++) {
+      const from = row === start.row ? start.col : 1
+      const to = row === end.row ? end.col : this.width
+      const snapshotRow = this.snapshotRows.get(row)
+      if (
+        snapshotRow !== undefined
+        && !this.snapshotRowOverlapsRailControl(snapshotRow)
+        && from <= snapshotRow.col + snapshotRow.line.displayWidth - 1
+        && to >= snapshotRow.col
+      ) {
+        out += `\x1b[${row};${snapshotRow.col}H${paintSnapshotLine(snapshotRow.line)}`
+        continue
+      }
+      let run = ''
+      let runCol = 0
+      const flush = () => {
+        if (run === '' || runCol === 0) return
+        out += `\x1b[${row};${runCol}H${paintRow([styled(run, 'fg')])}`
+        run = ''
+        runCol = 0
+      }
+      for (let col = from; col <= to; col++) {
+        if (this.isSnapshotRailControlCell(col, row)) {
+          flush()
+          continue
+        }
+        const cell = this.cellAt(col, row)
+        if (cell === undefined || !cell.written || cell.ch === '') {
           flush()
           continue
         }
@@ -259,7 +425,25 @@ export class ScreenAtlas {
     return Array.from({ length: this.width * this.height }, () => ({
       ch: ' ',
       url: undefined,
+      written: false,
     }))
+  }
+
+  private isSnapshotRailControlCell(col: number, row: number): boolean {
+    const rail = this.snapshotRail
+    return rail !== undefined
+      && col >= Math.max(1, rail.col - 1)
+      && col <= rail.col
+      && row >= rail.topRow
+      && row < rail.topRow + rail.rows
+  }
+
+  private snapshotRowOverlapsRailControl(row: FrameSnapshotRow): boolean {
+    const rail = this.snapshotRail
+    return rail !== undefined
+      && row.row >= rail.topRow
+      && row.row < rail.topRow + rail.rows
+      && row.col + row.line.displayWidth - 1 >= Math.max(1, rail.col - 1)
   }
 
   private writeGrapheme(grapheme: string): void {
@@ -273,11 +457,13 @@ export class ScreenAtlas {
     this.put(this.cursorCol, this.cursorRow, {
       ch: grapheme === '\t' ? ' ' : grapheme,
       url: this.activeUrl,
+      written: true,
     })
     for (let extra = 1; extra < width; extra++) {
       this.put(this.cursorCol + extra, this.cursorRow, {
         ch: '',
         url: this.activeUrl,
+        written: true,
       })
     }
     const nextCol = this.cursorCol + width
@@ -347,7 +533,7 @@ export class ScreenAtlas {
       const start = first === 1 || first === 2 ? 0 : this.cursorCol
       const end = first === 1 ? this.cursorCol + 1 : this.width
       for (let col = start; col < end; col++) {
-        this.put(col, row, { ch: ' ', url: undefined })
+        this.put(col, row, { ch: ' ', url: undefined, written: false })
       }
     }
   }

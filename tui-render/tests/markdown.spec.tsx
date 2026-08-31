@@ -132,7 +132,7 @@ describe('MarkdownBlock', () => {
     expect(plain).toContain('┌')
   })
 
-  it('expands a short table through the complete markdown row budget', () => {
+  it('keeps a short table at its natural width', () => {
     const maxCols = 40
     const out = renderToString(
       createElement(MarkdownBlock, {
@@ -144,7 +144,34 @@ describe('MarkdownBlock', () => {
     const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
     const tableLines = plain.split('\n').filter(line => /[┌│├└]/u.test(line))
     expect(tableLines.length).toBeGreaterThan(0)
-    expect(tableLines.every(line => displayWidth(line) === maxCols)).toBe(true)
+    const widths = new Set(tableLines.map(displayWidth))
+    expect(widths.size).toBe(1)
+    expect(Math.max(...widths)).toBeLessThan(maxCols)
+    expect(plain).not.toContain(`enabled${' '.repeat(10)}`)
+  })
+
+  it('keeps short emoji status labels intact before shrinking long columns', () => {
+    const source = [
+      '| 级别 | 位置 | 警告 | 建议 |',
+      '| --- | --- | --- | --- |',
+      `| 🔴 P1 | ${'a'.repeat(60)} | ${'b'.repeat(60)} | ${'c'.repeat(60)} |`,
+      `| 🟠 P2 | ${'d'.repeat(60)} | ${'e'.repeat(60)} | ${'f'.repeat(60)} |`,
+      `| 🟡 P3 | ${'g'.repeat(60)} | ${'h'.repeat(60)} | ${'i'.repeat(60)} |`,
+    ].join('\n')
+    const out = renderToString(
+      createElement(MarkdownBlock, {
+        source,
+        maxCols: 109,
+        prefix: { first: '● ', rest: '  ' },
+      }),
+      { columns: 113 },
+    )
+    const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
+    const tableLines = plain.split('\n').filter(line => /[┌│├└]/u.test(line))
+    for (const label of ['🔴 P1', '🟠 P2', '🟡 P3']) {
+      expect(tableLines.some(line => line.includes(label))).toBe(true)
+    }
+    expect(new Set(tableLines.map(displayWidth)).size).toBe(1)
   })
 
   it('shrinks a wider later column before a short first column', () => {
@@ -160,7 +187,7 @@ describe('MarkdownBlock', () => {
     expect(plain).not.toContain('long-second-header-name')
   })
 
-  it('falls back to joined pipes when the window cannot hold a boxed grid', () => {
+  it('falls back to labeled records when the window cannot hold a boxed grid', () => {
     const out = renderToString(
       createElement(MarkdownBlock, {
         source: '| a | b |\n| - | - |\n| c | d |',
@@ -169,7 +196,8 @@ describe('MarkdownBlock', () => {
     )
     const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
     expect(plain).not.toContain('┌')
-    expect(plain).toContain('a | b')
+    expect(plain).toContain('a: c')
+    expect(plain).toContain('b: d')
   })
 
   it('escapes ANSI sequences in content (P5)', () => {
@@ -280,8 +308,10 @@ describe('tier-mapped code and inline tokens', () => {
     expect(out).toContain('\x1b[48;2;15;17;21m')
     // keyword = bold fg (C3 bold tier), then the bold closes so the rest of
     // the line stays plain fg; the success green is gone from code entirely.
-    expect(out).toContain('\x1b[1m\x1b[38;2;247;247;248mconst')
-    expect(out).toContain('\x1b[22m')
+    // Per-span fg re-assertion happens pre-normalization; Ink compacts the
+    // redundant sequences, so assert the normalized byte shape.
+    expect(out).toContain('\x1b[38;2;247;247;248m')
+    expect(out).toContain('\x1b[1mconst\x1b[22m')
     expect(out).toContain('"s"')
     expect(out).not.toContain('\x1b[38;2;34;197;94m')
   })
@@ -290,14 +320,16 @@ describe('tier-mapped code and inline tokens', () => {
     applyTheme('256')
     const out = renderText('```ts\nconst x = 1\n```')
     expect(out).toContain('\x1b[48;5;233m')
-    expect(out).toContain('\x1b[1m\x1b[38;5;255mconst')
+    expect(out).toContain('\x1b[38;5;255m')
+    expect(out).toContain('\x1b[1mconst\x1b[22m')
   })
 
   it('maps code tokens through the 16 tier', () => {
     applyTheme('16')
     const out = renderText('```ts\nconst x = 1\n```')
     expect(out).toContain('\x1b[40m')
-    expect(out).toContain('\x1b[1m\x1b[37mconst')
+    expect(out).toContain('\x1b[37m')
+    expect(out).toContain('\x1b[1mconst\x1b[22m')
   })
 
   it('renders code unstyled at none', () => {

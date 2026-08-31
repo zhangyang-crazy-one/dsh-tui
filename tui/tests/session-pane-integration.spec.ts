@@ -30,6 +30,7 @@ import type {
 } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SessionTitleService, { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
 import { escapeContent } from '@deepseek-ai/dsh-tui-render'
 import { logPath } from '../../../session/session-persistence-jsonl/src/format.ts'
@@ -188,6 +189,7 @@ function persistenceStub(
 async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
+  await ctx.plugin(SessionProjectionRegistry)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentDefaultModelConfig, {
     provider: 'test-provider',

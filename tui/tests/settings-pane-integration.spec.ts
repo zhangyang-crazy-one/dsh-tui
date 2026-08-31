@@ -16,11 +16,10 @@ import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
-const NS = settingsNamespace('llm-deepseek')
+const NS = 'llm-deepseek'
 
 /** Scripted agent whose followup records the message and appends nothing. */
 function scriptedAgent(ownerCtx: Context, session: Session): Agent {
@@ -95,12 +94,16 @@ async function bench(options?: {
       update,
       ...(options?.registerTui === true
         ? {
-          register: () => ({
-            get: () => tuiSection,
-            watch: () => () => {},
-            update: async () => {},
-            replace: async () => {},
-          }),
+          installSection: (
+            _owner: unknown,
+            _ns: unknown,
+            _schema: unknown,
+            _entry: unknown,
+            hooks: { setSource(read: () => typeof tuiSection): void; onChange(): void },
+          ) => {
+            hooks.setSource(() => tuiSection)
+            hooks.onChange()
+          },
         }
         : {}),
     } as never)
@@ -381,7 +384,7 @@ describe('SettingsPane intercept', () => {
   })
 
   it('applies the selected row through that row\'s settings namespace', async () => {
-    const openaiNs = settingsNamespace('llm-openai')
+    const openaiNs = 'llm-openai'
     const openaiStored = { baseURL: 'https://api.openai.com/v1' }
     const { ctx, controller, stored, update } = await bench()
     const settings = ctx.get('settings') as {
@@ -427,7 +430,7 @@ describe('SettingsPane intercept', () => {
   })
 
   it('applies llm-pi-ai providers JSON through the selected field', async () => {
-    const piNs = settingsNamespace('llm-pi-ai')
+    const piNs = 'llm-pi-ai'
     const piStored = {
       providers: { acme: { api: 'openai-completions', baseURL: 'https://gw.example' } },
     }

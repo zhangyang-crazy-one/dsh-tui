@@ -196,8 +196,12 @@ describe('RuntimeController defensive lifecycle paths', () => {
     expect(state.readPlanStatus()).toEqual({ error: '计划服务未组合' })
     const removePlan = ctx.provide('planMode', { get: () => ({ active: true }) } as never)
     expect(state.readPlanStatus()).toEqual({ error: '会话未绑定' })
+    const removeProjections = ctx.provide('sessionProjections', {
+      stateOf: () => ({ active: false }),
+    } as never)
     state.session = ctx.sessions.create(SessionId('plan-fallback'))
     expect(state.readPlanStatus()).toEqual({ active: false })
+    removeProjections()
     removePlan()
 
     const current = vi.fn(() => 'missing')
@@ -208,11 +212,11 @@ describe('RuntimeController defensive lifecycle paths', () => {
     } as never)
     state.session = undefined
     state.openPermissionPane()
-    expect(current).toHaveBeenCalledWith([])
+    expect(current).not.toHaveBeenCalled()
     expect(controller.getPermissionPane()).toMatchObject({
       open: true,
       selectedIndex: 0,
-      currentName: 'missing',
+      currentName: '',
       descriptions: ['Safe preset'],
     })
     removePresets()

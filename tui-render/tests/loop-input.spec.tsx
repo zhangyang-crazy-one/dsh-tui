@@ -260,6 +260,24 @@ describe('TuiLoop real input path', () => {
     }
   })
 
+  it('keeps the presenter registry snapshot stable across local viewport renders', async () => {
+    const presenters = vi.fn(() => undefined)
+    const controller: TuiController = {
+      ...stubController(() => {}, []),
+      getToolPresenters: presenters,
+    }
+    const { instance, stdin } = mount(controller)
+    try {
+      await instance.waitUntilRenderFlush()
+      await press(stdin, 'k')
+      await press(stdin, 'j')
+      await instance.waitUntilRenderFlush()
+      expect(presenters).toHaveBeenCalledTimes(1)
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('routes mounted session, search, and model selections through the controller', async () => {
     const cases: Array<{
       controller: TuiController

@@ -9,9 +9,10 @@ import { StreamView } from '../src/stream-view.tsx'
 import type { ViewModel } from '../src/projection.ts'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import { applyTheme } from '../src/theme.ts'
-import { transformFrameChunk } from '../src/frame-fill.ts'
+import { transformFrameChunk, wrapStdoutForFrameBg } from '../src/frame-fill.ts'
 import type { ColorTier } from '../src/terminal-capabilities.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { displayWidth } from '../src/content.ts'
 
 const IDLE: ViewModel = {
   history: [],
@@ -185,6 +186,110 @@ describe('HTML terminal design geometry', () => {
       expect(composer?.indexOf('› 输入消息')).toBe(2)
       expect(frame.split('\n').find(line => line.includes('│ >'))?.indexOf('│ >')).toBe(0)
       expect(frame).toContain('SESSION_TITLE')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('keeps the thumb in the control column across a VS16 heading row', async () => {
+    applyTheme('none')
+    const columns = 80
+    const rows = 24
+    const stdout = tty(columns, rows)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: unknown) => { atlas.feed(String(chunk)) })
+    const lines = Array.from({ length: 30 }, (_unused, index) =>
+      index === 20 ? '## ⚠️ 两点说明' : `ROW_${String(index).padStart(2, '0')}`)
+    const instance = render(createElement(AppShell, {
+      title: 'RAIL_TITLE',
+      badge: 'provider · model',
+      children: createElement(StreamView, {
+        model: {
+          ...IDLE,
+          history: [{
+            id: 1,
+            kind: 'user',
+            text: lines.join('\n'),
+            timestamp: 1,
+          }],
+        },
+      }),
+      status: createElement(Text, null, 'RAIL_STATUS'),
+      input: createElement(Text, null, '> RAIL_INPUT'),
+    }), {
+      stdout: wrapStdoutForFrameBg(
+        stdout,
+        () => 'none',
+      ) as unknown as typeof stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const frame = atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
+      const headingRow = frame.split('\n').findIndex(line => line.includes('⚠️')) + 1
+      expect(headingRow).toBeGreaterThan(0)
+      expect(atlas.cellAt(columns, headingRow)?.ch).toBe('█')
+      expect(atlas.cellAt(columns - 1, headingRow)?.ch).not.toBe('█')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('keeps emoji priority labels on one row in a constrained 113-column table', async () => {
+    applyTheme('none')
+    const columns = 113
+    const rows = 43
+    const stdout = tty(columns, rows)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: unknown) => { atlas.feed(String(chunk)) })
+    const source = [
+      '| 级别 | 位置 | 警告 | 建议 |',
+      '| --- | --- | --- | --- |',
+      `| 🔴 P1 | ${'a'.repeat(60)} | ${'b'.repeat(60)} | ${'c'.repeat(60)} |`,
+      `| 🟠 P2 | ${'d'.repeat(60)} | ${'e'.repeat(60)} | ${'f'.repeat(60)} |`,
+      `| 🟡 P3 | ${'g'.repeat(60)} | ${'h'.repeat(60)} | ${'i'.repeat(60)} |`,
+    ].join('\n')
+    const instance = render(createElement(AppShell, {
+      title: 'EMOJI_TABLE_TITLE',
+      badge: 'provider · model',
+      children: createElement(StreamView, {
+        model: {
+          ...IDLE,
+          history: [{
+            id: 1,
+            kind: 'assistant',
+            text: source,
+            timestamp: 1,
+          }],
+        },
+      }),
+      status: createElement(Text, null, 'EMOJI_TABLE_STATUS'),
+      input: createElement(Text, null, '> EMOJI_TABLE_INPUT'),
+    }), {
+      stdout: wrapStdoutForFrameBg(
+        stdout,
+        () => 'none',
+      ) as unknown as typeof stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const frame = atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
+      const tableLines = frame.split('\n').filter(line => /[┌│├└]/u.test(line))
+      for (const label of ['🔴 P1', '🟠 P2', '🟡 P3']) {
+        expect(tableLines.some(line => line.includes(label))).toBe(true)
+      }
+      expect(new Set(tableLines.map(displayWidth)).size).toBe(1)
+      expect(frame).toContain('EMOJI_TABLE_INPUT')
+      expect(frame).toContain('EMOJI_TABLE_STATUS')
     } finally {
       instance.unmount()
     }

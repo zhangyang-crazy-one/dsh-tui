@@ -3,7 +3,11 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import { stripVTControlCharacters } from 'node:util'
 import { orderedPoints, ScreenAtlas } from '../src/screen-atlas.ts'
+import { createFrameSnapshotRow } from '../src/frame-snapshot.ts'
+import { createPhysicalLine } from '../src/physical-line.ts'
+import { styled } from '../src/theme.ts'
 
 describe('orderedPoints', () => {
   it('orders by reading order', () => {
@@ -17,6 +21,78 @@ describe('orderedPoints', () => {
 })
 
 describe('ScreenAtlas', () => {
+  it('applies shared physical rows with CJK and span-local OSC geometry', () => {
+    const atlas = new ScreenAtlas(12, 4)
+    const line = createPhysicalLine({
+      blockId: 'b1',
+      spans: [
+        { text: '中', token: 'fg' },
+        { text: 'doc', token: 'accent', href: 'https://example.test' },
+      ],
+      sourceStart: 0,
+      sourceEnd: 4,
+      blockRow: 0,
+    })
+    atlas.applyFrameSnapshot({
+      revision: '1',
+      geometry: {
+        columns: 12,
+        rows: 4,
+        transcriptTop: 2,
+        transcriptLeft: 2,
+        transcriptWidth: 10,
+        transcriptRows: 2,
+      },
+      rows: [createFrameSnapshotRow({ id: 'b1:0', row: 2, col: 2, line })],
+    })
+    expect(atlas.cellAt(2, 2)?.ch).toBe('中')
+    expect(atlas.cellAt(3, 2)?.ch).toBe('')
+    expect(atlas.urlAt(4, 2)).toBe('https://example.test')
+    expect(atlas.restoreOverlay({ col: 2, row: 2 }, { col: 6, row: 2 })).toContain(
+      styled('doc', 'accent'),
+    )
+  })
+
+  it('removes a wide glyph that overlaps the rail guard from copy and restore', () => {
+    const atlas = new ScreenAtlas(8, 2)
+    const line = createPhysicalLine({
+      blockId: 'wide-rail',
+      spans: [{ text: 'abcdef前', token: 'fg' }],
+      sourceStart: 0,
+      sourceEnd: 7,
+      blockRow: 0,
+    })
+    atlas.applyFrameSnapshot({
+      revision: 'wide-rail',
+      geometry: {
+        columns: 8,
+        rows: 2,
+        transcriptTop: 1,
+        transcriptLeft: 1,
+        transcriptWidth: 6,
+        transcriptRows: 1,
+        rail: {
+          col: 8,
+          topRow: 1,
+          rows: 1,
+          thumbStart: 0,
+          thumbRows: 1,
+        },
+      },
+      rows: [createFrameSnapshotRow({ id: 'wide-rail:0', row: 1, col: 1, line })],
+    })
+
+    expect(atlas.cellAt(7, 1)?.ch).toBe(' ')
+    expect(atlas.cellAt(8, 1)?.ch).toBe('█')
+    expect(atlas.extract({ col: 1, row: 1 }, { col: 8, row: 1 })).toBe('abcdef')
+    expect(stripVTControlCharacters(
+      atlas.selectionOverlay({ col: 1, row: 1 }, { col: 8, row: 1 }),
+    )).toBe('abcdef')
+    expect(stripVTControlCharacters(
+      atlas.restoreOverlay({ col: 1, row: 1 }, { col: 8, row: 1 }),
+    )).toBe('abcdef')
+  })
+
   it('writes graphemes, OSC 8, and CUP', () => {
     const atlas = new ScreenAtlas(8, 3)
     atlas.feed('\x1b[Hhi\x1b]8;;https://ex.com\x1b\\ab\x1b]8;;\x1b\\')
@@ -98,9 +174,10 @@ describe('ScreenAtlas', () => {
     const overlay = atlas.selectionOverlay({ col: 1, row: 1 }, { col: 2, row: 1 })
     expect(overlay).toContain('\x1b[7m')
     expect(overlay).toContain('he')
-    expect(atlas.selectionOverlay({ col: 8, row: 2 }, { col: 8, row: 2 })).toContain(
-      '\x1b[7m',
-    )
+    expect(atlas.selectionOverlay({ col: 8, row: 2 }, { col: 8, row: 2 })).toBe('')
+    expect(stripVTControlCharacters(
+      atlas.selectionOverlay({ col: 1, row: 1 }, { col: 8, row: 1 }),
+    )).toBe('hello')
     const wide = new ScreenAtlas(8, 2)
     wide.feed('\x1b[H中')
     expect(wide.selectionOverlay({ col: 2, row: 1 }, { col: 2, row: 1 })).toBe('')
@@ -130,6 +207,13 @@ describe('ScreenAtlas', () => {
     const bounded = new ScreenAtlas(1, 1)
     bounded.feed('中ab')
     expect(bounded.cellAt(1, 1)?.ch).toBe('b')
+  })
+
+  it('restores the cursor after a DEC save/absolute-overlay/restore run', () => {
+    const atlas = new ScreenAtlas(8, 3)
+    atlas.feed('base\x1b7\x1b[2;8H█\x1b8!')
+    expect(atlas.extract({ col: 1, row: 1 }, { col: 5, row: 1 })).toBe('base!')
+    expect(atlas.cellAt(8, 2)?.ch).toBe('█')
   })
 
   it('covers explicit cursor, erase, OSC, and CSI parameter variants', () => {
