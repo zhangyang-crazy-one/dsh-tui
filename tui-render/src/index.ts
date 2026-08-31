@@ -236,6 +236,7 @@ export {
   RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS,
   RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP,
   RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME,
+  RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS,
   RENDER_POLICY_DEFAULT_STREAM_CATCH_UP_ROWS_PER_FRAME,
   RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH,
   RENDER_POLICY_DEFAULT_STREAM_ENTRY_DRAIN_BACKPRESSURE_MS,
@@ -331,6 +332,9 @@ export function mountTuiRender(
   const mouse = attachMouseIo({
     stdin: options.stdin ?? process.stdin,
     stdout: options.stdout ?? process.stdout,
+    ...(options.renderPolicy === undefined
+      ? {}
+      : { wheelRows: options.renderPolicy.scroll.wheelRows }),
   })
   const instance = render(wrapped, {
     alternateScreen: true,

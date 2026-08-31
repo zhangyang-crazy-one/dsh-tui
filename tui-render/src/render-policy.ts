@@ -40,6 +40,8 @@ export const RENDER_POLICY_DEFAULT_STREAM_CATCH_UP_ROWS_PER_FRAME = 16
 export const RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS = 16
 /** Default rows-per-frame in the smooth band; one-line keys move one row each. */
 export const RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME = 1
+/** Default physical rows requested by one mouse-wheel report. */
+export const RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS = 3
 /** Default distance threshold switching from smooth to catch-up steps. */
 export const RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD = 10
 /** Default maximum rows-per-frame in catch-up mode. */
@@ -85,6 +87,8 @@ export interface RenderPolicyScroll {
   readonly frameIntervalMs: number
   /** Rows advanced per tick in the smooth band; must be > 0. */
   readonly stepPerFrame: number
+  /** Physical rows requested by one mouse-wheel report; must be > 0. */
+  readonly wheelRows: number
   /** Distance threshold switching from smooth to catch-up; must be >= 0. */
   readonly catchUpThreshold: number
   /** Upper bound on rows-per-tick in catch-up mode; must be > 0. */
@@ -134,6 +138,7 @@ export function renderPolicyDefaults(): RenderPolicy {
     scroll: {
       frameIntervalMs: RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS,
       stepPerFrame: RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME,
+      wheelRows: RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS,
       catchUpThreshold: RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD,
       maxCatchUpStep: RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP,
     },

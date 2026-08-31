@@ -93,6 +93,7 @@
           scroll:
             frameIntervalMs: 16
             stepPerFrame: 1
+            wheelRows: 3
             catchUpThreshold: 10
             maxCatchUpStep: 8
           cache:

@@ -7,6 +7,7 @@
 
 import { PassThrough } from 'node:stream'
 import { ESC_TIMEOUT_MS } from './terminal-capabilities.ts'
+import { RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS } from './render-policy.ts'
 import { publishedCaretBytes } from './frame-fill.ts'
 import { ScreenAtlas, type ScreenPoint } from './screen-atlas.ts'
 import { visibleFrameSnapshot } from './frame-snapshot.ts'
@@ -289,6 +290,8 @@ export function attachMouseIo(options: {
   stdin: NodeJS.ReadStream
   stdout: NodeJS.WriteStream
   session?: MouseSession
+  /** Physical rows requested for each decoded wheel report. */
+  wheelRows?: number
 }): {
   stdin: NodeJS.ReadStream
   stdout: NodeJS.WriteStream
@@ -321,7 +324,7 @@ export function attachMouseIo(options: {
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
     const repaint = session.handle(event)
     if (repaint !== '') write(repaint)
-  })
+  }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS)
   const wrappedStdout = Object.create(options.stdout) as NodeJS.WriteStream
   const transformingWrite: WriteCall = (chunk, ...args) => {
     if (typeof chunk !== 'string') return write(chunk, ...args)
@@ -348,6 +351,7 @@ export function attachMouseIo(options: {
 function wrapStdin(
   raw: NodeJS.ReadStream,
   onMouse: (event: SgrMouseEvent) => void,
+  wheelRows: number,
 ): { stdin: NodeJS.ReadStream; dispose: () => void } {
   // PassThrough supplies the readable surface Ink uses; the TTY-only members
   // below are assigned here, so the widening cast goes through unknown.
@@ -377,7 +381,24 @@ function wrapStdin(
     buffer += typeof chunk === 'string' ? chunk : chunk.toString('utf8')
     const consumed = consumeMouseStdin(buffer)
     buffer = consumed.rest
-    for (const event of consumed.mouse) onMouse(event)
+    let wheelDelta = 0
+    let wheelEvent: SgrMouseEvent | undefined
+    const flushWheel = (): void => {
+      if (wheelDelta === 0 || wheelEvent === undefined) return
+      onMouse({ ...wheelEvent, delta: wheelDelta * wheelRows })
+      wheelDelta = 0
+      wheelEvent = undefined
+    }
+    for (const event of consumed.mouse) {
+      if (event.kind === 'wheel' && event.delta !== undefined) {
+        wheelDelta += event.delta
+        wheelEvent = event
+        continue
+      }
+      flushWheel()
+      onMouse(event)
+    }
+    flushWheel()
     if (consumed.forward !== '') stream.write(consumed.forward)
     if (buffer !== '') {
       flushTimer = setTimeout(() => {

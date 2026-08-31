@@ -285,7 +285,24 @@ describe('attachMouseIo', () => {
     stdin.push('\x1b[<0;1;2')
     attached.dispose()
     expect(chunks.join('')).toContain(DISABLE_SGR_MOUSE)
-    expect(onScroll).toHaveBeenCalledWith(1)
+    expect(onScroll).toHaveBeenCalledWith(3)
+  })
+
+  it('coalesces one raw wheel burst and advances three rows per report', () => {
+    const stdin = ttyStdin()
+    const stdout = ttyStdout()
+    const onScroll = vi.fn()
+    setMouseScrollListener(onScroll)
+    const attached = attachMouseIo({ stdin, stdout })
+
+    stdin.push(
+      '\x1b[<64;2;2M'
+      + '\x1b[<64;2;2M'
+      + '\x1b[<64;2;2M',
+    )
+
+    expect(onScroll.mock.calls).toEqual([[9]])
+    attached.dispose()
   })
 
   it('writes selection repaint bytes directly from raw drag input', () => {

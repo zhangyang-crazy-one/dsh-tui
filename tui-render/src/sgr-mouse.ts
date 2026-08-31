@@ -22,8 +22,8 @@ export interface SgrMouseEvent {
   col: number
   /** 1-based terminal row. */
   row: number
-  /** Wheel only: +1 is up/older, -1 is down/newer. */
-  delta?: 1 | -1
+  /** Wheel only: positive is up/older, negative is down/newer. */
+  delta?: number
 }
 
 /** Result of draining complete sequences out of a stdin buffer. */

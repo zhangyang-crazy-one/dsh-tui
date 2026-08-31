@@ -69,6 +69,7 @@ describe('renderPolicy Config schema', () => {
     const config = Config({ task: 'hi', renderPolicy: baselinePolicy() })
     expect(config.renderPolicy).toBeDefined()
     expect(config.renderPolicy).toEqual(baselinePolicy())
+    expect(config.renderPolicy?.scroll.wheelRows).toBe(3)
   })
 
   it('accepts host overrides for every leaf field without regression', () => {
@@ -89,6 +90,7 @@ describe('renderPolicy Config schema', () => {
         scroll: {
           frameIntervalMs: 12,
           stepPerFrame: 2,
+          wheelRows: 4,
           catchUpThreshold: 12,
           maxCatchUpStep: 12,
         },
@@ -102,6 +104,7 @@ describe('renderPolicy Config schema', () => {
     expect(config.renderPolicy?.stream.frameIntervalMs).toBe(8)
     expect(config.renderPolicy?.stream.entryDepth).toBe(128)
     expect(config.renderPolicy?.stream.catchUpRowsPerFrame).toBe(24)
+    expect(config.renderPolicy?.scroll.wheelRows).toBe(4)
     expect(config.renderPolicy?.scroll.maxCatchUpStep).toBe(12)
     expect(config.renderPolicy?.cache.maxRows).toBe(8192)
     expect(config.renderPolicy?.cache.maxBytes).toBe(8 * 1024 * 1024)
@@ -133,6 +136,13 @@ describe('renderPolicy Config schema', () => {
       task: 'hi',
       renderPolicy: policyWith({ scroll: { frameIntervalMs: -1 } }),
     })).toThrow(/scroll\.frameIntervalMs/)
+  })
+
+  it('rejects a non-positive mouse-wheel row count', () => {
+    expect(() => Config({
+      task: 'hi',
+      renderPolicy: policyWith({ scroll: { wheelRows: 0 } }),
+    })).toThrow(/scroll\.wheelRows/)
   })
 
   it('rejects exitDepth >= entryDepth and names both fields', () => {
