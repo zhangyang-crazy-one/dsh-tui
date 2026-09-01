@@ -1,29 +1,49 @@
 /**
- * Markdown rendering for the terminal: GFM markdown parses through the mdast
- * pipeline, then a small walker emits Ink elements against the Grok theme.
- * Code blocks highlight with a lightweight regex tokenizer (P12: cached by
- * content hash, collapsed above 500 lines). Every content byte passes
- * escapeContent before styling (P5). Markdown links wrap that styled text in
- * OSC 8 when {@link hyperlinksEnabled} is set; otherwise the href is printed
- * in parentheses when it differs from the label. Streaming callers reuse the
- * same block for settled text: `prefix` paints the turn marker on the first
- * row and the continuation indent on later rows (no sibling marker column,
- * so Ink leaves no unstyled gap cells), `tail` appends the streaming cursor
- * to the last painted row, and a trailing partial closing fence is trimmed
- * from the last code block until its marker completes. GFM tables paint a
- * box-drawing grid and wrap cells inside shared column widths.
+ * Markdown rendering for the terminal: GFM markdown parses through the
+ * mdast pipeline, then a styled renderer (in {@link ./markdown-render.ts})
+ * produces physical row records, which the JSX bridge here paints through
+ * the installed theme via {@link paintRow} / {@link styled}. Code blocks
+ * highlight with a lightweight regex tokenizer (P12: cached by content
+ * hash, collapsed above 500 lines). Markdown links wrap that styled text
+ * in OSC 8 when {@link hyperlinksEnabled} is set; otherwise the href is
+ * printed in parentheses when it differs from the label.
+ *
+ * Streaming callers reuse the same block for settled text: `prefix` paints
+ * the turn marker on the first row and the continuation indent on later
+ * rows (no sibling marker column, so Ink leaves no unstyled gap cells),
+ * `tail` appends the streaming cursor to the last painted row, and a
+ * trailing partial closing fence is trimmed from the last code block
+ * until its marker completes (delegated to {@link ./markdown-parse.ts}).
+ *
+ * GFM tables feed through {@link ./markdown-render.ts#renderTable} and use
+ * the same `layoutTableCells` strategy as the standalone
+ * {@link ./table-layout.ts} so widths settle deterministically when the
+ * window shrinks. Active tables (header and delimiter seen, body rows
+ * still arriving) are also driven by the `TableScanner` so pre-table
+ * content remains cached and the active table itself renders from raw
+ * scanner cells.
+ *
  * @module @deepseek-ai/dsh-tui-render/markdown
  */
 
 import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
-import { fromMarkdown } from 'mdast-util-from-markdown'
-import { gfmFromMarkdown } from 'mdast-util-gfm'
-import { gfm } from 'micromark-extension-gfm'
-import type { PhrasingContent, Root, RootContent } from 'mdast'
-import { displayWidth, escapeContent, padDisplayEnd, wrapDisplayLines } from './content.ts'
-import { wrapLink } from './hyperlink.ts'
+import { Fragment, useRef } from 'react'
+import type { RootContent } from 'mdast'
+import { displayWidth, escapeContent } from './content.ts'
+import { hyperlinksEnabled } from './hyperlink.ts'
 import { paintRow, styled, type StyleToken } from './theme.ts'
+import { markdownParseInternals, parseMarkdownSource } from './markdown-parse.ts'
+import { paintLineFromRenderLine } from './painted-line.ts'
+import {
+  type MarkdownBlockRenderer,
+  type MarkdownRenderLine,
+  type MarkdownRenderScope,
+  type MarkdownStyleToken,
+  createMarkdownProjector,
+} from './markdown-projector.ts'
+import { createStyledMarkdownBlockRenderer } from './markdown-render.ts'
+import { parsePipeTableCells, TableScanner } from './table-scanner.ts'
 
 /** Highlight token kinds the lightweight tokenizer emits. */
 type TokenKind = 'keyword' | 'string' | 'comment' | 'plain'
@@ -76,12 +96,7 @@ const MARKDOWN_CACHE_LIMIT = 2000
 /** Tokenizer cache: content hash + language → tokens (P12). */
 const tokenCache = new Map<string, Token[]>()
 
-/** Settled source → parsed and partial-fence-trimmed mdast. */
-const markdownCache = new Map<string, Root>()
-
-let markdownHits = 0
-let markdownParses = 0
-let markdownEvictions = 0
+/** Read-only counter block for the markdown-specific caches. */
 let tokenHits = 0
 let tokenMisses = 0
 let tokenEvictions = 0
@@ -103,6 +118,7 @@ function lruSet<Value>(
   cache.delete(key)
   while (cache.size >= MARKDOWN_CACHE_LIMIT) {
     const oldest = cache.keys().next().value
+    /* v8 ignore next -- cacheLimit >= 1 guarantees a non-empty cache at eviction */
     if (oldest === undefined) break
     cache.delete(oldest)
     evicted()
@@ -118,7 +134,7 @@ function lruSet<Value>(
 function tokenizeLine(source: string): Token[] {
   const tokens: Token[] = []
   let plain = ''
-  const flush = () => {
+  const flush = (): void => {
     if (plain !== '') {
       tokens.push({ kind: 'plain', text: plain })
       plain = ''
@@ -289,62 +305,14 @@ export function CodeBlock({
   )
 }
 
-/** Join one node's literal text, walking nested children when present. */
-function literalText(node: PhrasingContent | RootContent): string {
-  if ('value' in node) return node.value
-  const children = (node as unknown as { children?: unknown[] }).children
-  if (children !== undefined && children.length > 0) {
-    return children
-      .map(child => literalText(child as PhrasingContent | RootContent))
-      .join('')
-  }
-  return ''
+/** Render a single {@link MarkdownRenderLine} into one painted Text run. */
+function paintedLineFromRenderLine(
+  line: MarkdownRenderLine,
+  hyperlinks: boolean,
+): string {
+  return paintLineFromRenderLine(line, hyperlinks && hyperlinksEnabled())
 }
 
-/** Extract the phrasing children of a node when the node carries them. */
-function phrasingChildren(
-  node: PhrasingContent,
-): PhrasingContent[] | undefined {
-  const children = (node as unknown as { children?: unknown }).children
-  return Array.isArray(children) ? (children as PhrasingContent[]) : undefined
-}
-
-/**
- * Styled runs for one inline mdast node. Prose sits on the frame `bg` so
- * assistant paragraphs do not pick up the terminal default as a gray plate;
- * inline code keeps `codeBg`, and links/emphasis keep accent.
- * @param node - inline mdast node.
- * @returns paint parts for {@link paintRow}.
- */
-function inlineParts(node: PhrasingContent): string[] {
-  if (node.type === 'inlineCode') {
-    return [styled(escapeContent(node.value), 'codeBg')]
-  }
-  if (node.type === 'strong') {
-    return [styled(escapeContent(literalText(node)), 'fg', undefined, true)]
-  }
-  if (node.type === 'link') {
-    const visible = literalText(node)
-    const href = node.url
-    return wrapLink(
-      styled(escapeContent(visible), 'accent'),
-      visible,
-      href,
-      styled(escapeContent(` (${href})`), 'fgDim'),
-    )
-  }
-  if (node.type === 'emphasis') {
-    return [styled(escapeContent(literalText(node)), 'accent')]
-  }
-  if ('value' in node) {
-    return [styled(escapeContent(node.value), 'fg')]
-  }
-  const children = phrasingChildren(node)
-  if (children === undefined) return []
-  return children.flatMap(inlineParts)
-}
-
-/** Painted runs around one block's rows: turn marker and stream cursor. */
 interface RowAffixes {
   /** Prepended to the block's first painted row. */
   lead: string
@@ -354,438 +322,53 @@ interface RowAffixes {
   tail?: string | undefined
 }
 
-/**
- * One painted markdown line: escaped, themed parts over the frame `bg`. The
- * prefix and tail runs are already painted; concatenating them into the same
- * Text keeps the row one span so Ink cannot emit unstyled gap cells.
- */
-function paintedLine(
-  parts: string[],
-  key: number | string,
-  prefix = '',
-  tail?: string,
+/** Emit JSX for one block from its physical lines + affixes. */
+function linesToJsx(
+  lines: readonly MarkdownRenderLine[],
+  affixes: RowAffixes,
+  hyperlinks: boolean,
 ): ReactNode {
+  if (lines.length === 0) return null
   return (
-    <Text key={key} wrap="truncate">
-      {prefix}
-      {paintRow(parts)}
-      {tail}
-    </Text>
-  )
-}
-
-/**
- * One painted table row: a box-drawing rule, a header/body cell row, or a
- * fallback plain line when the window cannot hold a stable grid.
- */
-type TableLine =
-  | { kind: 'rule'; text: string }
-  | { kind: 'row'; header: boolean; cells: readonly string[] }
-  | { kind: 'plain'; text: string }
-
-/** Cap for an unbreakable table-cell word when shrinking columns. */
-const TABLE_WORD_CAP = 30
-
-/**
- * Longest whitespace-delimited token in `text`, capped so one path cannot
- * starve every other column.
- * @param text - escaped cell text.
- * @returns at least one column.
- */
-function longestWordWidth(text: string): number {
-  let max = 1
-  for (const word of text.split(/\s+/)) {
-    if (word === '') continue
-    max = Math.max(max, Math.min(TABLE_WORD_CAP, displayWidth(word)))
-  }
-  return max
-}
-
-/**
- * Distribute `available` display columns across `natural` widths, never
- * below `min`. Extra space goes to columns that still sit under their
- * natural width.
- * @param natural - unconstrained per-column display widths.
- * @param min - floor per column.
- * @param available - cell budget after box-drawing overhead.
- * @returns one width per column, summing to at most `available`.
- */
-function fitColumnWidths(
-  natural: readonly number[],
-  min: readonly number[],
-  available: number,
-): number[] {
-  const widths: number[] = []
-  for (let index = 0; index < natural.length; index += 1) {
-    const cap = natural[index] as number
-    const floor = min[index] as number
-    widths.push(Math.max(1, Math.min(floor, cap)))
-  }
-  let used = 0
-  for (const width of widths) used += width
-  while (used > available) {
-    let widest = 0
-    for (let col = 1; col < widths.length; col += 1) {
-      if ((widths[col] as number) > (widths[widest] as number)) widest = col
-    }
-    widths[widest] = (widths[widest] as number) - 1
-    used -= 1
-  }
-  let leftover = available - used
-  let index = 0
-  let stalled = 0
-  while (leftover > 0 && stalled < widths.length) {
-    const cap = natural[index] as number
-    if ((widths[index] as number) < cap) {
-      widths[index] = (widths[index] as number) + 1
-      leftover -= 1
-      stalled = 0
-    } else {
-      stalled += 1
-    }
-    index = (index + 1) % widths.length
-  }
-  if (leftover > 0) {
-    widths[widths.length - 1] = (widths.at(-1) as number) + leftover
-  }
-  return widths
-}
-
-/**
- * Box-drawing rule for the given column widths.
- * @param widths - cell display widths.
- * @param kind - top, header-split, or bottom.
- * @returns one rule string.
- */
-function tableRule(
-  widths: readonly number[],
-  kind: 'top' | 'mid' | 'bottom',
-): string {
-  const fill = widths.map(width => '─'.repeat(Math.max(1, width)))
-  if (kind === 'top') return `┌─${fill.join('─┬─')}─┐`
-  if (kind === 'bottom') return `└─${fill.join('─┴─')}─┘`
-  return `├─${fill.join('─┼─')}─┤`
-}
-
-/**
- * Paint one table line: dim box chrome, accent+bold header cells, fg body.
- * @param line - a rule, cell row, or fallback.
- * @returns styled runs for {@link paintedLine}.
- */
-function tableLineParts(line: TableLine): string[] {
-  if (line.kind === 'rule') return [styled(line.text, 'fgDim')]
-  if (line.kind === 'plain') return [styled(line.text, 'fg')]
-  const token = line.header ? 'accent' : 'fg'
-  const parts: string[] = [styled('│ ', 'fgDim')]
-  line.cells.forEach((cell, index) => {
-    if (index > 0) parts.push(styled(' │ ', 'fgDim'))
-    parts.push(styled(cell, token, undefined, line.header))
-  })
-  parts.push(styled(' │', 'fgDim'))
-  return parts
-}
-
-/**
- * Layout a GFM table as a boxed grid. Columns share display-width maxima;
- * cells wrap inside the column instead of clipping the right-hand side.
- * When the window cannot hold `colCount` columns plus box chrome, the table
- * falls back to wrapped ` | `-joined lines.
- * @param cells - row-major cell text; row 0 is the header.
- * @param maxCols - wrap budget for one painted row, including box chrome.
- * @returns painted table lines in visual order.
- */
-function layoutTable(
-  cells: readonly (readonly string[])[],
-  maxCols: number,
-): TableLine[] {
-  const colCount = Math.max(
-    1,
-    cells.reduce((max, row) => Math.max(max, row.length), 0),
-  )
-  const escaped = cells.map(row =>
-    Array.from({ length: colCount }, (_, col) => escapeContent(row[col] ?? '')),
-  )
-  const overhead = 3 * colCount + 1
-  const available = maxCols - overhead
-  if (available < colCount) {
-    return escaped.flatMap(row =>
-      wrapDisplayLines(row.join(' | '), maxCols).map(text => ({
-        kind: 'plain' as const,
-        text,
-      })),
-    )
-  }
-  const natural = Array.from({ length: colCount }, (_, col) => {
-    let width = 1
-    for (const row of escaped) {
-      width = Math.max(width, displayWidth(row[col] as string))
-    }
-    return width
-  })
-  const min = Array.from({ length: colCount }, (_, col) => {
-    let width = 1
-    for (const row of escaped) {
-      width = Math.max(width, longestWordWidth(row[col] as string))
-    }
-    return width
-  })
-  const widths = fitColumnWidths(natural, min, available)
-  const visualRows = (row: readonly string[], header: boolean): TableLine[] => {
-    const wrapped = row.map((cell, col) => wrapDisplayLines(cell, widths[col] as number))
-    const height = wrapped.reduce((max, lines) => Math.max(max, lines.length), 1)
-    const lines: TableLine[] = []
-    for (let lineIndex = 0; lineIndex < height; lineIndex += 1) {
-      lines.push({
-        kind: 'row',
-        header,
-        cells: wrapped.map((linesForCell, col) =>
-          padDisplayEnd(linesForCell[lineIndex] ?? '', widths[col] as number),
-        ),
-      })
-    }
-    return lines
-  }
-  const header = escaped[0] as string[]
-  const body = escaped.slice(1)
-  return [
-    { kind: 'rule', text: tableRule(widths, 'top') },
-    ...visualRows(header, true),
-    { kind: 'rule', text: tableRule(widths, 'mid') },
-    ...body.flatMap(row => visualRows(row, false)),
-    { kind: 'rule', text: tableRule(widths, 'bottom') },
-  ]
-}
-
-/**
- * Wrap a styled-as-one-run block onto `maxCols` so Yoga's measured height
- * matches the rows Ink later paints. Long unwrapped paragraphs otherwise
- * measure as one row and overwrite the rows below.
- * @param text - already-escaped plain text.
- * @param token - body token.
- * @param maxCols - wrap budget.
- * @param key - react key prefix.
- * @param bold - heading uses bold.
- * @param affixes - marker/indent prefix runs and the optional cursor tail.
- * @returns one Text per wrapped row.
- */
-function wrappedRun(
-  text: string,
-  token: StyleToken,
-  maxCols: number,
-  key: number,
-  bold = false,
-  affixes: RowAffixes = { lead: '', rest: '' },
-): ReactNode {
-  const lines = wrapDisplayLines(text, maxCols)
-  if (lines.length <= 1) {
-    return paintedLine(
-      [styled(text, token, undefined, bold)],
-      key,
-      affixes.lead,
-      affixes.tail,
-    )
-  }
-  return (
-    <Box key={key} flexDirection="column" width="100%">
-      {lines.map((line, index) =>
-        paintedLine(
-          [styled(line, token, undefined, bold)],
-          `${key}-${index}`,
-          index === 0 ? affixes.lead : affixes.rest,
-          index === lines.length - 1 ? affixes.tail : undefined,
-        ),
-      )}
+    <Box flexDirection="column" width="100%">
+      {lines.map((line, index) => {
+        const painted = paintedLineFromRenderLine(line, hyperlinks)
+        const prefix = index === 0 ? affixes.lead : affixes.rest
+        const tail = index === lines.length - 1 ? affixes.tail : undefined
+        return (
+          <Text key={index} wrap="truncate">
+            {prefix}
+            {painted}
+            {tail}
+          </Text>
+        )
+      })}
     </Box>
   )
 }
 
-/** Render one block-level mdast node into Ink elements. */
-function renderNode(
-  node: RootContent,
-  key: number,
-  maxCols: number,
-  affixes: RowAffixes,
-): ReactNode {
-  switch (node.type) {
-    case 'heading': {
-      const text = node.children.map(literalText).join('')
-      // T2 closes the h1 frame on both sides: `━━━ 标题 ━━━`.
-      const depth = node.depth === 1
-      const prefix = depth ? '━━━ ' : '━ '
-      const suffix = depth ? ' ━━━' : ''
-      return wrappedRun(
-        `${prefix}${escapeContent(text)}${suffix}`,
-        'accent',
-        maxCols,
-        key,
-        true,
-        affixes,
-      )
-    }
-    case 'paragraph': {
-      const escaped = escapeContent(node.children.map(literalText).join(''))
-      if (displayWidth(escaped) <= maxCols && !escaped.includes('\n')) {
-        return paintedLine(
-          node.children.flatMap(inlineParts),
-          key,
-          affixes.lead,
-          affixes.tail,
-        )
-      }
-      return wrappedRun(escaped, 'fg', maxCols, key, false, affixes)
-    }
-    case 'list': {
-      const lastIndex = node.children.length - 1
-      return (
-        <Box key={key} flexDirection="column" width="100%">
-          {node.children.map((item, index) => {
-            let marker = '- '
-            if (node.ordered === true) {
-              // v8 ignore next -- micromark always supplies List.start on ordered lists.
-              const startAt = node.start ?? 1
-              marker = `${startAt + index}. `
-            }
-            const text = item.children.map(literalText).join('')
-            return wrappedRun(
-              `${marker}${escapeContent(text)}`,
-              'fg',
-              maxCols,
-              index,
-              false,
-              {
-                lead: index === 0 ? affixes.lead : affixes.rest,
-                rest: affixes.rest,
-                tail: index === lastIndex ? affixes.tail : undefined,
-              },
-            )
-          })}
-        </Box>
-      )
-    }
-    case 'blockquote': {
-      const text = node.children.map(literalText).join('')
-      return wrappedRun(
-        `│ ${escapeContent(text)}`,
-        'fgDim',
-        maxCols,
-        key,
-        false,
-        affixes,
-      )
-    }
-    case 'code':
-      return (
-        <CodeBlock
-          key={key}
-          source={node.value}
-          lang={node.lang ?? 'text'}
-          lead={affixes.lead}
-          rest={affixes.rest}
-          tail={affixes.tail}
-        />
-      )
-    case 'table': {
-      const rows = node.children.map(row =>
-        row.children.map(cell => cell.children.map(literalText).join('')),
-      )
-      const lines = layoutTable(rows, maxCols)
-      const lastIndex = lines.length - 1
-      return (
-        <Box key={key} flexDirection="column" width="100%">
-          {lines.map((line, rowIndex) =>
-            paintedLine(
-              tableLineParts(line),
-              rowIndex,
-              rowIndex === 0 ? affixes.lead : affixes.rest,
-              rowIndex === lastIndex ? affixes.tail : undefined,
-            ),
-          )}
-        </Box>
-      )
-    }
-    default:
-      return null
-  }
-}
-
-/**
- * Trim a streamed partial closing fence from the last code block. An
- * unclosed fence swallows the tail line as code content until the closing
- * marker is complete, so a fence arriving character by character would
- * briefly paint its own ` `` ` as code (the Pi #5825 flicker). The trimmed
- * line reappears as content when it turns out not to be a fence prefix.
- * @param root - parsed mdast tree (mutated in place).
- * @param source - the markdown source the tree was parsed from.
- */
-function trimPartialClosingFence(root: Root, source: string): void {
-  let node: RootContent | undefined = root.children.at(-1)
-  while (
-    node !== undefined
-    && (node.type === 'list' || node.type === 'listItem' || node.type === 'blockquote')
-  ) {
-    node = (node.children as RootContent[]).at(-1)
-  }
-  if (node?.type !== 'code') return
-  const start = node.position?.start.offset
-  const end = node.position?.end.offset
-  // mdast nodes produced from source text always retain parser offsets.
-  const raw = source.slice(start, end)
-  const marker = /^(`{3,}|~{3,})/.exec(raw)?.[1]
-  if (marker === undefined) return
-  const lastLine = raw.split('\n').at(-1) as string
-  if (lastLine === '' || lastLine.length >= marker.length) return
-  if (lastLine !== marker.charAt(0).repeat(lastLine.length)) return
-  node.value = node.value
-    .slice(0, node.value.length - lastLine.length)
-    .replace(/\n$/, '')
-}
-
-function parseMarkdown(source: string, settled: boolean): Root {
-  if (settled) {
-    const cached = lruGet(markdownCache, source)
-    if (cached !== undefined) {
-      markdownHits += 1
-      return cached
-    }
-  }
-  markdownParses += 1
-  const root = fromMarkdown(source, {
-    extensions: [gfm()],
-    mdastExtensions: [gfmFromMarkdown()],
-  })
-  trimPartialClosingFence(root, source)
-  if (settled) {
-    lruSet(markdownCache, source, root, () => {
-      markdownEvictions += 1
-    })
-  }
-  return root
-}
-
-/** Read-only instrumentation and reset seam for bounded Markdown-cache tests. */
+/** Read-only instrumentation and reset seam for the markdown cache surface. */
 export const markdownCacheInternals = {
-  /** Clear both caches and their counters. */
+  /** Clear both caches and reset every counter to zero. */
   reset(): void {
-    markdownCache.clear()
     tokenCache.clear()
-    markdownHits = 0
-    markdownParses = 0
-    markdownEvictions = 0
     tokenHits = 0
     tokenMisses = 0
     tokenEvictions = 0
+    markdownParseInternals.reset()
   },
   /**
    * Return current cache occupancy and access counters.
    * @returns an immutable diagnostic snapshot.
    */
   snapshot() {
+    const parseSnap = markdownParseInternals.snapshot()
     return Object.freeze({
       limit: MARKDOWN_CACHE_LIMIT,
-      markdownEntries: markdownCache.size,
-      markdownHits,
-      markdownParses,
-      markdownEvictions,
+      markdownEntries: parseSnap.entries,
+      markdownHits: parseSnap.hits,
+      markdownParses: parseSnap.parses,
+      markdownEvictions: parseSnap.evictions,
       tokenEntries: tokenCache.size,
       tokenHits,
       tokenMisses,
@@ -802,8 +385,50 @@ export interface MarkdownRowPrefix {
   rest: string
 }
 
+/** Per-block JSX cache; useMemo-keyed by (node pointer) + (scopeKey). */
+
+interface BlockEntry {
+  /** ReactNode tree for the rendered block (null when the block paints empty). */
+  readonly node: ReactNode
+  /** Display width consumed by the last painted row (for affix clamping). */
+  readonly lastRowWidth: number
+  /** Source range of the block; used to detect stable prefix boundaries. */
+  readonly range: { start: number; end: number }
+}
+
+interface RendererState {
+  projector: ReturnType<typeof createMarkdownProjector>
+  scanner: TableScanner
+  lastSource: string
+  /** Last scopeKey (width|theme|fold|renderMode) used to build the renderer. */
+  scopeKey: string
+  /** Cached renderer for the current scope. */
+  renderer: MarkdownBlockRenderer
+  /** Cached block-render output keyed by `start:end`. */
+  cache: Map<string, BlockEntry>
+  /** Last projection's per-block output for stable-prefix detection. */
+  lastBlocks: readonly { range: { start: number; end: number }; lines: readonly MarkdownRenderLine[] }[]
+}
+
+/** Build a renderer bound to the active width + hyperlink flag. */
+function buildRenderer(width: number, hyperlinks: boolean): MarkdownBlockRenderer {
+  return createStyledMarkdownBlockRenderer({ width, hyperlinks })
+}
+
+function computeScopeKey(width: number, theme: string, fold: string, renderMode: string): string {
+  return `${width}|${theme}|${fold}|${renderMode}`
+}
+
 /**
  * Render GFM markdown source into Ink elements.
+ *
+ * Internally the component owns one {@link MarkdownProjector} (incrementally
+ * parses the source) and one {@link TableScanner} (tracks the active GFM
+ * table region). For settled sources the projector reuses its cached
+ * physical rows; for streaming sources only the new tail re-parses.
+ * Active tables short-circuit mdast for the mutable region so pre-table
+ * content stays cached and rows never duplicate.
+ *
  * @param source - markdown source (untrusted; escaped inside).
  * @param maxCols - complete row budget, including marker and cursor affixes;
  * defaults to the current window width.
@@ -828,34 +453,362 @@ export function MarkdownBlock({
   settled?: boolean | undefined
 }): ReactNode {
   const { columns } = useWindowSize()
+  const stateRef = useRef<RendererState | null>(null)
   const width = Math.max(1, maxCols ?? columns)
   const prefixWidth = Math.max(
     displayWidth(prefix?.first ?? ''),
     displayWidth(prefix?.rest ?? ''),
   )
-  const bodyWidth = Math.max(1, width - prefixWidth - displayWidth(tail ?? ''))
-  const root = parseMarkdown(source, settled)
-  const children = root.children
-  if (children.length === 0) {
-    if (tail === undefined) {
-      return <Box flexDirection="column" width="100%" />
+  const tailWidth = displayWidth(tail ?? '')
+  const bodyWidth = Math.max(1, width - prefixWidth - tailWidth)
+  if (!source.endsWith('\n') && (tail === undefined || settled)) {
+    return renderFullSource(source, bodyWidth, prefix, tail, settled)
+  }
+  if (stateRef.current === null) {
+    const scope: MarkdownRenderScope = {
+      width: bodyWidth,
+      theme: 'truecolor',
+      fold: 'expanded',
+      renderMode: settled ? 'settled' : 'streaming',
     }
+    stateRef.current = {
+      projector: createMarkdownProjector(buildRenderer(bodyWidth, /* hyperlinks */ false), { cacheLimit: MARKDOWN_CACHE_LIMIT }),
+      scanner: new TableScanner(),
+      lastSource: '',
+      scopeKey: computeScopeKey(bodyWidth, scope.theme, scope.fold, scope.renderMode),
+      renderer: buildRenderer(bodyWidth, false),
+      cache: new Map(),
+      lastBlocks: [],
+    }
+  }
+  const state = stateRef.current
+  const scopeKey = computeScopeKey(bodyWidth, 'truecolor', 'expanded', settled ? 'settled' : 'streaming')
+  if (state.scopeKey !== scopeKey) {
+    state.projector = createMarkdownProjector(buildRenderer(bodyWidth, false), { cacheLimit: MARKDOWN_CACHE_LIMIT })
+    state.renderer = buildRenderer(bodyWidth, false)
+    state.cache.clear()
+    state.lastBlocks = []
+    state.scanner.reset()
+    state.scopeKey = scopeKey
+  }
+  // Feed delta from previous render to current.
+  if (source !== state.lastSource) {
+    if (!source.startsWith(state.lastSource)) {
+      state.projector.collector.reset()
+      state.projector.reset()
+      state.scanner.reset()
+      state.cache.clear()
+      state.lastBlocks = []
+    }
+    const delta = source.slice(state.lastSource.length)
+    state.projector.collector.append(delta)
+    state.scanner.feed(delta)
+    state.lastSource = source
+  }
+  // Streaming keeps the unfinished line raw so token-sized updates do not
+  // reparse the complete Markdown source. Settlement promotes it exactly
+  // once before the immutable history snapshot is rendered.
+  if (settled || tail === undefined) {
+    state.projector.collector.finalize()
+    state.scanner.finalize()
+  }
+  const projection = state.projector.project({
+    width: bodyWidth,
+    theme: 'truecolor',
+    fold: 'expanded',
+    renderMode: settled ? 'settled' : 'streaming',
+  })
+  const scannerSnap = state.scanner.snapshot()
+  const activeTableTailCells = scannerSnap.state.kind === 'confirmed-table'
+    && projection.tail !== undefined
+    ? parsePipeTableCells(projection.tail.text)
+    : undefined
+  // Render blocks: pre-table / active-table / post-table.
+  const renderScope: MarkdownRenderScope = {
+    width: bodyWidth,
+    theme: 'truecolor',
+    fold: 'expanded',
+    renderMode: settled ? 'settled' : 'streaming',
+  }
+  const affixes: RowAffixes = {
+    lead: prefix?.first ?? '',
+    rest: prefix?.rest ?? '',
+    tail,
+  }
+  const out: ReactNode[] = []
+  const blocks = projection.blocks
+  let blockIndex = 0
+  for (const block of blocks) {
+    const range = block.range
+    const overlaps = scannerSnap.state.kind === 'confirmed-table'
+      && range.end > scannerSnap.mutableStart
+      && range.start < scannerSnap.mutableEnd
+    if (overlaps) {
+      // Skip: this block is the mdast form of the active table.
+      blockIndex += 1
+      continue
+    }
+    const isLast = blockIndex === blocks.length - 1
+      && projection.tail === undefined
+      && scannerSnap.state.kind !== 'confirmed-table'
+    const blockAffixes: RowAffixes = {
+      lead: blockIndex === 0 ? affixes.lead : affixes.rest,
+      rest: affixes.rest,
+      tail: isLast ? affixes.tail : undefined,
+    }
+    out.push(<Fragment key={`b-${blockIndex}`}>{renderBlockEntry(block, blockAffixes, state, renderScope)}</Fragment>)
+    blockIndex += 1
+  }
+  if (scannerSnap.state.kind === 'confirmed-table' && scannerSnap.rows.length > 0) {
+    const tableAffixes: RowAffixes = {
+      lead: blocks.length === 0 ? affixes.lead : affixes.rest,
+      rest: affixes.rest,
+      tail: projection.tail === undefined ? affixes.tail : undefined,
+    }
+    const tableRows = [
+      ...scannerSnap.rows.filter(row => !row.isDelimiter),
+      ...(activeTableTailCells === undefined
+        ? []
+        : [{ cells: activeTableTailCells }]),
+    ]
+    out.push(<Fragment key="active-table">{renderActiveTable(tableRows, bodyWidth, tableAffixes, false)}</Fragment>)
+  }
+  if (projection.tail !== undefined && activeTableTailCells === undefined) {
+    out.push(
+      <Fragment key="tail">
+        {renderFullSource(
+          projection.tail.text,
+          bodyWidth,
+          {
+            first: blocks.length === 0 && scannerSnap.rows.length === 0
+              ? affixes.lead
+              : affixes.rest,
+            rest: affixes.rest,
+          },
+          affixes.tail,
+          false,
+        )}
+      </Fragment>,
+    )
+  }
+  if (out.length === 0 && tail === undefined) {
+    return <Box flexDirection="column" width="100%" />
+  }
+  if (out.length === 0) {
     return (
       <Box flexDirection="column" width="100%">
         <Text>{prefix?.first}{tail}</Text>
       </Box>
     )
   }
-  const lastIndex = children.length - 1
   return (
     <Box flexDirection="column" width="100%">
-      {children.map((node, index) =>
-        renderNode(node, index, bodyWidth, {
-          lead: index === 0 ? prefix?.first ?? '' : prefix?.rest ?? '',
-          rest: prefix?.rest ?? '',
-          tail: index === lastIndex ? tail : undefined,
-        }),
-      )}
+      {out}
     </Box>
   )
+}
+
+/** Render one cached block entry, recomputing on cache miss. */
+function renderBlockEntry(
+  block: { node: RootContent; lines: readonly MarkdownRenderLine[]; range: { start: number; end: number } },
+  affixes: RowAffixes,
+  state: RendererState,
+  _scope: MarkdownRenderScope,
+): ReactNode {
+  const rangeKey = `${block.range.start}:${block.range.end}`
+  const cached = state.cache.get(rangeKey)
+  if (cached !== undefined) {
+    return cached.node
+  }
+  const node = linesToJsx(block.lines, affixes, /* hyperlinks */ false)
+  const lastRow = block.lines.at(-1)
+  const entry: BlockEntry = {
+    node,
+    lastRowWidth: lastRow?.displayWidth ?? 0,
+    range: block.range,
+  }
+  state.cache.set(rangeKey, entry)
+  return node
+}
+
+/** Render one active table line range from raw scanner rows. */
+function renderActiveTable(
+  rows: readonly { cells: readonly string[] }[],
+  width: number,
+  affixes: RowAffixes,
+  hyperlinks: boolean,
+): ReactNode {
+  // Determine column count from the widest row; pad shorter rows with ''.
+  const colCount = rows.reduce((m, r) => Math.max(m, r.cells.length), 0)
+  const normalized = rows.map((r) => {
+    const cells = r.cells.slice()
+    while (cells.length < colCount) cells.push('')
+    return cells
+  })
+  const overhead = 3 * colCount + 1
+  const available = Math.max(0, width - overhead)
+  if (available < colCount) {
+    const lines: MarkdownRenderLine[] = normalized.map((cells, index) => {
+      const text = cells.join(' | ')
+      return {
+        text,
+        displayWidth: displayWidth(text),
+        spans: [{ start: 0, end: displayWidth(text), token: 'fg', bold: false }],
+        rowInBlock: index,
+        sourceStart: -1,
+        sourceEnd: -1,
+        rawTail: false,
+      }
+    })
+    return linesToJsx(lines, affixes, hyperlinks)
+  }
+  const natural = Array.from({ length: colCount }, (_, col) => {
+    let w = 1
+    for (const row of normalized) w = Math.max(w, displayWidth(row[col] ?? ''))
+    return w
+  })
+  const widths = natural.slice()
+  let used = 0
+  for (const w of widths) used += w
+  while (used > available) {
+    let widest = 0
+    for (let col = 1; col < widths.length; col += 1) {
+      if ((widths[col] as number) > (widths[widest] as number)) widest = col
+    }
+    widths[widest] = (widths[widest] as number) - 1
+    used -= 1
+  }
+  const fill = widths.map(w => '─'.repeat(Math.max(1, w)))
+  const lines: MarkdownRenderLine[] = []
+  const pushRule = (rule: string): void => {
+    lines.push(makeSimpleLine(rule, 'fgDim', lines.length))
+  }
+  pushRule(`┌─${fill.join('─┬─')}─┐`)
+  normalized.forEach((cells, rowIndex) => {
+    const escaped = cells.map(c => escapeContent(c))
+    const header = rowIndex === 0
+    const cellParts = cells.map((_cell, col) => {
+      const cellWidth = widths[col] as number
+      return (escaped[col] ?? '').padEnd(cellWidth, ' ').slice(0, cellWidth)
+    })
+    const inner = cellParts.join(' │ ')
+    const lineText = `│ ${inner} │`
+    lines.push(makeSimpleLine(lineText, header ? 'accent' : 'fg', lines.length, header))
+    if (rowIndex === 0) {
+      pushRule(`├─${fill.join('─┼─')}─┤`)
+    }
+  })
+  pushRule(`└─${fill.join('─┴─')}─┘`)
+  return linesToJsx(lines, affixes, hyperlinks)
+}
+
+/** Build a one-spanned MarkdownRenderLine from plain text + token. */
+function makeSimpleLine(
+  text: string,
+  token: MarkdownStyleToken,
+  rowInBlock: number,
+  bold = false,
+): MarkdownRenderLine {
+  return {
+    text,
+    displayWidth: displayWidth(text),
+    spans: [{ start: 0, end: displayWidth(text), token, bold }],
+    rowInBlock,
+    sourceStart: -1,
+    sourceEnd: -1,
+    rawTail: false,
+  }
+}
+
+/**
+ * Re-export the parse internals so callers can poke at the parse cache
+ * surface (the upstream `markdownCacheInternals` seam wraps both layers).
+ */
+export { markdownParseInternals }
+
+
+/**
+ * One-shot render path used when the source ends without a trailing
+ * newline. Parses the source via the shared parse layer (which applies the
+ * partial-fence trim and the settled-source cache) and then emits the same
+ * JSX shape as the projector path would, including table-holdback
+ * partition by the scanner's mutable range.
+ */
+function renderFullSource(
+  source: string,
+  bodyWidth: number,
+  prefix: MarkdownRowPrefix | undefined,
+  tail: string | undefined,
+  settled: boolean,
+): ReactNode {
+  const root = parseMarkdownSource(source, settled)
+  const hyperlinks = hyperlinksEnabled()
+  const renderer = buildRenderer(bodyWidth, hyperlinks)
+  const affixes: RowAffixes = {
+    lead: prefix?.first ?? '',
+    rest: prefix?.rest ?? '',
+    tail,
+  }
+  const out: ReactNode[] = []
+  const scanner = new TableScanner()
+  scanner.feed(source)
+  scanner.finalize()
+  const snap = scanner.snapshot()
+  let blockIndex = 0
+  const blocks = root.children
+  for (const block of blocks) {
+    const range = blockPositionRange(block)
+    const overlaps = snap.state.kind === 'confirmed-table'
+      && range.end > snap.mutableStart
+      && range.start < snap.mutableEnd
+    if (overlaps) {
+      blockIndex += 1
+      continue
+    }
+    const isLast = blockIndex === blocks.length - 1
+    const blockAffixes: RowAffixes = {
+      lead: blockIndex === 0 ? affixes.lead : affixes.rest,
+      rest: affixes.rest,
+      tail: isLast ? affixes.tail : undefined,
+    }
+    const lines = renderer.renderBlock(block, {
+      width: bodyWidth,
+      theme: 'truecolor',
+      fold: 'expanded',
+      renderMode: 'streaming',
+    }, blockIndex)
+    out.push(
+      <Fragment key={`full-b-${blockIndex}`}>{linesToJsx(lines, blockAffixes, hyperlinks)}</Fragment>,
+    )
+    blockIndex += 1
+  }
+  if (snap.state.kind === 'confirmed-table' && snap.rows.length > 0) {
+    const tableAffixes: RowAffixes = {
+      lead: blocks.length === 0 ? affixes.lead : affixes.rest,
+      rest: affixes.rest,
+      tail: blocks.length === 0 ? affixes.tail : undefined,
+    }
+    out.push(<Fragment key="full-active-table">{renderActiveTable(snap.rows, bodyWidth, tableAffixes, hyperlinks)}</Fragment>)
+  }
+  if (out.length === 0 && tail === undefined) {
+    return <Box flexDirection="column" width="100%" />
+  }
+  if (out.length === 0) {
+    return (
+      <Box flexDirection="column" width="100%">
+        <Text>{prefix?.first}{tail}</Text>
+      </Box>
+    )
+  }
+  return (
+    <Box flexDirection="column" width="100%">
+      {out}
+    </Box>
+  )
+}
+
+function blockPositionRange(node: RootContent): { start: number; end: number } {
+  const position = node.position
+  if (position === undefined) return { start: -1, end: -1 }
+  return { start: position.start.offset ?? -1, end: position.end.offset ?? -1 }
 }

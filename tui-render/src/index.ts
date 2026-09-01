@@ -16,11 +16,13 @@ import type { TuiController } from './loop.tsx'
 import type { ViewModel } from './projection.ts'
 import { FrameProbe } from './frame-stats.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
-import { installTheme } from './theme.ts'
+import type { FrameMetricsHandle } from './frame-metrics.ts'
+import { currentTier, installTheme } from './theme.ts'
 import { wrapStdoutForFrameBg } from './frame-fill.ts'
 import { attachMouseIo } from './mouse-io.ts'
 import { detectHyperlinks, setHyperlinks } from './hyperlink.ts'
 import { detectBrandRenderTier } from './terminal-capabilities.ts'
+import type { RenderPolicy } from './render-policy.ts'
 
 export { renderToString }
 export { AppShell, layoutTitleBar } from './app-shell.tsx'
@@ -51,6 +53,20 @@ export { isHumanUserMessage } from './message-visibility.ts'
 export { StreamView } from './stream-view.tsx'
 export type { StreamViewProps } from './stream-view.tsx'
 export { conversationLeft, conversationWidth } from './conversation-layout.ts'
+export {
+  createFrameSnapshotRow,
+  diffVisibleFrameSnapshots,
+  physicalLineIdentity,
+  setVisibleFrameSnapshot,
+  visibleFrameSnapshot,
+} from './frame-snapshot.ts'
+export type {
+  FrameGeometry,
+  FrameRowChange,
+  FrameSnapshotDiff,
+  FrameSnapshotRow,
+  VisibleFrameSnapshot,
+} from './frame-snapshot.ts'
 export {
   EMPTY_TRANSCRIPT_VIEWPORT,
   physicalScrollRailGeometry,
@@ -159,10 +175,12 @@ export { createRenderLoop, withThrottle } from './render-loop.ts'
 export {
   hideFrameCaret,
   setFrameCaret,
+  setFrameRail,
   transformFrameChunk,
+  writePublishedFrameRail,
   wrapStdoutForFrameBg,
 } from './frame-fill.ts'
-export type { FrameCaret } from './frame-fill.ts'
+export type { FrameCaret, FrameRail } from './frame-fill.ts'
 export { goalFooterHead, goalFooterRuns, formatGoalFooter } from './goal-footer.ts'
 export type { GoalFooterRuns, GoalFooterView } from './goal-footer.ts'
 export { formatAdaptiveInfoFooter } from './adaptive-info-footer.ts'
@@ -203,6 +221,41 @@ export type {
   FrameProbeProps,
   FrameStatsSnapshot,
 } from './frame-stats.ts'
+export { createFrameMetrics, FRAME_METRICS_CAPACITY } from './frame-metrics.ts'
+export type {
+  FrameMetricsCounterSnapshot,
+  FrameMetricsHandle,
+  FrameMetricsSnapshot,
+  RenderQueueSnapshot,
+} from './frame-metrics.ts'
+export {
+  renderPolicyDefaults,
+  RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES,
+  RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS,
+  RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD,
+  RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS,
+  RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP,
+  RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME,
+  RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS,
+  RENDER_POLICY_DEFAULT_STREAM_CATCH_UP_ROWS_PER_FRAME,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_DRAIN_BACKPRESSURE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_OLDEST_AGE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_DEPTH,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_DRAIN_BACKPRESSURE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_OLDEST_AGE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_FRAME_INTERVAL_MS,
+  RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN,
+  RENDER_POLICY_MAX_CACHE_BYTES,
+  RENDER_POLICY_MAX_CACHE_ROWS,
+  RENDER_POLICY_MAX_OVERSCAN,
+} from './render-policy.ts'
+export type {
+  RenderPolicy,
+  RenderPolicyCache,
+  RenderPolicyScroll,
+  RenderPolicyStream,
+} from './render-policy.ts'
 export { reduceInteraction } from './interaction-state.ts'
 export type {
   InteractionState,
@@ -242,11 +295,15 @@ export interface TuiRenderOptions {
   exitOnCtrlC?: boolean
   /** When set, wrap the tree in a FrameProbe that records commit render costs into this store. */
   frameProbe?: FrameProbeHandle
+  /** Renderer metrics shared by StreamView and the host frame-stats writer. */
+  frameMetrics?: FrameMetricsHandle
   /**
    * Environment snapshot for color-tier detection; defaults to process.env.
    * Tests inject a fixed snapshot so the installed tier is deterministic.
    */
   env?: NodeJS.ProcessEnv
+  /** Resolved, host-validated transcript, stream, scroll, and cache policy. */
+  renderPolicy?: RenderPolicy
 }
 
 /**
@@ -275,12 +332,15 @@ export function mountTuiRender(
   const mouse = attachMouseIo({
     stdin: options.stdin ?? process.stdin,
     stdout: options.stdout ?? process.stdout,
+    ...(options.renderPolicy === undefined
+      ? {}
+      : { wheelRows: options.renderPolicy.scroll.wheelRows }),
   })
   const instance = render(wrapped, {
     alternateScreen: true,
     patchConsole: false,
     exitOnCtrlC: options.exitOnCtrlC ?? false,
-    stdout: wrapStdoutForFrameBg(mouse.stdout),
+    stdout: wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
     stdin: mouse.stdin,
   })
   return () => {
@@ -364,7 +424,13 @@ export function mountTuiLoop(
   controller: TuiController,
   options: { title: string; brandFrameProbe?: FrameProbeHandle | undefined } & TuiRenderOptions,
 ): () => void {
-  const { title, brandFrameProbe, ...mountOptions } = options
+  const {
+    title,
+    brandFrameProbe,
+    renderPolicy,
+    frameMetrics,
+    ...mountOptions
+  } = options
   const env = mountOptions.env ?? process.env
   const stdout = mountOptions.stdout ?? process.stdout
   const stdin = mountOptions.stdin ?? process.stdin
@@ -375,7 +441,13 @@ export function mountTuiLoop(
       brandTier: detectBrandRenderTier(env),
       brandAutoEligible: stdout.isTTY && stdin.isTTY,
       brandFrameProbe,
+      frameProbe: mountOptions.frameProbe,
+      renderPolicy,
+      frameMetrics,
     }),
-    mountOptions,
+    {
+      ...mountOptions,
+      ...(frameMetrics === undefined ? {} : { frameMetrics }),
+    },
   )
 }

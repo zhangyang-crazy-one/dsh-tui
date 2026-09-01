@@ -46,20 +46,20 @@ import type {} from '@deepseek-ai/dsh-skill'
 import type { SubagentListEntry, SubagentTimingProjection } from '@deepseek-ai/dsh-subagent'
 // Type-only: declaration-merges ctx.planMode. The service is composed by
 // the base patch; this plugin never injects it.
-import { foldPlanMode } from '@deepseek-ai/dsh-plan-mode'
+import type {} from '@deepseek-ai/dsh-plan-mode'
 // Type-only: declaration-merges ctx.permissionPresets. The service is composed
 // by the base patch; this plugin never injects it and never calls setApprovalPolicy.
 import type {} from '@deepseek-ai/dsh-permission-presets'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-settings'
 import {
   createUserMessage,
   type ToolCallId,
   type ContentBlock,
   type LlmModelInfo,
   type MessageId,
-  assertNever,
 } from '@deepseek-ai/dsh-llm'
+import { assertNever } from '@deepseek-ai/dsh-util-values'
 import type { LlmRetryEventData, RetryId } from '@deepseek-ai/dsh-llm-retry/types'
 import type {} from '@deepseek-ai/dsh-token-meter/src/projection.ts'
 import type {
@@ -88,8 +88,10 @@ import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
 import {
   applyTheme,
   activeBrandRevealTimerCount,
+  createFrameMetrics,
   createFrameProbe,
   createProjector,
+  renderPolicyDefaults,
   frameStatsSnapshot,
   isHumanUserMessage,
   latestAssistantCopyTarget,
@@ -111,6 +113,29 @@ import {
   WORKFLOW_OVERLAY_WINDOW,
   detectNotifyCapability,
   notifyBytes,
+  RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES,
+  RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS,
+  RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD,
+  RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS,
+  RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP,
+  RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME,
+  RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS,
+  RENDER_POLICY_DEFAULT_STREAM_CATCH_UP_ROWS_PER_FRAME,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_DRAIN_BACKPRESSURE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_ENTRY_OLDEST_AGE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_DEPTH,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_DRAIN_BACKPRESSURE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_EXIT_OLDEST_AGE_MS,
+  RENDER_POLICY_DEFAULT_STREAM_FRAME_INTERVAL_MS,
+  RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN,
+  RENDER_POLICY_MAX_CACHE_BYTES,
+  RENDER_POLICY_MAX_CACHE_ROWS,
+  RENDER_POLICY_MAX_OVERSCAN,
+} from '@deepseek-ai/dsh-tui-render'
+import type {
+  FrameMetricsSnapshot,
+  RenderPolicy,
 } from '@deepseek-ai/dsh-tui-render'
 import type {
   AdaptiveInfoFooterView,
@@ -177,7 +202,7 @@ export const FEEDBACK_MS = 2000
 const DANGER_PRESET = 'danger-full-access'
 
 /** General / theme settings namespace owned by this Consumer. */
-const TUI_SETTINGS_NS = settingsNamespace('tui')
+const TUI_SETTINGS_NS = 'tui'
 
 /** First-run credential the idle boot overlay collects. */
 const ONBOARDING_KEY = 'DEEPSEEK_API_KEY'
@@ -219,6 +244,8 @@ export interface Config {
   cwd?: string
   /** Frame-stats JSON output path, if given on the command line. */
   frameStats?: string
+  /** Resolved render policy the host hands the renderer; absent falls back to defaults. */
+  renderPolicy?: RenderPolicy
 }
 
 export const Config: z<Config> = z.object({
@@ -226,7 +253,78 @@ export const Config: z<Config> = z.object({
   resume: z.string(),
   cwd: z.string(),
   frameStats: z.string(),
+  renderPolicy: z.transform(
+    z.object({
+      transcriptOverscan: z.number().min(0).max(RENDER_POLICY_MAX_OVERSCAN)
+        .default(RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN),
+      stream: z.object({
+        frameIntervalMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_FRAME_INTERVAL_MS),
+        entryDepth: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH),
+        exitDepth: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_EXIT_DEPTH),
+        entryOldestAgeMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_ENTRY_OLDEST_AGE_MS),
+        exitOldestAgeMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_EXIT_OLDEST_AGE_MS),
+        entryDrainBackpressureMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_ENTRY_DRAIN_BACKPRESSURE_MS),
+        exitDrainBackpressureMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_EXIT_DRAIN_BACKPRESSURE_MS),
+        catchUpRowsPerFrame: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_STREAM_CATCH_UP_ROWS_PER_FRAME),
+      }),
+      scroll: z.object({
+        frameIntervalMs: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_SCROLL_FRAME_INTERVAL_MS),
+        stepPerFrame: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME),
+        wheelRows: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS),
+        catchUpThreshold: z.number().min(0).step(1)
+          .default(RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD),
+        maxCatchUpStep: z.number().min(1).step(1)
+          .default(RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP),
+      }),
+      cache: z.object({
+        maxRows: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_ROWS)
+          .default(RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS),
+        maxBytes: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_BYTES)
+          .default(RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES),
+      }),
+    }),
+    validateRenderPolicy,
+  ),
 })
+
+function validateRenderPolicy(value: unknown): RenderPolicy {
+  // The transform callback receives the inner schema's pre-normalization
+  // value; defaults have already been applied by the resolver. The min(1)
+  // and min(0) field rules above keep each number positive on its own;
+  // this pass enforces the entry/exit threshold ordering required for
+  // hysteresis to function (exit threshold strictly lower than entry).
+  const policy = value as RenderPolicy
+  if (policy.stream.exitDepth >= policy.stream.entryDepth) {
+    throw new Error(
+      `renderPolicy.stream.exitDepth (${String(policy.stream.exitDepth)}) `
+      + `must be strictly less than entryDepth (${String(policy.stream.entryDepth)})`,
+    )
+  }
+  if (policy.stream.exitOldestAgeMs >= policy.stream.entryOldestAgeMs) {
+    throw new Error(
+      `renderPolicy.stream.exitOldestAgeMs (${String(policy.stream.exitOldestAgeMs)}) `
+      + `must be strictly less than entryOldestAgeMs (${String(policy.stream.entryOldestAgeMs)})`,
+    )
+  }
+  if (policy.stream.exitDrainBackpressureMs >= policy.stream.entryDrainBackpressureMs) {
+    throw new Error(
+      `renderPolicy.stream.exitDrainBackpressureMs (${String(policy.stream.exitDrainBackpressureMs)}) `
+      + `must be strictly less than entryDrainBackpressureMs (${String(policy.stream.entryDrainBackpressureMs)})`,
+    )
+  }
+  return policy
+}
 
 /** The process surfaces the driver uses; tests substitute captures. */
 export const internals: {
@@ -244,8 +342,16 @@ export const internals: {
   notifySpawn: (command: string, args: readonly string[]) => void
   /** Loop mount used by the process runtime; tests replace it with a terminal-restoration probe. */
   mountLoop: typeof mountTuiLoop
+  /** Renderer-metric probe factory; tests inject a deterministic clock. */
+  createFrameMetrics: typeof createFrameMetrics
   /** Durable frame-stats write used by the exit path; tests count exact writes. */
-  writeFrameStatsFile: typeof writeFrameStatsFile
+  writeFrameStatsFile: (
+    path: string,
+    probe: FrameProbeHandle,
+    io: TuiIo,
+    brandProbe?: FrameProbeHandle,
+    frameMetrics?: FrameMetricsSnapshot,
+  ) => Promise<void>
   /** Replacement-process spawn for `/reload`; tests inject a fake child. */
   spawn: RelaunchHost['spawn']
   /** Clipboard writer used by the message-copy action; tests capture its payload. */
@@ -283,6 +389,7 @@ export const internals: {
     child.on('error', () => {})
   },
   mountLoop: mountTuiLoop,
+  createFrameMetrics,
   writeFrameStatsFile,
   spawn: (command, args, options) => spawn(command, args, options),
   copyText,
@@ -3858,8 +3965,10 @@ export class RuntimeController implements TuiController {
         return { active: planMode.get(agent).active }
       }
       const session = this.session
-      if (session !== undefined) {
-        return { active: foldPlanMode(session.events) }
+      if (session !== undefined && planMode !== undefined) {
+        const state = this.ctx.sessionProjections.stateOf(session, 'plan')
+        if (state === undefined) return { error: '计划投影未注册' }
+        return { active: state.active }
       }
       return {
         error: planMode === undefined ? '计划服务未组合' : '会话未绑定',
@@ -3885,8 +3994,8 @@ export class RuntimeController implements TuiController {
       this.permissionSelectedIndex = 0
     } else {
       this.permissionNames = [...presets.names]
-      const events = this.session?.events ?? []
-      this.permissionCurrentName = presets.current(events)
+      const session = this.session
+      this.permissionCurrentName = session === undefined ? '' : presets.current(session)
       const currentIndex = this.permissionNames.indexOf(this.permissionCurrentName)
       this.permissionSelectedIndex = Math.max(0, currentIndex)
       this.permissionDescriptions = this.permissionNames.map(
@@ -3957,7 +4066,7 @@ export class RuntimeController implements TuiController {
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
-        fieldOf(settings.get(settingsNamespace(row.namespace)), row.field),
+        fieldOf(settings.get(row.namespace), row.field),
         value,
       )
     } catch (error: unknown) {
@@ -3967,7 +4076,7 @@ export class RuntimeController implements TuiController {
     }
     this.ownWork((async () => {
       try {
-        await settings.update(settingsNamespace(row.namespace), { [row.field]: parsed })
+        await settings.update(row.namespace, { [row.field]: parsed })
         if (this.closed) return
         this.settingsOpen = false
         this.settingsEditing = false
@@ -4062,17 +4171,18 @@ export class RuntimeController implements TuiController {
    * Unit stubs that only implement `describe`/`get`/`update` are left alone.
    */
   private installTuiSettings(): void {
-    const settings = this.ctx.get('settings')
-    if (settings === undefined || typeof settings.register !== 'function') return
-    installSettingsSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
-      setSource: (read) => {
-        this.readTuiSettings = read
-      },
-      onChange: () => {
-        const next = this.readTuiSettings?.()
-        if (next?.colorTier !== undefined) applyTheme(next.colorTier)
-        this.emit()
-      },
+    this.ctx.inject(['settings'], (settingsCtx) => {
+      if (typeof settingsCtx.settings.installSection !== 'function') return
+      settingsCtx.settings.installSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
+        setSource: (read) => {
+          this.readTuiSettings = read
+        },
+        onChange: () => {
+          const next = this.readTuiSettings?.()
+          if (next?.colorTier !== undefined) applyTheme(next.colorTier)
+          this.emit()
+        },
+      })
     })
   }
 
@@ -5105,12 +5215,26 @@ async function frameStatsTarget(input: string): Promise<string> {
 
 /** The `--frame-stats` JSON contract: render cost plus pacing and environment context. */
 interface FrameStatsFile {
-  renderMs: { count: number; mean: number; max: number; p95: number }
-  brandRenderMs: { count: number; mean: number; max: number; p95: number }
+  renderMs: {
+    count: number
+    mean: number
+    max: number
+    p95: number
+    samples: readonly number[]
+  }
+  brandRenderMs: {
+    count: number
+    mean: number
+    max: number
+    p95: number
+    samples: readonly number[]
+  }
   pacing: { commits: number; elapsedMs: number }
   brandRevealTimers: number
   environment: { platform: NodeJS.Platform; node: string; arch: string }
   path: string
+  /** Renderer-metric snapshot (rows / cells / bytes / queue / cache); present from 1.1 onward. */
+  frameMetrics?: FrameMetricsSnapshot
 }
 
 /**
@@ -5120,16 +5244,19 @@ interface FrameStatsFile {
  * @param probe - the probe store the render tree recorded into.
  * @param io - process-facing effects (stderr for a write failure).
  * @param brandProbe - optional dedicated generated-home render probe.
+ * @param frameMetrics - optional renderer-metric probe (1.1+); its snapshot
+ *   appears as a new top-level `frameMetrics` field for backward compatibility.
  */
 async function writeFrameStatsFile(
   path: string,
   probe: FrameProbeHandle,
   io: TuiIo,
   brandProbe?: FrameProbeHandle,
+  frameMetrics?: FrameMetricsSnapshot,
 ): Promise<void> {
   const snapshot = frameStatsSnapshot(probe)
   const brandSnapshot = brandProbe === undefined
-    ? { count: 0, mean: 0, max: 0, p95: 0 }
+    ? { count: 0, mean: 0, max: 0, p95: 0, samples: [] }
     : frameStatsSnapshot(brandProbe)
   const payload: FrameStatsFile = {
     renderMs: {
@@ -5137,12 +5264,14 @@ async function writeFrameStatsFile(
       mean: snapshot.mean,
       max: snapshot.max,
       p95: snapshot.p95,
+      samples: snapshot.samples,
     },
     brandRenderMs: {
       count: brandSnapshot.count,
       mean: brandSnapshot.mean,
       max: brandSnapshot.max,
       p95: brandSnapshot.p95,
+      samples: brandSnapshot.samples,
     },
     pacing: { commits: probe.commits, elapsedMs: probe.elapsedMs() },
     brandRevealTimers: activeBrandRevealTimerCount(),
@@ -5152,6 +5281,9 @@ async function writeFrameStatsFile(
       arch: process.arch,
     },
     path,
+  }
+  if (frameMetrics !== undefined) {
+    payload.frameMetrics = frameMetrics
   }
   try {
     await writeFile(path, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
@@ -5203,6 +5335,16 @@ async function run(
     frameStatsPath === undefined ? undefined : createFrameProbe()
   const brandFrameProbe =
     frameStatsPath === undefined ? undefined : createFrameProbe()
+  // Renderer-metric probe is always created so its snapshot is included on
+  // orderly exit; it carries the new top-level `frameMetrics` field that the
+  // 1.1 perf-evidence step observes. Tests can replace it via internals.
+  const frameMetricsProbe = internals.createFrameMetrics()
+  // The plugin Config owns the validated render policy. Absent host value
+  // falls back to the renderer's own fallback defaults (kept inside
+  // @deepseek-ai/dsh-tui-render for the same reason render helpers keep
+  // module constants — they only matter when neither the schema nor the
+  // host supplies a value).
+  const renderPolicy: RenderPolicy = config.renderPolicy ?? renderPolicyDefaults()
   let unmount: (() => void) | undefined
   let disposeSignalHooks: (() => void) | undefined
   let handbackSignals: (() => void) | undefined
@@ -5226,6 +5368,8 @@ async function run(
       stdin: internals.stdin,
       ...(frameProbe === undefined ? {} : { frameProbe }),
       ...(brandFrameProbe === undefined ? {} : { brandFrameProbe }),
+      renderPolicy,
+      frameMetrics: frameMetricsProbe,
     },
   )
 
@@ -5303,7 +5447,13 @@ async function run(
         ctx.logger.warn(`session flush before reload failed: ${String(error)}`)
       }
       if (frameStatsPath !== undefined && frameProbe !== undefined) {
-        await internals.writeFrameStatsFile(frameStatsPath, frameProbe, io, brandFrameProbe)
+        await internals.writeFrameStatsFile(
+          frameStatsPath,
+          frameProbe,
+          io,
+          brandFrameProbe,
+          frameMetricsProbe.snapshot(),
+        )
       }
       unmountOnce()
       await liveController.dispose()
@@ -5358,7 +5508,13 @@ async function run(
         ctx.logger.warn(`session flush before exit failed: ${String(error)}`)
       }
       if (frameStatsPath !== undefined && frameProbe !== undefined) {
-        await internals.writeFrameStatsFile(frameStatsPath, frameProbe, io, brandFrameProbe)
+        await internals.writeFrameStatsFile(
+          frameStatsPath,
+          frameProbe,
+          io,
+          brandFrameProbe,
+          frameMetricsProbe.snapshot(),
+        )
       }
       unmountOnce()
       // The signal hooks stay installed until the process exits. The

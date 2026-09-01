@@ -56,6 +56,38 @@ describe('Markdown render caches', () => {
     })
   })
 
+  it('keeps hook order while a streamed table alternates partial and complete lines', async () => {
+    const stdout = fakeTtyStdout()
+    const element = (source: string) => createElement(MarkdownBlock, {
+      source,
+      maxCols: 80,
+    })
+    const instance = render(element('| a | b |'), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      expect(() => {
+        instance.rerender(element('| a | b |\n| --- | --- |\n'))
+      }).not.toThrow()
+      await instance.waitUntilRenderFlush()
+      expect(() => {
+        instance.rerender(element('| a | b |\n| --- | --- |\n| 1 | 2 |'))
+      }).not.toThrow()
+      await instance.waitUntilRenderFlush()
+      expect(() => {
+        instance.rerender(element('| a | b |\n| --- | --- |\n| 1 | 2 |\n'))
+      }).not.toThrow()
+      await instance.waitUntilRenderFlush()
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('reuses the safely trimmed final tree for an incomplete closing fence', () => {
     const source = '```ts\nconst value = 1\n``'
     expect(renderMarkdown(source, true)).toBe(renderMarkdown(source, true))

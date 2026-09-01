@@ -16,6 +16,7 @@ import {
   createElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -70,6 +71,8 @@ import { formatAdaptiveInfoFooter } from './adaptive-info-footer.ts'
 import type { AdaptiveInfoFooterView } from './adaptive-info-footer.ts'
 import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
+import type { FrameMetricsHandle } from './frame-metrics.ts'
+import type { RenderPolicy } from './render-policy.ts'
 import { TodoHud } from './todo-hud.tsx'
 import type { TodoHudItem } from './todo-hud.tsx'
 import { JobsHud } from './jobs-hud.tsx'
@@ -281,6 +284,12 @@ export interface TuiLoopProps {
   brandAutoEligible?: boolean | undefined
   /** Optional dedicated render-cost probe for the generated home subtree. */
   brandFrameProbe?: FrameProbeHandle | undefined
+  /** Root render probe whose workload window starts on generation or viewport input. */
+  frameProbe?: FrameProbeHandle | undefined
+  /** Host-validated renderer policy shared by the transcript schedulers. */
+  renderPolicy?: RenderPolicy | undefined
+  /** Renderer metrics persisted by the host on orderly exit. */
+  frameMetrics?: FrameMetricsHandle | undefined
 }
 
 /** Buffered input state the key reducer folds over. */
@@ -1836,6 +1845,9 @@ export function TuiLoop({
   brandTier = 'plain',
   brandAutoEligible = false,
   brandFrameProbe,
+  frameProbe,
+  renderPolicy,
+  frameMetrics,
 }: TuiLoopProps): ReactNode {
   const [state, setState] = useState<LoopInputState>({
     text: controller.getComposerDraft?.() ?? '',
@@ -1859,9 +1871,10 @@ export function TuiLoop({
   const issueViewportCommand = useCallback((
     command: TranscriptViewportCommandInput,
   ): void => {
+    frameProbe?.beginMeasurement()
     viewportSequenceRef.current += 1
     setViewportCommand({ ...command, sequence: viewportSequenceRef.current })
-  }, [])
+  }, [frameProbe])
   const brandRevealStartedRef = useRef(false)
   const brandRevealStoppedRef = useRef(false)
   // The input and paste handlers fold and write the loop buffer. React runs
@@ -1878,6 +1891,9 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getModel(),
   )
+  useEffect(() => {
+    if (model.status === 'generating') frameProbe?.beginMeasurement()
+  }, [frameProbe, model.status])
   const interaction = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getInteraction(),
@@ -2483,6 +2499,21 @@ export function TuiLoop({
     || feedbackPane.open
     || workflowOverlay.open
     || planReviewPane.open
+  const viewportMotionPaused = pane.open
+    || search.open
+    || timelineOpen
+    || modelPane.open
+    || helpPane.open
+    || approvalPane.open
+    || askUserPane.open
+    || permissionPane.open
+    || settingsPane.open
+    || agentHubPane.open
+    || planDirectoryPane.open
+    || workspacePane.open
+    || feedbackPane.open
+    || workflowOverlay.open
+    || planReviewPane.open
   const brandLifecycleAllowed = !brandBlocked
     && (brandAnimationMode === 'on'
       || (brandAnimationMode === 'auto' && brandAutoEligible))
@@ -2498,13 +2529,20 @@ export function TuiLoop({
   const brandAnimation = brandLifecycleAllowed
     && brandRevealStartedRef.current
     && !brandRevealStoppedRef.current
+  const presenters = useMemo(
+    () => controller.getToolPresenters?.(),
+    [controller],
+  )
   const streamView = createElement(StreamView, {
     model,
-    presenters: controller.getToolPresenters?.(),
+    presenters,
     brandTier,
     brandAnimation,
     brandFrameProbe,
     viewportCommand,
+    renderPolicy,
+    frameMetrics,
+    motionPaused: viewportMotionPaused,
   })
   const conversationColumns = conversationWidth(columns)
   const hudRows: ReactNode[] = []
@@ -2528,7 +2566,7 @@ export function TuiLoop({
       ? streamView
       : createElement(
         Box,
-        { flexDirection: 'column', width: '100%' },
+        { flexDirection: 'column', width: '100%', flexGrow: 1 },
         streamView,
         createElement(
           Box,

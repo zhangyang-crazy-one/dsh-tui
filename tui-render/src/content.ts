@@ -69,6 +69,33 @@ export function wcwidthSafeSlice(text: string, maxCols: number): string {
 }
 
 /**
+ * Slice a string by terminal display-column offsets without splitting a
+ * grapheme. Both offsets are zero-based and the end is exclusive.
+ * @param text - source text.
+ * @param startCol - inclusive display-column offset.
+ * @param endCol - exclusive display-column offset.
+ * @returns graphemes fully covered by the requested column interval.
+ */
+export function displayColumnSlice(
+  text: string,
+  startCol: number,
+  endCol: number,
+): string {
+  const start = Math.max(0, startCol)
+  const end = Math.max(start, endCol)
+  let column = 0
+  let out = ''
+  for (const part of GRAPHEME.segment(text)) {
+    const width = displayWidth(part.segment)
+    const next = column + width
+    if (column >= start && next <= end) out += part.segment
+    if (column >= end) break
+    column = next
+  }
+  return out
+}
+
+/**
  * Pad `text` on the right to `width` display columns. Uses
  * {@link displayWidth}, not `String.padEnd`, so CJK and emoji stay aligned
  * with ASCII in the same column.

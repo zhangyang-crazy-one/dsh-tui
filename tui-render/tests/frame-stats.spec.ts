@@ -85,6 +85,20 @@ describe('createFrameProbe', () => {
     expect(probe.elapsedMs()).toBe(2000)
   })
 
+  it('starts the workload window once and discards launch samples', () => {
+    const clock = fakeClock()
+    const probe = createFrameProbe(clock.now)
+    clock.advance(200)
+    probe.record(80)
+    probe.beginMeasurement()
+    clock.advance(25)
+    probe.record(7)
+    probe.beginMeasurement()
+    expect(probe.snapshot().samples).toEqual([7])
+    expect(probe.commits).toBe(1)
+    expect(probe.elapsedMs()).toBe(25)
+  })
+
   it('summarizes single-sample and single-channel edge cases', () => {
     const probe = createFrameProbe()
     probe.record(42)

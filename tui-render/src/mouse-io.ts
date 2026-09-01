@@ -1,14 +1,16 @@
 /**
  * Fullscreen mouse session: SGR tracking, a cell atlas of the last frame,
- * wheel/edge-scroll callbacks, OSC 8 click, and drag-select copy. Stdin is
- * wrapped so mouse bytes never reach Ink's key parser.
+ * wheel/edge-scroll callbacks, OSC 8 click, and drag-select copy.
+ * Stdin is wrapped so mouse bytes never reach Ink's key parser.
  * @module @deepseek-ai/dsh-tui-render/mouse-io
  */
 
 import { PassThrough } from 'node:stream'
 import { ESC_TIMEOUT_MS } from './terminal-capabilities.ts'
+import { RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS } from './render-policy.ts'
 import { publishedCaretBytes } from './frame-fill.ts'
 import { ScreenAtlas, type ScreenPoint } from './screen-atlas.ts'
+import { visibleFrameSnapshot } from './frame-snapshot.ts'
 import {
   consumeMouseStdin,
   DISABLE_SGR_MOUSE,
@@ -85,14 +87,18 @@ function hitRail(col: number, row: number): MouseRailRegion | undefined {
     : undefined
 }
 
-/** Drag and copy/click owner for one mounted TUI. */
+/** Drag, selection, copy, and click owner for one mounted TUI. */
 export class MouseSession {
   /** Cell atlas of bytes written through {@link feedStdout}. */
   readonly atlas: ScreenAtlas
+  private lastFrameRevision: string | undefined
   private drag:
     | { start: ScreenPoint; moved: boolean }
     | undefined
   private selection:
+    | { start: ScreenPoint; end: ScreenPoint }
+    | undefined
+  private paintedSelection:
     | { start: ScreenPoint; end: ScreenPoint }
     | undefined
   private railDrag: MouseRailRegion | undefined
@@ -129,13 +135,14 @@ export class MouseSession {
   }
 
   /**
-   * Consume a decoded mouse event.
+   * Consume a decoded mouse event and return any immediate selection repaint.
    * @param event - SGR report.
+   * @returns terminal bytes that update or clear the visible selection.
    */
-  handle(event: SgrMouseEvent): void {
+  handle(event: SgrMouseEvent): string {
     if (event.kind === 'wheel' && event.delta !== undefined) {
       this.onScroll(event.delta)
-      return
+      return ''
     }
     const point: ScreenPoint = { col: event.col, row: event.row }
     if (event.kind === 'press' && event.button === 'left') {
@@ -146,20 +153,20 @@ export class MouseSession {
         this.drag = undefined
         this.selection = undefined
         this.onRail(railFraction(region, event.row))
-        return
+        return this.repaintSelection()
       }
       this.drag = { start: point, moved: false }
       this.selection = { start: point, end: point }
-      return
+      return ''
     }
     if (event.kind === 'drag' && this.railDrag !== undefined && event.button === 'left') {
       this.onRail(railFraction(this.railDrag, event.row))
-      return
+      return ''
     }
     if (event.kind === 'release' && this.railDrag !== undefined) {
       this.onRail(railFraction(this.railDrag, event.row))
       this.railDrag = undefined
-      return
+      return ''
     }
     if (event.kind === 'drag' && this.drag !== undefined && event.button === 'left') {
       if (event.col !== this.drag.start.col || event.row !== this.drag.start.row) {
@@ -167,12 +174,16 @@ export class MouseSession {
       }
       this.selection = { start: this.drag.start, end: point }
       this.syncEdge(event.row)
-      return
+      return this.repaintSelection()
     }
     if (event.kind === 'release' && this.drag !== undefined) {
       this.stopEdge()
+      if (event.col !== this.drag.start.col || event.row !== this.drag.start.row) {
+        this.drag.moved = true
+        this.selection = { start: this.drag.start, end: point }
+      }
       if (this.drag.moved) {
-        // A drag creates its selection with the same press and retains it until this release.
+        // A drag creates and copies one reading-order range on release.
         const range = this.selection as { start: ScreenPoint; end: ScreenPoint }
         this.copy(this.atlas.extract(range.start, range.end))
       } else {
@@ -181,7 +192,9 @@ export class MouseSession {
       }
       this.drag = undefined
       this.selection = undefined
+      return this.repaintSelection()
     }
+    return ''
   }
 
   /**
@@ -190,13 +203,20 @@ export class MouseSession {
    * @returns chunk plus overlay and caret restore.
    */
   feedStdout(chunk: string): string {
-    this.atlas.feed(chunk)
+    const snapshot = visibleFrameSnapshot()
+    if (snapshot === undefined) {
+      this.atlas.feed(chunk)
+    } else if (snapshot.revision !== this.lastFrameRevision) {
+      this.atlas.applyFrameSnapshot(snapshot)
+      this.lastFrameRevision = snapshot.revision
+    }
     if (this.selection === undefined) return chunk
     const overlay = this.atlas.selectionOverlay(
       this.selection.start,
       this.selection.end,
     )
     if (overlay === '') return chunk
+    this.paintedSelection = this.selection
     return `${chunk}${overlay}${publishedCaretBytes()}`
   }
 
@@ -235,6 +255,26 @@ export class MouseSession {
     this.stopInterval(this.edgeTimer)
     this.edgeTimer = undefined
   }
+
+  private repaintSelection(): string {
+    let bytes = ''
+    if (this.paintedSelection !== undefined) {
+      bytes += this.atlas.restoreOverlay(
+        this.paintedSelection.start,
+        this.paintedSelection.end,
+      )
+    }
+    if (this.selection !== undefined && this.drag?.moved === true) {
+      bytes += this.atlas.selectionOverlay(
+        this.selection.start,
+        this.selection.end,
+      )
+      this.paintedSelection = this.selection
+    } else {
+      this.paintedSelection = undefined
+    }
+    return bytes === '' ? '' : bytes + publishedCaretBytes()
+  }
 }
 
 /** Loose write covering WriteStream overloads. */
@@ -250,6 +290,8 @@ export function attachMouseIo(options: {
   stdin: NodeJS.ReadStream
   stdout: NodeJS.WriteStream
   session?: MouseSession
+  /** Physical rows requested for each decoded wheel report. */
+  wheelRows?: number
 }): {
   stdin: NodeJS.ReadStream
   stdout: NodeJS.WriteStream
@@ -277,11 +319,12 @@ export function attachMouseIo(options: {
       },
     }
   }
+  const write = options.stdout.write.bind(options.stdout) as WriteCall
   options.stdout.write(ENABLE_SGR_MOUSE)
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
-    session.handle(event)
-  })
-  const write = options.stdout.write.bind(options.stdout) as WriteCall
+    const repaint = session.handle(event)
+    if (repaint !== '') write(repaint)
+  }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS)
   const wrappedStdout = Object.create(options.stdout) as NodeJS.WriteStream
   const transformingWrite: WriteCall = (chunk, ...args) => {
     if (typeof chunk !== 'string') return write(chunk, ...args)
@@ -308,6 +351,7 @@ export function attachMouseIo(options: {
 function wrapStdin(
   raw: NodeJS.ReadStream,
   onMouse: (event: SgrMouseEvent) => void,
+  wheelRows: number,
 ): { stdin: NodeJS.ReadStream; dispose: () => void } {
   // PassThrough supplies the readable surface Ink uses; the TTY-only members
   // below are assigned here, so the widening cast goes through unknown.
@@ -337,7 +381,24 @@ function wrapStdin(
     buffer += typeof chunk === 'string' ? chunk : chunk.toString('utf8')
     const consumed = consumeMouseStdin(buffer)
     buffer = consumed.rest
-    for (const event of consumed.mouse) onMouse(event)
+    let wheelDelta = 0
+    let wheelEvent: SgrMouseEvent | undefined
+    const flushWheel = (): void => {
+      if (wheelDelta === 0 || wheelEvent === undefined) return
+      onMouse({ ...wheelEvent, delta: wheelDelta * wheelRows })
+      wheelDelta = 0
+      wheelEvent = undefined
+    }
+    for (const event of consumed.mouse) {
+      if (event.kind === 'wheel' && event.delta !== undefined) {
+        wheelDelta += event.delta
+        wheelEvent = event
+        continue
+      }
+      flushWheel()
+      onMouse(event)
+    }
+    flushWheel()
     if (consumed.forward !== '') stream.write(consumed.forward)
     if (buffer !== '') {
       flushTimer = setTimeout(() => {

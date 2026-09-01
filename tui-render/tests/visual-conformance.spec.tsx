@@ -15,7 +15,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { renderToString } from 'ink'
+import { render, renderToString } from 'ink'
 import { createElement } from 'react'
 import { Text } from 'ink'
 import { AppShell } from '../src/app-shell.tsx'
@@ -35,6 +35,10 @@ import { EMPTY_ASK_USER_PANE } from '../src/ask-user-pane.tsx'
 import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
 import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
+import { ScreenAtlas } from '../src/screen-atlas.ts'
+import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
+import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
 
 /** Strip SGR sequences so content-level assertions ignore tier bytes. */
 function stripAnsi(text: string): string {
@@ -513,6 +517,96 @@ describe('A3 escape before styling', () => {
 })
 
 describe('TuiLoop mounted render branches', () => {
+  it('keeps the transcript visible beside Jobs HUD while an active tool chain settles', async () => {
+    applyTheme('none')
+    const columns = 113
+    const rows = 43
+    const stdout = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
+      isTTY: boolean
+      columns: number
+      rows: number
+    }
+    stdout.isTTY = true
+    stdout.columns = columns
+    stdout.rows = rows
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: unknown) => { atlas.feed(String(chunk)) })
+    const toolContent = Array.from({ length: 12 }, (_unused, index) => {
+      const callId = ToolCallId(`settle-${String(index)}`)
+      return [
+        { kind: 'tool-call' as const, callId, name: 'bash', arguments: '{}' },
+        { kind: 'tool-result' as const, callId, text: 'ok', isError: false },
+      ]
+    }).flat()
+    const activeModel: ViewModel = {
+      ...IDLE_MODEL,
+      activeTurn: {
+        turn: 1,
+        assistantText: 'ACTIVE_TOOL_CHAIN',
+        reasoningText: 'checking tools',
+        reasoningDurationMs: 1200,
+        toolCalls: [],
+        content: [...toolContent, { kind: 'text', text: 'ACTIVE_TOOL_CHAIN' }],
+      },
+      status: 'generating',
+    }
+    const settledModel: ViewModel = {
+      ...IDLE_MODEL,
+      history: [{
+        id: 1,
+        kind: 'assistant',
+        text: 'FINAL_SETTLED_RESULT',
+        content: [...toolContent, { kind: 'text', text: 'FINAL_SETTLED_RESULT' }],
+        timestamp: 1,
+        turnOrdinal: 1,
+        usageOutputTokens: 42,
+        stepWallMs: 1200,
+      }],
+    }
+    let currentModel = activeModel
+    let currentJobs = [{ id: 'bash-1', status: 'running', label: 'long tool chain' }]
+    const controller = stubController({
+      getModel: () => currentModel,
+      getInteraction: () => currentModel.status,
+      getJobsHud: () => currentJobs,
+    })
+    const shell = () => createElement(TuiLoop, { title: 'SESSION_TITLE', controller })
+    const instance = render(shell(), {
+      stdout: wrapStdoutForFrameBg(
+        stdout,
+        () => 'none',
+      ) as unknown as typeof stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    const frame = (): string => atlas.extract(
+      { col: 1, row: 1 },
+      { col: columns, row: rows },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      expect(frame()).toContain('ACTIVE_TOOL_CHAIN')
+      expect(frame()).toContain('bash-1 · running · long tool chain')
+
+      currentModel = settledModel
+      currentJobs = [{ id: 'bash-1', status: 'completed', label: 'long tool chain' }]
+      instance.rerender(shell())
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const settledFrame = frame()
+      expect(settledFrame).toContain('FINAL_SETTLED_RESULT')
+      expect(settledFrame).toContain('── 已完成 ──')
+      expect(settledFrame).toContain('bash-1 · completed · long tool chain')
+      expect(settledFrame).toContain('输入消息')
+      expect(settledFrame).toContain('状态 空闲')
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('renders goal, stats, todo, jobs, workflow, and generating status together', () => {
     const goal = { phase: 'execute', objective: 'finish coverage', maxGoalRounds: 4, roundsStarted: 2 }
     const stats = { turns: 3, decodeTokens: 12, llmMs: 40 }

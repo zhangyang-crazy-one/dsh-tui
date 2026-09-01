@@ -30,26 +30,31 @@ kind: "package-group"
 
 无 scope 的 `dsh-tui` 包属于另一位 maintainer。本项目只在已认证的 `crazyhappyone` npm scope 下发布。
 
-发布 prerelease 后运行：
+Launcher 需要 Git、pnpm 与 DSH 支持的 Node 版本。无需单独安装 `@deepseek-ai/dsh`，launcher 也不会使用它：`dsh-tui` 始终从专用源码 checkout 运行 `deepseek-tui` profile。
+
+安装 prerelease 并完成首次启动：
 
 ```text
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui version
+dsh-tui update
+dsh-tui
 ```
 
-安装只创建 launcher。它不会 clone DSH、运行 `pnpm install`、请求 Git 凭据或执行 postinstall script。请显式运行 `dsh-tui update` 创建源码运行时。
+安装 npm 包只会创建 launcher。它不会 clone DSH、运行 `pnpm install`、请求 Git 凭据或执行 postinstall script。显式执行 `dsh-tui update` 才会创建源码运行时；其默认 private 源码需要仓库授权。
 
 -----
 
 <a id="run-and-update"></a>
 ## 运行与更新
 
-初始化专用运行时，然后启动 TUI：
+初始化后，在希望 agent 使用的 workspace 中运行 `dsh-tui`：
 
 ```text
-dsh-tui update
 dsh-tui
 ```
+
+需要刷新专用运行时时，请先运行 `dsh-tui update`，然后再次启动。
 
 普通参数会原样传递给 `deepseek-tui` profile：
 

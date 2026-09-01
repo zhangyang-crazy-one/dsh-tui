@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
   displayWidth,
+  displayColumnSlice,
   escapeContent,
   padDisplayEnd,
   wcwidthSafeSlice,
   wrapDisplayLines,
 } from '../src/content.ts'
+
+describe('displayColumnSlice', () => {
+  it('uses terminal columns without splitting CJK or ZWJ graphemes', () => {
+    expect(displayColumnSlice('a中b', 1, 3)).toBe('中')
+    expect(displayColumnSlice('a中b', 0, 1)).toBe('a')
+    expect(displayColumnSlice('a中b', 3, 4)).toBe('b')
+    expect(displayColumnSlice('x👨‍👩‍👧‍👦y', 1, 3)).toBe('👨‍👩‍👧‍👦')
+  })
+})
 
 describe('escapeContent', () => {
   it('neutralizes the ESC byte and every C0 control except tab and newline', () => {
