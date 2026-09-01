@@ -7,6 +7,10 @@ kind: "package-group"
 
 [English](README.md) | 中文
 
+[![CI](https://github.com/zhangyang-crazy-one/dsh-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/zhangyang-crazy-one/dsh-tui/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/zhangyang-crazy-one/dsh-tui?include_prereleases)](https://github.com/zhangyang-crazy-one/dsh-tui/releases)
+[![npm next](https://img.shields.io/npm/v/%40crazyhappyone%2Fdsh-tui/next?label=npm%40next)](https://www.npmjs.com/package/@crazyhappyone/dsh-tui)
+
 ## 概述
 
 `@crazyhappyone/dsh-tui` 提供 `dsh-tui` 命令，用于运行和安全更新 DeepSeek Harness 终端界面。Launcher 管理专用 DSH 源码 checkout，因此不会 pull、reset、stash 或 clean 贡献者的开发 checkout。本公开仓库还镜像 `packages/tui/` bundle 与 renderer 源码以供审查。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
@@ -146,30 +150,26 @@ Launcher runtime 必须与开发 checkout 分离。要安全测试其他源码�
 <a id="publish-the-npm-package"></a>
 ## 发布 npm 包
 
-Operator 通过 npm browser flow 认证，并验证所选账号：
+GitHub Actions 会在每个 pull request 和向 `main` 的 push 上使用 Node 22.19 与 24 运行测试。只有发布 GitHub Release 才会启动 npm 发布。工作流要求 Release tag 等于 `v` 加 `package.json` 中的版本；prerelease 发布到 npm `next` tag，stable release 发布到 `latest`。
+
+在 `publish.yml` 进入默认分支后，一次性配置 npm Trusted Publishing。npm CLI 11.5.1 或更高版本可以通过已认证的 browser session 注册 GitHub workflow：
 
 ```text
-npm config delete //registry.npmjs.org/:_authToken
-npm config set registry https://registry.npmjs.org/
-npm login --registry=https://registry.npmjs.org/ --auth-type=web
-npm whoami
+npm trust github @crazyhappyone/dsh-tui \
+  --file publish.yml \
+  --repository zhangyang-crazy-one/dsh-tui \
+  --allow-publish
 ```
 
-`npm whoami` 必须打印 `crazyhappyone`。绝不要把密码、OTP 或 npm token 放入本仓库、issue、供审查捕获的命令输出或 AI conversation。
+对应的 npm 网站配置为：organization or user 填 `zhangyang-crazy-one`，repository 填 `dsh-tui`，workflow filename 填 `publish.yml`，environment 留空。工作流使用 GitHub OIDC，不保存 npm token、密码或 OTP。
 
-测试与 packed-install 验证通过后，仅在 operator 显式批准时发布 prerelease：
+每次发布时，先提升 `package.json` 版本，等待 CI 通过并合并，然后创建 tag 与 package version 一致的 GitHub Release：
 
 ```text
-npm publish --access public --tag next
+gh release create v0.1.0-alpha.3 --prerelease --generate-notes
 ```
 
-npm 要求双因素认证时，operator 在本地提供当前验证码：
-
-```text
-npm publish --access public --tag next --otp=<six-digit-code>
-```
-
-提升到 `latest` 是单独的 release 决策。本地实现与验证绝不会自动创建或更改 registry package。
+`Publish npm` workflow 会在发布前再次运行测试与 packed-package 验证。不要重新运行旧的 release tag：npm version 不可覆盖。提升到 stable 必须使用新版本并发布 non-prerelease GitHub Release。
 
 -----
 

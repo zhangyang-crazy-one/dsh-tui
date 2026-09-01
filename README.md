@@ -7,6 +7,10 @@ kind: "package-group"
 
 English | [中文](README.zh.md)
 
+[![CI](https://github.com/zhangyang-crazy-one/dsh-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/zhangyang-crazy-one/dsh-tui/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/zhangyang-crazy-one/dsh-tui?include_prereleases)](https://github.com/zhangyang-crazy-one/dsh-tui/releases)
+[![npm next](https://img.shields.io/npm/v/%40crazyhappyone%2Fdsh-tui/next?label=npm%40next)](https://www.npmjs.com/package/@crazyhappyone/dsh-tui)
+
 ## Summary
 
 `@crazyhappyone/dsh-tui` provides the `dsh-tui` command for running and safely updating the DeepSeek Harness terminal interface. The launcher manages a dedicated DSH source checkout, so it never pulls, resets, stashes, or cleans a contributor's development checkout. This public repository also mirrors the `packages/tui/` bundle and renderer sources for review. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
@@ -146,30 +150,26 @@ The launcher runtime must remain separate from the development checkout. To test
 <a id="publish-the-npm-package"></a>
 ## Publish the npm package
 
-The operator authenticates through npm's browser flow and verifies the selected account:
+GitHub Actions tests every pull request and push to `main` on Node 22.19 and 24. Publishing starts only when a GitHub Release is published. The workflow rejects a release tag unless it equals `v` followed by the version in `package.json`; prereleases publish to npm's `next` tag and stable releases publish to `latest`.
+
+Configure npm Trusted Publishing once after `publish.yml` is present on the default branch. npm CLI 11.5.1 or newer can register the GitHub workflow through an authenticated browser session:
 
 ```text
-npm config delete //registry.npmjs.org/:_authToken
-npm config set registry https://registry.npmjs.org/
-npm login --registry=https://registry.npmjs.org/ --auth-type=web
-npm whoami
+npm trust github @crazyhappyone/dsh-tui \
+  --file publish.yml \
+  --repository zhangyang-crazy-one/dsh-tui \
+  --allow-publish
 ```
 
-`npm whoami` must print `crazyhappyone`. Never place the password, OTP, or npm token in this repository, an issue, command output captured for review, or an AI conversation.
+The equivalent npm website settings are organization or user `zhangyang-crazy-one`, repository `dsh-tui`, workflow filename `publish.yml`, with no environment restriction. The workflow uses GitHub OIDC and stores no npm token, password, or OTP.
 
-After tests and packed-install verification pass, publish a prerelease only with explicit operator approval:
+For each release, bump `package.json`, merge the change after CI passes, then create a GitHub Release whose tag matches the package version:
 
 ```text
-npm publish --access public --tag next
+gh release create v0.1.0-alpha.3 --prerelease --generate-notes
 ```
 
-When npm requires two-factor authentication, the operator supplies the current code locally:
-
-```text
-npm publish --access public --tag next --otp=<six-digit-code>
-```
-
-Promotion to `latest` is a separate release decision. Local implementation and verification never create or change a registry package automatically.
+The `Publish npm` workflow runs tests and packed-package verification again before publishing. Do not rerun an old release tag: npm versions are immutable. Promotion to stable is a new version and a non-prerelease GitHub Release.
 
 -----
 
