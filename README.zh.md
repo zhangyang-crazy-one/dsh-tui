@@ -152,10 +152,10 @@ Launcher runtime 必须与开发 checkout 分离。要安全测试其他源码�
 
 GitHub Actions 会在每个 pull request 和向 `main` 的 push 上使用 Node 22.19 与 24 运行测试。只有发布 GitHub Release 才会启动 npm 发布。工作流要求 Release tag 等于 `v` 加 `package.json` 中的版本；prerelease 发布到 npm `next` tag，stable release 发布到 `latest`。
 
-在 `publish.yml` 进入默认分支后，一次性配置 npm Trusted Publishing。npm CLI 11.5.1 或更高版本可以通过已认证的 browser session 注册 GitHub workflow：
+在 `publish.yml` 进入默认分支后，一次性配置 npm Trusted Publishing。npm CLI 11.5.1 或更高版本可以通过已认证的 browser session 注册 GitHub workflow。下面的命令会临时运行兼容的 npm 11，不替换全局安装的 npm：
 
 ```text
-npm trust github @crazyhappyone/dsh-tui \
+npx --yes npm@11 trust github @crazyhappyone/dsh-tui \
   --file publish.yml \
   --repository zhangyang-crazy-one/dsh-tui \
   --allow-publish

@@ -152,10 +152,10 @@ The launcher runtime must remain separate from the development checkout. To test
 
 GitHub Actions tests every pull request and push to `main` on Node 22.19 and 24. Publishing starts only when a GitHub Release is published. The workflow rejects a release tag unless it equals `v` followed by the version in `package.json`; prereleases publish to npm's `next` tag and stable releases publish to `latest`.
 
-Configure npm Trusted Publishing once after `publish.yml` is present on the default branch. npm CLI 11.5.1 or newer can register the GitHub workflow through an authenticated browser session:
+Configure npm Trusted Publishing once after `publish.yml` is present on the default branch. npm CLI 11.5.1 or newer can register the GitHub workflow through an authenticated browser session. The command below runs a compatible npm 11 temporarily and does not replace the globally installed npm:
 
 ```text
-npm trust github @crazyhappyone/dsh-tui \
+npx --yes npm@11 trust github @crazyhappyone/dsh-tui \
   --file publish.yml \
   --repository zhangyang-crazy-one/dsh-tui \
   --allow-publish
