@@ -37,6 +37,8 @@ export interface FrameSnapshotRow {
 /** One consistent visible transcript publication. */
 export interface VisibleFrameSnapshot {
   readonly revision: string
+  /** Changed key requests one full transcript-region scrub before repaint. */
+  readonly repaintKey?: string | number
   readonly geometry: FrameGeometry
   readonly rows: readonly FrameSnapshotRow[]
 }

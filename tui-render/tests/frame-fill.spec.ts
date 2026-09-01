@@ -400,6 +400,48 @@ describe('transcript differential clearing', () => {
     transformFrameChunk('\x1b[?2026l', 'none')
   })
 
+  it('scrubs transcript cells outside the current snapshot for a new repaint key', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    setVisibleFrameSnapshot({
+      revision: 'settled',
+      geometry,
+      rows: [positionedRow('settled', 4, 'DONE')],
+    })
+    atlas.feed(transformFrameChunk('\x1b[4;2HDONE\x1b[?2026l', 'none'))
+
+    atlas.feed('\x1b[2;2HSTALE\x1b[3;2HTAIL')
+    setVisibleFrameSnapshot({
+      revision: 'settled',
+      repaintKey: 'assistant-turn-1',
+      geometry,
+      rows: [positionedRow('settled', 4, 'DONE')],
+    })
+    atlas.feed(transformFrameChunk('\x1b[?25l', 'none'))
+    expect(atlas.extract({ col: 2, row: 2 }, { col: 6, row: 2 })).toBe('STALE')
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+
+    expect(atlas.extract({ col: 2, row: 2 }, { col: 6, row: 2 })).toBe('')
+    expect(atlas.extract({ col: 2, row: 3 }, { col: 5, row: 3 })).toBe('')
+    expect(atlas.extract({ col: 2, row: 4 }, { col: 5, row: 4 })).toBe('DONE')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('emits no full scrub for an empty transcript region', () => {
+    setVisibleFrameSnapshot({
+      revision: 'empty',
+      repaintKey: 'assistant-turn-empty',
+      geometry: {
+        ...geometry,
+        transcriptRows: 0,
+      },
+      rows: [],
+    })
+    expect(transformFrameChunk('\x1b[?2026l', 'none')).toBe('\x1b[?2026l')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
   it('repaints snapshot-owned code background and OSC 8 spans', () => {
     setHyperlinks(true)
     try {

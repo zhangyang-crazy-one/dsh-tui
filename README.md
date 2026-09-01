@@ -1,5 +1,5 @@
 ---
-description: "Installable source-runtime launcher and private source mirror for the DeepSeek Harness terminal interface."
+description: "Installable source-runtime launcher and public source mirror for the DeepSeek Harness terminal interface."
 kind: "package-group"
 ---
 
@@ -9,10 +9,11 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@crazyhappyone/dsh-tui` provides the `dsh-tui` command for running and safely updating the DeepSeek Harness terminal interface. The launcher manages a dedicated DSH source checkout, so it never pulls, resets, stashes, or cleans a contributor's development checkout. This repository also mirrors the `packages/tui/` bundle and renderer sources for review. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
+`@crazyhappyone/dsh-tui` provides the `dsh-tui` command for running and safely updating the DeepSeek Harness terminal interface. The launcher manages a dedicated DSH source checkout, so it never pulls, resets, stashes, or cleans a contributor's development checkout. This public repository also mirrors the `packages/tui/` bundle and renderer sources for review. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
 ## Table of Contents
 
+- [Screenshots](#screenshots)
 - [Install the launcher](#install-the-launcher)
 - [Run and update](#run-and-update)
 - [Configure the source runtime](#configure-the-source-runtime)
@@ -22,6 +23,19 @@ English | [中文](README.zh.md)
 - [Publish the npm package](#publish-the-npm-package)
 - [Known limitations](#known-limitations)
 - [Dev Note](#dev-note)
+
+-----
+
+<a id="screenshots"></a>
+## Screenshots
+
+Idle home:
+
+![dsh-tui idle home](assets/screenshots/dsh-tui-home.png)
+
+After sending `你好`:
+
+![dsh-tui response after sending hello](assets/screenshots/dsh-tui-hello.png)
 
 -----
 

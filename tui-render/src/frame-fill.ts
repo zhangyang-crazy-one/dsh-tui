@@ -31,7 +31,8 @@
  * visible physical lines repaint at absolute coordinates after Ink's
  * incremental output, then shortened or vacated ranges are cleared. A partial
  * Ink diff therefore cannot leave missing cells, while stable rows remain
- * write-free.
+ * write-free. A changed repaint key defers one full transcript scrub until
+ * synchronized output ends, then repaints the snapshot after Ink's last write.
  * @module @deepseek-ai/dsh-tui-render/frame-fill
  */
 
@@ -105,6 +106,7 @@ let frameCaret: FrameCaret | undefined
 let frameRail: FrameRail | undefined
 let paintedFrameRail: FrameRail | undefined
 let paintedVisibleFrame: VisibleFrameSnapshot | undefined
+let paintedTranscriptRepaintKey: string | number | undefined
 
 /**
  * Publish the composer caret for the next frame writes. Called during the
@@ -206,16 +208,39 @@ function paintPhysicalLine(line: PhysicalLine, tier: ColorTier): string {
     : paintRow(parts, tier)
 }
 
-/** Repaint changed rows and explicitly blank stale suffix or vacated cells. */
-function transcriptOverlay(tier: ColorTier): string {
+/** Repaint changed rows; a new repaint key also scrubs the owned region once. */
+function transcriptOverlay(
+  tier: ColorTier,
+  synchronizedFrameEnded: boolean,
+): { bytes: string; afterSync: boolean } {
   const next = visibleFrameSnapshot()
   if (next === undefined) {
     paintedVisibleFrame = undefined
-    return ''
+    paintedTranscriptRepaintKey = undefined
+    return { bytes: '', afterSync: false }
   }
+  const repaintAll = synchronizedFrameEnded
+    && next.repaintKey !== undefined
+    && next.repaintKey !== paintedTranscriptRepaintKey
+  if (repaintAll) paintedTranscriptRepaintKey = next.repaintKey
   const diff = diffVisibleFrameSnapshots(paintedVisibleFrame, next)
   paintedVisibleFrame = next
   let cells = ''
+  if (repaintAll) {
+    const { transcriptLeft, transcriptRows, transcriptTop, transcriptWidth } = next.geometry
+    const blank = styled(' '.repeat(transcriptWidth), 'bg', tier)
+    for (let index = 0; index < transcriptRows; index += 1) {
+      cells += `\x1b[${String(transcriptTop + index)};${String(transcriptLeft)}H${blank}`
+    }
+    for (const row of next.rows) {
+      cells += `\x1b[${String(row.row)};${String(row.col)}H`
+        + paintPhysicalLine(row.line, tier)
+    }
+    return {
+      bytes: cells === '' ? '' : `\x1b7${cells}\x1b8`,
+      afterSync: true,
+    }
+  }
   for (const change of diff.changes) {
     const nextWidth = change.line?.displayWidth ?? 0
     const staleColumns = change.clearColumns - nextWidth
@@ -228,7 +253,10 @@ function transcriptOverlay(tier: ColorTier): string {
         + styled(' '.repeat(staleColumns), 'bg', tier)
     }
   }
-  return cells === '' ? '' : `\x1b7${cells}\x1b8`
+  return {
+    bytes: cells === '' ? '' : `\x1b7${cells}\x1b8`,
+    afterSync: false,
+  }
 }
 
 /** The appended caret bytes for the current anchor, or '' when unset. */
@@ -316,12 +344,14 @@ export function transformFrameChunk(
     out.includes(SHOW_CURSOR) ||
     out.includes(HIDE_CURSOR)
   if (isFrame) {
-    const transcript = transcriptOverlay(tier)
-    if (transcript !== '') {
+    const transcript = transcriptOverlay(tier, out.includes(END_SYNC))
+    if (transcript.bytes !== '' && transcript.afterSync) {
+      out += transcript.bytes
+    } else if (transcript.bytes !== '') {
       const syncIndex = out.lastIndexOf(END_SYNC)
       out = syncIndex < 0
-        ? out + transcript
-        : out.slice(0, syncIndex) + transcript + out.slice(syncIndex)
+        ? out + transcript.bytes
+        : out.slice(0, syncIndex) + transcript.bytes + out.slice(syncIndex)
     }
     const overlay = railOverlay(tier)
     if (overlay !== '') {

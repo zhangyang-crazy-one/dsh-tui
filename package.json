@@ -8,6 +8,7 @@
     "dsh-tui": "bin/dsh-tui.js"
   },
   "files": [
+    "assets/screenshots/*.png",
     "bin/dsh-tui.js",
     "src/**/*.js",
     "README.md",

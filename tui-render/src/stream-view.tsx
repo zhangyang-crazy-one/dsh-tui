@@ -1814,6 +1814,9 @@ export function StreamView({
         themeTier,
         snapshotRows.map(row => `${row.id}:${row.identity}`).join('|'),
       ].join('\u0000'),
+      ...(!generating && latestSettledAssistantId !== undefined
+        ? { repaintKey: latestSettledAssistantId }
+        : {}),
       geometry: Object.freeze({
         columns,
         rows,
@@ -1832,6 +1835,7 @@ export function StreamView({
     contentWidth,
     effectiveViewportRows,
     generating,
+    latestSettledAssistantId,
     presentedEntryRows,
     publishedRail,
     renderEntries,

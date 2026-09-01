@@ -1,5 +1,5 @@
 ---
-description: "DeepSeek Harness 终端界面的可安装源码运行时 launcher 与 private 源码镜像。"
+description: "DeepSeek Harness 终端界面的可安装源码运行时 launcher 与公开源码镜像。"
 kind: "package-group"
 ---
 
@@ -9,10 +9,11 @@ kind: "package-group"
 
 ## 概述
 
-`@crazyhappyone/dsh-tui` 提供 `dsh-tui` 命令，用于运行和安全更新 DeepSeek Harness 终端界面。Launcher 管理专用 DSH 源码 checkout，因此不会 pull、reset、stash 或 clean 贡献者的开发 checkout。本仓库还镜像 `packages/tui/` bundle 与 renderer 源码以供审查。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
+`@crazyhappyone/dsh-tui` 提供 `dsh-tui` 命令，用于运行和安全更新 DeepSeek Harness 终端界面。Launcher 管理专用 DSH 源码 checkout，因此不会 pull、reset、stash 或 clean 贡献者的开发 checkout。本公开仓库还镜像 `packages/tui/` bundle 与 renderer 源码以供审查。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
 ## 目录
 
+- [截图](#screenshots)
 - [安装 launcher](#install-the-launcher)
 - [运行与更新](#run-and-update)
 - [配置源码运行时](#configure-the-source-runtime)
@@ -22,6 +23,19 @@ kind: "package-group"
 - [发布 npm 包](#publish-the-npm-package)
 - [已知限制](#known-limitations)
 - [开发备注](#dev-note)
+
+-----
+
+<a id="screenshots"></a>
+## 截图
+
+空闲首页：
+
+![dsh-tui 空闲首页](assets/screenshots/dsh-tui-home.png)
+
+发送 `你好` 后：
+
+![dsh-tui 发送你好后的响应](assets/screenshots/dsh-tui-hello.png)
 
 -----
 
