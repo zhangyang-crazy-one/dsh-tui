@@ -30,26 +30,31 @@ English | [中文](README.zh.md)
 
 The unscoped `dsh-tui` package belongs to another maintainer. This project publishes only under the authenticated `crazyhappyone` npm scope.
 
-After a prerelease is published:
+The launcher requires Git, pnpm, and a DSH-supported Node version. Installing `@deepseek-ai/dsh` separately is neither required nor used: `dsh-tui` always runs the `deepseek-tui` profile from its dedicated source checkout.
+
+Install the prerelease and complete the first launch:
 
 ```text
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui version
+dsh-tui update
+dsh-tui
 ```
 
-Installation creates only the launcher. It does not clone DSH, run `pnpm install`, prompt for Git credentials, or execute a postinstall script. Run `dsh-tui update` explicitly to create the source runtime.
+Package installation creates only the launcher. It does not clone DSH, run `pnpm install`, prompt for Git credentials, or execute a postinstall script. The explicit `dsh-tui update` command creates the source runtime; its default private source requires repository authorization.
 
 -----
 
 <a id="run-and-update"></a>
 ## Run and update
 
-Initialize the dedicated runtime, then start the TUI:
+After initialization, run `dsh-tui` from the workspace that the agent should use:
 
 ```text
-dsh-tui update
 dsh-tui
 ```
+
+Run `dsh-tui update` when you want to refresh the dedicated runtime before launching it again.
 
 Ordinary arguments pass to the `deepseek-tui` profile unchanged:
 
