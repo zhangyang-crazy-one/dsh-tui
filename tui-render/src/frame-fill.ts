@@ -26,12 +26,25 @@
  * when a preceding emoji sequence has a different width in Ink and the host
  * terminal. The overlay clears cells from a prior position before repainting
  * the current track, then restores the composer caret last.
+ *
+ * The transcript snapshot is authoritative at the same suffix: changed
+ * visible physical lines repaint at absolute coordinates after Ink's
+ * incremental output, then shortened or vacated ranges are cleared. A partial
+ * Ink diff therefore cannot leave missing cells, while stable rows remain
+ * write-free.
  * @module @deepseek-ai/dsh-tui-render/frame-fill
  */
 
-import { bgSequence, currentTier, styled } from './theme.ts'
+import {
+  bgSequence,
+  currentTier,
+  paintBackgroundRow,
+  paintRow,
+  styled,
+} from './theme.ts'
 import type { ColorTier } from './terminal-capabilities.ts'
 import { displayWidth } from './content.ts'
+import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
 import { completeDeltaStdoutDrain } from './frame-metrics.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
 import {
@@ -39,6 +52,7 @@ import {
   visibleFrameSnapshot,
 } from './frame-snapshot.ts'
 import type { VisibleFrameSnapshot } from './frame-snapshot.ts'
+import type { PhysicalLine } from './physical-line.ts'
 
 /** Resets the active background to the terminal default. */
 const BG_OFF = '\x1b[49m'
@@ -178,8 +192,22 @@ function railOverlay(tier: ColorTier): string {
   return cells === '' ? '' : `\x1b7${cells}\x1b8`
 }
 
-/** Explicitly blank stale suffix cells for shortened or removed rows. */
-function staleTranscriptOverlay(tier: ColorTier): string {
+function paintPhysicalLine(line: PhysicalLine, tier: ColorTier): string {
+  const parts = line.spans.map((span) => {
+    const text = styled(span.text, span.token, tier, span.bold)
+    return span.href !== undefined
+      && hyperlinksEnabled()
+      && isOsc8Href(span.href)
+      ? wrapOsc8(text, span.href)
+      : text
+  })
+  return line.background === 'codeBg'
+    ? paintBackgroundRow(parts, 'codeBg', Math.max(1, line.displayWidth), tier)
+    : paintRow(parts, tier)
+}
+
+/** Repaint changed rows and explicitly blank stale suffix or vacated cells. */
+function transcriptOverlay(tier: ColorTier): string {
   const next = visibleFrameSnapshot()
   if (next === undefined) {
     paintedVisibleFrame = undefined
@@ -191,9 +219,14 @@ function staleTranscriptOverlay(tier: ColorTier): string {
   for (const change of diff.changes) {
     const nextWidth = change.line?.displayWidth ?? 0
     const staleColumns = change.clearColumns - nextWidth
-    if (staleColumns <= 0) continue
-    cells += `\x1b[${String(change.row)};${String(change.col + nextWidth)}H`
-      + styled(' '.repeat(staleColumns), 'bg', tier)
+    if (change.line !== undefined) {
+      cells += `\x1b[${String(change.row)};${String(change.col)}H`
+        + paintPhysicalLine(change.line, tier)
+    }
+    if (staleColumns > 0) {
+      cells += `\x1b[${String(change.row)};${String(change.col + nextWidth)}H`
+        + styled(' '.repeat(staleColumns), 'bg', tier)
+    }
   }
   return cells === '' ? '' : `\x1b7${cells}\x1b8`
 }
@@ -283,12 +316,12 @@ export function transformFrameChunk(
     out.includes(SHOW_CURSOR) ||
     out.includes(HIDE_CURSOR)
   if (isFrame) {
-    const stale = staleTranscriptOverlay(tier)
-    if (stale !== '') {
+    const transcript = transcriptOverlay(tier)
+    if (transcript !== '') {
       const syncIndex = out.lastIndexOf(END_SYNC)
       out = syncIndex < 0
-        ? out + stale
-        : out.slice(0, syncIndex) + stale + out.slice(syncIndex)
+        ? out + transcript
+        : out.slice(0, syncIndex) + transcript + out.slice(syncIndex)
     }
     const overlay = railOverlay(tier)
     if (overlay !== '') {

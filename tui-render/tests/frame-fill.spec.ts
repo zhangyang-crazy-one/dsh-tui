@@ -24,6 +24,7 @@ import {
   setVisibleFrameSnapshot,
 } from '../src/frame-snapshot.ts'
 import { createPhysicalLine } from '../src/physical-line.ts'
+import { setHyperlinks } from '../src/hyperlink.ts'
 
 const TIERS = [
   { tier: 'truecolor', on: '\x1b[48;2;0;0;0m' },
@@ -213,6 +214,14 @@ describe('caret anchoring', () => {
 })
 
 describe('fixed-column transcript rail', () => {
+  it('paints a one-column terminal without a left guard cell', () => {
+    setFrameRail({ col: 1, topRow: 1, rows: 1, thumbStart: 0, thumbRows: 1 })
+    const out = transformFrameChunk('\x1b[?2026l', 'none')
+    expect(out).toContain('\x1b[1;1H█')
+    expect(out).not.toContain('\x1b[1;0H')
+    setFrameRail(undefined)
+  })
+
   it('paints every rail cell at the absolute column across a VS16 emoji row', () => {
     const atlas = new ScreenAtlas(40, 8)
     setFrameRail({
@@ -302,6 +311,18 @@ describe('transcript differential clearing', () => {
       }),
     })],
   })
+  const positionedRow = (id: string, terminalRow: number, text: string) => createFrameSnapshotRow({
+    id,
+    row: terminalRow,
+    col: 2,
+    line: createPhysicalLine({
+      blockId: id,
+      spans: [{ text, token: 'fg' }],
+      sourceStart: 0,
+      sourceEnd: text.length,
+      blockRow: 0,
+    }),
+  })
 
   it('inserts an absolute stale-tail clear before rail/sync and caret restoration', () => {
     setVisibleFrameSnapshot(snapshot('long', 'abcdef'))
@@ -325,22 +346,10 @@ describe('transcript differential clearing', () => {
 
   it('does not clear a screen row that a different transcript row now occupies', () => {
     const atlas = new ScreenAtlas(20, 6)
-    const row = (id: string, terminalRow: number, text: string) => createFrameSnapshotRow({
-      id,
-      row: terminalRow,
-      col: 2,
-      line: createPhysicalLine({
-        blockId: id,
-        spans: [{ text, token: 'fg' }],
-        sourceStart: 0,
-        sourceEnd: text.length,
-        blockRow: 0,
-      }),
-    })
     setVisibleFrameSnapshot({
       revision: 'before-scroll',
       geometry,
-      rows: [row('a', 2, 'AAAA'), row('b', 3, 'BBBB')],
+      rows: [positionedRow('a', 2, 'AAAA'), positionedRow('b', 3, 'BBBB')],
     })
     atlas.feed(transformFrameChunk(
       '\x1b[2;2HAAAA\x1b[3;2HBBBB\x1b[?2026l',
@@ -350,7 +359,7 @@ describe('transcript differential clearing', () => {
     setVisibleFrameSnapshot({
       revision: 'after-scroll',
       geometry,
-      rows: [row('b', 2, 'BBBB'), row('c', 3, 'CCCC')],
+      rows: [positionedRow('b', 2, 'BBBB'), positionedRow('c', 3, 'CCCC')],
     })
     atlas.feed(transformFrameChunk(
       '\x1b[2;2HBBBB\x1b[3;2HCCCC\x1b[?2026l',
@@ -361,5 +370,63 @@ describe('transcript differential clearing', () => {
     expect(atlas.extract({ col: 2, row: 3 }, { col: 5, row: 3 })).toBe('CCCC')
     setVisibleFrameSnapshot(undefined)
     transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('repaints a changed snapshot row when the Ink frame omits its cells', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    setVisibleFrameSnapshot({
+      revision: 'before-scroll',
+      geometry,
+      rows: [positionedRow('a', 2, 'AAAA'), positionedRow('b', 3, 'BBBB')],
+    })
+    atlas.feed(transformFrameChunk(
+      '\x1b[2;2HAAAA\x1b[3;2HBBBB\x1b[?2026l',
+      'none',
+    ))
+
+    setVisibleFrameSnapshot({
+      revision: 'after-scroll',
+      geometry,
+      rows: [positionedRow('b', 2, 'BBBB'), positionedRow('c', 3, 'CCCC')],
+    })
+    atlas.feed(transformFrameChunk(
+      '\x1b[2;2H    \x1b[3;2HCCCC\x1b[?2026l',
+      'none',
+    ))
+
+    expect(atlas.extract({ col: 2, row: 2 }, { col: 5, row: 2 })).toBe('BBBB')
+    expect(atlas.extract({ col: 2, row: 3 }, { col: 5, row: 3 })).toBe('CCCC')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('repaints snapshot-owned code background and OSC 8 spans', () => {
+    setHyperlinks(true)
+    try {
+      setVisibleFrameSnapshot({
+        revision: 'linked-code-row',
+        geometry,
+        rows: [createFrameSnapshotRow({
+          id: 'linked-code-row',
+          row: 2,
+          col: 2,
+          line: createPhysicalLine({
+            blockId: 'linked-code-row',
+            spans: [{ text: 'doc', token: 'accent', href: 'https://example.test' }],
+            sourceStart: 0,
+            sourceEnd: 3,
+            blockRow: 0,
+            background: 'codeBg',
+          }),
+        })],
+      })
+      const out = transformFrameChunk('\x1b[?2026l', 'truecolor')
+      expect(out).toContain('\x1b]8;;https://example.test\x1b\\')
+      expect(out).toContain('doc')
+    } finally {
+      setVisibleFrameSnapshot(undefined)
+      transformFrameChunk('\x1b[?2026l', 'none')
+      setHyperlinks(false)
+    }
   })
 })
