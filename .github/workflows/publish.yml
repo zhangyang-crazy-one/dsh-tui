@@ -36,11 +36,29 @@ jobs:
             echo "Release tag ${RELEASE_TAG} must equal v${package_version}."
             exit 1
           fi
+      - name: Check npm registry
+        id: registry
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          published_git_head="$(npm view "${package_name}@${package_version}" gitHead 2>/dev/null || true)"
+          if [[ -z "${published_git_head}" ]]; then
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          checkout_git_head="$(git rev-parse HEAD)"
+          if [[ "${published_git_head}" != "${checkout_git_head}" ]]; then
+            echo "npm ${package_name}@${package_version} points to ${published_git_head}, not ${checkout_git_head}."
+            exit 1
+          fi
+          echo "npm ${package_name}@${package_version} already contains this Git commit."
+          echo "exists=true" >> "${GITHUB_OUTPUT}"
       - name: Run tests
         run: npm test
       - name: Verify package contents
         run: npm run pack:check
       - name: Publish package
+        if: steps.registry.outputs.exists != 'true'
         env:
           NPM_DIST_TAG: ${{ github.event.release.prerelease && 'next' || 'latest' }}
         run: npm publish --access public --tag "${NPM_DIST_TAG}"
