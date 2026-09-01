@@ -22,7 +22,10 @@ test("release publishing uses GitHub OIDC and validates the release tag", () => 
   assert.match(workflow, /id-token: write/u);
   assert.match(workflow, /github\.event\.release\.tag_name/u);
   assert.match(workflow, /v\$\{package_version\}/u);
+  assert.match(workflow, /npm view "\$\{package_name\}@\$\{package_version\}" gitHead/u);
+  assert.match(workflow, /published_git_head.*checkout_git_head/su);
   assert.match(workflow, /github\.event\.release\.prerelease/u);
+  assert.match(workflow, /if: steps\.registry\.outputs\.exists != 'true'/u);
   assert.match(workflow, /npm publish --access public --tag "\$\{NPM_DIST_TAG\}"/u);
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/u);
 });
