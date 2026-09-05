@@ -103,6 +103,26 @@ export interface RenderPolicyCache {
   readonly maxBytes: number
 }
 
+/** Bounded tool previews, detail pages, and rebuildable row storage. */
+export interface RenderPolicyTools {
+  /** Maximum physical body rows in an expanded transcript preview. */
+  readonly previewRows: number
+  /** Maximum physical body rows loaded by one detail-page action. */
+  readonly detailPageRows: number
+  /** Maximum tool documents retained by the preview cache. */
+  readonly cacheEntries: number
+  /** Maximum materialized tool rows retained across cached documents. */
+  readonly cacheRows: number
+}
+
+/**
+ * Default tool presentation budgets, also used by the host Config schema.
+ * @returns fresh bounded preview, page, and cache settings.
+ */
+export function toolPolicyDefaults(): RenderPolicyTools {
+  return { previewRows: 6, detailPageRows: 40, cacheEntries: 128, cacheRows: 2048 }
+}
+
 /** Resolved render policy the TUI plugin passes to the renderer at mount. */
 export interface RenderPolicy {
   /** Extra pre-rendered rows around the visible window; 0..max. */
@@ -113,6 +133,8 @@ export interface RenderPolicy {
   readonly scroll: RenderPolicyScroll
   /** Cache-budget knobs. */
   readonly cache: RenderPolicyCache
+  /** Tool preview, pagination, and cache budgets. */
+  readonly tools: RenderPolicyTools
 }
 
 /**
@@ -146,5 +168,6 @@ export function renderPolicyDefaults(): RenderPolicy {
       maxRows: RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS,
       maxBytes: RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES,
     },
+    tools: toolPolicyDefaults(),
   }
 }

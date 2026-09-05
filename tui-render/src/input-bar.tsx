@@ -11,13 +11,14 @@
  */
 
 import { Box, Text, useStdout, useWindowSize } from 'ink'
-import { useEffect, useLayoutEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import type { ReactNode } from 'react'
-import { composerFrameAnchor } from './composer-cursor.ts'
+import { composerFrameAnchor, composerLineWindow } from './composer-cursor.ts'
 import { tokenizeComposer } from './composer-tokens.ts'
-import { escapeContent } from './content.ts'
+import { displayColumnSlice, displayWidth, escapeContent } from './content.ts'
 import { hideFrameCaret, setFrameCaret } from './frame-fill.ts'
 import { inkColor, paintBackgroundRow, styled } from './theme.ts'
+import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 /** Input state handed between the state machine steps. */
 export interface InputState {
@@ -102,31 +103,36 @@ export function handleInput(
 
 /** InputBar props: display state the keymap owner supplies. */
 export interface InputBarProps {
+  /** Presentation-copy locale, Chinese when omitted. */
+  locale?: TuiLocale
   /** The buffered text to display. */
   text: string
   /** Command menu open state (renders the `/` hint). */
   commandMode: boolean
   /** Mention mode open state (renders the `@` hint). */
   mentionMode: boolean
-  /** Palette rows painted under the composer; the caret counts them in `up`. */
+  /** Palette and status rows below the composer, excluded from its caret row. */
   rowsBelow?: number
   /** Caret offset into `text`; omitted means the end of the buffer. */
   caretIndex?: number | undefined
+  /** Model name to show in the composer frame chip. */
+  modelChip?: string | undefined
+  /** Mode name ('agent' | 'plan' | 'focus') to show in the composer frame chip. */
+  modeChip?: string | undefined
 }
 
 /** Width of the prompt marker (`> `) before the buffered text. */
 const PROMPT_WIDTH = 2
 
 /** Dim placeholder shown when the composer buffer is empty. */
-export const COMPOSER_PLACEHOLDER = '输入消息'
+export const COMPOSER_PLACEHOLDER = tuiCopy('inputHint')
 
 /**
  * The composer panel: title, accent prompt marker, buffered text, and mode hints, with the
  * terminal cursor anchored at the composer caret. AppShell pins the frame to
- * the terminal height, so a TTY write is Ink's fullscreen path (no trailing
- * newline, cursor left on the last output row). {@link composerFrameAnchor}
- * turns that origin plus the `> `-prefixed caret column into the CSI appended
- * after Ink's frame via {@link setFrameCaret}. The value is published during
+ * the terminal height; {@link composerFrameAnchor} determines the caret's
+ * distance above the bottom, which is converted to an absolute terminal row.
+ * The position is appended after Ink's frame via {@link setFrameCaret} and published during
  * render because Ink writes frames from resetAfterCommit, which precedes
  * layout and passive effects and would otherwise leave the cursor one commit
  * behind the text.
@@ -139,9 +145,19 @@ export function InputBar({
   mentionMode,
   rowsBelow = 0,
   caretIndex,
+  modelChip,
+  modeChip,
+  locale,
 }: InputBarProps): ReactNode {
   const { stdout } = useStdout()
   const { columns, rows } = useWindowSize()
+  const lines = text.split('\n')
+  const caret = Math.max(0, Math.min(caretIndex ?? text.length, text.length))
+  const caretLine = text.slice(0, caret).split('\n').length - 1
+  const caretLineStart = caret === 0 ? 0 : text.lastIndexOf('\n', caret - 1) + 1
+  const windows = lines.map((line, index) => composerLineWindow(
+    line, index === caretLine ? caret - caretLineStart : undefined, Math.max(1, columns - 4),
+  ))
   const anchor = composerFrameAnchor(text, caretIndex ?? text.length, {
     promptWidth: 2 + PROMPT_WIDTH,
     columns,
@@ -149,61 +165,85 @@ export function InputBar({
     fullscreen: stdout.isTTY,
     rowsBelow,
   })
-  // Publish during render (see the module doc): the frame stream appends this
-  // anchor after Ink's own cursor suffix, so the visible cursor tracks the
-  // caret in the same frame as the text. TTY + full-height AppShell is Ink's
-  // fullscreen path, so the last composer line is `up = 0`.
-  setFrameCaret(anchor)
+  const caretRow = Math.max(1, rows - anchor.up)
+  const caretWindow = windows[caretLine] as (typeof windows)[number]
+  const caretCol = Math.min(columns, 5 + caretWindow.caretColumn)
+  setFrameCaret({ row: caretRow, col: caretCol })
 
   // Left/right only changes caretIndex, so Ink may skip the frame write.
-  // Absolute CUP still moves the hardware cursor when the painted row is
-  // unchanged. Omit SHOW_CURSOR so the frame-fill wrapper does not append a
-  // second, origin-relative suffix.
+  // Absolute positioning also restores a newly mounted editor after the old
+  // editor's layout cleanup hid the cursor during the same commit.
   useLayoutEffect(() => {
     if (!stdout.isTTY) return
-    stdout.write(`\x1b[${Math.max(1, rows - anchor.up)};${anchor.col}H`)
-  }, [anchor.up, anchor.col, rows, stdout])
+    setFrameCaret({ row: caretRow, col: caretCol })
+    stdout.write(`\x1b[${caretRow};${caretCol}H\x1b[?25h`)
+  }, [caretRow, caretCol, stdout])
 
   // Park the cursor when the composer unmounts (a full-content panel owns the
   // screen); the next mounted composer republishes its caret.
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       hideFrameCaret()
     }
   }, [])
-  const lines = text.split('\n')
+  const chipText = modeChip && modelChip
+    ? `${modeChip} · ${modelChip}`
+    : (modeChip ?? modelChip ?? '')
+  const leftPrefix = '│ '
+  const placeholder = tuiCopy('inputHint', locale)
+  const sendHint = tuiCopy('sendHint', locale)
+  const leftHint = `› ${placeholder} · ${sendHint}`
+  const leftWidth = displayWidth(leftPrefix + leftHint)
+  const chipWidth = chipText !== '' ? displayWidth(chipText) : 0
+  const canFitChip = chipWidth > 0 && leftWidth + chipWidth + 2 <= columns
+  const headerParts = [
+    styled(escapeContent(leftPrefix), 'accentText'),
+    styled(escapeContent(`› ${placeholder}`), 'fg'),
+    styled(escapeContent(` · ${sendHint}`), 'fgDim'),
+    ...(canFitChip
+      ? [
+        ' '.repeat(Math.max(1, columns - leftWidth - chipWidth)),
+        styled(escapeContent(chipText), 'fgDim'),
+      ]
+      : []),
+  ]
   return (
     <Box
       flexDirection="column"
       width="100%"
-      backgroundColor={inkColor('codeBg')}
+      backgroundColor={inkColor('inputBg')}
     >
       <Text wrap="truncate">
-        {paintBackgroundRow([
-          styled(escapeContent('│ '), 'accent'),
-          styled(escapeContent(`› ${COMPOSER_PLACEHOLDER}`), 'fg'),
-          styled(escapeContent(' · Enter 发送'), 'fgDim'),
-        ], 'codeBg', columns)}
+        {paintBackgroundRow(headerParts, 'inputBg', columns)}
       </Text>
       {lines.map((line, lineIndex) => {
-        const tokenParts = tokenizeComposer(line).map(token => styled(
-          escapeContent(token.text),
-          token.kind === 'command' || token.kind === 'mention'
+        const window = windows[lineIndex] as (typeof windows)[number]
+        let sourceColumn = 0
+        const endColumn = window.startColumn + displayWidth(window.text)
+        const tokenParts = tokenizeComposer(line).map((token) => {
+          const safe = escapeContent(token.text).replace(/\t/gu, '\\t')
+          const width = displayWidth(safe)
+          const visible = displayColumnSlice(
+            safe, Math.max(0, window.startColumn - sourceColumn), Math.min(width, endColumn - sourceColumn),
+          )
+          sourceColumn += width
+          return styled(visible, token.kind === 'command' || token.kind === 'mention'
             ? 'accent'
             : token.kind === 'image'
               ? 'fgDim'
-              : 'fg',
-        ))
+              : 'fg')
+        })
         const last = lineIndex === lines.length - 1
         return (
           <Text key={lineIndex} wrap="truncate">
             {paintBackgroundRow([
-              styled(escapeContent('│ '), 'accent'),
-              styled(escapeContent(lineIndex === 0 ? '> ' : '  '), 'accent'),
+              styled(escapeContent('│ '), 'accentText'),
+              styled(escapeContent(lineIndex === 0 ? '> ' : '  '), 'accentText'),
+              ...(window.hiddenPrefix ? [styled('‹', 'fgDim')] : []),
               ...tokenParts,
               ...(last && commandMode ? [styled(escapeContent(' /'), 'fgDim')] : []),
               ...(last && mentionMode ? [styled(escapeContent(' @'), 'fgDim')] : []),
-            ], 'codeBg', columns)}
+            ], 'inputBg', columns)}
           </Text>
         )
       })}

@@ -50,20 +50,22 @@ export function displayWidth(text: string): number {
 
 /**
  * Slice a string so its display width fits `maxCols` columns. The cut never
- * lands inside a wide glyph: `wcwidthSafeSlice('中文ab', 2)` keeps `中文`
- * intact instead of splitting the first character.
+ * lands inside a grapheme: `wcwidthSafeSlice('中文ab', 2)` returns `中`.
  * @param text - the string to truncate.
  * @param maxCols - the column budget.
  * @returns the longest prefix within the budget.
  */
 export function wcwidthSafeSlice(text: string, maxCols: number): string {
+  if (maxCols <= 0) return ''
+  const budget = Math.floor(maxCols)
+  if (/^[\x20-\x7e]*$/u.test(text.slice(0, budget + 1))) return text.slice(0, budget)
   let cols = 0
   let end = 0
-  for (const char of text) {
-    const width = stringWidth(char)
+  for (const { segment } of GRAPHEME.segment(text)) {
+    const width = stringWidth(segment)
     if (cols + width > maxCols) break
     cols += width
-    end += char.length
+    end += segment.length
   }
   return text.slice(0, end)
 }
@@ -83,6 +85,7 @@ export function displayColumnSlice(
 ): string {
   const start = Math.max(0, startCol)
   const end = Math.max(start, endCol)
+  if (/^[\x20-\x7e]*$/u.test(text)) return text.slice(Math.ceil(start), Math.floor(end))
   let column = 0
   let out = ''
   for (const part of GRAPHEME.segment(text)) {

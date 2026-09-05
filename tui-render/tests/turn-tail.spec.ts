@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { producedPathsForTurn } from '../src/turn-tail.ts'
+import { formatTurnTailStats, producedPathsForTurn } from '../src/turn-tail.ts'
 import type { ToolCardModel } from '../src/tool-cards.ts'
 
 /** A card fixture with the given call view and status. */
@@ -75,5 +75,38 @@ describe('producedPathsForTurn', () => {
       card(undefined),
     ]
     expect(producedPathsForTurn(cards)).toEqual([])
+  })
+})
+
+describe('formatTurnTailStats', () => {
+  it('formats exact turn input, output, timing, and one cache suffix', () => {
+    const stats = formatTurnTailStats({
+      turnOrdinal: 3,
+      turnUsage: {
+        uncachedInputTokens: 30,
+        outputTokens: 7,
+        totalTokens: 50,
+        cacheReadTokens: 13,
+        cacheWriteTokens: 0,
+      },
+      elapsedMs: 340,
+    })
+    expect(stats).toBe('turn 3 · ↑43 · ↓7 · 340 ms · 缓存命中 30%')
+    expect(stats?.match(/%/gu)).toHaveLength(1)
+  })
+
+  it('omits cache hit without complete buckets and retains legacy output', () => {
+    expect(formatTurnTailStats({
+      turnOrdinal: 1,
+      turnUsage: {
+        uncachedInputTokens: 10,
+        outputTokens: 2,
+        totalTokens: 20,
+      },
+    })).toBe('turn 1 · ↑18 · ↓2')
+    expect(formatTurnTailStats({
+      legacyOutputTokens: 4,
+      elapsedMs: 8,
+    })).toBe('↓4 · 8 ms')
   })
 })

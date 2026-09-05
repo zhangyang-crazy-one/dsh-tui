@@ -39,8 +39,12 @@ function paintSnapshotLine(line: PhysicalLine): string {
     const href = span.href ?? line.osc8?.href
     return href === undefined || !hyperlinksEnabled() ? painted : wrapOsc8(painted, href)
   })
-  return line.background === 'codeBg'
-    ? paintBackgroundRow(parts, 'codeBg', Math.max(1, line.displayWidth))
+  return line.background !== undefined && line.background !== 'bg'
+    ? paintBackgroundRow(
+      parts,
+      line.background,
+      line.backgroundColumns ?? Math.max(1, line.displayWidth),
+    )
     : paintRow(parts)
 }
 
@@ -71,6 +75,7 @@ export class ScreenAtlas {
   private cells: ScreenCell[]
   private cursorCol = 0
   private cursorRow = 0
+  private showsCursor = true
   private savedCursorCol = 0
   private savedCursorRow = 0
   private wrapPending = false
@@ -88,6 +93,22 @@ export class ScreenAtlas {
     this.width = Math.max(1, width)
     this.height = Math.max(1, height)
     this.cells = this.blank()
+  }
+
+  /**
+   * Position reached by the consumed terminal bytes, independent of layout estimates.
+   * @returns a fresh one-based cursor coordinate.
+   */
+  get cursorPosition(): ScreenPoint {
+    return { col: this.cursorCol + 1, row: this.cursorRow + 1 }
+  }
+
+  /**
+   * Visibility selected by the most recent DEC cursor visibility control.
+   * @returns true before any visibility control or after showing the cursor.
+   */
+  get cursorVisible(): boolean {
+    return this.showsCursor
   }
 
   /**
@@ -159,6 +180,10 @@ export class ScreenAtlas {
             this.leftover = text.slice(index)
             return
           }
+          if (text.startsWith('\x1b[?', index) && csi.params.includes(25)
+            && (csi.final === 'h' || csi.final === 'l')) {
+            this.showsCursor = csi.final === 'h'
+          }
           this.applyCsi(csi.params, csi.final)
           index = csi.end
           continue
@@ -216,12 +241,33 @@ export class ScreenAtlas {
 
   /**
    * Apply renderer-owned transcript rows directly. This is the normal product
-   * geometry path; {@link feed} remains the fallback for external bytes and
+   * geometry path. Unchanged rows retain their cells and source links;
+   * changed rail geometry invalidates reuse. {@link feed} remains the fallback for external bytes and
    * shells that do not publish physical rows.
    * @param snapshot - shared visible frame from the transcript renderer.
    */
   applyFrameSnapshot(snapshot: VisibleFrameSnapshot): void {
+    const previousRail = this.snapshotRail
+    const nextRail = snapshot.geometry.rail
+    const sameRailArea = previousRail?.col === nextRail?.col
+      && previousRail?.topRow === nextRail?.topRow && previousRail?.rows === nextRail?.rows
+    const unchanged = new Set<number>()
+    if (sameRailArea) for (const row of snapshot.rows) {
+      const previous = this.snapshotRows.get(row.row)
+      if (previous?.line === row.line && previous.col === row.col) unchanged.add(row.row)
+    }
+    if (!sameRailArea && previousRail !== undefined) {
+      for (let index = 0; index < previousRail.rows; index += 1) {
+        const row = previousRail.topRow - 1 + index
+        for (const col of [previousRail.col - 2, previousRail.col - 1]) {
+          if (col >= 0 && col < this.width && row >= 0 && row < this.height) {
+            this.cells[row * this.width + col] = { ch: ' ', url: undefined, written: false }
+          }
+        }
+      }
+    }
     for (const range of this.snapshotRanges) {
+      if (unchanged.has(range.row)) continue
       for (let offset = 0; offset < range.width; offset += 1) {
         const col = range.col - 1 + offset
         const row = range.row - 1
@@ -244,12 +290,14 @@ export class ScreenAtlas {
     }
     for (const row of snapshot.rows) {
       this.snapshotRows.set(row.row, row)
-      this.cursorCol = Math.max(0, row.col - 1)
-      this.cursorRow = Math.max(0, row.row - 1)
-      this.wrapPending = false
-      for (const span of row.line.spans) {
-        this.activeUrl = span.href
-        for (const part of GRAPHEME.segment(span.text)) this.writeGrapheme(part.segment)
+      if (!unchanged.has(row.row)) {
+        this.cursorCol = Math.max(0, row.col - 1)
+        this.cursorRow = Math.max(0, row.row - 1)
+        this.wrapPending = false
+        for (const span of row.line.spans) {
+          this.activeUrl = span.href
+          for (const part of GRAPHEME.segment(span.text)) this.writeGrapheme(part.segment)
+        }
       }
       this.snapshotRanges.push({
         row: row.row,
@@ -443,7 +491,8 @@ export class ScreenAtlas {
     return rail !== undefined
       && row.row >= rail.topRow
       && row.row < rail.topRow + rail.rows
-      && row.col + row.line.displayWidth - 1 >= Math.max(1, rail.col - 1)
+      && row.col + (row.line.backgroundColumns ?? row.line.displayWidth) - 1
+        >= Math.max(1, rail.col - 1)
   }
 
   private writeGrapheme(grapheme: string): void {

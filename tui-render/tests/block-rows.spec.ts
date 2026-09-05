@@ -12,8 +12,11 @@ import {
   computeBlockRowsScopeKey,
   createMarkdownProjectorState,
   lineForText,
+  messageGapLines,
+  messageSeparatorLine,
   mixedLine,
   projectBlockRows,
+  turnPartGap,
 } from '../src/block-rows.ts'
 import type { MarkdownRenderLine } from '../src/markdown-projector.ts'
 
@@ -74,7 +77,25 @@ describe('lineForText / mixedLine', () => {
 })
 
 describe('projectBlockRows — non-markdown blocks', () => {
-  it('emits exactly one dim row for a collapsed reasoning fold', () => {
+  it('projects user copy on a full-width message surface with separate marker contrast', () => {
+    const projection = projectBlockRows({
+      id: 'u1',
+      kind: 'user',
+      source: 'hello',
+    }, settledScope({ width: 40 }), undefined)
+    expect(projection.lines).toHaveLength(1)
+    expect(projection.lines[0]).toMatchObject({
+      text: '> hello',
+      background: 'messageBg',
+      backgroundColumns: 40,
+    })
+    expect(projection.lines[0]?.spans.map(span => span.token)).toEqual([
+      'fgDim',
+      'fgSoft',
+    ])
+  })
+
+  it('emits no rows for hidden reasoning', () => {
     const entry: BlockRowsEntry = {
       id: 'r1',
       kind: 'reasoning',
@@ -85,9 +106,7 @@ describe('projectBlockRows — non-markdown blocks', () => {
       },
     }
     const projection = projectBlockRows(entry, settledScope(), undefined)
-    expect(projection.lines).toHaveLength(1)
-    expect(projection.lines[0]?.text).toContain('▸ ✻ 思考 (1.2s)')
-    expect(projection.lines[0]?.text).toContain('Ctrl+O 展开')
+    expect(projection.lines).toEqual([])
   })
 
   it('emits a header plus wrapped reasoning rows when expanded', () => {
@@ -132,9 +151,63 @@ describe('projectBlockRows — non-markdown blocks', () => {
     }
     const collapsed = projectBlockRows(entry, settledScope({ fold: { reasoning: false, tools: false } }), undefined)
     expect(collapsed.lines).toHaveLength(1)
-    expect(collapsed.lines[0]?.text).toBe('▸ bash · 完成 ls')
+    expect(collapsed.lines[0]?.text).toBe('▸ bash · ✓ ls')
+    expect(collapsed.lines[0]?.spans.find(s => collapsed.lines[0]?.text.slice(s.start, s.end) === '✓')?.token).toBe('fgDim')
+    expect(collapsed.lines[0]).toMatchObject({
+      background: 'toolBg',
+      backgroundColumns: 80,
+    })
     const expanded = projectBlockRows(entry, settledScope({ fold: { reasoning: false, tools: true } }), undefined)
     expect(expanded.lines.length).toBeGreaterThanOrEqual(2)
+
+    const oversizeEntry: BlockRowsEntry = {
+      id: 't-oversize',
+      kind: 'tool-card',
+      source: '',
+      meta: {
+        toolCard: {
+          name: 'bash',
+          arguments: '{"command":"cat big.log"}',
+          status: 'ok',
+          resultText: Array.from({ length: 600 }, (_, i) => `line ${i + 1}`).join('\n'),
+        },
+      },
+    }
+    const oversize = projectBlockRows(oversizeEntry, settledScope({ fold: { reasoning: false, tools: true } }), undefined)
+    expect(oversize.lines).toHaveLength(8)
+    expect(oversize.lines.at(-1)?.text).toContain('/tools 详情 · 597 剩余源行')
+  })
+
+  it('projects explicit failure details and a full-width tool summary card', () => {
+    const failed = projectBlockRows({
+      id: 'failed-tool',
+      kind: 'tool-card',
+      source: '',
+      meta: {
+        toolCard: {
+          name: 'bash',
+          arguments: '{"command":"pnpm test"}',
+          status: 'error',
+          resultText: 'setup\n2 tests failed',
+          error: { name: 'ToolError', code: 'TEST_FAILED' },
+        },
+      },
+    }, settledScope(), undefined)
+    expect(failed.lines[0]?.text).toBe('▸ bash · 失败 TEST_FAILED · 2 tests failed')
+
+    const summary = projectBlockRows({
+      id: 'tool-summary',
+      kind: 'tool-summary',
+      source: '▸ 工具记录 · 已收起 7 个 · 失败 2 · Ctrl+E 展开',
+      meta: { toolSummaryStatus: 'error' },
+    }, settledScope({ width: 40 }), undefined)
+    expect(summary.lines).toHaveLength(1)
+    expect(summary.lines[0]).toMatchObject({
+      text: '▸ 工具记录 · 已收起 7 个 · 失败 2 · Ctrl+E 展开',
+      background: 'toolBg',
+      backgroundColumns: 40,
+    })
+    expect(summary.lines[0]?.spans[0]?.token).toBe('error')
   })
 
   it('tool-card projection preserves presenter titles and specialized result rows', () => {
@@ -165,7 +238,7 @@ describe('projectBlockRows — non-markdown blocks', () => {
       undefined,
     )
     expect(collapsed.lines.map(line => line.text)).toEqual([
-      '▸ Read artifact.txt · 完成 artifact.txt',
+      '▸ Read artifact.txt · ✓ artifact.txt',
     ])
     const expanded = projectBlockRows(
       entry,
@@ -173,7 +246,7 @@ describe('projectBlockRows — non-markdown blocks', () => {
       undefined,
     )
     expect(expanded.lines.map(line => line.text)).toEqual([
-      '▾ Read artifact.txt · 完成',
+      '▾ Read artifact.txt · ✓',
       '  结果',
       '  1 payload',
     ])
@@ -201,9 +274,9 @@ describe('projectBlockRows — non-markdown blocks', () => {
       },
     }, settledScope(), undefined)
     expect(projection.lines.map(line => line.text)).toEqual([
-      '── 已完成 ──',
       '产物 · a.ts · b.ts',
       'turn 1 · 12 tok · 200 ms',
+      '── 已完成 ──',
     ])
   })
 
@@ -236,16 +309,21 @@ describe('projectBlockRows — non-markdown blocks', () => {
 
 describe('projectBlockRows — markdown via the projector delegate', () => {
   it('delegates to the renderer-owned projector state and returns projector lines', () => {
-    const entry: BlockRowsEntry = {
-      id: 'm1',
-      kind: 'markdown',
-      source: '# Title\n\nBody paragraph\n',
+    for (const source of ['# Title\n\nBody paragraph', '# Title\n\nBody paragraph\n']) {
+      const entry: BlockRowsEntry = {
+        id: `m1-${String(source.length)}`,
+        kind: 'markdown',
+        source,
+      }
+      const state = createMarkdownProjectorState(entry.id, settledScope())
+      const projection = projectBlockRows(entry, settledScope(), state)
+      const texts = projection.lines.map(line => line.text)
+      const titleIndex = texts.findIndex(text => text.includes('Title'))
+      const bodyIndex = texts.findIndex(text => text.includes('Body paragraph'))
+      expect(titleIndex).toBeGreaterThanOrEqual(0)
+      expect(bodyIndex - titleIndex).toBe(2)
+      expect(texts[bodyIndex - 1]).toBe(' ')
     }
-    const state = createMarkdownProjectorState('m1', settledScope())
-    const projection = projectBlockRows(entry, settledScope(), state)
-    const texts = projection.lines.map(line => line.text)
-    expect(texts.some(t => t.includes('Title'))).toBe(true)
-    expect(texts.some(t => t.includes('Body paragraph'))).toBe(true)
   })
 
   it('returns stable line references across re-projection of unchanged markdown', () => {
@@ -326,5 +404,100 @@ describe('projectBlockRows — markdown via the projector delegate', () => {
     expect(settled.lines).toHaveLength(active.lines.length)
     expect(settled.lines[0]).toBe(active.lines[0])
     expect(settled.lines[250]).toBe(active.lines[250])
+  })
+})
+
+describe('module spacing and separator lines (Task 6)', () => {
+  it('paints the message-gap separator with line across the conversation width, including widths below 40', () => {
+    const wide = messageSeparatorLine(80)
+    expect(wide.text).toBe('─'.repeat(80))
+    expect(wide.displayWidth).toBe(80)
+    expect(wide.spans).toEqual([{ start: 0, end: 80, token: 'line', bold: false }])
+    expect(wide.background).toBeUndefined()
+
+    const narrow = messageSeparatorLine(32)
+    expect(narrow.text).toBe('─'.repeat(32))
+    expect(narrow.displayWidth).toBe(32)
+    expect(narrow.spans).toEqual([{ start: 0, end: 32, token: 'line', bold: false }])
+    expect(narrow.background).toBeUndefined()
+  })
+
+  it('messageGapLines returns exactly two rows: line separator followed by a blank row', () => {
+    const gap = messageGapLines(50, 2)
+    expect(gap).toHaveLength(2)
+    expect(gap[0]?.text).toBe('─'.repeat(50))
+    expect(gap[0]?.displayWidth).toBe(50)
+    expect(gap[0]?.spans[0]?.token).toBe('line')
+    expect(gap[0]?.rowInBlock).toBe(2)
+    expect(gap[1]?.text).toBe(' ')
+    expect(gap[1]?.rowInBlock).toBe(3)
+  })
+
+  it('projects user message with userMessageGap into user row, line separator, and blank spacer', () => {
+    const entry: BlockRowsEntry = {
+      id: 'u-gap',
+      kind: 'user',
+      source: 'ping',
+      meta: { userMessageGap: true },
+    }
+    const projection = projectBlockRows(entry, settledScope({ width: 40 }), undefined)
+    expect(projection.lines).toHaveLength(3)
+    // Row 0: user message on messageBg
+    expect(projection.lines[0]).toMatchObject({
+      text: '> ping',
+      background: 'messageBg',
+      backgroundColumns: 40,
+    })
+    // Row 1: line separator on frame bg (no messageBg)
+    expect(projection.lines[1]).toMatchObject({
+      text: '─'.repeat(40),
+      displayWidth: 40,
+    })
+    expect(projection.lines[1]?.background).toBeUndefined()
+    expect(projection.lines[1]?.spans[0]?.token).toBe('line')
+    // Row 2: blank spacer
+    expect(projection.lines[2]?.text).toBe(' ')
+    expect(projection.lines[2]?.background).toBeUndefined()
+  })
+
+  it('turnPartGap keeps adjacent tool cards gapless and enforces 1 blank row between other modules', () => {
+    // Start of turn: 0 rows
+    expect(turnPartGap(undefined, 'reasoning')).toBe(0)
+    expect(turnPartGap(undefined, 'card')).toBe(0)
+    expect(turnPartGap(undefined, 'text')).toBe(0)
+
+    // Adjacent tool cards/summary: 0 rows (gapless)
+    expect(turnPartGap('card', 'card')).toBe(0)
+    expect(turnPartGap('card', 'tool-summary')).toBe(0)
+    expect(turnPartGap('tool-summary', 'card')).toBe(0)
+    expect(turnPartGap('tool-summary', 'tool-summary')).toBe(0)
+
+    // Inter-module boundaries: 1 blank row
+    expect(turnPartGap('reasoning', 'card')).toBe(1)
+    expect(turnPartGap('reasoning', 'tool-summary')).toBe(1)
+    expect(turnPartGap('card', 'text')).toBe(1)
+    expect(turnPartGap('tool-summary', 'text')).toBe(1)
+    expect(turnPartGap('text', 'reasoning')).toBe(1)
+    expect(turnPartGap('reasoning', 'text')).toBe(1)
+  })
+
+  it('projectDividerEntry emits a full-width line separator when source is empty or dash', () => {
+    const emptyDivider = projectBlockRows({
+      id: 'd-empty',
+      kind: 'divider',
+      source: '',
+    }, settledScope({ width: 60 }), undefined)
+    expect(emptyDivider.lines).toHaveLength(1)
+    expect(emptyDivider.lines[0]?.text).toBe('─'.repeat(60))
+    expect(emptyDivider.lines[0]?.spans[0]?.token).toBe('line')
+
+    const dashDivider = projectBlockRows({
+      id: 'd-dash',
+      kind: 'divider',
+      source: '─',
+    }, settledScope({ width: 35 }), undefined)
+    expect(dashDivider.lines).toHaveLength(1)
+    expect(dashDivider.lines[0]?.text).toBe('─'.repeat(35))
+    expect(dashDivider.lines[0]?.spans[0]?.token).toBe('line')
   })
 })

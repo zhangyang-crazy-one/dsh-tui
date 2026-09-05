@@ -87,11 +87,20 @@ import type {} from '@deepseek-ai/dsh-session-projection-cache'
 import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
 import {
   applyTheme,
+  tuiCopy,
+  ToolPresenterCache,
+  EMPTY_TOOL_DETAILS_PANE,
+  cardsFrom,
+  cardsFromTurn,
+  createToolBodyDocument,
+  planToolBodyWindow,
+  toolCardOriginalText,
   activeBrandRevealTimerCount,
   createFrameMetrics,
   createFrameProbe,
   createProjector,
   renderPolicyDefaults,
+  toolPolicyDefaults,
   frameStatsSnapshot,
   isHumanUserMessage,
   latestAssistantCopyTarget,
@@ -133,8 +142,11 @@ import {
   RENDER_POLICY_MAX_CACHE_ROWS,
   RENDER_POLICY_MAX_OVERSCAN,
 } from '@deepseek-ai/dsh-tui-render'
+import type { TuiLocale } from '@deepseek-ai/dsh-tui-render'
+import type { ToolBodyCursor, ToolDetailsPaneState, ToolDetailsInput, ToolCardModel } from '@deepseek-ai/dsh-tui-render'
 import type {
   FrameMetricsSnapshot,
+  FrameStatsSnapshot,
   RenderPolicy,
 } from '@deepseek-ai/dsh-tui-render'
 import type {
@@ -170,6 +182,7 @@ import type {
   TodoHudItem,
   ToolPresenterLookup,
   TuiController,
+  LoopMode,
   ViewModel,
   WorkflowHudMember,
   WorkflowHudState,
@@ -198,6 +211,27 @@ import { parseSettingsFieldValue, settingsRowsFromDescribe } from './settings-ro
 /** Feedback row lifetime: cleared on the next key or after this bound (K8/S4). */
 export const FEEDBACK_MS = 2000
 
+/**
+ * Typed feedback keys surfaced through the status row. Every owner must look
+ * the copy up through {@link feedbackCopy} so internal diagnostics (message
+ * ids, absolute session paths, raw error messages) never leak to the
+ * terminal. The diagnostic itself always travels through `ctx.logger.warn`
+ * with the full cause.
+ */
+type FeedbackKey = 'sendFailed'
+
+const FEEDBACK_COPY: Readonly<Record<FeedbackKey, string>> = {
+  // Safe copy: tells the user the action failed and they can retry. The
+  // controller already restored the draft; this is the only thing the
+  // terminal needs to say.
+  sendFailed: '✗ 发送未生效 · 请重试',
+}
+
+/** Resolve one feedback key to its user-visible copy. */
+function feedbackCopy(key: FeedbackKey): string {
+  return FEEDBACK_COPY[key]
+}
+
 /** Host table key that requires a second Enter before execute (D-03 / D-08). */
 const DANGER_PRESET = 'danger-full-access'
 
@@ -209,6 +243,12 @@ const ONBOARDING_KEY = 'DEEPSEEK_API_KEY'
 
 /** TUI-owned user settings: color, input, notification, and brand presentation. */
 interface TuiUserSettings {
+  /** Locale for terminal presentation controls. */
+  locale?: TuiLocale
+  /** Whether thinking text is visible throughout the transcript. */
+  reasoning?: boolean
+  /** Whether the footer displays full metrics instead of one quiet row. */
+  statusDetails?: boolean
   /** Optional override of the mount-time detected color tier. */
   colorTier?: 'truecolor' | '256' | '16' | 'none'
   /** When false, Enter inserts a newline and Ctrl+Enter sends. */
@@ -219,6 +259,8 @@ interface TuiUserSettings {
   notifyQuietInputSeconds?: number
   /** Generated FishLogo reveal mode (TERM-11). */
   brandAnimation?: 'auto' | 'on' | 'off'
+  /** Whether overflowing conversation history displays a scrollbar. */
+  scrollbar?: boolean
 }
 
 const TuiUserSettings: z<TuiUserSettings> = z.object({
@@ -227,7 +269,16 @@ const TuiUserSettings: z<TuiUserSettings> = z.object({
   notify: z.union(['off', 'attention', 'every-turn'] as const).default('attention'),
   notifyQuietInputSeconds: z.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
   brandAnimation: z.union(['auto', 'on', 'off'] as const).default('auto'),
+  scrollbar: z.boolean().default(true),
+  locale: z.union(['zh-CN', 'en-US'] as const).default('zh-CN'),
+  reasoning: z.boolean().default(false),
+  statusDetails: z.boolean().default(false),
 })
+
+type PresentationFlag = 'reasoning' | 'scrollbar' | 'statusDetails'
+const PRESENTATION_DEFAULTS: Readonly<Record<PresentationFlag, boolean>> = {
+  reasoning: false, scrollbar: true, statusDetails: false,
+}
 /** Stable Cordis plugin name. */
 export const name = 'tui-runtime'
 
@@ -293,6 +344,12 @@ export const Config: z<Config> = z.object({
         maxBytes: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_BYTES)
           .default(RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES),
       }),
+      tools: z.object({
+        previewRows: z.number().min(1).step(1).max(50).default(toolPolicyDefaults().previewRows),
+        detailPageRows: z.number().min(1).step(1).max(200).default(toolPolicyDefaults().detailPageRows),
+        cacheEntries: z.number().min(1).step(1).max(4096).default(toolPolicyDefaults().cacheEntries),
+        cacheRows: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_ROWS).default(toolPolicyDefaults().cacheRows),
+      }).default(toolPolicyDefaults()),
     }),
     validateRenderPolicy,
   ),
@@ -329,9 +386,9 @@ function validateRenderPolicy(value: unknown): RenderPolicy {
 /** The process surfaces the driver uses; tests substitute captures. */
 export const internals: {
   /** Terminal output consumed by the loop and direct diagnostics. */
-  stdout: { write(chunk: string): unknown }
+  stdout: { write(chunk: string): boolean }
   /** Diagnostic output used for startup, export, and orderly-exit failures. */
-  stderr: { write(chunk: string): unknown }
+  stderr: { write(chunk: string): boolean }
   /** TTY-shaped stdin Ink's input hooks attach to; tests inject a fake. */
   stdin: NodeJS.ReadStream
   /** Environment snapshot for the interactive-terminal guard. */
@@ -470,8 +527,8 @@ function createRuntimeLifecycle(
 
 /** Process-facing effects of one run: output streams plus the launcher's bounded exit request. */
 export interface TuiIo {
-  stdout: { write(chunk: string): unknown }
-  stderr: { write(chunk: string): unknown }
+  stdout: { write(chunk: string): boolean }
+  stderr: { write(chunk: string): boolean }
   /** Request process exit with `code` after the tree disposes. */
   exit(code: number): void
 }
@@ -645,17 +702,19 @@ function errorReason(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+type SettingsFieldValue = string | number | boolean | object | null | undefined
+
 /**
  * Read one field from a settings section object.
  * @param section - `ctx.settings.get` result.
  * @param field - schema field key.
  * @returns the field value, or undefined when the section is not a plain object.
  */
-function fieldOf(section: unknown, field: string): unknown {
+function fieldOf(section: unknown, field: string): SettingsFieldValue {
   if (typeof section !== 'object' || section === null || Array.isArray(section)) {
     return undefined
   }
-  return (section as Record<string, unknown>)[field]
+  return (section as Record<string, SettingsFieldValue>)[field]
 }
 
 /** Hub table row for one `child` listing entry; diagnostics are omitted. */
@@ -864,8 +923,10 @@ export class RuntimeController implements TuiController {
   /** Single bounded refresh timer while {@link retryFooter} is visible. */
   private retryFooterTimer: ReturnType<typeof setTimeout> | undefined
   private projector = createProjector()
-  private reasoningExpanded = false
+  private presentationOverrides = new Map<PresentationFlag, { value: boolean }>()
+  private presentationWrites: Promise<void> = Promise.resolve()
   private toolCardsExpanded = false
+  private mode: LoopMode = 'agent'
   /** Latest compaction divider expanded by Ctrl+K. */
   private expandedCompactionId: string | undefined
   private pending: LoopAction[] = []
@@ -1018,6 +1079,13 @@ export class RuntimeController implements TuiController {
   private searchPaneSnapshot: SearchPaneState | undefined
   private modelPaneSnapshot: ModelPaneState | undefined
   private helpPaneSnapshot: HelpPaneState | undefined
+  private toolDetailsOpen = false
+  private toolDetailsSelected = 0
+  private toolDetailsBody = false
+  private toolDetailsDiagnostics = false
+  private toolDetailCursors: ToolBodyCursor[] = [{ line: 0, offset: 0 }]
+  private toolDetailsSnapshot: ToolDetailsPaneState | undefined
+  private toolPresenterCache: ToolPresenterCache | undefined
   private permissionPaneSnapshot: PermissionPaneState | undefined
   private settingsPaneSnapshot: SettingsPaneState | undefined
   private agentHubPaneSnapshot: AgentHubPaneState | undefined
@@ -1066,7 +1134,7 @@ export class RuntimeController implements TuiController {
       if (session !== this.liveHandle?.agent.session) return
       this.projector.push(event)
       if (event.type === 'turn/start') {
-        this.reduce({ kind: 'turn-started' })
+        this.reduce({ kind: 'turn-started' }, undefined, undefined)
       } else if (event.type === 'llm/retry') {
         this.startRetryFooter(event.data)
       } else if (
@@ -1079,7 +1147,7 @@ export class RuntimeController implements TuiController {
         this.reduce({
           kind: 'turn-ended',
           completed: event.data.reason.kind === 'completed',
-        })
+        }, undefined, undefined)
         this.notifyTurnEnd(event.data.reason)
         this.settleDraftTurn()
         this.flushOnTurnEnd()
@@ -1266,7 +1334,7 @@ export class RuntimeController implements TuiController {
       const model = this.projector.snapshot()
       this.modelSnapshot = {
         ...model,
-        reasoningExpanded: this.reasoningExpanded,
+        reasoningExpanded: this.presentationFlag('reasoning'),
         toolCardsExpanded: this.toolCardsExpanded,
         expandedCompactionId: this.expandedCompactionId,
         status: this.statusOf(),
@@ -1289,6 +1357,14 @@ export class RuntimeController implements TuiController {
    */
   getBadge(): string {
     return this.badge
+  }
+
+  /**
+   * Return the current interactive loop mode.
+   * @returns active loop mode.
+   */
+  getMode(): LoopMode {
+    return this.mode
   }
 
   /**
@@ -1367,6 +1443,88 @@ export class RuntimeController implements TuiController {
       }
     }
     return this.helpPaneSnapshot
+  }
+
+  /**
+   * Read the per-item tool source browser for the current session.
+   * @returns a stable snapshot until the next controller emission.
+   */
+  getToolDetailsPane(): ToolDetailsPaneState {
+    if (!this.toolDetailsOpen) return EMPTY_TOOL_DETAILS_PANE
+    if (this.toolDetailsSnapshot === undefined) {
+      this.toolPresenterCache ??= new ToolPresenterCache((this.config.renderPolicy ?? renderPolicyDefaults()).tools.cacheEntries)
+      const presenterCache = this.toolPresenterCache
+      const model = this.getModel()
+      const cards = new Map<ToolCallId, ToolCardModel>()
+      for (const message of model.history) {
+        if (message.kind === 'assistant') for (const card of cardsFrom(message.content ?? [])) cards.set(card.callId, card)
+      }
+      if (model.activeTurn !== undefined) for (const card of cardsFromTurn(model.activeTurn)) cards.set(card.callId, card)
+      this.toolDetailsSnapshot = {
+        open: true, cards: [...cards.values()].map(card => presenterCache.present(this.getToolPresenters(), card)),
+        selectedIndex: Math.min(this.toolDetailsSelected, Math.max(0, cards.size - 1)),
+        detail: this.toolDetailsBody, diagnostics: this.toolDetailsDiagnostics,
+        cursor: this.toolDetailCursors.at(-1) as ToolBodyCursor, page: this.toolDetailCursors.length - 1,
+      }
+    }
+    return this.toolDetailsSnapshot
+  }
+
+  /** Navigate source pages; copy/export always use the canonical logged fields. */
+  private toolDetailsInput(input: ToolDetailsInput, width: number, pageRows: number): void {
+    const state = this.getToolDetailsPane()
+    if (!state.open || this.blockingHead() !== undefined) return
+    const card = state.cards[state.selectedIndex]
+    if (input === 'back') {
+      if (state.detail) this.toolDetailsBody = false
+      else this.toolDetailsOpen = false
+      this.toolDetailCursors = [{ line: 0, offset: 0 }]
+    } else if (input === 'select') {
+      this.toolDetailsBody = card !== undefined
+    } else if (!state.detail && (input === 'up' || input === 'down')) {
+      this.toolDetailsSelected = Math.max(0, Math.min(state.cards.length - 1, state.selectedIndex + (input === 'up' ? -1 : 1)))
+      this.toolDetailCursors = [{ line: 0, offset: 0 }]
+    } else if (card !== undefined && state.detail) {
+      const options = { locale: this.getLocale(), diagnostics: state.diagnostics, includeArguments: true }
+      if (input === 'previous' || input === 'up') {
+        if (this.toolDetailCursors.length > 1) this.toolDetailCursors.pop()
+      } else if (input === 'next' || input === 'down') {
+        const document = createToolBodyDocument(card, options)
+        const page = planToolBodyWindow(document, state.cursor, Math.max(1, width - 2), pageRows)
+        if (page.next !== undefined) this.toolDetailCursors.push(page.next)
+      } else if (input === 'diagnostics') {
+        this.toolDetailsDiagnostics = !state.diagnostics
+        this.toolDetailCursors = [{ line: 0, offset: 0 }]
+      } else if (input === 'copy') {
+        const text = toolCardOriginalText(card, options)
+        if (text.length > OSC52_MAX_CHARS) this.setFeedback(`${tuiCopy('toolCopyFailed', options.locale)} · e ${tuiCopy('toolExportAction', options.locale)}`)
+        else {
+          try {
+            internals.copyText(text, (chunk) => { this.io.stdout.write(chunk) })
+            this.setFeedback(tuiCopy('toolCopied', options.locale))
+          } catch (error: unknown) {
+            this.ctx.logger.warn(`tool copy failed: ${errorReason(error)}`)
+            this.setFeedback(tuiCopy('toolCopyFailed', options.locale))
+          }
+        }
+      } else {
+        const text = toolCardOriginalText(card, options)
+        this.ownWork(this.exportToolText(text, options.locale), 'tool source export')
+      }
+    }
+    this.emit()
+  }
+
+  /** Write one explicitly requested source export without replacing an existing file. */
+  private async exportToolText(text: string, locale: TuiLocale): Promise<void> {
+    const path = resolve(this.config.cwd ?? process.cwd(), `tool-${randomUUID()}.txt`)
+    try {
+      await writeFile(path, text, { flag: 'wx', mode: 0o600 })
+      if (!this.closed) this.setFeedback(`${tuiCopy('toolExported', locale)} · ${path}`)
+    } catch (error: unknown) {
+      this.ctx.logger.warn(`tool source export failed: ${errorReason(error)}`)
+      if (!this.closed) this.setFeedback(tuiCopy('toolExportFailed', locale))
+    }
   }
 
   /**
@@ -1981,6 +2139,65 @@ export class RuntimeController implements TuiController {
   }
 
   /**
+   * Read the saved conversation scrollbar preference.
+   * @returns true unless the `tui.scrollbar` setting disables it.
+   */
+  getScrollbarVisible(): boolean {
+    return this.presentationFlag('scrollbar')
+  }
+
+  /**
+   * Read the saved footer-detail preference.
+   * @returns true only when full metrics are explicitly enabled.
+   */
+  getStatusDetails(): boolean {
+    return this.presentationFlag('statusDetails')
+  }
+
+  /**
+   * Read the validated presentation-copy locale.
+   * @returns the saved locale, or the Chinese product default.
+   */
+  getLocale(): TuiLocale {
+    const section = this.readTuiSettings?.()
+      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    return section?.locale ?? 'zh-CN'
+  }
+
+  private presentationFlag(field: PresentationFlag): boolean {
+    const section = this.readTuiSettings?.()
+      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    return this.presentationOverrides.get(field)?.value ?? section?.[field] ?? PRESENTATION_DEFAULTS[field]
+  }
+
+  /** Apply immediately, serialize persistence, and let only the latest write settle its override. */
+  private togglePresentationFlag(field: PresentationFlag): void {
+    const override = { value: !this.presentationFlag(field) }
+    this.presentationOverrides.set(field, override)
+    this.emit()
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) return
+    const operation = this.presentationWrites.then(async () => {
+      let failure: { reason: unknown } | undefined
+      try {
+        await settings.update(TUI_SETTINGS_NS, { [field]: override.value })
+      } catch (error: unknown) {
+        failure = { reason: error }
+      }
+      if (this.closed) return
+      if (this.presentationOverrides.get(field) === override) this.presentationOverrides.delete(field)
+      if (failure !== undefined) {
+        this.ctx.logger.warn(`display setting ${field} failed: ${errorReason(failure.reason)}`)
+        this.setFeedback(tuiCopy('settingsSaveFailed', this.getLocale()))
+      } else {
+        this.emit()
+      }
+    })
+    this.presentationWrites = operation
+    this.ownWork(operation, 'display settings')
+  }
+
+  /**
    * Return whether the read-only timeline view is open.
    * @returns the Ctrl+T timeline toggle.
    */
@@ -2114,6 +2331,12 @@ export class RuntimeController implements TuiController {
    * exclusion). The caller re-opens its own pane afterwards.
    */
   private closeOtherPanels(): void {
+    this.toolDetailsOpen = false
+    this.toolDetailsSelected = 0
+    this.toolDetailsBody = false
+    this.toolDetailsDiagnostics = false
+    this.toolDetailCursors = [{ line: 0, offset: 0 }]
+    this.toolPresenterCache?.clear()
     this.listOpen = false
     this.searchOpen = false
     this.timelineOpen = false
@@ -2277,10 +2500,7 @@ export class RuntimeController implements TuiController {
       let snapshot: ProjectionSnapshot | undefined
       const live = this.ctx.sessions.get(row.id)
       const projections = this.ctx.get('sessionProjections')
-      if (live !== undefined) {
-        if (projections === undefined) return row
-        snapshot = projections.snapshot(live)
-      } else {
+      if (live === undefined) {
         const header = coldHeaders.get(row.id)
         if (cache === undefined || persistence === undefined || header === undefined) return row
         try {
@@ -2301,6 +2521,9 @@ export class RuntimeController implements TuiController {
           signal.throwIfAborted()
           return row
         }
+      } else {
+        if (projections === undefined) return row
+        snapshot = projections.snapshot(live)
       }
       return { ...row, ...hubMetricsOf(snapshot.values, row.activity, now) }
     }))
@@ -2340,6 +2563,8 @@ export class RuntimeController implements TuiController {
   /**
    * Dispatch one interaction action. Actions arriving before the first Agent
    * binds are retained in order; actions after teardown begins are ignored.
+   * A synchronous send failure restores the interaction state and composer
+   * draft, logs its cause, and reports safe feedback instead of throwing.
    * Asynchronous session, model, command, search, rename, delete, and export
    * operations become controller-owned work and settle after this method returns.
    * @param action - action requested by the render loop.
@@ -2354,6 +2579,9 @@ export class RuntimeController implements TuiController {
     // Any keypress dismisses the feedback row (S4 next-key rule).
     this.clearFeedback()
     switch (action.kind) {
+      case 'tool-details':
+        this.toolDetailsInput(action.input, action.width, action.pageRows)
+        return
       case 'plan-review-scroll':
         // The loop owns the plan-review offset locally; this action never
         // reaches the controller, but the switch names it for exhaustiveness.
@@ -2371,14 +2599,18 @@ export class RuntimeController implements TuiController {
         return
       case 'sigint':
         this.clearRetryFooter()
-        this.reduce({ kind: 'sigint' })
+        this.reduce({ kind: 'sigint' }, undefined, undefined)
         return
       case 'toggle-reasoning':
-        this.reasoningExpanded = !this.reasoningExpanded
-        this.emit()
+        this.togglePresentationFlag('reasoning')
         return
       case 'toggle-tool-cards':
         this.toolCardsExpanded = !this.toolCardsExpanded
+        this.emit()
+        return
+      case 'cycle-mode':
+        this.mode = this.mode === 'agent' ? 'plan' : this.mode === 'plan' ? 'focus' : 'agent'
+        this.setFeedback(`模式：${this.mode}`)
         this.emit()
         return
       case 'copy-message':
@@ -3079,7 +3311,8 @@ export class RuntimeController implements TuiController {
     validateImage(input: { data: Uint8Array; mediaType: ImageMediaType; name?: string }): Promise<void>
     saveImages(inputs: readonly { data: Uint8Array; mediaType: ImageMediaType; name?: string }[]): Promise<readonly ImageAttachmentRef[]>
   } | undefined {
-    const store = (this.ctx as unknown as { get(key: string): unknown }).get('attachments')
+    // SAFETY: the optional attachment provider owns this Cordis service key.
+    const store = (this.ctx as unknown as { get(key: string): object | undefined }).get('attachments')
     return store as ReturnType<RuntimeController['attachmentStore']> | undefined
   }
 
@@ -3204,12 +3437,17 @@ export class RuntimeController implements TuiController {
    * Submit composer text. Plain text keeps the synchronous legacy path;
    * token-bearing text admits every pending image in one atomic batch (or
    * reuses the durable ref of a taken-back image), preserving composer order.
+   *
+   * The original composer draft is captured before the clear so the reduce
+   * path can roll it back if the synchronous followup chain throws.
    */
   private submitComposer(text: string): void {
     if (!IMAGE_TOKEN_PATTERN.test(text)) {
+      const previousDraft = this.composerDraft
+      const previousStructured = this.composerStructuredDraft
       this.composerDraft = ''
       this.composerStructuredDraft = undefined
-      this.submitDraft(this.createDraft(text))
+      this.submitDraft(this.createDraft(text), previousDraft, previousStructured)
       return
     }
     void this.submitComposerWithImages(text)
@@ -3276,29 +3514,49 @@ export class RuntimeController implements TuiController {
     for (const part of parts) {
       if (part.kind === 'image') this.pendingImages.delete(part.id)
     }
+    const previousDraft = this.composerDraft
+    const previousStructured = this.composerStructuredDraft
     this.composerDraft = ''
     this.composerStructuredDraft = undefined
     this.submitDraft(Object.freeze({
       draftId: this.nextDraftId++,
       segments: Object.freeze(segments.map(segment => Object.freeze(segment))),
-    }))
+    }), previousDraft, previousStructured)
   }
 
   /** Route one composer submission to ordinary follow-up, steer, or later FIFO. */
-  private submitDraft(draft: StructuredDraft): void {
+  private submitDraft(
+    draft: StructuredDraft,
+    rollbackDraft: string | undefined,
+    rollbackStructured: StructuredDraft | undefined,
+  ): void {
     if (this.machine !== 'generating') {
-      this.reduce({ kind: 'send', draft })
+      this.reduce({ kind: 'send', draft }, rollbackDraft, rollbackStructured)
       return
     }
     if (this.currentTurnSteer === undefined) {
       const message = this.messageFromDraft(draft)
+      const previousSteer = this.currentTurnSteer
       this.currentTurnSteer = {
         draft,
         messageId: message.id,
         state: 'handoff',
         transcriptSeen: false,
       }
-      this.agentHandle?.steer(message)
+      try {
+        this.agentHandle?.steer(message)
+      } catch (error: unknown) {
+        this.currentTurnSteer = previousSteer
+        if (rollbackDraft !== undefined) {
+          this.composerDraft = rollbackDraft
+          this.composerStructuredDraft = rollbackStructured
+        }
+        this.ctx.logger.warn(
+          `send steer failed: ${errorReason(error)}`,
+        )
+        this.setFeedback(feedbackCopy('sendFailed'))
+        return
+      }
       this.setFeedback('已引导当前回合')
       return
     }
@@ -3338,7 +3596,11 @@ export class RuntimeController implements TuiController {
   private drainDraftFifo(): void {
     if (!this.draftDrainReady) return
     this.draftDrainReady = false
-    this.reduce({ kind: 'send', draft: this.draftFifo.shift() as StructuredDraft })
+    this.reduce(
+      { kind: 'send', draft: this.draftFifo.shift() as StructuredDraft },
+      undefined,
+      undefined,
+    )
   }
 
   /** Copy the latest assistant row or its final fenced code body. */
@@ -3384,7 +3646,7 @@ export class RuntimeController implements TuiController {
     if (this.closed) return
     this.clearRetryFooter()
     this.machine = 'exit-armed'
-    this.reduce({ kind: 'sigint' })
+    this.reduce({ kind: 'sigint' }, undefined, undefined)
   }
 
   /**
@@ -3787,7 +4049,16 @@ export class RuntimeController implements TuiController {
     const registry = this.agent === undefined || commands === undefined
       ? []
       : commands.list(this.agent).filter(command => command.name !== 'export')
-    return [...registry, ...LOCAL_COMMANDS].sort((left, right) =>
+    const locale = this.getLocale()
+    const displayCommands = ([
+      ['status', 'statusDetails', 'commandStatus'],
+      ['reasoning', 'reasoning', 'commandReasoning'],
+      ['scrollbar', 'scrollbar', 'commandScrollbar'],
+    ] as const).map(([commandName, field, key]) => ({
+      name: commandName,
+      description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? 'on' : 'off', locale)})`,
+    }))
+    return [...registry, ...LOCAL_COMMANDS, ...displayCommands, { name: 'tools', description: tuiCopy('commandTools', locale) }].sort((left, right) =>
       left.name < right.name ? -1 : 1,
     )
   }
@@ -3805,6 +4076,17 @@ export class RuntimeController implements TuiController {
    * @param query - the text after `/`, passed verbatim to the registry.
    */
   private runCommand(query: string): void {
+    if (query.trim() === 'tools') {
+      if (this.blockingHead() !== undefined) return
+      this.closeOtherPanels()
+      this.toolDetailsOpen = true
+      this.emit()
+      return
+    }
+    if (query === 'status' || query === 'reasoning' || query === 'scrollbar') {
+      this.togglePresentationFlag(query === 'status' ? 'statusDetails' : query)
+      return
+    }
     if (query === 'export') {
       this.ownWork(this.exportLive(), 'session export')
       return
@@ -4241,7 +4523,7 @@ export class RuntimeController implements TuiController {
       '/help — 命令与键位速查',
       ...commands,
       '',
-      '键位: Ctrl+C 停止/退出 · Ctrl+O 展开/收起推理 · Ctrl+N 新会话 · Ctrl+K 搜索 · Ctrl+T 时间线',
+      '键位: Ctrl+C 停止/退出 · Ctrl+O 显示/隐藏思考 · Ctrl+N 新会话 · Ctrl+K 搜索 · Ctrl+T 时间线',
       'Ctrl+E 工具卡 · y/n 审批 · /permission · /settings · e/r 导出重载',
       'g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流',
       '↑↓/jk 滚动 · g s 会话列表 · Tab 补全 · Esc 关闭 · / 命令 · @ 提及',
@@ -4968,7 +5250,12 @@ export class RuntimeController implements TuiController {
     return ''
   }
 
-  private reduce(event: MachineEvent): void {
+  private reduce(
+    event: MachineEvent,
+    rollbackDraft: string | undefined,
+    rollbackStructured: StructuredDraft | undefined,
+  ): void {
+    const previousMachine = this.machine
     const next = reduceInteraction(
       this.machine,
       event.kind === 'send'
@@ -4979,26 +5266,46 @@ export class RuntimeController implements TuiController {
         : event,
     )
     this.machine = next.state
-    switch (next.effect.kind) {
-      case 'followup':
-        this.agentHandle?.followup(
-          this.messageFromDraft(
-            (event as Extract<MachineEvent, { kind: 'send' }>).draft,
-          ),
-        )
-        break
-      case 'cancel-generation':
-        this.agentHandle?.cancel()
-        break
-      case 'exit':
-        this.requestExit()
-        break
-      case 'arm-exit':
-      case 'none':
-        break
-      /* v8 ignore next -- InteractionEffect is closed; retain compile-time exhaustiveness. */
-      default:
-        assertNever(next.effect, 'InteractionEffect')
+    try {
+      switch (next.effect.kind) {
+        case 'followup':
+          this.agentHandle?.followup(
+            this.messageFromDraft(
+              (event as Extract<MachineEvent, { kind: 'send' }>).draft,
+            ),
+          )
+          break
+        case 'cancel-generation':
+          this.agentHandle?.cancel()
+          break
+        case 'exit':
+          this.requestExit()
+          break
+        case 'arm-exit':
+        case 'none':
+          break
+        /* v8 ignore next -- InteractionEffect is closed; retain compile-time exhaustiveness. */
+        default:
+          assertNever(next.effect, 'InteractionEffect')
+      }
+    } catch (error: unknown) {
+      // Transactional rollback: the machine transition committed before the
+      // effect ran, and the caller may have cleared the composer draft. Both
+      // must return to the pre-call state so the user can retry without a
+      // half-state of `generating + empty inbox`. The diagnostic travels
+      // through ctx.logger.warn (with the full cause); the user copy comes
+      // from the typed dictionary so internals never leak to the terminal.
+      this.machine = previousMachine
+      if (event.kind === 'send' && rollbackDraft !== undefined) {
+        this.composerDraft = rollbackDraft
+        this.composerStructuredDraft = rollbackStructured
+      }
+      this.ctx.logger.warn(
+        `reduce ${event.kind} failed: ${errorReason(error)}`,
+      )
+      this.setFeedback(feedbackCopy('sendFailed'))
+      // setFeedback already called emit(); no extra emit needed.
+      return
     }
     this.emit()
   }
@@ -5031,6 +5338,7 @@ export class RuntimeController implements TuiController {
     this.searchPaneSnapshot = undefined
     this.modelPaneSnapshot = undefined
     this.helpPaneSnapshot = undefined
+    this.toolDetailsSnapshot = undefined
     this.approvalPaneSnapshot = undefined
     this.askUserPaneSnapshot = undefined
     this.planReviewPaneSnapshot = undefined
@@ -5051,11 +5359,9 @@ export class RuntimeController implements TuiController {
       this.emitPending = true
       return
     }
-    const delay = 20 - (Date.now() - this.emitLastRun)
-    if (delay <= 0) {
-      this.notifyListeners()
-      return
-    }
+    const delay = Math.max(0, 20 - (Date.now() - this.emitLastRun))
+    // Always cross an async boundary so an already-buffered event burst
+    // invalidates snapshots once instead of forcing one render per event.
     this.emitPending = true
     this.emitTimer = setTimeout(() => {
       this.emitTimer = undefined
@@ -5215,20 +5521,8 @@ async function frameStatsTarget(input: string): Promise<string> {
 
 /** The `--frame-stats` JSON contract: render cost plus pacing and environment context. */
 interface FrameStatsFile {
-  renderMs: {
-    count: number
-    mean: number
-    max: number
-    p95: number
-    samples: readonly number[]
-  }
-  brandRenderMs: {
-    count: number
-    mean: number
-    max: number
-    p95: number
-    samples: readonly number[]
-  }
+  renderMs: FrameStatsSnapshot
+  brandRenderMs: FrameStatsSnapshot
   pacing: { commits: number; elapsedMs: number }
   brandRevealTimers: number
   environment: { platform: NodeJS.Platform; node: string; arch: string }
@@ -5256,23 +5550,11 @@ async function writeFrameStatsFile(
 ): Promise<void> {
   const snapshot = frameStatsSnapshot(probe)
   const brandSnapshot = brandProbe === undefined
-    ? { count: 0, mean: 0, max: 0, p95: 0, samples: [] }
+    ? createFrameProbe().snapshot()
     : frameStatsSnapshot(brandProbe)
   const payload: FrameStatsFile = {
-    renderMs: {
-      count: snapshot.count,
-      mean: snapshot.mean,
-      max: snapshot.max,
-      p95: snapshot.p95,
-      samples: snapshot.samples,
-    },
-    brandRenderMs: {
-      count: brandSnapshot.count,
-      mean: brandSnapshot.mean,
-      max: brandSnapshot.max,
-      p95: brandSnapshot.p95,
-      samples: brandSnapshot.samples,
-    },
+    renderMs: snapshot,
+    brandRenderMs: brandSnapshot,
     pacing: { commits: probe.commits, elapsedMs: probe.elapsedMs() },
     brandRevealTimers: activeBrandRevealTimerCount(),
     environment: {

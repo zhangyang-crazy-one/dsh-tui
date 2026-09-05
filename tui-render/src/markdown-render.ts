@@ -5,7 +5,7 @@
  * {@link MarkdownBlockRenderer} callback. This module provides a renderer
  * that emits the full token set the JSX bridge needs:
  *
- *   - `fg` / `fgDim` / `accent` / `accentDim` / `codeBg`
+ *   - semantic foreground tokens, including distinct inline Markdown roles
  *   - bold
  *   - OSC 8 link targets (carried as `href` on the span; the bridge decides
  *     whether to emit the escape sequences based on the runtime
@@ -22,12 +22,14 @@
  */
 
 import type { Heading, List, Paragraph, PhrasingContent, RootContent, Table, TableCell, TableRow } from 'mdast'
-import { displayWidth, escapeContent, padDisplayEnd, wrapDisplayLines } from './content.ts'
+import { displayWidth, escapeContent, padDisplayEnd, wcwidthSafeSlice, wrapDisplayLines } from './content.ts'
 import { linkNeedsUrlSuffix } from './hyperlink.ts'
 import {
   appendedRowsPreserveTableMetrics,
+  isMultilineTableRow,
   layoutTableCells,
   measureTableCells,
+  wrapTableCell,
 } from './table-layout.ts'
 import type {
   TableColumnMetrics,
@@ -62,49 +64,10 @@ function makeBuffer(): LineBuffer {
   return { segments: [], cols: 0 }
 }
 
-/** Buffer-append result telling the caller whether to flush. */
-type AppendResult =
-  | { readonly kind: 'fit' }
-  | { readonly kind: 'flush'; readonly tail: InlineSegment | null }
-
-/** Append one segment to `buffer`, returning a hint for the caller's line loop. */
-function appendSegment(buffer: LineBuffer, segment: InlineSegment, maxCols: number): AppendResult {
-  if (segment.text === '') {
-    buffer.segments.push(segment)
-    return { kind: 'fit' }
-  }
-  if (buffer.cols >= maxCols) {
-    buffer.segments.push(segment)
-    return { kind: 'fit' }
-  }
-  const remaining = maxCols - buffer.cols
-  const cols = displayWidth(segment.text)
-  if (cols <= remaining) {
-    buffer.segments.push(segment)
-    buffer.cols += cols
-    return { kind: 'fit' }
-  }
-  // Segment exceeds the remaining room. If the buffer already has content,
-  // flush the buffer and ask the caller to retry on a fresh line.
-  if (buffer.segments.length > 0) {
-    return { kind: 'flush', tail: segment }
-  }
-  // Buffer is empty; hard-wrap the segment by display width.
-  const lines = wrapDisplayLines(segment.text, remaining)
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] as string
-    const isLast = i === lines.length - 1
-    buffer.segments.push({
-      text: line,
-      token: segment.token,
-      bold: segment.bold,
-      href: segment.href,
-      hrefVisible: segment.hrefVisible,
-    })
-    buffer.cols = displayWidth(line)
-    if (!isLast) buffer.cols = maxCols
-  }
-  return { kind: 'fit' }
+/** Append one already-wrapped segment; callers own physical row breaks. */
+function appendSegment(buffer: LineBuffer, segment: InlineSegment): void {
+  buffer.segments.push(segment)
+  buffer.cols += displayWidth(segment.text)
 }
 
 /** Finalize one buffer into a {@link MarkdownRenderLine}, converting
@@ -161,19 +124,18 @@ function inlineToSegments(
     case 'text':
       return [{ text: escapeContent(node.value), token: 'fg', bold: false }]
     case 'inlineCode':
-      return [{ text: escapeContent(node.value), token: 'codeBg', bold: false }]
+      return [{ text: escapeContent(node.value), token: 'markdownCode', bold: false }]
     case 'strong':
-      return [{
-        text: escapeContent(literalText(node)),
-        token: 'fg',
+      return node.children.flatMap(child => inlineToSegments(child, hyperlinks)).map(segment => ({
+        ...segment,
+        token: segment.token === 'fg' ? 'markdownStrong' : segment.token,
         bold: true,
-      }]
+      }))
     case 'emphasis':
-      return [{
-        text: escapeContent(literalText(node)),
-        token: 'accent',
-        bold: false,
-      }]
+      return node.children.flatMap(child => inlineToSegments(child, hyperlinks)).map(segment => ({
+        ...segment,
+        token: segment.token === 'fg' ? 'markdownEmphasis' : segment.token,
+      }))
     case 'delete':
       return [{
         text: escapeContent(literalText(node)),
@@ -185,7 +147,7 @@ function inlineToSegments(
       const escaped = escapeContent(visible)
       const segments: InlineSegment[] = [{
         text: escaped,
-        token: 'accent',
+        token: 'markdownLink',
         bold: false,
         href: node.url,
         hrefVisible: visible,
@@ -206,7 +168,7 @@ function inlineToSegments(
     case 'image':
       return [{ text: escapeContent(node.alt ?? ''), token: 'fg', bold: false }]
     case 'break':
-      return [{ text: '', token: 'fg', bold: false }]
+      return [{ text: '\n', token: 'fg', bold: false }]
     default: {
       const children = (node as unknown as { children?: readonly PhrasingContent[] }).children
       if (children === undefined) return []
@@ -240,68 +202,43 @@ function renderParagraph(
   for (const child of node.children) {
     segments.push(...inlineToSegments(child, hyperlinks))
   }
+  return wrapInlineSegments(segments, width, rowOffset, sourceStart)
+}
+
+/** Wrap styled segments without discarding nested tokens or link targets. */
+function wrapInlineSegments(
+  segments: readonly InlineSegment[],
+  width: number,
+  rowOffset: number,
+  sourceStart: number,
+): MarkdownRenderLine[] {
   if (segments.length === 0) {
     return [freezeEmpty(rowOffset, sourceStart)]
   }
   const lines: MarkdownRenderLine[] = []
   let buffer = makeBuffer()
   let row = rowOffset
+  const flush = (): void => {
+    lines.push(freezeLine(buffer, row, sourceStart))
+    row += 1
+    buffer = makeBuffer()
+  }
   for (const seg of segments) {
     const parts = seg.text.split('\n')
-    for (const part of parts) {
-      if (part === '') {
-        if (buffer.segments.length > 0) {
-          lines.push(freezeLine(buffer, row, sourceStart))
-          row += 1
-          buffer = makeBuffer()
-        }
-        continue
-      }
-      const chunked = wrapDisplayLines(part, width)
-      for (let c = 0; c < chunked.length; c += 1) {
-        const line = chunked[c] as string
-        const isLastChunk = c === chunked.length - 1
-        if (line === '') {
-          if (buffer.segments.length > 0) {
-            lines.push(freezeLine(buffer, row, sourceStart))
-            row += 1
-            buffer = makeBuffer()
-          }
+    for (const [index, part] of parts.entries()) {
+      if (index > 0) flush()
+      let rest = part
+      while (rest !== '') {
+        if (buffer.cols >= width) flush()
+        let text = wcwidthSafeSlice(rest, width - buffer.cols)
+        if (text === '' && buffer.cols > 0) {
+          flush()
           continue
         }
-        if (!isLastChunk) {
-          buffer = makeBuffer()
-          const buffer2 = makeBuffer()
-          appendSegment(buffer2, {
-            text: line,
-            token: seg.token,
-            bold: seg.bold,
-            href: seg.href,
-            hrefVisible: seg.hrefVisible,
-          }, width)
-          lines.push(freezeLine(buffer2, row, sourceStart))
-          row += 1
-          continue
-        }
-        const result = appendSegment(buffer, {
-          text: line,
-          token: seg.token,
-          bold: seg.bold,
-          href: seg.href,
-          hrefVisible: seg.hrefVisible,
-        }, width)
-        if (result.kind === 'flush') {
-          lines.push(freezeLine(buffer, row, sourceStart))
-          row += 1
-          buffer = makeBuffer()
-          appendSegment(buffer, {
-            text: line,
-            token: seg.token,
-            bold: seg.bold,
-            href: seg.href,
-            hrefVisible: seg.hrefVisible,
-          }, width)
-        }
+        // A terminal narrower than one glyph must still consume that glyph.
+        if (text === '') text = wrapDisplayLines(rest, width)[0] as string
+        appendSegment(buffer, { ...seg, text })
+        rest = rest.slice(text.length)
       }
     }
   }
@@ -328,7 +265,7 @@ function renderHeading(
   const wrapped = wrapDisplayLines(`${prefix}${escapeContent(text)}${suffix}`, width)
   return wrapped.map((line, index) => {
     const buffer = makeBuffer()
-    appendSegment(buffer, { text: line, token: 'accent', bold: true }, width)
+    appendSegment(buffer, { text: line, token: 'accentText', bold: true })
     return freezeLine(buffer, rowOffset + index, index === 0 ? sourceStart : -1)
   })
 }
@@ -347,12 +284,12 @@ function renderBlockquote(
   const wrapped = wrapDisplayLines(`│ ${escapeContent(merged)}`, width)
   return wrapped.map((line, index) => {
     const buffer = makeBuffer()
-    appendSegment(buffer, { text: line, token: 'fgDim', bold: false }, width)
+    appendSegment(buffer, { text: line, token: 'fgDim', bold: false })
     return freezeLine(buffer, rowOffset + index, index === 0 ? sourceStart : -1)
   })
 }
 
-/** Render a list block as multiple marker-prefixed fg lines. */
+/** Render a list block with marker prefixes and intact inline styles. */
 function renderList(
   list: List,
   width: number,
@@ -364,20 +301,10 @@ function renderList(
   const ordered = list.ordered === true
   list.children.forEach((item, index) => {
     const marker = ordered ? `${(list.start ?? 1) + index}. ` : '- '
-    const segments: InlineSegment[] = []
+    const segments: InlineSegment[] = [{ text: marker, token: 'fg', bold: false }]
     const children = item.children as readonly PhrasingContent[]
     for (const child of children) segments.push(...inlineToSegments(child, hyperlinks))
-    const merged = segments.map(s => s.text).join('')
-    const wrapped = wrapDisplayLines(`${marker}${escapeContent(merged)}`, width)
-    wrapped.forEach((line, lineIndex) => {
-      const buffer = makeBuffer()
-      appendSegment(buffer, { text: line, token: 'fg', bold: false }, width)
-      lines.push(freezeLine(
-        buffer,
-        rowOffset + lines.length,
-        index === 0 && lineIndex === 0 ? sourceStart : -1,
-      ))
-    })
+    lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index === 0 ? sourceStart : -1))
   })
   return lines
 }
@@ -393,15 +320,10 @@ function renderCode(
   sourceStart: number,
 ): MarkdownRenderLine[] {
   const lines = value.split('\n')
-  // Huge fences collapse to the first twenty rows plus a fold glyph so a
-  // pasted log cannot blow up the frame budget; copy/export reads the
-  // authoritative source, so the hidden rows stay recoverable.
-  const collapsed = lines.length > 500
-  const shown = collapsed ? lines.slice(0, 20) : lines
   const out: MarkdownRenderLine[] = []
   let row = rowOffset
-  for (const [index, line] of shown.entries()) {
-    const wrapped = wrapDisplayLines(escapeContent(line), width)
+  for (const [index, line] of lines.entries()) {
+    const wrapped = wrapDisplayLines(escapeContent(line), Math.max(1, width - 2))
     if (wrapped.length === 0) {
       out.push(freezeEmpty(row, index === 0 ? sourceStart : -1))
       row += 1
@@ -411,7 +333,7 @@ function renderCode(
       const buffer = makeBuffer()
       const tokens = tokenizeCodeLine(`  ${part}`)
       for (const tk of tokens) {
-        appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold }, width)
+        appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold })
       }
       const line = freezeLine(
         buffer,
@@ -421,19 +343,6 @@ function renderCode(
       out.push({ ...line, background: 'codeBg' })
       row += 1
     }
-  }
-  if (collapsed) {
-    const text = `▾ … 还有 ${lines.length - 20} 行`
-    const cols = displayWidth(text)
-    out.push({
-      text,
-      displayWidth: cols,
-      spans: [{ start: 0, end: cols, token: 'fgDim', bold: false }],
-      rowInBlock: row,
-      sourceStart: -1,
-      sourceEnd: -1,
-      rawTail: false,
-    })
   }
   return out
 }
@@ -460,7 +369,7 @@ function tokenizeCodeLine(source: string): CodeToken[] {
   if (source === '') return out
   const trimmed = source.trimStart()
   if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('--')) {
-    return [{ text: source, token: 'fgDim', bold: false }]
+    return [{ text: source, token: 'codeComment', bold: false }]
   }
   let i = 0
   let plain = source.slice(0, source.length - trimmed.length)
@@ -476,19 +385,19 @@ function tokenizeCodeLine(source: string): CodeToken[] {
       const end = trimmed.indexOf(ch, i + 1)
       const stop = end === -1 ? trimmed.length : end + 1
       flushPlain()
-      out.push({ text: trimmed.slice(i, stop), token: 'fg', bold: false })
+      out.push({ text: trimmed.slice(i, stop), token: 'codeString', bold: false })
       i = stop
       continue
     }
     if (ch === '/' && trimmed.charAt(i + 1) === '/') {
       flushPlain()
-      out.push({ text: trimmed.slice(i), token: 'fgDim', bold: false })
+      out.push({ text: trimmed.slice(i), token: 'codeComment', bold: false })
       return out
     }
     const wordMatch = /^([A-Za-z_$][A-Za-z0-9_$]*)/.exec(trimmed.slice(i))
     if (wordMatch !== null && CODE_KEYWORDS.has(wordMatch[0])) {
       flushPlain()
-      out.push({ text: wordMatch[0], token: 'fg', bold: true })
+      out.push({ text: wordMatch[0], token: 'codeKeyword', bold: false })
       i += wordMatch[0].length
       continue
     }
@@ -534,7 +443,7 @@ export function renderTableCells(
   let row = rowOffset
   const appendLine = (segments: readonly InlineSegment[]): void => {
     const buffer = makeBuffer()
-    for (const segment of segments) appendSegment(buffer, segment, Math.max(1, width))
+    for (const segment of segments) appendSegment(buffer, segment)
     lines.push(freezeLine(buffer, row, row === rowOffset ? sourceStart : -1))
     row += 1
   }
@@ -625,26 +534,24 @@ export function renderStreamingTableCells(
     for (let index = previous.committedRows; index < committedCells.length; index += 1) {
       const cells = committedCells[index]
       if (cells === undefined) continue
-      committedLines.push(...renderGridRow(
+      appendGridBodyRow(
+        committedLines,
+        index > 1 ? committedCells[index - 1] : undefined,
         cells,
         plan.widths,
-        false,
-        safeWidth,
-        rowOffset + committedLines.length,
+        rowOffset,
         sourceStart,
-      ))
+      )
     }
     committedLines.push(ruleRenderLine(
       gridRule(plan.widths, 'bottom'),
       rowOffset + committedLines.length,
       sourceStart,
-      safeWidth,
     ))
   } else {
     committedLines = renderGridTableWithWidths(
       committedCells,
       plan.widths,
-      safeWidth,
       rowOffset,
       sourceStart,
     )
@@ -658,19 +565,18 @@ export function renderStreamingTableCells(
   }
   if (tailCells === undefined) return { lines: committedLines, cache }
   const presentation = committedLines.slice(0, -1)
-  presentation.push(...renderGridRow(
+  appendGridBodyRow(
+    presentation,
+    committedCells.length > 1 ? committedCells.at(-1) : undefined,
     tailCells,
     plan.widths,
-    false,
-    safeWidth,
-    rowOffset + presentation.length,
+    rowOffset,
     sourceStart,
-  ))
+  )
   presentation.push(ruleRenderLine(
     gridRule(plan.widths, 'bottom'),
     rowOffset + presentation.length,
     sourceStart,
-    safeWidth,
   ))
   return { lines: presentation, cache }
 }
@@ -693,60 +599,76 @@ function ruleRenderLine(
   text: string,
   rowInBlock: number,
   sourceStart: number,
-  width: number,
 ): MarkdownRenderLine {
   const buffer = makeBuffer()
-  appendSegment(buffer, { text, token: 'fgDim', bold: false }, width)
+  appendSegment(buffer, { text, token: 'fgDim', bold: false })
   return freezeLine(buffer, rowInBlock, rowInBlock === 0 ? sourceStart : -1)
 }
 
 function renderGridTableWithWidths(
   cells: readonly (readonly string[])[],
   widths: readonly number[],
-  width: number,
   rowOffset: number,
   sourceStart: number,
 ): MarkdownRenderLine[] {
   const out: MarkdownRenderLine[] = []
-  out.push(ruleRenderLine(gridRule(widths, 'top'), rowOffset, sourceStart, width))
-  out.push(...renderGridRow(cells[0] ?? [], widths, true, width, rowOffset + out.length, sourceStart))
-  out.push(ruleRenderLine(gridRule(widths, 'mid'), rowOffset + out.length, sourceStart, width))
-  for (const row of cells.slice(1)) {
-    out.push(...renderGridRow(row, widths, false, width, rowOffset + out.length, sourceStart))
+  out.push(ruleRenderLine(gridRule(widths, 'top'), rowOffset, sourceStart))
+  out.push(...renderGridRow(cells[0] ?? [], widths, true, rowOffset + out.length, sourceStart))
+  out.push(ruleRenderLine(gridRule(widths, 'mid'), rowOffset + out.length, sourceStart))
+  for (let index = 1; index < cells.length; index += 1) {
+    appendGridBodyRow(out, index > 1 ? cells[index - 1] : undefined,
+      cells[index] as readonly string[], widths, rowOffset, sourceStart)
   }
-  out.push(ruleRenderLine(gridRule(widths, 'bottom'), rowOffset + out.length, sourceStart, width))
+  out.push(ruleRenderLine(gridRule(widths, 'bottom'), rowOffset + out.length, sourceStart))
   return out
+}
+
+/** Append one logical body record with the shared multiline separation rule. */
+function appendGridBodyRow(
+  out: MarkdownRenderLine[],
+  previous: readonly string[] | undefined,
+  cells: readonly string[],
+  widths: readonly number[],
+  rowOffset: number,
+  sourceStart: number,
+): void {
+  if (previous !== undefined && (
+    isMultilineTableRow(previous.map(escapeContent), widths)
+    || isMultilineTableRow(cells.map(escapeContent), widths)
+  )) {
+    out.push(ruleRenderLine(gridRule(widths, 'mid'), rowOffset + out.length, sourceStart))
+  }
+  out.push(...renderGridRow(cells, widths, false, rowOffset + out.length, sourceStart))
 }
 
 function renderGridRow(
   row: readonly string[],
   widths: readonly number[],
   header: boolean,
-  width: number,
   rowOffset: number,
   sourceStart: number,
 ): MarkdownRenderLine[] {
   const wrapped = widths.map((columnWidth, column) => {
     const text = escapeContent(row[column] ?? '')
-    return displayWidth(text) <= columnWidth
+    return displayWidth(text) <= columnWidth && !text.includes('\n')
       ? [text]
-      : wrapDisplayLines(text, columnWidth)
+      : wrapTableCell(text, columnWidth)
   })
   const height = wrapped.reduce((maximum, lines) => Math.max(maximum, lines.length), 1)
   const out: MarkdownRenderLine[] = []
   for (let lineIndex = 0; lineIndex < height; lineIndex += 1) {
     const buffer = makeBuffer()
-    appendSegment(buffer, { text: '│ ', token: 'fgDim', bold: false }, width)
+    appendSegment(buffer, { text: '│ ', token: 'fgDim', bold: false })
     for (let column = 0; column < widths.length; column += 1) {
-      if (column > 0) appendSegment(buffer, { text: ' │ ', token: 'fgDim', bold: false }, width)
+      if (column > 0) appendSegment(buffer, { text: ' │ ', token: 'fgDim', bold: false })
       const text = wrapped[column]?.[lineIndex] ?? ''
       appendSegment(buffer, {
         text: padDisplayEnd(text, widths[column] as number),
-        token: header ? 'accent' : 'fg',
+        token: header ? 'accentText' : 'fg',
         bold: header,
-      }, width)
+      })
     }
-    appendSegment(buffer, { text: ' │', token: 'fgDim', bold: false }, width)
+    appendSegment(buffer, { text: ' │', token: 'fgDim', bold: false })
     out.push(freezeLine(buffer, rowOffset + lineIndex, rowOffset === 0 && lineIndex === 0 ? sourceStart : -1))
   }
   return out
@@ -763,7 +685,7 @@ function gridLayoutSegments(line: TableLayoutLine): readonly InlineSegment[] {
     if (index > 0) segments.push({ text: ' │ ', token: 'fgDim', bold: false })
     segments.push({
       text: cell.text,
-      token: line.header ? 'accent' : 'fg',
+      token: line.header ? 'accentText' : 'fg',
       bold: line.header,
     })
   }
@@ -784,7 +706,7 @@ function renderRecordLayout(
   if (records.length <= 1) {
     const header = layout.header.map(cell => cell.text).join(' | ')
     for (const line of wrapDisplayLines(header, width)) {
-      appendLine([{ text: line, token: 'accent', bold: true }])
+      appendLine([{ text: line, token: 'accentText', bold: true }])
     }
     return
   }
@@ -795,13 +717,15 @@ function renderRecordLayout(
     }
     if (line.kind !== 'record' || line.key.row === 0) continue
     const keyLabel = layout.header[0]?.text ?? 'key'
-    for (const text of wrapDisplayLines(`${keyLabel}: ${line.key.text}`, width)) {
-      appendLine([{ text, token: 'accent', bold: true }])
+    const keyText = keyLabel === '' ? line.key.text : `${keyLabel}: ${line.key.text}`
+    for (const text of wrapTableCell(keyText, width)) {
+      appendLine([{ text, token: 'accentText', bold: true }])
     }
     for (const value of line.values) {
       const label = layout.header[value.column]?.text ?? `#${String(value.column + 1)}`
-      for (const text of wrapDisplayLines(`${layout.valueIndent}${label}: ${value.text}`, width)) {
-        appendLine([{ text, token: 'fg', bold: false }])
+      const indent = wcwidthSafeSlice(layout.valueIndent, Math.max(0, width - 1))
+      for (const text of wrapTableCell(`${label}: ${value.text}`, width - displayWidth(indent))) {
+        appendLine([{ text: indent + text, token: 'fg', bold: false }])
       }
     }
   }
@@ -853,7 +777,7 @@ export function createStyledMarkdownBlockRenderer(
     },
     renderRawTail(text: string, cols: number, _scope: MarkdownRenderScope): MarkdownRenderLine {
       const buffer = makeBuffer()
-      appendSegment(buffer, { text, token: 'fg', bold: false }, width)
+      appendSegment(buffer, { text, token: 'fg', bold: false })
       return {
         text: buffer.segments.map(s => s.text).join(''),
         displayWidth: cols,

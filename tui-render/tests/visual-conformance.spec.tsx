@@ -5,7 +5,7 @@
  * rhythm and the PITFALLS L1 narrow-screen full-width fallback, the
  * four-tier theme mapping with the `none` fallback, the frame bg/fg wiring
  * (every shell row painted through the bg token, body text on fg, the
- * accent bold/普通/accentDim brightness matrix on the current turn), the
+ * accent bold/普通 brightness matrix on the current turn), the
  * semantic accent/success/error SGR with A3 glyph+copy redundancy and
  * escaped user content, markdown tier mapping, and the status hint/copy.
  * Assertions target the contract (tier SGR bytes, locked copy, glyphs, row
@@ -246,13 +246,13 @@ describe('conversation column', () => {
         reasoningDurationMs: 100,
       },
       status: 'idle',
-      reasoningExpanded: false,
+      reasoningExpanded: true,
       toolCardsExpanded: false,
     })
     const lines = out.split('\n')
     expect(
       lines.findIndex(line => line.includes('answer')) -
-        lines.findIndex(line => line.includes('✻ 思考 (0.1s)')),
+        lines.findIndex(line => line.includes('deep')),
     ).toBe(2)
   })
 })
@@ -262,19 +262,19 @@ describe('theme tiers', () => {
     expect(styled('x', 'accent', 'truecolor')).toBe(
       '\x1b[38;2;77;107;254mx\x1b[0m',
     )
-    expect(styled('x', 'success', '256')).toBe('\x1b[38;5;40mx\x1b[0m')
+    expect(styled('x', 'success', '256')).toBe('\x1b[38;5;108mx\x1b[0m')
     expect(styled('x', 'error', '16')).toBe('\x1b[31mx\x1b[0m')
     expect(styled('x', 'codeBg', '16')).toBe('\x1b[40mx\x1b[0m')
     expect(styled('x', 'accent', 'none')).toBe('x')
   })
 
-  it('maps the bg/fg pair through all four tiers as the only color source', () => {
-    expect(styled('x', 'bg', 'truecolor')).toBe('\x1b[48;2;0;0;0mx\x1b[0m')
-    expect(styled('x', 'bg', '256')).toBe('\x1b[48;5;16mx\x1b[0m')
+  it('maps the base bg/fg pair through all four tiers', () => {
+    expect(styled('x', 'bg', 'truecolor')).toBe('\x1b[48;2;21;22;24mx\x1b[0m')
+    expect(styled('x', 'bg', '256')).toBe('\x1b[48;5;233mx\x1b[0m')
     expect(styled('x', 'bg', '16')).toBe('\x1b[40mx\x1b[0m')
     expect(styled('x', 'bg', 'none')).toBe('x')
     expect(styled('x', 'fg', 'truecolor')).toBe(
-      '\x1b[38;2;247;247;248mx\x1b[0m',
+      '\x1b[38;2;238;240;242mx\x1b[0m',
     )
     expect(styled('x', 'fg', '256')).toBe('\x1b[38;5;255mx\x1b[0m')
     expect(styled('x', 'fg', '16')).toBe('\x1b[37mx\x1b[0m')
@@ -300,7 +300,7 @@ describe('theme tiers', () => {
     applyTheme('16')
     const row = paintRow([styled('> ', 'fgDim'), styled('hi', 'fg')])
     expect(row).toBe(
-      '\x1b[40m\x1b[90m> \x1b[0m\x1b[0m\x1b[40m\x1b[37mhi\x1b[0m\x1b[0m',
+      '\x1b[40m\x1b[37m> \x1b[0m\x1b[0m\x1b[40m\x1b[37mhi\x1b[0m\x1b[0m',
     )
     // none: the painted row is the joined plain text (A3 readable).
     applyTheme('none')
@@ -341,8 +341,8 @@ describe('theme tiers', () => {
 
 describe('frame bg/fg wiring', () => {
   const TIER_BG: Record<string, string> = {
-    truecolor: '\x1b[48;2;0;0;0m',
-    '256': '\x1b[48;5;16m',
+    truecolor: '\x1b[48;2;21;22;24m',
+    '256': '\x1b[48;5;233m',
     '16': '\x1b[40m',
   }
 
@@ -364,7 +364,7 @@ describe('frame bg/fg wiring', () => {
     }
   })
 
-  it('centers user rows in the conversation column with fgDim marker plus fg body', () => {
+  it('centers full-width user message surfaces in the conversation column', () => {
     applyTheme('16')
     const out = renderStream({
       history: [{ kind: 'user', text: 'hello', timestamp: 1_000 }],
@@ -374,14 +374,13 @@ describe('frame bg/fg wiring', () => {
       toolCardsExpanded: false,
     })
     const line = out.split('\n').find(l => stripAnsi(l).includes('> hello'))
-    expect(stripAnsi(line ?? '').trimStart()).toBe('> hello')
+    expect(stripAnsi(line ?? '').trim()).toBe('> hello')
     const prefix = (line ?? '').slice(0, (line ?? '').indexOf('>'))
     expect(prefix).toContain('\x1b[40m')
-    expect(line).toContain('\x1b[90m> ')
-    expect(line).toContain('\x1b[37mhello')
+    expect(line).toContain('\x1b[37m> hello')
   })
 
-  it('marks the current turn with bold accent and the streaming cursor in accentDim', () => {
+  it('marks the current turn with bold accent and leaves the caret to the composer', () => {
     applyTheme('16')
     const out = renderStream({
       history: [],
@@ -397,31 +396,31 @@ describe('frame bg/fg wiring', () => {
       toolCardsExpanded: false,
     })
     expect(out).toContain('\x1b[1m\x1b[94m● \x1b[22m\x1b[37manswer')
-    expect(out).toContain('\x1b[34m▌\x1b[39m')
+    expect(stripAnsi(out)).not.toContain('▌')
   })
 })
 
 describe('markdown tier mapping', () => {
   it('maps code tokens at truecolor, 256, 16, and none', () => {
     expect(renderMarkdown('```ts\nconst x = 1\n```')).toContain(
-      '\x1b[48;2;15;17;21m',
+      '\x1b[48;2;32;35;40m',
     )
     applyTheme('256')
     expect(renderMarkdown('```ts\nconst x = 1\n```')).toContain(
-      '\x1b[48;5;233m',
+      '\x1b[48;5;235m',
     )
-    expect(renderMarkdown('a `b` c')).toContain('\x1b[48;5;233mb')
+    expect(renderMarkdown('a `b` c')).toContain('\x1b[48;5;235m\x1b[38;5;151mb')
     applyTheme('16')
     expect(renderMarkdown('```ts\nconst x = 1\n```')).toContain('\x1b[40m')
     applyTheme('none')
     expect(renderMarkdown('```ts\nconst x = 1\n```')).not.toContain('\x1b')
   })
 
-  it('marks inline links and emphasis with the accent token', () => {
+  it('separates link and emphasis colors', () => {
     expect(renderMarkdown('[docs](https://example.com)')).toContain(
-      '\x1b[38;2;77;107;254mdocs',
+      '\x1b[38;2;128;199;217mdocs',
     )
-    expect(renderMarkdown('*note*')).toContain('\x1b[38;2;77;107;254mnote')
+    expect(renderMarkdown('*note*')).toContain('\x1b[38;2;196;174;242mnote')
   })
 })
 
@@ -429,12 +428,12 @@ describe('status copy and hint', () => {
   it('keeps the locked copy and adds the fgDim hint beside generating/stopped rows', () => {
     expect(STATUS_HINT).toBe('↑↓/jk 滚动')
     expect(statusSlot('generating')).toBe(
-      '\x1b[48;2;0;0;0m\x1b[38;2;77;107;254m⏹ Ctrl+C 停止\x1b[0m\x1b[0m' +
-        '\x1b[48;2;0;0;0m · \x1b[38;2;138;143;152m↑↓/jk 滚动\x1b[0m\x1b[0m',
+      '\x1b[48;2;21;22;24m\x1b[38;2;77;107;254m⏹ Ctrl+C 停止\x1b[0m\x1b[0m' +
+        '\x1b[48;2;21;22;24m · \x1b[38;2;164;169;176m↑↓/jk 滚动\x1b[0m\x1b[0m',
     )
     expect(statusSlot('stopped')).toContain('继续生成')
     expect(statusSlot('exit-armed')).toBe(
-      '\x1b[48;2;0;0;0m\x1b[38;2;77;107;254m再按一次 Ctrl+C 退出\x1b[0m\x1b[0m',
+      '\x1b[48;2;21;22;24m\x1b[38;2;77;107;254m再按一次 Ctrl+C 退出\x1b[0m\x1b[0m',
     )
   })
 
@@ -445,13 +444,13 @@ describe('status copy and hint', () => {
         controller: stubController({ getInteraction: () => 'generating' }),
       }),
     )
-    expect(out).toContain('\x1b[48;2;15;17;21m')
+    expect(out).toContain('\x1b[48;2;35;38;43m')
     expect(out).toContain('/workspace · ⏹ Ctrl+C 停止')
     expect(out).toContain('↑↓/jk 滚动')
     expect(out).not.toContain('/ 命令')
   })
 
-  it('keeps the adaptive scroll hint plain until the final style layer', () => {
+  it('retains a compact navigation hint in the default single-row footer', () => {
     const adaptive = {
       provider: 'deepseek-official',
       model: 'deepseek-v4-flash',
@@ -481,7 +480,7 @@ describe('status copy and hint', () => {
     expect(out).toContain('/workspace · 状态 空闲')
     expect(out).toContain('provider · model · / 命令 · @ 提及')
     expect(out).toContain('输入消息')
-    expect(out).toContain('\x1b[38;2;138;143;152m')
+    expect(out).toContain('\x1b[38;2;164;169;176m')
   })
 })
 
@@ -490,6 +489,8 @@ describe('A3 escape before styling', () => {
     const rows = [{ id: 's1', title: 'evil \x1b[2J title', updatedAt: 0 }]
     const out = renderToString(
       createElement(SessionPane, {
+        columns: 80,
+        maxRows: 20,
         rows,
         selectedIndex: 0,
         currentId: undefined,

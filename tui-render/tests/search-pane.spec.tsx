@@ -50,7 +50,7 @@ describe('SearchPane', () => {
       selectedIndex: 0,
     })
     expect(out).toContain('\x1b[1m\x1b[38;2;77;107;254m› ')
-    expect(out).toContain('\x1b[38;2;138;143;152m↑↓/jk 选择 · Enter 恢复 · Esc 关闭')
+    expect(out).toContain('\x1b[38;2;164;169;176m↑↓/jk 选择 · Enter 恢复 · Esc 关闭')
   })
 
   it('escapes ANSI injected through the query and the candidates', () => {

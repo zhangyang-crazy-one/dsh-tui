@@ -15,6 +15,8 @@ import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import type { ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm'
+import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
+import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
 
@@ -99,6 +101,8 @@ export interface FrozenMessage {
   readonly stepWallMs?: number | undefined
   /** 1-based assistant-turn ordinal within the log (drives `turn {n}`). */
   readonly turnOrdinal?: number | undefined
+  /** Exact aggregate usage for every billed attempt in this completed turn. */
+  readonly turnUsage?: TurnTokenUsage | undefined
 }
 
 /** One durable compaction marker interleaved with frozen transcript rows. */
@@ -174,7 +178,7 @@ export interface ViewModel {
   activeTurn: ActiveTurn | undefined
   /** Rendering status. */
   status: 'generating' | 'stopped' | 'idle'
-  /** Whether the reasoning fold is force-expanded (Ctrl+O toggle). */
+  /** Whether complete reasoning appears in the transcript (Ctrl+O; default false). */
   reasoningExpanded: boolean
   /** Whether tool cards in the current window are expanded (Ctrl+E toggle). */
   toolCardsExpanded: boolean
@@ -297,6 +301,7 @@ export function createProjector(): Projector {
   let lastUsageOutputTokens: number | undefined
   let lastStepWallMs: number | undefined
   let assistantTurnCount = 0
+  let turnEvents: SessionEvent[] = []
   let turnContent: ProjectedTurnContent[] = []
   let stepContent: ProjectedTurnContent[] = []
   let stepToolCalls: ProjectedToolCall[] = []
@@ -381,6 +386,8 @@ export function createProjector(): Projector {
   }
 
   function push(event: SessionEvent): void {
+    if (event.type === 'turn/start') turnEvents = [event]
+    else if (activeTurn !== undefined) turnEvents.push(event)
     if (activeTurn !== undefined) turnEventAt = event.time
     switch (event.type) {
       case 'turn/start': {
@@ -499,6 +506,7 @@ export function createProjector(): Projector {
           commitStep()
           activeTurn.reason = event.data.reason
           updateActiveTurn()
+          const turnUsage = deriveTurnTokenUsage(turnEvents)
           if (turnContent.length > 0) {
             assistantTurnCount += 1
             appendHistory({
@@ -515,12 +523,14 @@ export function createProjector(): Projector {
                 ? {}
                 : { usageOutputTokens: lastUsageOutputTokens }),
               ...(lastStepWallMs === undefined ? {} : { stepWallMs: lastStepWallMs }),
+              ...(turnUsage === undefined ? {} : { turnUsage }),
               turnOrdinal: assistantTurnCount,
             })
           }
           activeTurn = undefined
           lastUsageOutputTokens = undefined
           lastStepWallMs = undefined
+          turnEvents = []
         }
         status = 'idle'
         return

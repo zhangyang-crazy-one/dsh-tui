@@ -147,9 +147,13 @@ describe('command directory', () => {
       'help',
       'model',
       'permission',
+      'reasoning',
       'reload',
       'resume',
+      'scrollbar',
       'settings',
+      'status',
+      'tools',
     ])
     expect(controller.commands.find(command => command.name === 'compact')).toEqual({
       name: 'compact',

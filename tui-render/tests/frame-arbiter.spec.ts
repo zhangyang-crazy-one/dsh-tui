@@ -136,6 +136,29 @@ describe('createFrameArbiter defaults and wiring', () => {
 })
 
 describe('createFrameArbiter publish gating', () => {
+  it('publishes every shared-clock scroll step including the final target before becoming idle', () => {
+    vi.useFakeTimers({ now: 0 })
+    const scroll = createScrollScheduler({ autoSchedule: false })
+    const stream = createStreamQueue<TestRow>()
+    const arbiter = createFrameArbiter({ scroll, stream, drivesScrollScheduler: true, demandDriven: true })
+    const positions: number[] = []
+    arbiter.onPublish(snapshot => positions.push(snapshot.scroll.presented))
+    try {
+      scroll.setTarget(3)
+      arbiter.requestScroll()
+      vi.advanceTimersByTime(ONE_FRAME * 3)
+      expect(positions).toEqual([1, 2, 3])
+      expect(arbiter.isRunning()).toBe(false)
+      scroll.setTarget(0)
+      arbiter.requestScroll()
+      vi.advanceTimersByTime(ONE_FRAME * 3)
+      expect(positions).toEqual([1, 2, 3, 2, 1, 0])
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      arbiter.dispose()
+    }
+  })
+
   it('publishes no snapshot when nothing is pending and no work is available', () => {
     const { arbiter, publishes } = fixture()
     vi.advanceTimersByTime(ONE_FRAME * 5)
@@ -477,6 +500,39 @@ describe('createFrameArbiter cooperation with scroll-scheduler and stream-queue'
     stream.push([row(1), row(2), row(3), row(4), row(5)], 0)
     vi.advanceTimersByTime(ONE_FRAME)
     expect(snapshots).toHaveLength(1)
+    arbiter.dispose()
+    scroll.dispose()
+  })
+
+  it('demand-driven arbiter starts timer on request and stops when idle', () => {
+    vi.useFakeTimers({ now: 0 })
+    const scroll = createScrollScheduler({ frameIntervalMs: ONE_FRAME })
+    const stream = createStreamQueue<TestRow>({ smoothRowsPerFrame: 2 })
+    const arbiter = createFrameArbiter<TestRow>({
+      scroll,
+      stream,
+      demandDriven: true,
+      frameIntervalMs: ONE_FRAME,
+    })
+    // Initially idle: timer is NOT running
+    expect(arbiter.isRunning()).toBe(false)
+    expect(arbiter.isScrollActive()).toBe(false)
+
+    // Calling requestScroll starts the timer and activates scroll activity
+    arbiter.requestScroll()
+    expect(arbiter.isRunning()).toBe(true)
+    expect(arbiter.isScrollActive()).toBe(true)
+
+    // Advancing one frame publishes and clears pending request; with no more work, timer stops
+    vi.advanceTimersByTime(ONE_FRAME)
+    expect(arbiter.isRunning()).toBe(false)
+
+    // Requesting stream also starts the timer
+    arbiter.requestStream()
+    expect(arbiter.isRunning()).toBe(true)
+    vi.advanceTimersByTime(ONE_FRAME)
+    expect(arbiter.isRunning()).toBe(false)
+
     arbiter.dispose()
     scroll.dispose()
   })

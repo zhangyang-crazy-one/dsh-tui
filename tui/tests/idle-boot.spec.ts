@@ -204,3 +204,50 @@ describe('zero-arg idle boot', () => {
     await ctx.fiber.dispose()
   })
 })
+
+/**
+ * Transactional rollback when the synchronous dispatch chain throws: the
+ * controller owns the failure path so the renderer never has to defend against
+ * `generating + empty inbox` half-state. The fixture wires the scripted
+ * followup to throw on the next call, exercising the real
+ * `RuntimeController.dispatch → submitComposer → submitDraft → reduce →
+ * agentHandle.followup → agent.send → inbox.splice → session.append` path.
+ */
+describe('RuntimeController transactional send rollback', () => {
+  it('rolls back machine, surfaces feedback, logs the diagnostic, and accepts the next send', async () => {
+    const { ctx, controller: ctrl, followup } = await bench('')
+    const warn = vi.spyOn(ctx.logger, 'warn')
+    await ctrl.start()
+    // Pre-script the agent's followup to throw on the first call, then
+    // recover so the next send reaches the scripted agent. Mirrors the real
+    // inbox splice / session append reentry or duplicate-message rejection
+    // the user hit in the field.
+    followup.mockImplementationOnce(() => {
+      throw new Error('session append cannot reenter while another append is being published')
+    })
+    followup.mockImplementationOnce(() => {})
+    // Drive the failure through the public dispatch seam.
+    expect(() => {
+      ctrl.dispatch({ kind: 'send', text: '你好' })
+    }).not.toThrow()
+    // Machine rolls back to its pre-call state, never lands in
+    // `generating + empty inbox`.
+    expect(ctrl.getInteraction()).toBe('idle')
+    // The status-row feedback reaches the user through the typed dictionary
+    // path; the diagnostic stays in the logger.
+    expect(ctrl.getFeedback()).toMatch(/发送/)
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('session append cannot reenter'),
+    )
+    // The user-visible feedback never leaks the underlying message id or
+    // absolute session path.
+    expect(ctrl.getFeedback()).not.toMatch(/msg-[0-9a-f-]+/)
+    expect(ctrl.getFeedback()).not.toContain('/session/')
+    // The very next send goes through end-to-end.
+    ctrl.dispatch({ kind: 'send', text: '重试' })
+    expect(followup).toHaveBeenCalledTimes(2)
+    expect(textOf(followup.mock.calls[1]![0] as UserMessage)).toBe('重试')
+    expect(ctrl.getInteraction()).toBe('generating')
+    await ctx.fiber.dispose()
+  })
+})

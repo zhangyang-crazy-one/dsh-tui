@@ -187,6 +187,33 @@ describe('createScrollScheduler snap commands', () => {
 })
 
 describe('createScrollScheduler distance-adaptive catch-up', () => {
+  it('finishes a burst at catch-up speed without a one-row tail', () => {
+    const scheduler = start()
+    scheduler.setTarget(12)
+    vi.advanceTimersByTime(FRAME_MS)
+    expect(scheduler.getPresented()).toBe(8)
+    vi.advanceTimersByTime(FRAME_MS)
+    expect(scheduler.getPresented()).toBe(12)
+    expect(scheduler.isAnimating()).toBe(false)
+    scheduler.setTarget(11)
+    expect(scheduler.tick()).toBe(11)
+    scheduler.dispose()
+  })
+
+  it('recomputes pacing for a replacement target and retains it across rebasing', () => {
+    const scheduler = createScrollScheduler({ autoSchedule: false })
+    scheduler.setTarget(12)
+    expect(scheduler.tick()).toBe(8)
+    scheduler.rebase(100, 200)
+    expect(scheduler.tick()).toBe(112)
+    scheduler.setTarget(140)
+    expect(scheduler.tick()).toBe(120)
+    scheduler.setTarget(118)
+    expect(scheduler.tick()).toBe(119)
+    expect(scheduler.tick()).toBe(118)
+    scheduler.dispose()
+  })
+
   it('uses stepPerFrame inside the smooth band', () => {
     vi.useFakeTimers()
     const scheduler = createScrollScheduler({

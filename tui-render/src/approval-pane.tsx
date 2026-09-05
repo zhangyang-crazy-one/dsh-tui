@@ -10,10 +10,8 @@ import type { ReactNode } from 'react'
 import { escapeContent } from './content.ts'
 import { paintRow, styled } from './theme.ts'
 
-/** Exact composer-slot heading (bold fg, never accent). */
-const TITLE = '等待审批'
-/** Exact key footnote; also carries the CTA words 允许一次 / 拒绝 / 详情. */
-const FOOTNOTE = 'y 允许一次 · n 拒绝 · i 详情'
+/** Exact key footnote; also carries the CTA words 允许 / 拒绝 / 本会话总是. */
+const PROMPT_OPTIONS = '[Y] 允许 · [n] 拒绝 · [a] 本会话总是'
 /** Next-step copy after a delivery failure (S5: ✗ with Chinese). */
 const DELIVERY_NEXT = '当前工具未执行 · 可重试该轮'
 
@@ -64,6 +62,7 @@ export const EMPTY_APPROVAL_PANE: ApprovalPaneState = {
  * @returns the unescaped extra line, or undefined when the reason stands alone.
  */
 function extraArgumentLine(raw: string): string | undefined {
+  if (raw.trim() === '') return undefined
   try {
     const parsed: unknown = JSON.parse(raw)
     if (
@@ -101,8 +100,8 @@ function line(
 }
 
 /**
- * The approval dialog: heading, tool name, optional details or delivery
- * failure, and the y/n/i footnote. Does not call `ctx.approval`.
+ * The approval strip: inline question, tool/command name, single-key action prompt,
+ * and optional expandable details or delivery failure.
  * @param props - pending request fields and detail/delivery flags.
  * @returns the element tree.
  */
@@ -113,26 +112,35 @@ export function ApprovalPane({
   detailsOpen,
   deliveryError,
 }: ApprovalPaneProps): ReactNode {
-  const extra =
-    detailsOpen && deliveryError === undefined
-      ? extraArgumentLine(rawArguments)
-      : undefined
+  const extra = extraArgumentLine(rawArguments)
+  const escapedTool = escapeContent(toolName)
+  const escapedExtra = extra !== undefined ? escapeContent(extra) : undefined
+  const target = escapedExtra !== undefined ? `${escapedTool} "${escapedExtra}"` : escapedTool
+
   return (
     <Box flexDirection="column" width="100%">
-      {line(TITLE, 'fg', true)}
-      {line(toolName, 'fg')}
       {deliveryError !== undefined ? (
         <Box flexDirection="column" width="100%">
           {line(`✗ 审批未能送达：${deliveryError}`, 'error')}
           {line(DELIVERY_NEXT, 'fgDim')}
         </Box>
-      ) : detailsOpen ? (
+      ) : (
         <Box flexDirection="column" width="100%">
-          {line(reason, 'fg')}
-          {extra !== undefined ? line(extra, 'fg') : null}
+          <Text>
+            {paintRow([
+              styled(`允许执行 ${target} 吗？ `, 'fg', undefined, true),
+              styled(PROMPT_OPTIONS, 'fgDim'),
+              ...(detailsOpen ? [styled(' · [i] 收起', 'fgDim')] : [styled(' · [i] 详情', 'fgDim')]),
+            ])}
+          </Text>
+          {detailsOpen ? (
+            <Box flexDirection="column" width="100%">
+              {reason !== '' ? line(reason, 'fg') : null}
+              {extra !== undefined ? line(extra, 'fg') : null}
+            </Box>
+          ) : null}
         </Box>
-      ) : null}
-      {line(FOOTNOTE, 'fgDim')}
+      )}
     </Box>
   )
 }

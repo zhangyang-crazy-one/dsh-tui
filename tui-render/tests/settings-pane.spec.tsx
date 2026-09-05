@@ -272,7 +272,7 @@ describe('TuiLoop settings overlay', () => {
     )
     expect(out).toContain('设置')
     expect(out).toContain('Enter 应用 · Esc 取消')
-    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
+    expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
     expect(out).not.toContain('有什么可以帮忙的')
   })
 })

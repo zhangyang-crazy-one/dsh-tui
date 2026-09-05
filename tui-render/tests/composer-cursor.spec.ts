@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   composerCursorPosition,
   composerFrameAnchor,
+  composerLineWindow,
   clampCaretIndex,
   moveCaretByGrapheme,
 } from '../src/composer-cursor.ts'
@@ -97,6 +98,17 @@ describe('moveCaretByGrapheme', () => {
 })
 
 describe('composerFrameAnchor', () => {
+  it('keeps long mixed-width drafts and the current caret visible without changing source', () => {
+    const source = `${'中'.repeat(80)} DRAFT_END`
+    const end = composerLineWindow(source, source.length, 108)
+    expect(end.hiddenPrefix).toBe(true)
+    expect(end.text).toContain('DRAFT_END')
+    expect(end.caretColumn).toBe(107)
+    expect(composerLineWindow(source, 0, 108)).toMatchObject({ hiddenPrefix: false, startColumn: 0, caretColumn: 0 })
+    const emoji = composerLineWindow('abcd👩‍💻中XYZ', 12, 8)
+    expect(emoji.text).not.toMatch(/^[\u200d\ufe0f]/u)
+    expect(source).toHaveLength(90)
+  })
   const viewport = { promptWidth: 2, columns: 80, rows: 24 }
 
   it('keeps a fullscreen single-line caret on the last output row', () => {

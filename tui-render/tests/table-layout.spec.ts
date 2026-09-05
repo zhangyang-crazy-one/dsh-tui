@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { displayWidth } from '../src/content.ts'
+import { PRESET_TABLE_CELLS } from './fixtures/preset-table.ts'
+import { TABLE_BENCHMARK_CASES } from './fixtures/table-benchmark.ts'
+import { renderStreamingTableCells, renderTableCells, type StreamingTableRenderCache } from '../src/markdown-render.ts'
 import {
   appendedRowsPreserveTableMetrics,
   classifyColumns,
@@ -7,14 +10,34 @@ import {
   DEFAULT_NARRATIVE_MIN,
   DEFAULT_TOKEN_HEAVY_MIN,
   layoutTableCells,
+  wrapTableCell,
   type TableColumnCategory,
   type TableLayout,
 } from '../src/table-layout.ts'
 
+describe('wrapTableCell', () => {
+  it('keeps fitting identifiers whole next to Chinese prose', () => {
+    expect(wrapTableCell('一次性 bash/pwsh', 9)).toEqual(['一次性', 'bash/pwsh'])
+    expect(wrapTableCell('= standard + tool-cordis', 11)).toEqual(['= standard', '+', 'tool-cordis'])
+  })
+
+  it.each([5, 12, 24])('preserves non-whitespace content and explicit lines within %i display columns', (width) => {
+    const source = '默认编码 agent\nincludeRuntimeContext: false 🐟'
+    const lines = wrapTableCell(source, width)
+    expect(lines.join('').replace(/\s/gu, '')).toBe(source.replace(/\s/gu, ''))
+    expect(lines.every(line => displayWidth(line) <= width)).toBe(true)
+    expect(wrapTableCell('alpha\n\nbeta', width)).toEqual(['alpha', '', 'beta'])
+  })
+
+  it('preserves explicit lines without a positive column budget', () => {
+    expect(wrapTableCell('alpha\nbeta', 0)).toEqual(['alpha', 'beta'])
+  })
+})
+
 describe('appendedRowsPreserveTableMetrics', () => {
   const metrics = [
-    { category: 'compact' as const, natural: 6, minimum: 6 },
-    { category: 'narrative' as const, natural: 20, minimum: 8 },
+    { category: 'compact' as const, natural: 6, minimum: 6, wrapWidths: [4, 6], lineWidthsByRow: [[4], [6]] },
+    { category: 'narrative' as const, natural: 20, minimum: 8, wrapWidths: [9, 20], lineWidthsByRow: [[9], [20]] },
   ]
 
   it('accepts appended cells that cannot change the existing plan', () => {
@@ -89,6 +112,73 @@ describe('classifyColumns', () => {
 })
 
 describe('layoutTableCells', () => {
+  it('records the width matrix and preserves every row through streaming and settled rendering', async () => {
+    const evidence = []
+    for (const [name, cells] of Object.entries(TABLE_BENCHMARK_CASES)) {
+      for (const columns of [80, 112, 140, 200]) {
+        const width = columns - 8
+        const layout = layoutTableCells(cells, { maxCols: width })
+        let cache: StreamingTableRenderCache | undefined
+        for (let count = 1; count <= cells.length; count += 1) {
+          const committed = cells.slice(0, count)
+          const current = renderStreamingTableCells(committed, cells[count], width, 0, 0, cache)
+          cache = current.cache
+          const expected = renderTableCells(cells.slice(0, count + 1), width, 0, 0)
+          expect(current.lines.map(line => line.text)).toEqual(expected.map(line => line.text))
+        }
+        const lines = renderTableCells(cells, width, 0, 0).map(line => line.text)
+        expect(lines.every(line => displayWidth(line) <= width)).toBe(true)
+        if (name === 'status' && layout.kind === 'grid') expect(layout.widths[1]).toBe(2)
+        for (const [rowIndex, row] of cells.entries()) {
+          for (const [column, cell] of row.entries()) {
+            const visible = layout.kind === 'grid'
+              ? layout.lines.flatMap(line => line.kind === 'row' && line.cells[column]?.row === rowIndex
+                ? [line.cells[column]?.text ?? ''] : []).join('')
+              : lines.join('')
+            expect(visible.replace(/\s/gu, '')).toContain(cell.replace(/\s/gu, ''))
+          }
+        }
+        evidence.push({ name, columns, kind: layout.kind,
+          widths: layout.kind === 'grid' ? layout.widths : [], rows: lines.length, lines })
+      }
+    }
+    await expect(`${JSON.stringify(evidence, null, 2)}\n`).toMatchFileSnapshot('./fixtures/table-width-matrix.expected.json')
+  })
+
+  it('allocates columns by wrapping benefit when one oversized id competes with several descriptions', () => {
+    const layout = layoutTableCells(TABLE_BENCHMARK_CASES.identifiers, { maxCols: 104 })
+    expect(layout.kind).toBe('grid')
+    if (layout.kind !== 'grid') return
+    expect(layout.widths[1]).toBeGreaterThan(layout.widths[0]!)
+    expect(layout.widths[2]).toBe(2)
+    expect(layout.lines.filter(line => line.kind === 'row' && !line.header).length).toBeLessThan(6)
+  })
+
+  it('separates multiline records while keeping single-line records compact and top-aligned', () => {
+    const cells = [['key', 'value'], ['first', 'one\ntwo'], ['second', 'short'], ['third', 'short']]
+    const layout = layoutTableCells(cells, { maxCols: 80 })
+    expect(layout.kind).toBe('grid')
+    if (layout.kind !== 'grid') return
+    expect(layout.lines.filter(line => line.kind === 'rule')).toHaveLength(4)
+    const first = layout.lines.filter(line => line.kind === 'row' && line.cells[0]?.row === 1)
+    expect(first).toHaveLength(2)
+    expect(first.map(line => line.kind === 'row' ? line.cells.map(cell => cell.text.trim()) : [])).toEqual([
+      ['first', 'one'], ['', 'two'],
+    ])
+  })
+
+  it('shares constrained width across a preset comparison without starving identifier columns', () => {
+    const layout = layoutTableCells(PRESET_TABLE_CELLS, { maxCols: 104 })
+    expect(layout.kind).toBe('grid')
+    if (layout.kind !== 'grid') return
+    expect(layout.widths[1]).toBeGreaterThanOrEqual(displayWidth('bash/pwsh'))
+    expect(layout.widths[4]).toBeGreaterThanOrEqual(displayWidth('tool-cordis'))
+    expect(Math.max(...layout.widths) - Math.min(...layout.widths)).toBeLessThanOrEqual(10)
+    const standardShell = layout.lines.flatMap(line => line.kind === 'row' && line.cells[0]?.row === 3
+      ? [line.cells[1]?.text.trim() ?? ''] : [])
+    expect(standardShell.some(line => line.includes('bash/pwsh'))).toBe(true)
+  })
+
   it('returns a grid layout with natural widths when the table fits', () => {
     const cells = [
       ['name', 'status'],
@@ -147,7 +237,7 @@ describe('layoutTableCells', () => {
     }
   })
 
-  it('shrinks token-heavy columns before narrative columns under tight budgets', () => {
+  it('shrinks wide identifier and narrative columns under tight budgets', () => {
     const cells = [
       ['a', 'this is a longer narrative description', 'https://very-long-example.com/path/to/resource'],
       ['b', 'more narrative content', 'https://another-long-url.example.com/foo'],
@@ -191,7 +281,7 @@ describe('layoutTableCells', () => {
     const tokenIndex = categories.indexOf('token-heavy')
     // Narrative and token-heavy minima honor the configured floors.
     expect(layout.columns[narrativeIndex]?.minimum).toBeGreaterThanOrEqual(6)
-    expect(layout.columns[tokenIndex]?.minimum).toBe(10)
+    expect(layout.columns[tokenIndex]?.minimum).toBe(displayWidth('https://x.com/long/path'))
   })
 
   it('falls back to records when even minimum widths cannot be honored', () => {
@@ -407,10 +497,7 @@ describe('layoutTableCells edge cases', () => {
     }
   })
 
-  it('selects the widest column when multiple candidates in the same priority category can shrink', () => {
-    // Three narrative columns: the first is moderate, the second is wide,
-    // and the third is also wide. The shrink loop must pick the widest of
-    // the equal-priority candidates each pass.
+  it('selects the widest eligible column while preserving readable minima', () => {
     const cells = [
       ['aaa bbb ccc', 'narrative column one is here', 'another wide narrative text'],
       ['xxx yyy zzz', 'tiny', 'tiny'],

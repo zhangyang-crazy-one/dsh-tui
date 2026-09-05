@@ -68,7 +68,7 @@ describe('TimelineView', () => {
     ])
     expect(out).toContain('\x1b[38;2;77;107;254mnewest')
     expect(out).not.toContain('\x1b[38;2;77;107;254molder')
-    expect(out).toContain('\x1b[38;2;138;143;152m↑↓/jk 滚动 · Esc 关闭')
+    expect(out).toContain('\x1b[38;2;164;169;176m↑↓/jk 滚动 · Esc 关闭')
   })
 
   it('leaves the newest message unstyled when scrolled away from the tail', () => {

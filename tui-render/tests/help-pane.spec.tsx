@@ -38,7 +38,7 @@ describe('HelpPane', () => {
     expect(out).toContain('Ctrl+E 工具卡 · y/n 审批 · /permission')
     expect(out).toContain('g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流')
     expect(out).toContain('/plan 计划 · /goal 目标 · /compact 压缩')
-    expect(out).toContain('\x1b[38;2;138;143;152m↑↓/jk 滚动 · Esc/Enter 关闭')
+    expect(out).toContain('\x1b[38;2;164;169;176m↑↓/jk 滚动 · Esc/Enter 关闭')
   })
 
   it('escapes ANSI injected through command metadata', () => {

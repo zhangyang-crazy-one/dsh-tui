@@ -44,8 +44,12 @@ export function paintLineFromRenderLine(
       parts.push(styledText)
     }
   }
-  if (line.background === 'codeBg') {
-    return paintBackgroundRow(parts, 'codeBg', Math.max(line.displayWidth, 1))
+  if (line.background !== undefined && line.background !== 'bg') {
+    return paintBackgroundRow(
+      parts,
+      line.background,
+      line.backgroundColumns ?? Math.max(line.displayWidth, 1),
+    )
   }
   return paintRow(parts)
 }

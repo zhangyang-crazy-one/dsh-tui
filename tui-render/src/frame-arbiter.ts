@@ -55,6 +55,8 @@ export interface FrameArbiterOptions<T> {
   readonly ownsScrollScheduler?: boolean
   /** Call the injected scheduler's `tick()` on this shared frame clock. */
   readonly drivesScrollScheduler?: boolean
+  /** When true, the shared frame timer only runs when requests or animations are pending. */
+  readonly demandDriven?: boolean
   /** Optional `setInterval` injection for deterministic tests; defaults to the Node global. */
   readonly setInterval?: typeof setInterval
   /** Optional `clearInterval` injection for deterministic tests; defaults to the Node global. */
@@ -121,6 +123,8 @@ export interface FrameArbiter<T> {
   isRunning(): boolean
   /** Whether at least one request flag (`stream` or `scroll`) is pending in the current frame. */
   hasPendingRequest(): boolean
+  /** Whether scroll motion or recent scroll requests are active. */
+  isScrollActive(): boolean
   /**
    * Release the internal frame timer, drop every listener, and (when
    * the scheduler is owned) also dispose the injected scroll scheduler.
@@ -142,6 +146,7 @@ export function createFrameArbiter<T>(
     ?? FRAME_ARBITER_DEFAULT_FRAME_INTERVAL_MS
   const ownsScrollScheduler = options.ownsScrollScheduler ?? true
   const drivesScrollScheduler = options.drivesScrollScheduler ?? false
+  const demandDriven = options.demandDriven ?? false
   const setIntervalFn = options.setInterval ?? setInterval
   const clearIntervalFn = options.clearInterval ?? clearInterval
   const nowFn = options.now ?? Date.now
@@ -153,7 +158,14 @@ export function createFrameArbiter<T>(
   let timer: ReturnType<typeof setInterval> | undefined
   let pendingStream = false
   let pendingScroll = false
+  let lastPresented = scroll.getPresented()
+  let lastScrollActivityMs = -Infinity
   let disposed = false
+
+  function ensureTimer(): void {
+    if (disposed || timer !== undefined) return
+    timer = setIntervalFn(tickFrame, frameIntervalMs)
+  }
 
   /**
    * Read the scroll subsystem's current state. The injected scheduler
@@ -188,7 +200,12 @@ export function createFrameArbiter<T>(
     }
     const streamRows = stream.tick(nowMs)
     const scrollState = readScrollState()
-    const naturalWork = streamRows.length > 0 || scrollState.isAnimating
+    const scrollMoved = scrollState.presented !== lastPresented
+    lastPresented = scrollState.presented
+    if (scrollMoved || scrollState.isAnimating || pendingScroll) {
+      lastScrollActivityMs = nowMs
+    }
+    const naturalWork = streamRows.length > 0 || scrollMoved || scrollState.isAnimating
     const shouldPublish = pendingStream || pendingScroll || naturalWork
     if (shouldPublish) {
       publish({
@@ -200,6 +217,14 @@ export function createFrameArbiter<T>(
     }
     pendingStream = false
     pendingScroll = false
+
+    if (demandDriven) {
+      const busy = scrollState.isAnimating || stream.getStats(nowMs).depth > 0
+      if (!busy && timer !== undefined) {
+        clearIntervalFn(timer)
+        timer = undefined
+      }
+    }
   }
 
   /**
@@ -210,11 +235,9 @@ export function createFrameArbiter<T>(
     for (const listener of listeners) listener(snapshot)
   }
 
-  // Start the shared frame clock eagerly so subscribers join an already
-  // running loop. The dispose path still owns this timer via the
-  // `ownsScrollScheduler` argument only controlling whether the injected
-  // scroll scheduler's lifecycle is co-owned.
-  timer = setIntervalFn(tickFrame, frameIntervalMs)
+  if (!demandDriven) {
+    timer = setIntervalFn(tickFrame, frameIntervalMs)
+  }
 
   return {
     onPublish(listener) {
@@ -230,14 +253,22 @@ export function createFrameArbiter<T>(
     requestStream() {
       if (disposed) return
       pendingStream = true
+      if (demandDriven) ensureTimer()
     },
     requestScroll() {
       if (disposed) return
       pendingScroll = true
+      lastScrollActivityMs = nowFn()
+      if (demandDriven) ensureTimer()
     },
     getScrollState: readScrollState,
     isRunning: () => timer !== undefined,
     hasPendingRequest: () => pendingStream || pendingScroll,
+    isScrollActive: () => {
+      if (disposed) return false
+      const scrollState = readScrollState()
+      return pendingScroll || scrollState.isAnimating || (nowFn() - lastScrollActivityMs < 150)
+    },
     dispose() {
       // Always clear the frame timer first so subsequent calls also
       // exercise the no-timer branch. The `disposed` early-return then

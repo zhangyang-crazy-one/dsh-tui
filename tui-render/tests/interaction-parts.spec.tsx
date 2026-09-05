@@ -163,11 +163,11 @@ describe('palette selected rows', () => {
       }),
     )
     expect(out).toContain('\x1b[38;2;77;107;254m› ')
-    expect(out).toContain('\x1b[38;2;247;247;248m/compact')
+    expect(out).toContain('\x1b[38;2;238;240;242m/compact')
     expect(out).not.toContain('\x1b[38;2;77;107;254m› /compact')
     expect(out).toContain('/permission')
     expect(out).toContain('/model')
-    expect(out).toContain('\x1b[38;2;138;143;152mCompact older conversation history')
+    expect(out).toContain('\x1b[38;2;164;169;176mCompact older conversation history')
     expect(out).not.toContain(' — ')
   })
 

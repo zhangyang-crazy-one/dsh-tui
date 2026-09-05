@@ -36,6 +36,7 @@ import { gfm } from 'micromark-extension-gfm'
 import type { Root, RootContent } from 'mdast'
 import { displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import { parseMarkdownSource, trimPartialClosingFence } from './markdown-parse.ts'
+import type { BackgroundToken } from './theme.ts'
 
 /**
  * Default cache size for stable-block records. Sized to match the
@@ -106,7 +107,9 @@ export interface MarkdownRenderLine {
   /** Whether this row is a streaming raw tail (no mdast node owns it). */
   readonly rawTail: boolean
   /** Background token; `undefined` means use the frame `bg`. */
-  readonly background?: 'bg' | 'codeBg' | undefined
+  readonly background?: BackgroundToken | undefined
+  /** Cell width painted through `background`; defaults to `displayWidth`. */
+  readonly backgroundColumns?: number | undefined
 }
 
 /** One inline style span inside a {@link MarkdownRenderLine}. */
@@ -126,12 +129,24 @@ export interface MarkdownRenderSpan {
 /** Theme tokens the default renderer emits; see {@link ./theme.ts}. */
 export type MarkdownStyleToken =
   | 'fg'
+  | 'fgSoft'
   | 'fgDim'
   | 'accent'
+  | 'accentText'
   | 'accentDim'
   | 'success'
+  | 'warning'
   | 'error'
+  | 'line'
   | 'codeBg'
+  | 'codeKeyword'
+  | 'codeString'
+  | 'codeComment'
+  | 'codeCommand'
+  | 'markdownStrong'
+  | 'markdownEmphasis'
+  | 'markdownCode'
+  | 'markdownLink'
 
 /** All inputs that change the rendered physical rows. */
 export interface MarkdownRenderScope {

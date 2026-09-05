@@ -41,6 +41,103 @@ export interface ToolCardModel {
   resultView?: ToolCardResultView | undefined
 }
 
+/** Card fields used by the collapsed-row formatter. */
+type CollapsedToolCard = Pick<
+  ToolCardModel,
+  'name' | 'arguments' | 'status' | 'resultText' | 'error' | 'callView' | 'resultView'
+>
+
+/**
+ * Derive the status users see. A terminal presenter reports a failed process
+ * through a nonzero exit code or signal even when the tool pipeline itself
+ * returned a valid result object.
+ * @param card - card status and optional specialized result view.
+ * @returns the semantic status used by collapsed and expanded cards.
+ */
+export function toolCardDisplayStatus(
+  card: Pick<CollapsedToolCard, 'status' | 'resultView'>,
+): ToolCardStatus {
+  const terminal = card.resultView?.card === 'terminal' ? card.resultView : undefined
+  if (terminal?.signal !== undefined) return 'error'
+  if (terminal?.exitCode !== undefined && terminal.exitCode !== 0) return 'error'
+  return card.status
+}
+
+/** Last non-empty logical line, escaped for one collapsed terminal row. */
+function collapsedResultTail(text: string | undefined): string | undefined {
+  if (text === undefined) return undefined
+  const line = text.split(/\r?\n/u).map(item => item.trim()).filter(Boolean).at(-1)
+  return line === undefined ? undefined : escapeContent(line)
+}
+
+/** Failure identity and result detail shown before any call-argument fallback. */
+function collapsedFailureSummary(card: CollapsedToolCard): string | undefined {
+  const terminal = card.resultView?.card === 'terminal' ? card.resultView : undefined
+  const identity = terminal?.exitCode !== undefined
+    ? `exitCode ${String(terminal.exitCode)}`
+    : terminal?.signal !== undefined
+      ? `signal ${terminal.signal}`
+      : card.error?.code
+  const detail = collapsedResultTail(terminal?.output ?? card.resultText)
+  if (identity === undefined) return detail
+  return detail === undefined || detail === identity ? identity : `${identity} · ${detail}`
+}
+
+/**
+ * One collapsed card summary. Failed cards prefer their durable failure
+ * identity and final result line so the row explains the failure without an
+ * expansion; other cards use their presenter-specific result or call summary.
+ * @param card - paired tool call/result plus optional presenter views.
+ * @returns escaped single-line summary, or undefined when no detail exists.
+ */
+export function collapsedToolCardSummary(card: CollapsedToolCard): string | undefined {
+  if (toolCardDisplayStatus(card) === 'error') {
+    const failure = collapsedFailureSummary(card)
+    if (failure !== undefined) return failure
+  }
+  const result = card.resultView
+  const kind = result?.card ?? card.callView?.card ?? 'generic'
+  switch (kind) {
+    case 'terminal':
+      if (result?.card === 'terminal' && result.exitCode !== undefined) {
+        return `exitCode ${String(result.exitCode)}`
+      }
+      if (result?.card === 'terminal' && result.signal !== undefined) {
+        return `signal ${result.signal}`
+      }
+      if (result?.card === 'terminal' && result.output !== undefined && result.output !== '') {
+        return escapeContent(result.output.replace(/\n/g, ' '))
+      }
+      return card.callView?.card === 'terminal' && card.callView.cwd !== undefined
+        ? escapeContent(card.callView.cwd)
+        : undefined
+    case 'diff': {
+      const paths = card.callView?.card === 'diff'
+        ? (card.callView.locations ?? card.callView.diffs.map(diff => ({ path: diff.path })))
+        : (result as Extract<ToolCardResultView, { card: 'diff' }>).diffs
+          .map(diff => ({ path: diff.path }))
+      return paths.length === 0
+        ? undefined
+        : escapeContent(paths.map(entry => entry.path).join(' · '))
+    }
+    case 'search':
+      return result?.card === 'search' ? `${String(result.total)} matches` : undefined
+    case 'read':
+      return result?.card === 'read' ? escapeContent(result.path) : undefined
+    case 'web':
+      if (result?.card !== 'web') return undefined
+      if (result.kind === 'fetch') {
+        return escapeContent(`${result.url} · ${String(result.statusCode)}`)
+      }
+      if (result.sources.length === 0) return undefined
+      return escapeContent(result.sources.length === 1
+        ? (result.sources[0]?.title ?? result.sources[0]?.url as string)
+        : `${String(result.sources.length)} sources`)
+    default:
+      return card.callView === undefined ? collapsedCardSummary(card.arguments) : undefined
+  }
+}
+
 /**
  * Structural projections of the dsh-tools presentation views the cards read,
  * declared here so this package keeps its no-dsh-tools stance (the registry
@@ -338,4 +435,74 @@ export function fileUrlFromToolArguments(argumentsJson: string): string | undefi
     // JSON.parse throws SyntaxError on invalid JSON; there is no path to wrap.
   }
   return undefined
+}
+
+/** Tokenized segment of a shell command heading. */
+export interface CommandHeadingToken {
+  readonly text: string
+  readonly token: 'fgSoft' | 'fgDim' | 'codeCommand' | 'codeKeyword'
+}
+
+/**
+ * Tokenize a command heading for expanded terminal cards. Highlights the
+ * command name (first whitespace-delimited token) with `codeCommand`.
+ * @param heading - escaped heading string.
+ * @returns tokenized segments with theme tokens.
+ */
+export function tokenizeCommandHeading(heading: string): readonly CommandHeadingToken[] {
+  const trimmed = heading.trimStart()
+  const leading = heading.slice(0, heading.length - trimmed.length)
+  const firstSpace = trimmed.indexOf(' ')
+  const cmd = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace)
+  const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace)
+  const tokens: CommandHeadingToken[] = []
+  if (leading !== '') tokens.push({ text: leading, token: 'fgSoft' })
+  if (cmd !== '') tokens.push({ text: cmd, token: 'codeCommand' })
+  if (rest !== '') tokens.push({ text: rest, token: 'fgSoft' })
+  return Object.freeze(tokens)
+}
+
+/**
+ * Tokenize a tool card heading for collapsed or expanded display.
+ * Highlights:
+ * - The action/tool name (first whitespace-delimited token) with `codeCommand`.
+ * - Parameter connectors (` in `) with `fgDim`.
+ * - File paths or filter patterns (after ` in ` or after file ops) with `codeKeyword`.
+ * - Regular command/query text with `fgSoft`.
+ * @param heading - escaped heading string.
+ * @returns tokenized segments with theme tokens.
+ */
+export function tokenizeToolHeading(heading: string): readonly CommandHeadingToken[] {
+  const trimmed = heading.trimStart()
+  const leading = heading.slice(0, heading.length - trimmed.length)
+  const tokens: CommandHeadingToken[] = []
+  if (leading !== '') tokens.push({ text: leading, token: 'fgSoft' })
+
+  const firstSpace = trimmed.indexOf(' ')
+  const tool = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace)
+  const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace)
+
+  if (tool !== '') {
+    tokens.push({ text: tool, token: 'codeCommand' })
+  }
+
+  if (rest !== '') {
+    const inIndex = rest.indexOf(' in ')
+    if (inIndex !== -1) {
+      const param = rest.slice(0, inIndex)
+      const afterIn = rest.slice(inIndex + 4)
+      if (param !== '') tokens.push({ text: param, token: 'fgSoft' })
+      tokens.push({ text: ' in ', token: 'fgDim' })
+      if (afterIn !== '') tokens.push({ text: afterIn, token: 'codeKeyword' })
+    } else {
+      const lower = tool.toLowerCase()
+      if (lower === 'read' || lower === 'write' || lower === 'edit' || lower === 'view') {
+        tokens.push({ text: rest, token: 'codeKeyword' })
+      } else {
+        tokens.push({ text: rest, token: 'fgSoft' })
+      }
+    }
+  }
+
+  return Object.freeze(tokens)
 }

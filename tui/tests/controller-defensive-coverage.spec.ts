@@ -107,10 +107,14 @@ describe('RuntimeController defensive lifecycle paths', () => {
     const internals = controller as unknown as ControllerInternals
     internals.agentHandle = { cancel: () => {} }
     controller.subscribe(() => { throw new Error('subscriber failed') })
+    let notifications = 0
+    controller.subscribe(() => { notifications += 1 })
     controller.dispatch({ kind: 'toggle-reasoning' })
     controller.dispatch({ kind: 'toggle-tool-cards' })
+    expect(notifications).toBe(0)
     await vi.waitFor(() => {
       expect(warn).toHaveBeenCalledWith('TUI subscriber failed: subscriber failed')
+      expect(notifications).toBe(1)
     })
     internals.machine = 'stopped'
     expect(controller.getModel().status).toBe('stopped')
@@ -626,7 +630,8 @@ describe('RuntimeController defensive lifecycle paths', () => {
       ctx.provide('appExit', (code: number) => { exits.push(code) })
       ctx.provide('loader', {
         await: () => new Promise<never>((_resolve, reject) => {
-          Reflect.apply(reject, undefined, [failure])
+          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Exercise the non-Error startup failure path.
+          reject(failure)
         }),
       } as never)
       const previous = {

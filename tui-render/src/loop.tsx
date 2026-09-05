@@ -67,7 +67,7 @@ import type { ToolPresenterLookup } from './tool-cards.ts'
 import { truncateDisplay } from './tool-cards.ts'
 import { goalFooterHead, goalFooterRuns } from './goal-footer.ts'
 import type { GoalFooterRuns, GoalFooterView } from './goal-footer.ts'
-import { formatAdaptiveInfoFooter } from './adaptive-info-footer.ts'
+import { formatAdaptiveInfoFooterRows, formatQuietStatusRow } from './adaptive-info-footer.ts'
 import type { AdaptiveInfoFooterView } from './adaptive-info-footer.ts'
 import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
@@ -85,9 +85,13 @@ import { WorkspacePane } from './workspace-pane.tsx'
 import type { WorkspacePaneState } from './workspace-pane.tsx'
 import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
-import { keyActionFor } from './keymap.ts'
+import { keyActionFor, toolDetailsKeyAction } from './keymap.ts'
+import { ToolDetailsPane, EMPTY_TOOL_DETAILS_PANE } from './tool-details-pane.tsx'
+import type { ToolDetailsPaneState, ToolDetailsInput } from './tool-details-pane.tsx'
+import { toolPolicyDefaults } from './render-policy.ts'
 import { QueueChip } from './queue-chip.tsx'
 import { conversationWidth } from './conversation-layout.ts'
+import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type TranscriptViewportCommandInput = WithoutSequence<TranscriptViewportCommand>
@@ -95,10 +99,15 @@ type TranscriptViewportCommandInput = WithoutSequence<TranscriptViewportCommand>
 /** The g-s chord window: a lone `g` arms the list toggle for this long. */
 export const CHORD_WINDOW_MS = 600
 
+/** Interactive mode the TUI loop operates in. */
+export type LoopMode = 'agent' | 'plan' | 'focus'
+
 /** Runtime actions the loop requests from its controller. */
 export type LoopAction =
+  | { kind: 'tool-details'; input: ToolDetailsInput; width: number; pageRows: number }
   | { kind: 'send'; text: string }
   | { kind: 'sigint' }
+  | { kind: 'cycle-mode' }
   | { kind: 'toggle-reasoning' }
   | { kind: 'toggle-tool-cards' }
   | { kind: 'copy-message' }
@@ -193,6 +202,8 @@ export interface TuiController {
   getModelPane(): ModelPaneState
   /** Latest help-panel state (lines, open flag). */
   getHelpPane(): HelpPaneState
+  /** Current per-item source browser; absent in minimal renderer compositions. */
+  getToolDetailsPane?(): ToolDetailsPaneState
   /** Latest approval-slot state (open flag and pending request fields). */
   getApprovalPane(): ApprovalPaneState
   /** Latest ask-user slot (header, labels, selection). */
@@ -244,6 +255,14 @@ export interface TuiController {
   getSubmitOnEnter(): boolean
   /** Persisted generated-brand reveal mode; omitted controllers keep it off. */
   getBrandAnimation?(): 'auto' | 'on' | 'off'
+  /** Saved conversation scrollbar preference; omitted controllers display it. */
+  getScrollbarVisible?(): boolean
+  /** Saved metrics-detail preference; omitted controllers use one quiet row. */
+  getStatusDetails?(): boolean
+  /** Locale for presentation controls; omitted controllers use Chinese. */
+  getLocale?(): TuiLocale
+  /** Current interactive mode; omitted controllers default to 'agent'. */
+  getMode?(): LoopMode | undefined
   /** Session-transition progress or transient feedback for the status row. */
   getFeedback(): string | undefined
   /** Draft restored across an external-editor unmount/remount cycle. */
@@ -262,7 +281,7 @@ export interface TuiController {
   noteUserActivity(): void
   /** Subscribe to store changes; returns an unsubscribe. */
   subscribe(callback: () => void): () => void
-  /** Dispatch one runtime action. */
+  /** Dispatch one runtime action; synchronous send failures recover inside the controller. */
   dispatch(action: LoopAction): void
   /** The command directory for the `/` palette. */
   commands: readonly CommandItem[]
@@ -1097,6 +1116,17 @@ export function mapKeyEvent(
       caretIndex: previous,
     }
   }
+  if ((key === '\t' || keyInfo.tab) && keyInfo.shift) {
+    if (dialogOpen) return { kind: 'none' }
+    return {
+      kind: 'dispatch',
+      action: { kind: 'cycle-mode' },
+      text: state.text,
+      commandQuery: state.commandQuery,
+      prefixG: false,
+      renaming: state.renaming,
+    }
+  }
   if (key === '\t' || keyInfo.tab) {
     if (mention.open) {
       if (mention.selectedCandidate === undefined) return { kind: 'none' }
@@ -1560,21 +1590,18 @@ export function mapKeyEvent(
   }
   // j/k scroll only while the composer is empty (j newer, k older); with
   // text buffered they are ordinary letters (02-UI-SPEC §3 scrolling vs K4).
-  if (key === 'j' && state.text === '') {
-    return {
-      kind: 'dispatch',
-      action: { kind: 'scroll', delta: -1 },
-      text: state.text,
-      commandQuery: state.commandQuery,
-      prefixG: false,
-      renaming: state.renaming,
-      caretIndex: state.caretIndex,
+  // In terminal bursts / PTY delivery, multiple j/k keystrokes can arrive in
+  // one input chunk; collapse them to their net scroll delta so rapid j/k
+  // navigation never spills into composer text.
+  if (/^[jk]+$/u.test(key) && !keyInfo.ctrl && !keyInfo.meta && state.text === '') {
+    let delta = 0
+    for (const char of key) {
+      if (char === 'k') delta += 1
+      else if (char === 'j') delta -= 1
     }
-  }
-  if (key === 'k' && state.text === '') {
     return {
       kind: 'dispatch',
-      action: { kind: 'scroll', delta: 1 },
+      action: { kind: 'scroll', delta },
       text: state.text,
       commandQuery: state.commandQuery,
       prefixG: false,
@@ -1713,7 +1740,7 @@ export function statusHint(interaction: InteractionState, occupied = false): str
 /**
  * The composed status row for the AppShell slot: the accent status label
  * plus the fgDim key hint where the state carries one, painted through the
- * bg strip per part so the pure-black frame leaves no SGR gap (gap audit
+ * bg strip per part so the themed frame leaves no SGR gap (gap audit
  * blocker#1). A current goal prepends its `目标 …` fragment ahead of the label.
  * @param interaction - the interaction state.
  * @param occupied - whether a dialog owns input (suppresses the scroll hint).
@@ -1926,6 +1953,10 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getHelpPane(),
   )
+  const toolDetailsPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getToolDetailsPane?.() ?? EMPTY_TOOL_DETAILS_PANE,
+  )
   const approvalPane = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getApprovalPane(),
@@ -2006,7 +2037,25 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getBrandAnimation?.() ?? 'off',
   )
-  const { columns } = useWindowSize()
+  const controllerMode = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getMode?.(),
+  )
+  const scrollbar = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getScrollbarVisible?.() ?? true,
+  )
+  const statusDetails = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getStatusDetails?.() ?? false,
+  )
+  const locale = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getLocale?.() ?? 'zh-CN',
+  )
+  const [localMode, setLocalMode] = useState<LoopMode>('agent')
+  const currentMode: LoopMode = controllerMode ?? localMode
+  const { columns, rows } = useWindowSize()
   // Reopening the help sheet starts at the top (K4 focus returns to the input).
   useEffect(() => {
     if (helpPane.open) setHelpOffset(0)
@@ -2031,6 +2080,9 @@ export function TuiLoop({
   modelPaneRef.current = modelPane
   const helpPaneRef = useRef(helpPane)
   helpPaneRef.current = helpPane
+  const toolDetailsPaneRef = useRef(toolDetailsPane)
+  toolDetailsPaneRef.current = toolDetailsPane
+  const toolDetailsSizeRef = useRef({ width: columns, pageRows: 1 })
   const approvalPaneRef = useRef(approvalPane)
   approvalPaneRef.current = approvalPane
   const askUserPaneRef = useRef(askUserPane)
@@ -2070,6 +2122,11 @@ export function TuiLoop({
   // loop-owned windows, and everything else scrolls the conversation.
   useEffect(() => {
     const listener = (delta: number): void => {
+      frameMetrics?.recordInputEvent()
+      if (toolDetailsPaneRef.current.open) {
+        controller.dispatch({ kind: 'tool-details', input: delta > 0 ? 'up' : 'down', ...toolDetailsSizeRef.current })
+        return
+      }
       const settingsState = settingsPaneRef.current
       if (settingsState.open) {
         if (settingsState.editing || settingsState.onboarding === true) return
@@ -2103,9 +2160,19 @@ export function TuiLoop({
       setMouseScrollListener(undefined)
       setMouseRailListener(undefined)
     }
-  }, [controller, issueViewportCommand])
+  }, [controller, frameMetrics, issueViewportCommand])
   useInput((key, keyInfo) => {
+    frameMetrics?.recordInputEvent()
     controller.noteUserActivity()
+    if (toolDetailsPaneRef.current.open
+      && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+      else {
+        const input = toolDetailsKeyAction(key, keyInfo)
+        if (input !== undefined) controller.dispatch({ kind: 'tool-details', input, ...toolDetailsSizeRef.current })
+      }
+      return
+    }
     const current = stateRef.current
     const effect = mapKeyEvent(
       current,
@@ -2225,6 +2292,9 @@ export function TuiLoop({
           if (result.ok) insertImageToken(result.token)
           else controller.note(result.reason)
         })
+      } else if (action.kind === 'cycle-mode') {
+        setLocalMode(prev => prev === 'agent' ? 'plan' : prev === 'plan' ? 'focus' : 'agent')
+        controller.dispatch(action)
       } else if (action.kind !== ('none' as never)) {
         controller.dispatch(action)
       }
@@ -2289,7 +2359,8 @@ export function TuiLoop({
     controller.noteUserActivity()
     const current = stateRef.current
     if (
-      approvalPaneRef.current.open
+      toolDetailsPaneRef.current.open
+      || approvalPaneRef.current.open
       || askUserPaneRef.current.open
       || planReviewPaneRef.current.open
       || permissionPaneRef.current.open
@@ -2398,13 +2469,22 @@ export function TuiLoop({
     )
     goalRuns = goalFooterRuns(goalFooter, budget)
   }
-  const adaptiveLines = adaptiveInfoFooter === undefined
+  const footerRowBudget = statusDetails ? (rows >= 32 ? 3 : rows >= 12 ? 2 : 1) : 1
+  const adaptiveRows = adaptiveInfoFooter === undefined
     ? []
-    : formatAdaptiveInfoFooter({
-      ...adaptiveInfoFooter,
-      environment: shortenHomePath(controller.getCwd(), homedir()),
-      tip: statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
-    }, columns)
+    : footerRowBudget === 1
+      ? [formatQuietStatusRow({
+        ...adaptiveInfoFooter,
+        locale,
+        reasoningVisible: model.reasoningExpanded,
+        tip: statusLabel === '' ? undefined : scrollHint,
+      }, columns)]
+      : formatAdaptiveInfoFooterRows({
+        ...adaptiveInfoFooter,
+        locale,
+        environment: shortenHomePath(controller.getCwd(), homedir()),
+        tip: statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
+      }, columns, footerRowBudget)
   let status: ReactNode
   let statusRowCount: number
   if (feedback !== undefined) {
@@ -2414,38 +2494,63 @@ export function TuiLoop({
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('codeBg'),
+        backgroundColor: inkColor('inputBg'),
       },
       createElement(
         Text,
         null,
-        paintBackgroundRow([feedbackLine(feedback) as string], 'codeBg', columns),
+        paintBackgroundRow([feedbackLine(feedback) as string], 'inputBg', columns),
       ),
     )
-  } else if (adaptiveLines.length > 0) {
+  } else if (adaptiveRows.length > 0) {
     const goalLine = goalRuns === undefined
       ? undefined
       : `${goalRuns.head} · ${goalRuns.objective}`
-    const visibleLines = goalLine === undefined
-      ? adaptiveLines
-      : [
-        truncateDisplay(`${goalLine} · ${adaptiveLines[0] ?? ''}`, Math.max(1, columns)),
-        adaptiveLines[1],
-      ].filter((line): line is string => line !== undefined && line !== '')
-    statusRowCount = visibleLines.length
+    const visibleRows = adaptiveRows.map((row, index) => {
+      if (index !== 0 || goalLine === undefined) return row
+      if (footerRowBudget === 1 && adaptiveInfoFooter !== undefined) {
+        return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, tip: goalLine }, columns)
+      }
+      const baseText = row.runs.map(run => run.text).join('')
+      if (displayWidth(`${goalLine} · ${baseText}`) > columns) {
+        const statusRun = row.runs.find(run => run.text.startsWith(`${tuiCopy('status', locale)} `))
+        if (statusRun === undefined) return row
+        const statusWidth = displayWidth(` · ${statusRun.text}`)
+        const fittedGoal = truncateDisplay(goalLine, Math.max(1, columns - statusWidth))
+        return {
+          ...row,
+          runs: [
+            { text: fittedGoal, token: 'fgDim' as const },
+            { text: ' · ', token: 'fgDim' as const },
+            statusRun,
+          ],
+        }
+      }
+      return {
+        ...row,
+        runs: [
+          { text: goalLine, token: 'fgDim' as const },
+          { text: ' · ', token: 'fgDim' as const },
+          ...row.runs,
+        ],
+      }
+    })
+    statusRowCount = visibleRows.length
     status = createElement(
       Box,
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('codeBg'),
+        backgroundColor: inkColor('inputBg'),
       },
-      ...visibleLines.map((line, index) => createElement(
+      ...visibleRows.map((row, index) => createElement(
         Text,
         { key: `adaptive-footer-${String(index)}` },
-        paintBackgroundRow([
-          styled(line, line.includes('重试 ') ? 'accent' : 'fgDim'),
-        ], 'codeBg', columns),
+        paintBackgroundRow(
+          row.runs.map(run => styled(run.text, run.token)),
+          'inputBg',
+          columns,
+        ),
       )),
     )
   } else {
@@ -2472,12 +2577,12 @@ export function TuiLoop({
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('codeBg'),
+        backgroundColor: inkColor('inputBg'),
       },
       ...visibleLines.map((line, index) => createElement(
         Text,
         { key: `fallback-footer-${String(index)}` },
-        paintBackgroundRow([styled(line, 'fgDim')], 'codeBg', columns),
+        paintBackgroundRow([styled(line, 'fgDim')], 'inputBg', columns),
       )),
     )
   }
@@ -2489,6 +2594,7 @@ export function TuiLoop({
     || timelineOpen
     || modelPane.open
     || helpPane.open
+    || toolDetailsPane.open
     || approvalPane.open
     || askUserPane.open
     || permissionPane.open
@@ -2504,6 +2610,7 @@ export function TuiLoop({
     || timelineOpen
     || modelPane.open
     || helpPane.open
+    || toolDetailsPane.open
     || approvalPane.open
     || askUserPane.open
     || permissionPane.open
@@ -2533,16 +2640,37 @@ export function TuiLoop({
     () => controller.getToolPresenters?.(),
     [controller],
   )
+  const streamLayoutKey = useMemo(() => ({}), [
+    statusRowCount,
+    state.text.split('\n').length,
+    commandMode ? state.text : '',
+    mentionMode ? state.text : '',
+    approvalPane,
+    askUserPane,
+    planReviewPane,
+    todoHud,
+    jobsHud,
+    workflowHud,
+    composerHud,
+    queuedDraftCount,
+  ])
+  const toolPaneRows = Math.max(4, rows - 2 - statusRowCount)
+  const toolPageRows = Math.min((renderPolicy?.tools ?? toolPolicyDefaults()).detailPageRows, toolPaneRows - 3)
+  toolDetailsSizeRef.current = { width: columns, pageRows: toolPageRows }
   const streamView = createElement(StreamView, {
+    locale,
+    layoutKey: streamLayoutKey,
     model,
     presenters,
     brandTier,
     brandAnimation,
+    scrollbar,
     brandFrameProbe,
     viewportCommand,
     renderPolicy,
     frameMetrics,
     motionPaused: viewportMotionPaused,
+    mode: currentMode,
   })
   const conversationColumns = conversationWidth(columns)
   const hudRows: ReactNode[] = []
@@ -2561,18 +2689,24 @@ export function TuiLoop({
   if (queuedDraftCount > 0) {
     hudRows.push(createElement(QueueChip, { count: queuedDraftCount }))
   }
+  const hasConversation = model.history.length > 0 || model.activeTurn !== undefined
   const conversation =
-    hudRows.length === 0
+    !hasConversation && hudRows.length === 0
       ? streamView
       : createElement(
         Box,
         { flexDirection: 'column', width: '100%', flexGrow: 1 },
         streamView,
-        createElement(
-          Box,
-          { flexDirection: 'column', alignItems: 'center', width: '100%' },
-          createElement(Box, { flexDirection: 'column', width: conversationColumns }, ...hudRows),
-        ),
+        ...(hudRows.length > 0
+          ? [
+            createElement(
+              Box,
+              { key: 'hud-rows', flexDirection: 'column', alignItems: 'center', width: '100%' },
+              createElement(Box, { flexDirection: 'column', width: conversationColumns }, ...hudRows),
+            ),
+          ]
+          : []),
+        createElement(Box, { key: 'conversation-gap', width: '100%', height: 1, flexShrink: 0 }),
       )
   const overlayBrowseOpen =
     agentHubPane.open
@@ -2594,6 +2728,7 @@ export function TuiLoop({
     })
   } else if (settingsPane.open) {
     content = createElement(SettingsPane, {
+      locale,
       rows: settingsPane.rows,
       selectedIndex: settingsPane.selectedIndex,
       editing: settingsPane.editing,
@@ -2612,6 +2747,8 @@ export function TuiLoop({
       status: modelPane.status,
       ...(modelPane.error === undefined ? {} : { error: modelPane.error }),
     })
+  } else if (toolDetailsPane.open) {
+    content = createElement(ToolDetailsPane, { state: toolDetailsPane, columns, maxRows: toolPaneRows, pageRows: toolPageRows, locale })
   } else if (helpPane.open) {
     content = createElement(HelpPane, {
       lines: helpPane.lines,
@@ -2623,6 +2760,9 @@ export function TuiLoop({
       selectedIndex: pane.selectedIndex,
       currentId: pane.currentId,
       confirmDelete: pane.confirmDelete,
+      deleteUnavailable: pane.deleteUnavailable,
+      columns,
+      maxRows: rows - 2 - statusRowCount - (state.renaming ? state.text.split('\n').length + 1 : 0),
     })
   } else if (search.open) {
     content = createElement(SearchPane, {
@@ -2661,18 +2801,31 @@ export function TuiLoop({
     content = conversation
   }
   const inputBar = (props: InputBarProps): ReactNode => createElement(InputBar, {
+    locale,
+    modelChip: adaptiveInfoFooter?.model,
+    modeChip: currentMode,
     ...props,
     rowsBelow: (props.rowsBelow ?? 0) + statusRowCount,
   })
   let inputSlot: ReactNode
   if (approvalPane.open) {
-    inputSlot = createElement(ApprovalPane, {
-      toolName: approvalPane.toolName,
-      reason: approvalPane.reason,
-      arguments: approvalPane.arguments,
-      detailsOpen: approvalPane.detailsOpen,
-      deliveryError: approvalPane.deliveryError,
-    })
+    inputSlot = createElement(
+      Box,
+      { flexDirection: 'column', width: '100%' },
+      createElement(ApprovalPane, {
+        toolName: approvalPane.toolName,
+        reason: approvalPane.reason,
+        arguments: approvalPane.arguments,
+        detailsOpen: approvalPane.detailsOpen,
+        deliveryError: approvalPane.deliveryError,
+      }),
+      inputBar({
+        text: state.text,
+        commandMode,
+        mentionMode,
+        caretIndex: state.caretIndex,
+      }),
+    )
   } else if (askUserPane.open) {
     inputSlot = createElement(AskUserPane, {
       header: askUserPane.header,
@@ -2709,6 +2862,8 @@ export function TuiLoop({
       mentionMode: false,
       caretIndex: state.caretIndex,
     })
+  } else if (toolDetailsPane.open) {
+    inputSlot = undefined
   } else if (helpPane.open) {
     inputSlot = null
   } else if (pane.open) {
@@ -2769,7 +2924,7 @@ export function TuiLoop({
 
   return createElement(AppShell, {
     title: liveTitle === '' ? title : liveTitle,
-    badge,
+    badge: adaptiveInfoFooter === undefined ? badge : shortenHomePath(controller.getCwd(), homedir()),
     status,
     children: content,
     input: inputSlot,

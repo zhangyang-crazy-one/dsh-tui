@@ -20,10 +20,10 @@
  *    path; the smooth step (`stepPerFrame`) gives a one-row key one frame.
  *
  * Distance-adaptive catch-up:
- *  - When the absolute distance is at most `catchUpThreshold`, each tick
- *    advances by `stepPerFrame` rows.
- *  - When the distance exceeds `catchUpThreshold`, each tick advances by
- *    `maxCatchUpStep` rows (capped to remaining distance).
+ *  - Each new target selects `stepPerFrame` or `maxCatchUpStep` from its
+ *    initial distance to the presented row and `catchUpThreshold`.
+ *  - That pace remains selected until the target is reached or replaced;
+ *    the final step is capped to the remaining distance.
  *
  * Disposal:
  *  - `dispose` clears the internal frame timer and ignores further input.
@@ -125,6 +125,7 @@ export function createScrollScheduler(
   let target = options.initialPosition ?? 0
   let timer: ReturnType<typeof setInterval> | undefined
   let disposed = false
+  let catchingUp = false
 
   /**
    * Choose the per-tick step. Smooth band uses `stepPerFrame`; the catch-up
@@ -135,7 +136,7 @@ export function createScrollScheduler(
    */
   function catchUpStep(delta: number): number {
     const abs = Math.abs(delta)
-    const base = abs > catchUpThreshold ? maxCatchUpStep : stepPerFrame
+    const base = catchingUp ? maxCatchUpStep : stepPerFrame
     return Math.min(abs, base)
   }
 
@@ -148,11 +149,7 @@ export function createScrollScheduler(
   function ensureTimer(): void {
     if (!autoSchedule) return
     if (timer !== undefined) return
-    timer = setIntervalFn(() => {
-      const delta = target - presented
-      presented += Math.sign(delta) * catchUpStep(delta)
-      if (presented === target) stopTimer()
-    }, frameIntervalMs)
+    timer = setIntervalFn(stepOnce, frameIntervalMs)
   }
 
   function stepOnce(): number {
@@ -170,6 +167,7 @@ export function createScrollScheduler(
     setTarget(row) {
       if (disposed) return
       target = row
+      catchingUp = Math.abs(target - presented) > catchUpThreshold
       if (presented !== target) ensureTimer()
       else stopTimer()
     },
@@ -177,6 +175,7 @@ export function createScrollScheduler(
       if (disposed) return
       presented = row
       target = row
+      catchingUp = false
       stopTimer()
     },
     rebase(delta, maximum) {

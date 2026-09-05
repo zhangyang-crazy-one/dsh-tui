@@ -139,6 +139,115 @@ describe('createProjector', () => {
     ])
   })
 
+  it('freezes exact aggregate usage from every billed attempt in one turn', () => {
+    const projector = createProjector()
+    projector.seed([
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/chunk', {
+        turn: 1,
+        step: 1,
+        chunk: {
+          type: 'usage',
+          usage: {
+            inputTokens: 10,
+            outputTokens: 2,
+            totalTokens: 15,
+            cacheReadTokens: 3,
+            cacheWriteTokens: 0,
+          },
+        },
+      }),
+      event(4, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: {
+          id: 'step-1',
+          role: 'assistant',
+          source: { kind: 'model', provider: 'test', model: 'model' },
+          content: [{ type: 'text', text: 'first' }],
+        },
+        usage: {
+          inputTokens: 10,
+          outputTokens: 2,
+          totalTokens: 15,
+          cacheReadTokens: 3,
+          cacheWriteTokens: 0,
+        },
+      }),
+      event(5, 'step/end', { turn: 1, step: 1 }),
+      event(6, 'step/start', { turn: 1, step: 2 }),
+      event(7, 'assistant/chunk', {
+        turn: 1,
+        step: 2,
+        chunk: {
+          type: 'usage',
+          usage: {
+            inputTokens: 20,
+            outputTokens: 5,
+            totalTokens: 35,
+            cacheReadTokens: 10,
+            cacheWriteTokens: 0,
+          },
+        },
+      }),
+      event(8, 'assistant/message', {
+        turn: 1,
+        step: 2,
+        message: {
+          id: 'step-2',
+          role: 'assistant',
+          source: { kind: 'model', provider: 'test', model: 'model' },
+          content: [{ type: 'text', text: 'final' }],
+        },
+        usage: {
+          inputTokens: 20,
+          outputTokens: 5,
+          totalTokens: 35,
+          cacheReadTokens: 10,
+          cacheWriteTokens: 0,
+        },
+      }),
+      event(9, 'step/end', { turn: 1, step: 2 }),
+      event(10, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ])
+    const message = projector.snapshot().history[0]
+    expect(message?.turnUsage).toEqual({
+      uncachedInputTokens: 30,
+      outputTokens: 7,
+      totalTokens: 50,
+      cacheReadTokens: 13,
+      cacheWriteTokens: 0,
+      routes: [{ provider: 'test', model: 'model' }],
+    })
+    expect(Object.isFrozen(message?.turnUsage)).toBe(true)
+  })
+
+  it('omits turn usage when the billed attempt lifecycle is incomplete', () => {
+    const projector = createProjector()
+    projector.seed([
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: {
+          id: 'step-1',
+          role: 'assistant',
+          source: { kind: 'model', provider: 'test', model: 'model' },
+          content: [{ type: 'text', text: 'answer' }],
+        },
+        usage: {
+          inputTokens: 4,
+          outputTokens: 2,
+          totalTokens: 6,
+        },
+      }),
+      event(4, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ])
+    expect(projector.snapshot().history[0]?.turnUsage).toBeUndefined()
+  })
+
   it('keeps historical messages frozen across later pushes', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))

@@ -4,7 +4,7 @@
  * produces physical row records, which the JSX bridge here paints through
  * the installed theme via {@link paintRow} / {@link styled}. Code blocks
  * highlight with a lightweight regex tokenizer (P12: cached by content
- * hash, collapsed above 500 lines). Markdown links wrap that styled text
+ * hash, with every source line retained). Markdown links wrap that styled text
  * in OSC 8 when {@link hyperlinksEnabled} is set; otherwise the href is
  * printed in parentheses when it differs from the label.
  *
@@ -32,17 +32,16 @@ import { Fragment, useRef } from 'react'
 import type { RootContent } from 'mdast'
 import { displayWidth, escapeContent } from './content.ts'
 import { hyperlinksEnabled } from './hyperlink.ts'
-import { paintRow, styled, type StyleToken } from './theme.ts'
+import { styled, type StyleToken } from './theme.ts'
 import { markdownParseInternals, parseMarkdownSource } from './markdown-parse.ts'
 import { paintLineFromRenderLine } from './painted-line.ts'
 import {
   type MarkdownBlockRenderer,
   type MarkdownRenderLine,
   type MarkdownRenderScope,
-  type MarkdownStyleToken,
   createMarkdownProjector,
 } from './markdown-projector.ts'
-import { createStyledMarkdownBlockRenderer } from './markdown-render.ts'
+import { createStyledMarkdownBlockRenderer, renderTableCells } from './markdown-render.ts'
 import { parsePipeTableCells, TableScanner } from './table-scanner.ts'
 
 /** Highlight token kinds the lightweight tokenizer emits. */
@@ -200,14 +199,12 @@ export function tokenize(source: string, lang: string): Token[] {
   return tokens
 }
 
-/** Syntax token kind → theme token (02-UI-SPEC §1.1 C4: code stays neutral
- * gray-scale inside conversation prose, so blue is reserved for links and
- * emphasis; no new THEME_LEVELS keys). The keyword bold carries the C3 bold
- * tier, keeping the 16-color fallback readable without color (A3). */
+/** Syntax token colors share the theme table; keyword weight remains
+ * independent of the foreground tier. */
 const TOKEN_STYLES: Readonly<Record<TokenKind, StyleToken | undefined>> = {
-  keyword: 'fg',
-  string: 'fg',
-  comment: 'fgDim',
+  keyword: 'codeKeyword',
+  string: 'codeString',
+  comment: 'codeComment',
   plain: undefined,
 }
 
@@ -266,7 +263,7 @@ export function HighlightedLine({
   return <Text>{prefix}{styled(`  ${spans}`, 'codeBg')}{tail}</Text>
 }
 
-/** Code fence: collapsed above 500 lines, highlighted inline. */
+/** Complete highlighted code fence; the transcript viewport owns clipping. */
 export function CodeBlock({
   source,
   lang,
@@ -281,26 +278,17 @@ export function CodeBlock({
   tail?: string | undefined
 }): ReactNode {
   const lines = source.split('\n')
-  const collapsed = lines.length > 500
-  const shown = collapsed ? lines.slice(0, 20) : lines
   return (
     <Box flexDirection="column">
-      {shown.map((line, index) => (
+      {lines.map((line, index) => (
         <HighlightedLine
           key={index}
           source={line}
           lang={lang}
           prefix={index === 0 ? lead : rest}
-          tail={!collapsed && index === shown.length - 1 ? tail : undefined}
+          tail={index === lines.length - 1 ? tail : undefined}
         />
       ))}
-      {collapsed ? (
-        <Text>
-          {rest}
-          {paintRow([styled(`▾ … 还有 ${lines.length - 20} 行`, 'fgDim')])}
-          {tail}
-        </Text>
-      ) : null}
     </Box>
   )
 }
@@ -556,6 +544,13 @@ export function MarkdownBlock({
       rest: affixes.rest,
       tail: isLast ? affixes.tail : undefined,
     }
+    if (out.length > 0 && block.lines.length > 0) {
+      out.push(
+        <Box key={`b-gap-${blockIndex}`}>
+          <Text wrap="truncate"> </Text>
+        </Box>,
+      )
+    }
     out.push(<Fragment key={`b-${blockIndex}`}>{renderBlockEntry(block, blockAffixes, state, renderScope)}</Fragment>)
     blockIndex += 1
   }
@@ -631,93 +626,14 @@ function renderBlockEntry(
   return node
 }
 
-/** Render one active table line range from raw scanner rows. */
+/** Render scanner rows with the same widths and wrapping as settled tables. */
 function renderActiveTable(
   rows: readonly { cells: readonly string[] }[],
   width: number,
   affixes: RowAffixes,
   hyperlinks: boolean,
 ): ReactNode {
-  // Determine column count from the widest row; pad shorter rows with ''.
-  const colCount = rows.reduce((m, r) => Math.max(m, r.cells.length), 0)
-  const normalized = rows.map((r) => {
-    const cells = r.cells.slice()
-    while (cells.length < colCount) cells.push('')
-    return cells
-  })
-  const overhead = 3 * colCount + 1
-  const available = Math.max(0, width - overhead)
-  if (available < colCount) {
-    const lines: MarkdownRenderLine[] = normalized.map((cells, index) => {
-      const text = cells.join(' | ')
-      return {
-        text,
-        displayWidth: displayWidth(text),
-        spans: [{ start: 0, end: displayWidth(text), token: 'fg', bold: false }],
-        rowInBlock: index,
-        sourceStart: -1,
-        sourceEnd: -1,
-        rawTail: false,
-      }
-    })
-    return linesToJsx(lines, affixes, hyperlinks)
-  }
-  const natural = Array.from({ length: colCount }, (_, col) => {
-    let w = 1
-    for (const row of normalized) w = Math.max(w, displayWidth(row[col] ?? ''))
-    return w
-  })
-  const widths = natural.slice()
-  let used = 0
-  for (const w of widths) used += w
-  while (used > available) {
-    let widest = 0
-    for (let col = 1; col < widths.length; col += 1) {
-      if ((widths[col] as number) > (widths[widest] as number)) widest = col
-    }
-    widths[widest] = (widths[widest] as number) - 1
-    used -= 1
-  }
-  const fill = widths.map(w => '─'.repeat(Math.max(1, w)))
-  const lines: MarkdownRenderLine[] = []
-  const pushRule = (rule: string): void => {
-    lines.push(makeSimpleLine(rule, 'fgDim', lines.length))
-  }
-  pushRule(`┌─${fill.join('─┬─')}─┐`)
-  normalized.forEach((cells, rowIndex) => {
-    const escaped = cells.map(c => escapeContent(c))
-    const header = rowIndex === 0
-    const cellParts = cells.map((_cell, col) => {
-      const cellWidth = widths[col] as number
-      return (escaped[col] ?? '').padEnd(cellWidth, ' ').slice(0, cellWidth)
-    })
-    const inner = cellParts.join(' │ ')
-    const lineText = `│ ${inner} │`
-    lines.push(makeSimpleLine(lineText, header ? 'accent' : 'fg', lines.length, header))
-    if (rowIndex === 0) {
-      pushRule(`├─${fill.join('─┼─')}─┤`)
-    }
-  })
-  pushRule(`└─${fill.join('─┴─')}─┘`)
-  return linesToJsx(lines, affixes, hyperlinks)
-}
-
-/** Build a one-spanned MarkdownRenderLine from plain text + token. */
-function makeSimpleLine(
-  text: string,
-  token: MarkdownStyleToken,
-  rowInBlock: number,
-  bold = false,
-): MarkdownRenderLine {
-  return {
-    text,
-    displayWidth: displayWidth(text),
-    spans: [{ start: 0, end: displayWidth(text), token, bold }],
-    rowInBlock,
-    sourceStart: -1,
-    sourceEnd: -1,
-    rawTail: false,
-  }
+  return linesToJsx(renderTableCells(rows.map(row => row.cells), width, 0, -1), affixes, hyperlinks)
 }
 
 /**
@@ -777,6 +693,13 @@ function renderFullSource(
       fold: 'expanded',
       renderMode: 'streaming',
     }, blockIndex)
+    if (out.length > 0 && lines.length > 0) {
+      out.push(
+        <Box key={`full-b-gap-${blockIndex}`}>
+          <Text wrap="truncate"> </Text>
+        </Box>,
+      )
+    }
     out.push(
       <Fragment key={`full-b-${blockIndex}`}>{linesToJsx(lines, blockAffixes, hyperlinks)}</Fragment>,
     )

@@ -165,6 +165,6 @@ describe('TuiLoop plan-review', () => {
       }),
     )
     expect(out).not.toContain('y 批准 · n 继续规划 · Esc 取消')
-    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
+    expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
   })
 })

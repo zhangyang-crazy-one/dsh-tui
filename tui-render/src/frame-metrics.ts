@@ -12,6 +12,7 @@
  * @module @deepseek-ai/dsh-tui-render/frame-metrics
  */
 
+import { DurationStats } from './duration-stats.ts'
 import type { FrameStatsSnapshot } from './frame-stats.ts'
 
 /** Bounded ring capacity for renderer-metric latency samples (ms). */
@@ -50,6 +51,12 @@ export interface RenderQueueSnapshot {
 
 /** Plain JSON-serializable snapshot of every renderer-metric channel. */
 export interface FrameMetricsSnapshot {
+  /** Intervals between completed synchronized PTY writes, including user idle gaps; not display latency. */
+  frameIntervalMs: FrameStatsSnapshot
+  /** Accepted keyboard or wheel deliveries. */
+  inputEvents: FrameMetricsCounterSnapshot
+  /** Scroll inputs merged before an earlier input's target was presented. */
+  coalescedInputs: FrameMetricsCounterSnapshot
   /** delta-ingress-to-stdout-drain latency in ms (ring + p95). */
   deltaIngressToStdoutDrainMs: FrameStatsSnapshot
   /** Markdown parse bytes observed by the projector (counter). */
@@ -76,6 +83,12 @@ export interface FrameMetricsSnapshot {
 
 /** Renderer-metric store the streaming pipeline reports into. */
 export interface FrameMetricsHandle {
+  /** Record a synchronized frame's completed stdout write, not physical monitor presentation. */
+  recordFramePresented(): void
+  /** Record one accepted keyboard or wheel delivery. */
+  recordInputEvent(): void
+  /** Record one scroll input merged with an unpresented predecessor. */
+  recordCoalescedInput(): void
   /** Record one delta-ingress-to-stdout-drain latency sample (ms). */
   recordDeltaIngressToStdoutDrain(ms: number): void
   /** Add parsed Markdown bytes to the counter (negative deltas allowed). */
@@ -162,43 +175,12 @@ function summarizeCounter(state: CounterState): FrameMetricsCounterSnapshot {
   }
 }
 
-/** Bounded latency ring + p95, mirroring frame-stats.ts summarize semantics. */
-function summarizeLatency(samples: number[]): FrameStatsSnapshot {
-  const count = samples.length
-  if (count === 0) {
-    return { count: 0, mean: 0, max: 0, p95: 0, samples: [] }
-  }
-  let sum = 0
-  let max = 0
-  for (const sample of samples) {
-    sum += sample
-    if (sample > max) max = sample
-  }
-  const sorted = [...samples].sort((a, b) => a - b)
-  const rank = Math.min(count, Math.max(1, Math.ceil(count * 0.95)))
-  // v8 ignore next -- rank is clamped to [1, count], so the indexed read is always defined.
-  const p95 = sorted[rank - 1] ?? 0
-  return {
-    count,
-    mean: sum / count,
-    max,
-    p95,
-    samples: samples.slice(),
-  }
-}
-
 /** Add an increment to a counter state. Negative deltas are allowed. */
 function addToCounter(state: CounterState, n: number): void {
   state.total += n
   state.windowCount += 1
   state.windowSum += n
   if (n > state.windowMax) state.windowMax = n
-}
-
-/** Record a sample into a bounded ring, dropping the oldest first. */
-function recordRing(ring: number[], sample: number, capacity: number): void {
-  ring.push(sample)
-  if (ring.length > capacity) ring.splice(0, ring.length - capacity)
 }
 
 /** Reset the window portion of a counter state, keeping the lifetime total. */
@@ -220,10 +202,14 @@ export function createFrameMetrics(
   capacity: number = FRAME_METRICS_CAPACITY,
 ): FrameMetricsHandle {
   const startedAt = now()
-  const drainSamples: number[] = []
-  const scrollSamples: number[] = []
-  const queueAgeSamples: number[] = []
+  const frameIntervals = new DurationStats(capacity)
+  let lastFrameAt: number | undefined
+  const drainSamples = new DurationStats(capacity)
+  const scrollSamples = new DurationStats(capacity)
+  const queueAgeSamples = new DurationStats(capacity)
   const counters = {
+    inputEvents: emptyCounter(),
+    coalescedInputs: emptyCounter(),
     markdownParseBytes: emptyCounter(),
     stableRowsReused: emptyCounter(),
     tailRowsRerendered: emptyCounter(),
@@ -237,8 +223,15 @@ export function createFrameMetrics(
     maxDepth: 0,
   }
   return {
+    recordFramePresented(): void {
+      const current = now()
+      if (lastFrameAt !== undefined) frameIntervals.record(Math.max(0, current - lastFrameAt))
+      lastFrameAt = current
+    },
+    recordInputEvent(): void { addToCounter(counters.inputEvents, 1) },
+    recordCoalescedInput(): void { addToCounter(counters.coalescedInputs, 1) },
     recordDeltaIngressToStdoutDrain(ms: number): void {
-      recordRing(drainSamples, ms, capacity)
+      drainSamples.record(ms)
     },
     addMarkdownParseBytes(n: number): void {
       addToCounter(counters.markdownParseBytes, n)
@@ -258,10 +251,10 @@ export function createFrameMetrics(
     recordRenderQueue(depth: number, ageMs: number): void {
       queueState.currentDepth = depth
       if (depth > queueState.maxDepth) queueState.maxDepth = depth
-      recordRing(queueAgeSamples, ageMs, capacity)
+      queueAgeSamples.record(ageMs)
     },
     recordScrollInputToPaint(ms: number): void {
-      recordRing(scrollSamples, ms, capacity)
+      scrollSamples.record(ms)
     },
     addCacheBytes(n: number): void {
       addToCounter(counters.cacheBytes, n)
@@ -270,6 +263,9 @@ export function createFrameMetrics(
       addToCounter(counters.cacheEvictions, n)
     },
     resetWindow(): void {
+      frameIntervals.resetWindow()
+      resetCounterWindow(counters.inputEvents)
+      resetCounterWindow(counters.coalescedInputs)
       resetCounterWindow(counters.markdownParseBytes)
       resetCounterWindow(counters.stableRowsReused)
       resetCounterWindow(counters.tailRowsRerendered)
@@ -278,13 +274,16 @@ export function createFrameMetrics(
       resetCounterWindow(counters.cacheBytes)
       resetCounterWindow(counters.cacheEvictions)
       queueState.maxDepth = queueState.currentDepth
-      drainSamples.length = 0
-      scrollSamples.length = 0
-      queueAgeSamples.length = 0
+      drainSamples.resetWindow()
+      scrollSamples.resetWindow()
+      queueAgeSamples.resetWindow()
     },
     snapshot(): FrameMetricsSnapshot {
       return {
-        deltaIngressToStdoutDrainMs: summarizeLatency(drainSamples),
+        frameIntervalMs: frameIntervals.snapshot(),
+        inputEvents: summarizeCounter(counters.inputEvents),
+        coalescedInputs: summarizeCounter(counters.coalescedInputs),
+        deltaIngressToStdoutDrainMs: drainSamples.snapshot(),
         markdownParseBytes: summarizeCounter(counters.markdownParseBytes),
         stableRowsReused: summarizeCounter(counters.stableRowsReused),
         tailRowsRerendered: summarizeCounter(counters.tailRowsRerendered),
@@ -293,9 +292,9 @@ export function createFrameMetrics(
         renderQueue: {
           currentDepth: queueState.currentDepth,
           maxDepth: queueState.maxDepth,
-          ageMs: summarizeLatency(queueAgeSamples),
+          ageMs: queueAgeSamples.snapshot(),
         },
-        scrollInputToPaintMs: summarizeLatency(scrollSamples),
+        scrollInputToPaintMs: scrollSamples.snapshot(),
         cacheBytes: summarizeCounter(counters.cacheBytes),
         cacheEvictions: summarizeCounter(counters.cacheEvictions),
         elapsedMs: now() - startedAt,

@@ -25,14 +25,9 @@ function fakeClock(): { now: () => number; advance(ms: number): void } {
 }
 
 /** A zeroed latency-channel shape, mirroring the empty-ring contract. */
-function zeroedLatency(): {
-  count: number
-  mean: number
-  max: number
-  p95: number
-  samples: readonly number[]
-} {
-  return { count: 0, mean: 0, max: 0, p95: 0, samples: [] }
+function zeroedLatency(previous?: number) {
+  return { count: 0, mean: 0, max: 0, p95: 0, p99: 0, samples: [],
+    run: { count: previous === undefined ? 0 : 1, mean: previous ?? 0, max: previous ?? 0, p95: previous ?? 0, p99: previous ?? 0 } }
 }
 
 /** A zeroed counter-channel shape. */
@@ -46,6 +41,24 @@ function zeroedCounter(): {
 }
 
 describe('createFrameMetrics', () => {
+  it('retains full-run frame intervals and input/coalescing counts across recent-window resets', () => {
+    const clock = fakeClock()
+    const probe = createFrameMetrics(clock.now, 2)
+    probe.recordFramePresented()
+    for (const interval of [80, 16, 16]) {
+      clock.advance(interval)
+      probe.recordFramePresented()
+      probe.recordInputEvent()
+    }
+    probe.recordCoalescedInput()
+    expect(probe.snapshot().frameIntervalMs.samples).toEqual([16, 16])
+    expect(probe.snapshot().frameIntervalMs.run).toMatchObject({ count: 3, max: 80, p95: 80 })
+    probe.resetWindow()
+    expect(probe.snapshot().inputEvents).toMatchObject({ total: 3, windowCount: 0 })
+    expect(probe.snapshot().coalescedInputs).toMatchObject({ total: 1, windowCount: 0 })
+    expect(probe.snapshot().frameIntervalMs.run.count).toBe(3)
+  })
+
   it('retains the earliest coalesced ingress until stdout drain completes', () => {
     const probe = createFrameMetrics()
     markDeltaIngress(probe, 10)
@@ -60,6 +73,9 @@ describe('createFrameMetrics', () => {
     const probe = createFrameMetrics(clock.now)
     const snapshot = probe.snapshot()
     expect(snapshot).toEqual({
+      frameIntervalMs: zeroedLatency(),
+      inputEvents: zeroedCounter(),
+      coalescedInputs: zeroedCounter(),
       deltaIngressToStdoutDrainMs: zeroedLatency(),
       markdownParseBytes: zeroedCounter(),
       stableRowsReused: zeroedCounter(),
@@ -146,11 +162,11 @@ describe('createFrameMetrics', () => {
       windowSum: 0,
       windowMax: 0,
     })
-    expect(snapshot.deltaIngressToStdoutDrainMs).toEqual(zeroedLatency())
+    expect(snapshot.deltaIngressToStdoutDrainMs).toEqual(zeroedLatency(15))
     expect(snapshot.renderQueue.currentDepth).toBe(9)
     // maxDepth resets to currentDepth; it does not track the prior peak.
     expect(snapshot.renderQueue.maxDepth).toBe(9)
-    expect(snapshot.renderQueue.ageMs).toEqual(zeroedLatency())
+    expect(snapshot.renderQueue.ageMs).toEqual(zeroedLatency(30))
   })
 
   it('isolates each channel so a recording on one does not affect another', () => {
@@ -188,7 +204,9 @@ describe('createFrameMetrics', () => {
       mean: 42,
       max: 42,
       p95: 42,
+      p99: 42,
       samples: [42],
+      run: { count: 1, mean: 42, max: 42, p95: 42, p99: 42 },
     })
   })
 

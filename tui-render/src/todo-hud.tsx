@@ -53,6 +53,7 @@ export function TodoHud({
       {todos.map((todo, index) => {
         const presentation = STATUS_PRESENTATION[todo.status]
         const head = `${presentation.glyph} ${presentation.word} `
+        const contentToken: StyleToken = todo.status === 'in_progress' ? 'fgSoft' : 'fgDim'
         return (
           <Text key={index} wrap="truncate">
             {paintRow([
@@ -62,7 +63,7 @@ export function TodoHud({
                   escapeContent(todo.content),
                   Math.max(1, maxCols - displayWidth(head)),
                 ),
-                'fgDim',
+                contentToken,
               ),
             ])}
           </Text>

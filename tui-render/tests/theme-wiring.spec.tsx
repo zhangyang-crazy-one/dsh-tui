@@ -81,15 +81,15 @@ describe('paintRow pairing', () => {
   it('wraps every part in the bg token with its own paired reset', () => {
     applyTheme('16')
     expect(paintRow([styled('> ', 'fgDim'), styled('hi', 'fg')])).toBe(
-      '\x1b[40m\x1b[90m> \x1b[0m\x1b[0m\x1b[40m\x1b[37mhi\x1b[0m\x1b[0m',
+      '\x1b[40m\x1b[37m> \x1b[0m\x1b[0m\x1b[40m\x1b[37mhi\x1b[0m\x1b[0m',
     )
     applyTheme('truecolor')
     expect(paintRow([styled('● ', 'accent'), styled('body', 'fg')])).toContain(
-      '\x1b[48;2;0;0;0m\x1b[38;2;77;107;254m● ',
+      '\x1b[48;2;21;22;24m\x1b[38;2;77;107;254m● ',
     )
     applyTheme('256')
     expect(paintRow([styled('● ', 'accent'), styled('body', 'fg')])).toContain(
-      '\x1b[48;5;16m\x1b[38;5;69m● ',
+      '\x1b[48;5;233m\x1b[38;5;69m● ',
     )
     applyTheme('none')
     expect(paintRow([styled('● ', 'accent'), styled('body', 'fg')])).toBe(
@@ -110,12 +110,12 @@ describe('paintRow pairing', () => {
 })
 
 describe('AppShell frame painting', () => {
-  it('paints the title and separator rows pure black at every tier', () => {
+  it('paints the title and separator rows on the Soft Slate frame at every tier', () => {
     applyTheme('16')
     const sixteen = renderShell()
     // CJK-aware gap: 80 − 会话(4) − provider · model(16) = 60 columns.
     expect(sixteen).toContain(
-      `\x1b[40m\x1b[37m会话\x1b[39m${' '.repeat(60)}\x1b[90mprovider · model\x1b[39m\x1b[49m`,
+      `\x1b[40m\x1b[37m会话\x1b[39m${' '.repeat(60)}\x1b[37mprovider · model\x1b[39m\x1b[49m`,
     )
     expect(sixteen).toContain(
       `\x1b[40m\x1b[90m${'─'.repeat(80)}\x1b[39m\x1b[49m`,
@@ -123,12 +123,12 @@ describe('AppShell frame painting', () => {
 
     applyTheme('256')
     expect(renderShell()).toContain(
-      '\x1b[48;5;16m\x1b[38;5;255m会话\x1b[39m',
+      '\x1b[48;5;233m\x1b[38;5;255m会话\x1b[39m',
     )
 
     applyTheme('truecolor')
     expect(renderShell()).toContain(
-      '\x1b[48;2;0;0;0m\x1b[38;2;247;247;248m会话\x1b[39m',
+      '\x1b[48;2;21;22;24m\x1b[38;2;238;240;242m会话\x1b[39m',
     )
 
     applyTheme('none')
@@ -152,52 +152,51 @@ describe('AppShell frame painting', () => {
 })
 
 describe('StreamView body rows', () => {
-  it('centers user rows in the conversation column with fgDim marker plus fg body', () => {
+  it('centers user rows on the Soft Slate message surface', () => {
     applyTheme('16')
     const sixteen = renderUserRow()
     const line = sixteen.split('\n').find(l => stripAnsi(l).includes('> hello'))
-    expect(stripAnsi(line ?? '').trimStart()).toBe('> hello')
+    expect(stripAnsi(line ?? '').trim()).toBe('> hello')
     const prefix = (line ?? '').slice(0, (line ?? '').indexOf('>'))
     expect(prefix).toContain('\x1b[40m')
-    expect(line).toContain('\x1b[90m> ')
-    expect(line).toContain('\x1b[37mhello')
+    expect(line).toContain('\x1b[37m> hello')
 
     applyTheme('256')
     expect(renderUserRow()).toContain(
-      '\x1b[38;5;245m> \x1b[38;5;255mhello',
+      '\x1b[48;5;235m\x1b[38;5;248m> \x1b[38;5;252mhello',
     )
     applyTheme('truecolor')
     expect(renderUserRow()).toContain(
-      '\x1b[38;2;138;143;152m> \x1b[38;2;247;247;248mhello',
+      '\x1b[48;2;37;40;44m\x1b[38;2;164;169;176m> \x1b[38;2;209;212;216mhello',
     )
     applyTheme('none')
     expect(renderUserRow()).not.toContain('\x1b')
     expect(stripAnsi(renderUserRow())).toContain('> hello')
   })
 
-  it('marks the current turn with the bold accent tier and accentDim cursor', () => {
+  it('marks the current turn with the bold accent tier without a transcript cursor', () => {
     applyTheme('16')
     const active = renderActiveTurn()
     expect(active).toContain(
-      '\x1b[40m\x1b[1m\x1b[94m● \x1b[22m\x1b[37manswer\x1b[34m▌\x1b[39m\x1b[49m',
+      '\x1b[40m\x1b[1m\x1b[94m● \x1b[22m\x1b[37manswer\x1b[39m\x1b[49m',
     )
-    // The plain-text projection keeps the glyph and the cursor (A3).
-    expect(stripAnsi(active)).toContain('● answer▌')
+    expect(stripAnsi(active)).toContain('● answer')
+    expect(stripAnsi(active)).not.toContain('▌')
 
     applyTheme('none')
     expect(renderActiveTurn().trimStart()).toBe(
-      '● answer▌',
+      '● answer',
     )
   })
 
-  it('keeps the streaming body and cursor readable at 256 and truecolor', () => {
+  it('keeps the streaming body readable at 256 and truecolor', () => {
     applyTheme('256')
     expect(renderActiveTurn()).toContain(
-      '\x1b[1m\x1b[38;5;69m● \x1b[22m\x1b[38;5;255manswer\x1b[38;5;60m▌',
+      '\x1b[1m\x1b[38;5;105m● \x1b[22m\x1b[38;5;255manswer',
     )
     applyTheme('truecolor')
     expect(renderActiveTurn()).toContain(
-      '\x1b[1m\x1b[38;2;77;107;254m● \x1b[22m\x1b[38;2;247;247;248manswer\x1b[38;2;52;65;91m▌',
+      '\x1b[1m\x1b[38;2;117;137;255m● \x1b[22m\x1b[38;2;238;240;242manswer',
     )
   })
 

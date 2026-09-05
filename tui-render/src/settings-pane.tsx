@@ -9,6 +9,7 @@ import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
 import { paintRow, styled } from './theme.ts'
+import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 /** Exact overlay heading (bold fg, never accent). */
 const TITLE = '设置'
@@ -45,6 +46,8 @@ export interface SettingsFieldRow {
 
 /** SettingsPane props. */
 export interface SettingsPaneProps {
+  /** Presentation-copy locale, Chinese when omitted. */
+  locale?: TuiLocale
   /** Host fields, in display order. */
   rows: readonly SettingsFieldRow[]
   /** Highlighted row index. */
@@ -163,6 +166,7 @@ export function SettingsPane({
   editing,
   onboarding,
   updateError,
+  locale,
 }: SettingsPaneProps): ReactNode {
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
@@ -185,7 +189,12 @@ export function SettingsPane({
       {visible.map((row, index) => {
         const absolute = start + index
         const selected = absolute === selectedIndex
-        const label = `${row.namespace} · ${row.field}`
+        const localized = row.namespace === 'tui'
+          && (row.field === 'reasoning' || row.field === 'scrollbar'
+            || row.field === 'statusDetails' || row.field === 'locale')
+          ? `${row.field} · ${tuiCopy(row.field, locale)}`
+          : row.field
+        const label = `${row.namespace} · ${localized}`
         return (
           <Box key={`${row.namespace}:${row.field}`} width="100%">
             <Text>

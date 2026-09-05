@@ -7,6 +7,18 @@
  */
 
 import { PassThrough } from 'node:stream'
+import { stripVTControlCharacters } from 'node:util'
+import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
+import type { ColorTier } from '../src/terminal-capabilities.ts'
+
+/**
+ * Remove terminal controls without exposing Node declarations to TSX test programs.
+ * @param text - captured terminal output.
+ * @returns printable text without ANSI sequences.
+ */
+export function stripTerminalControls(text: string): string {
+  return stripVTControlCharacters(text)
+}
 
 /** The stdin seam Ink's input parser attaches to. */
 export interface FakeTtyStdin {
@@ -42,4 +54,14 @@ export function fakeTtyStdin(): FakeTtyStdin {
 /** A writable stdout Ink can flush frames to. */
 export function fakeTtyStdout(): FakeTtyStdout {
   return new PassThrough()
+}
+
+/**
+ * Attach production frame painting while keeping Node stream types out of TSX tests.
+ * @param stdout - the owned PassThrough-backed fake TTY.
+ * @param getTier - optional frame color tier.
+ * @returns the wrapped stream with the same fake TTY interface.
+ */
+export function frameTtyStdout(stdout: FakeTtyStdout, getTier?: () => ColorTier): FakeTtyStdout {
+  return wrapStdoutForFrameBg(stdout as unknown as NodeJS.WriteStream, getTier)
 }

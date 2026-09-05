@@ -11,6 +11,7 @@
 export type KeyAction =
   | 'send'
   | 'newline'
+  | 'cycle-mode'
   | 'stop-generation'
   | 'confirm-exit'
   | 'toggle-reasoning'
@@ -41,6 +42,7 @@ export interface KeyBinding {
 export const KEYMAP: readonly KeyBinding[] = [
   { key: 'return', action: 'send' },
   { key: 'return', shift: true, action: 'newline' },
+  { key: 'tab', shift: true, action: 'cycle-mode' },
   { key: 'c', ctrl: true, action: 'stop-generation' },
   { key: 'o', ctrl: true, action: 'toggle-reasoning' },
   { key: 'e', ctrl: true, action: 'toggle-tool-cards' },
@@ -70,4 +72,24 @@ export function keyActionFor(
     && (binding.ctrl ?? false) === modifiers.ctrl
     && (binding.shift ?? false) === modifiers.shift,
   )?.action
+}
+
+/**
+ * Resolve source-reader navigation while its pane owns input.
+ * @param key - printable Ink input.
+ * @param info - normalized terminal key flags.
+ * @returns a pane action; unrelated input is swallowed by the pane owner.
+ */
+export function toolDetailsKeyAction(key: string, info: { ctrl: boolean; escape: boolean; return: boolean; upArrow: boolean; downArrow: boolean; leftArrow: boolean; rightArrow: boolean; pageUp: boolean; pageDown: boolean }): import('./tool-details-pane.tsx').ToolDetailsInput | undefined {
+  if (info.ctrl) return undefined
+  if (info.escape) return 'back'
+  if (info.return) return 'select'
+  if (info.upArrow || key === 'k') return 'up'
+  if (info.downArrow || key === 'j') return 'down'
+  if (info.leftArrow || info.pageUp || key === 'p') return 'previous'
+  if (info.rightArrow || info.pageDown || key === 'n') return 'next'
+  if (key === 'd') return 'diagnostics'
+  if (key === 'y') return 'copy'
+  if (key === 'e') return 'export'
+  return undefined
 }

@@ -116,7 +116,7 @@ export interface AppShellProps {
   badge: string
   /** Main scrollable area. */
   children: ReactNode
-  /** Status area under the input; the adaptive footer uses up to two rows. */
+  /** Status area under the input; the adaptive footer uses up to three rows. */
   status?: ReactNode
   /** Fixed input area at the bottom. */
   input?: ReactNode
@@ -160,16 +160,12 @@ export function AppShell({ title, badge, children, status, input }: AppShellProp
         </Text>
       </Box>
       <Box width="100%" flexShrink={0}>
-        <Text>{paintRow([styled(escapeContent('─'.repeat(columns)), 'fgDim')])}</Text>
+        <Text>{paintRow([styled(escapeContent('─'.repeat(columns)), 'line')])}</Text>
       </Box>
       <Box flexDirection="column" flexGrow={1} width="100%" overflow="hidden">
         {children}
       </Box>
-      {input !== undefined ? (
-        <Box flexDirection="row" width="100%" flexShrink={0}>
-          {input}
-        </Box>
-      ) : null}
+      {input !== undefined ? <Box flexDirection="row" width="100%" flexShrink={0}>{input}</Box> : null}
       {status !== undefined ? (
         <Box flexDirection="row" width="100%" flexShrink={0}>
           {status}

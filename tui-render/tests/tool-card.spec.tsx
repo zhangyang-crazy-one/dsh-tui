@@ -1,5 +1,5 @@
 /**
- * Collapsed ToolCard: ▸ name · status, escaped payloads, no plate.
+ * ToolCard Soft Slate surface, statuses, summaries, and escaped payloads.
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
@@ -35,17 +35,42 @@ describe('ToolCard', () => {
     const out = render(card())
     expect(out).toContain('▸ bash · ')
     expect(out).toContain('运行中')
-    expect(out).toContain('\x1b[38;2;77;107;254m运行中')
+    expect(out).toContain('\x1b[38;2;117;137;255m运行中')
+    expect(out).toContain('\x1b[48;2;26;28;31m')
     expect(out).not.toContain('Submit')
     expect(out).not.toContain('OK')
   })
 
   it('renders completed and failed status words with their tokens', () => {
-    expect(render(card({ status: 'ok' }))).toContain('完成')
-    expect(render(card({ status: 'ok' }))).toContain('\x1b[38;2;34;197;94m完成')
+    expect(render(card({ status: 'ok' }))).toContain('✓')
+    expect(render(card({ status: 'ok' }))).toContain('\x1b[38;2;164;169;176m✓')
     const failed = render(card({ status: 'error' }))
     expect(failed).toContain('失败')
-    expect(failed).toContain('\x1b[38;2;239;68;68m失败')
+    expect(failed).toContain('\x1b[38;2;226;125;119m失败')
+  })
+
+  it('summarizes a failed result instead of repeating the call arguments', () => {
+    const failed = render(card({
+      status: 'error',
+      arguments: '{"command":"pnpm test"}',
+      resultText: 'first line\nTypeScript compilation failed',
+      error: { name: 'ToolError', code: 'COMPILE_FAILED' },
+    }))
+    const plainFailed = failed.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
+    expect(plainFailed).toContain('失败 COMPILE_FAILED · TypeScript compilation failed')
+    expect(plainFailed).not.toContain('pnpm test')
+
+    const terminal = render(card({
+      status: 'ok',
+      callView: { card: 'terminal', title: 'pnpm test' },
+      resultView: {
+        card: 'terminal',
+        output: 'tests started\n2 tests failed',
+        exitCode: 1,
+      },
+    }))
+    expect(terminal.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, ''))
+      .toContain('失败 exitCode 1 · 2 tests failed')
   })
 
   it('escapes CSI in the tool name so it never reaches the terminal raw', () => {
@@ -72,7 +97,7 @@ describe('ToolCard', () => {
     expect(out).toContain('▸ bash · ')
   })
 
-  it('expands into 参数 / 结果 / meta blocks with escaped payloads', () => {
+  it('expands escaped arguments and results while reserving metadata for diagnostics', () => {
     const out = renderToString(createElement(ToolCard, {
       card: card({
         status: 'ok',
@@ -83,10 +108,11 @@ describe('ToolCard', () => {
       expanded: true,
     }))
     expect(out).toContain('▾ bash · ')
-    expect(out).toContain('完成')
+    expect(out).toContain('✓')
     expect(out).toContain('参数')
     expect(out).toContain('结果')
-    expect(out).toContain('meta')
+    expect(out).not.toContain('meta')
+    expect(out).not.toContain('presentation')
     expect(out).not.toContain('\x1b[2J')
     expect(out).not.toContain('presentCall')
   })
@@ -96,7 +122,7 @@ describe('ToolCard', () => {
       card: card({ arguments: '{"command":"git status"}' }),
       maxCols: 1,
     }))
-    expect(out).toContain('▸ bash · ')
+    expect(out).toContain('…')
     expect(out).not.toContain('git status')
   })
 
@@ -262,7 +288,7 @@ describe('ToolCard', () => {
       resultView: { card: 'terminal', output: 'ok\nsecond line', exitCode: 0 },
     }))
     const plainTerminal = terminal.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
-    expect(plainTerminal).toContain('▸ npm test · 完成 exitCode 0')
+    expect(plainTerminal).toContain('▸ npm test · ✓ exitCode 0')
     expect(plainTerminal).not.toContain('{"command"')
     expect(plainTerminal).not.toContain('second line')
 
@@ -278,7 +304,7 @@ describe('ToolCard', () => {
       },
     }))
     const plainWeb = web.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
-    expect(plainWeb).toContain('▸ web_search · 完成 Result One')
+    expect(plainWeb).toContain('▸ web_search · ✓ Result One')
     expect(plainWeb).not.toContain('{"q"')
     expect(plainWeb).not.toContain('\nhttps://example.com')
   })
@@ -454,11 +480,23 @@ describe('ToolCard', () => {
     expect(render(forged)).not.toContain('sources')
   })
 
-  it('falls back to the generic fold for an unknown card tag', () => {
-    const forged = card({ status: 'ok' })
-    // A forged/unknown presenter card tag must never crash the switch.
-    ;(forged as { resultView?: unknown }).resultView = { card: 'mystery' }
-    const out = render(forged)
-    expect(out).toContain('▸ bash · ')
+  it('highlights command name with codeCommand when expanded and preserves NO_COLOR identity', () => {
+    applyTheme('truecolor')
+    const terminalCard = card({
+      status: 'ok',
+      callView: { card: 'terminal', title: 'pnpm test' },
+      resultView: { card: 'terminal', output: 'all passed', exitCode: 0 },
+    })
+    const outTruecolor = renderToString(createElement(ToolCard, { card: terminalCard, expanded: true }))
+    // Command name 'pnpm' uses codeCommand (#75B984: 117;185;132)
+    expect(outTruecolor).toContain('\x1b[38;2;117;185;132mpnpm')
+    expect(outTruecolor).toContain('test')
+
+    applyTheme('none')
+    const outNone = renderToString(createElement(ToolCard, { card: terminalCard, expanded: true }))
+    expect(outNone).not.toContain('\x1b')
+    expect(outNone).toContain('▾ pnpm test · ')
+    expect(outNone).toContain('all passed')
+    applyTheme('truecolor')
   })
 })

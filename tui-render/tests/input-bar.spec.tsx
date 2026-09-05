@@ -110,19 +110,19 @@ describe('handleInput', () => {
 
 describe('InputBar caret publish', () => {
   it('anchors the fullscreen caret on the full-width panel input row', async () => {
-    expect(await publishedCaret('', true)).toBe('\x1b[?2026l\x1b[5G\x1b[?25h')
+    expect(await publishedCaret('', true)).toBe('\x1b[24;5H\x1b[?25h\x1b[?2026l')
   })
 
   it('places the fullscreen TTY caret after the buffered text', async () => {
-    expect(await publishedCaret('hi', true)).toBe('\x1b[?2026l\x1b[7G\x1b[?25h')
+    expect(await publishedCaret('hi', true)).toBe('\x1b[24;7H\x1b[?25h\x1b[?2026l')
   })
 
   it('places the fullscreen TTY caret at a mid-buffer index', async () => {
     expect(await publishedCaret('hello', true, 0)).toBe(
-      '\x1b[?2026l\x1b[5G\x1b[?25h',
+      '\x1b[24;5H\x1b[?25h\x1b[?2026l',
     )
     expect(await publishedCaret('hello', true, 1)).toBe(
-      '\x1b[?2026l\x1b[6G\x1b[?25h',
+      '\x1b[24;6H\x1b[?25h\x1b[?2026l',
     )
   })
 
@@ -164,9 +164,9 @@ describe('InputBar caret publish', () => {
     }
   })
 
-  it('cursor-ups once after a non-TTY trailing-newline frame', async () => {
+  it('anchors above the trailing newline for a non-TTY frame', async () => {
     expect(await publishedCaret('', false)).toBe(
-      '\x1b[?2026l\x1b[1A\x1b[5G\x1b[?25h',
+      '\x1b[23;5H\x1b[?25h\x1b[?2026l',
     )
   })
 
@@ -189,7 +189,7 @@ describe('InputBar caret publish', () => {
     try {
       await instance.waitUntilRenderFlush()
       expect(transformFrameChunk('\x1b[?2026l', 'none')).toBe(
-        '\x1b[?2026l\x1b[6G\x1b[?25h',
+        '\x1b[24;6H\x1b[?25h\x1b[?2026l',
       )
     } finally {
       instance.unmount()
@@ -199,7 +199,7 @@ describe('InputBar caret publish', () => {
 })
 
 describe('InputBar prompt', () => {
-  it('paints the composer prompt in accent', () => {
+  it('paints the composer prompt in the readable accent', () => {
     const out = renderToString(
       createElement(InputBar, {
         text: 'hi',
@@ -207,9 +207,9 @@ describe('InputBar prompt', () => {
         mentionMode: false,
       }),
     )
-    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
+    expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
     expect(out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')).toContain('> hi')
-    expect(out).toContain('\x1b[48;2;15;17;21m')
+    expect(out).toContain('\x1b[48;2;35;38;43m')
   })
 
   it('paints a title hint and leaves the empty input row at the prompt', () => {
@@ -233,7 +233,8 @@ describe('InputBar prompt', () => {
         mentionMode: false,
       }),
     )
-    expect(out).toContain('\x1b[38;2;77;107;254m│ > /settings')
+    expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
+    expect(out).toContain('\x1b[38;2;77;107;254m/settings')
   })
 
   it('paints semantic segments while preserving the exact composer text', () => {
@@ -247,7 +248,7 @@ describe('InputBar prompt', () => {
     )
     expect(out).toContain('\x1b[38;2;77;107;254m/compact')
     expect(out).toContain('\x1b[38;2;77;107;254m@worker')
-    expect(out).toContain('\x1b[38;2;138;143;152m[图片 #1]')
+    expect(out).toContain('\x1b[38;2;164;169;176m[图片 #1]')
     expect(out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')).toContain(`> ${text}`)
   })
 })

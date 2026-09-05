@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
 import { SessionId } from '@deepseek-ai/dsh-session'
+import { stripTerminalControls as stripAnsi } from './helpers.ts'
+import { displayWidth } from '../src/content.ts'
 import { SessionPane, relativeTime } from '../src/session-pane.tsx'
 import type { SessionRow } from '../src/session-pane.tsx'
 
@@ -37,12 +39,41 @@ function renderPane(props: Partial<Parameters<typeof SessionPane>[0]>): string {
       currentId: undefined,
       confirmDelete: false,
       now: NOW,
+      columns: 80,
+      maxRows: 52,
       ...props,
     }),
   )
 }
 
 describe('SessionPane', () => {
+  it('reserves the current marker, age, and distinct ids before shortening a long title', () => {
+    const title = '很长的混合标题 with identifier '.repeat(8)
+    const out = stripAnsi(renderPane({
+      rows: [{ id: SessionId('session-aaaaaaaa-1'), title, updatedAt: NOW },
+        { id: SessionId('session-bbbbbbbb-2'), title, updatedAt: NOW }],
+      currentId: SessionId('session-aaaaaaaa-1'),
+    }))
+    const lines = out.split('\n')
+    expect(lines[0]).toContain('aaaaaaaa')
+    expect(lines[0]).toContain('刚刚 · 当前')
+    expect(lines.find(line => line.includes('bbbbbbbb'))).toContain('刚刚')
+    expect(lines.every(line => displayWidth(line) <= 80)).toBe(true)
+    expect(lines).toHaveLength(4)
+  })
+
+  it('fits the centered directory and its controls in the supplied content rows', () => {
+    const out = stripAnsi(renderPane({
+      rows: directoryRows(101), selectedIndex: 75,
+      currentId: SessionId('session-75'), maxRows: 12,
+    }))
+    expect(out.split('\n')).toHaveLength(12)
+    expect(out).toContain('› row-075')
+    expect(out).toContain('会话 ID · session-75')
+    expect(out).toContain('还有 92 个会话')
+    expect(out).toContain('↑↓/jk 选择')
+  })
+
   it('renders the rows with titles, the selection marker, and the live marker', () => {
     const out = renderPane({
       rows: rows('alpha', 'beta', 'gamma'),
@@ -87,6 +118,54 @@ describe('SessionPane', () => {
     })
     expect(out).toContain('会话 ID · session-parent-002')
     expect(out).not.toContain('会话 ID · session-parent-001')
+  })
+
+  it('disambiguates duplicate titles inline with stable session id hints', () => {
+    const out = renderPane({
+      rows: [{
+        id: SessionId('session-81b9ecc6-b2d0-4b95-ae02-7a51353ed27c'),
+        title: '你好',
+        updatedAt: NOW,
+      }, {
+        id: SessionId('session-7fe21234-5356-405a-9e50-000f22c657f9'),
+        title: '你好',
+        updatedAt: NOW - 1,
+      }, {
+        id: SessionId('session-unique'),
+        title: '独立标题',
+        updatedAt: NOW - 2,
+      }],
+    })
+    expect(out).toContain('你好 · 81b9ecc6')
+    expect(out).toContain('你好 · 7fe21234')
+    expect(out).toContain('独立标题')
+    expect(out).not.toContain('独立标题 · unique')
+  })
+
+  it('extends shared id prefixes and falls back to raw ids after prefix removal collides', () => {
+    const out = renderPane({
+      rows: [{
+        id: SessionId('session-81b9ecc6-aaaaaaaa'),
+        title: 'shared prefix',
+        updatedAt: NOW,
+      }, {
+        id: SessionId('session-81b9ecc6-bbbbbbbb'),
+        title: 'shared prefix',
+        updatedAt: NOW - 1,
+      }, {
+        id: SessionId('session-shared-id'),
+        title: 'normalized collision',
+        updatedAt: NOW - 2,
+      }, {
+        id: SessionId('shared-id'),
+        title: 'normalized collision',
+        updatedAt: NOW - 3,
+      }],
+    })
+    expect(out).toContain('shared prefix · 81b9ecc6-a')
+    expect(out).toContain('shared prefix · 81b9ecc6-b')
+    expect(out).toContain('normalized collision · session-')
+    expect(out).toContain('normalized collision · shared-i')
   })
 
   it('escapes CSI in the currentId carrier row', () => {
@@ -164,12 +243,12 @@ describe('SessionPane', () => {
       confirmDelete: true,
       selectedIndex: 0,
     })
-    expect(armed).toContain('\x1b[38;2;239;68;68m再按 d 确认删除「alpha」')
+    expect(armed).toContain('\x1b[38;2;226;125;119m再按 d 确认删除「alpha」')
     const unavailable = renderPane({
       rows: rows('alpha'),
       deleteUnavailable: true,
     })
-    expect(unavailable).toContain('\x1b[38;2;239;68;68m删除不可用（后端能力缺失）')
+    expect(unavailable).toContain('\x1b[38;2;226;125;119m删除不可用（后端能力缺失）')
   })
 
   it('escapes ANSI injected through the delete-confirmation title', () => {
@@ -185,7 +264,7 @@ describe('SessionPane', () => {
 
   it('styles the footer in fgDim', () => {
     const out = renderPane({ rows: rows('alpha') })
-    expect(out).toContain('\x1b[38;2;138;143;152m↑↓/jk 选择')
+    expect(out).toContain('\x1b[38;2;164;169;176m↑↓/jk 选择')
   })
 
   it('shows the unavailable state when the delete capability is missing (K6)', () => {

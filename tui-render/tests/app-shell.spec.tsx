@@ -115,8 +115,8 @@ describe('layoutTitleBar', () => {
 
 describe('AppShell', () => {
   it.each([
-    ['truecolor', '\x1b[48;2;0;0;0m'],
-    ['256', '\x1b[48;5;16m'],
+    ['truecolor', '\x1b[48;2;21;22;24m'],
+    ['256', '\x1b[48;5;233m'],
     ['16', '\x1b[40m'],
   ] as const)('paints the complete AppShell output at the %s tier', (tier, bg) => {
     applyTheme(tier)
@@ -135,7 +135,7 @@ describe('AppShell', () => {
 
   it('preserves an explicit code background inside the root frame background', () => {
     const out = centeredShell(styled('code', 'codeBg'))
-    expect(out).toContain('\x1b[48;2;15;17;21mcode')
+    expect(out).toContain('\x1b[48;2;32;35;40mcode')
   })
 
   it('draws a thin fgDim separator spanning the window below the top bar', () => {

@@ -69,7 +69,9 @@ describe('createFrameProbe', () => {
       mean: 0,
       max: 0,
       p95: 0,
+      p99: 0,
       samples: [],
+      run: { count: 0, mean: 0, max: 0, p95: 0, p99: 0 },
     })
     expect(probe.commits).toBe(0)
   })
@@ -107,7 +109,9 @@ describe('createFrameProbe', () => {
       mean: 42,
       max: 42,
       p95: 42,
+      p99: 42,
       samples: [42],
+      run: { count: 1, mean: 42, max: 42, p95: 42, p99: 42 },
     })
   })
 

@@ -1,19 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, renderToString, Text } from 'ink'
-import { createElement } from 'react'
+import { createElement, useLayoutEffect } from 'react'
 import { AppShell } from '../src/app-shell.tsx'
 import { StreamView, conversationWidth, scrollRailGeometry } from '../src/stream-view.tsx'
 import type { ProjectedTurnContent, ViewModel } from '../src/projection.ts'
-import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { fakeTtyStdin, fakeTtyStdout, frameTtyStdout } from './helpers.ts'
 import { BRAND_APP_TITLE } from '../src/brand.ts'
 import { activeBrandRevealTimerCount } from '../src/pixel-fish-home.tsx'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { setHyperlinks } from '../src/hyperlink.ts'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import type { TranscriptViewportCommand } from '../src/transcript-viewport.ts'
-import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
 import { createFrameMetrics } from '../src/frame-metrics.ts'
 import { renderPolicyDefaults } from '../src/render-policy.ts'
+import { visibleFrameSnapshot } from '../src/frame-snapshot.ts'
+import { PRESET_TABLE_MARKDOWN } from './fixtures/preset-table.ts'
+import { displayWidth } from '../src/content.ts'
 
 function model(overrides: Partial<ViewModel> = {}): ViewModel {
   return {
@@ -23,6 +25,56 @@ function model(overrides: Partial<ViewModel> = {}): ViewModel {
     reasoningExpanded: false,
     toolCardsExpanded: false,
     ...overrides,
+  }
+}
+
+/** Render one clock-driven active frame under deterministic fake time. */
+async function timedActiveFrame(input: {
+  readonly activeTurn: NonNullable<ViewModel['activeTurn']>
+  readonly advanceMs: number
+}): Promise<{
+  readonly output: string
+  readonly activeTimerCount: number
+  readonly remainingTimerCount: number
+}> {
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+  let now = Date.now()
+  const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+  const chunks: string[] = []
+  const stdout = fakeTtyStdout()
+  stdout.on('data', (chunk: string) => chunks.push(chunk))
+  const instance = render(
+    createElement(StreamView, {
+      model: model({ activeTurn: input.activeTurn, status: 'generating', reasoningExpanded: true }),
+    }),
+    {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: false,
+    },
+  )
+  let unmounted = false
+  let activeTimerCount = 0
+  let remainingTimerCount = 0
+  try {
+    now += input.advanceMs
+    await vi.advanceTimersByTimeAsync(input.advanceMs)
+    activeTimerCount = vi.getTimerCount()
+    instance.unmount()
+    unmounted = true
+    await instance.waitUntilExit()
+    remainingTimerCount = vi.getTimerCount()
+  } finally {
+    if (!unmounted) instance.unmount()
+    nowSpy.mockRestore()
+    vi.useRealTimers()
+  }
+  return {
+    output: stripAnsi(chunks.join('')),
+    activeTimerCount,
+    remainingTimerCount,
   }
 }
 
@@ -99,6 +151,204 @@ describe('scrollRailGeometry', () => {
 })
 
 describe('StreamView', () => {
+  it('keeps frame revisions proportional to visible rows rather than the entire history', async () => {
+    const stdout = ttyStdout(24)
+    const text = Array.from({ length: 5001 }, (_, index) => `BODY_${index}`).join('\n')
+    const element = createElement(AppShell, { title: 'REVISION', badge: '',
+      children: createElement(StreamView, { model: model({ history: [{ id: 1, kind: 'assistant', text, timestamp: 0 }] }) }),
+      input: createElement(Text, null, 'INPUT'), status: createElement(Text, null, 'STATUS') })
+    const instance = render(element, { stdout: frameTtyStdout(stdout), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    try {
+      await instance.waitUntilRenderFlush()
+      const snapshot = visibleFrameSnapshot()!
+      expect(snapshot.rows.some(row => row.line.text.includes('BODY_5000'))).toBe(true)
+      const identityLength = snapshot.rows.reduce((size, row) => size + row.id.length + row.identity.length, 0)
+      expect(snapshot.revision.length).toBeLessThan(identityLength + 200)
+      expect(snapshot.revision).not.toContain('BODY_0\n')
+    } finally { instance.unmount() }
+  })
+
+  it('releases transcript paint ownership before a replacement pane lays out', async () => {
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const observations: boolean[] = []
+    const panelRow = `SETTINGS${' '.repeat(63)}PANEL_END`
+    const Panel = () => {
+      useLayoutEffect(() => { observations.push(visibleFrameSnapshot() !== undefined) }, [])
+      return createElement(Text, null, panelRow)
+    }
+    const shell = (panel: boolean) => createElement(AppShell, {
+      title: 'PANES', badge: '',
+      children: panel ? createElement(Panel) : createElement(StreamView, { model: model({ history: [{
+        id: 1, kind: 'assistant', timestamp: 0,
+        text: Array.from({ length: 60 }, (_, index) => `OLD_TRANSCRIPT_${index}`).join('\n'),
+      }] }) }),
+      input: createElement(Text, null, '> INPUT'), status: createElement(Text, null, 'STATUS'),
+    })
+    const instance = render(shell(false), { stdout: frameTtyStdout(stdout), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    try {
+      await instance.waitUntilRenderFlush()
+      expect(visibleFrameSnapshot()).toBeDefined()
+      instance.rerender(shell(true))
+      await instance.waitUntilRenderFlush()
+      expect(observations).toEqual([false])
+      const screen = atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+      expect(screen).toContain('SETTINGS')
+      expect(screen).toContain('PANEL_END')
+      expect(screen).not.toContain('OLD_TRANSCRIPT_')
+      expect(screen).not.toMatch(/[·█]/u)
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('streams complete opt-in reasoning through the shared viewport and keeps it after settlement', async () => {
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const thoughts = (count: number) => Array.from({ length: count }, (_, index) =>
+      `THOUGHT_${String(index).padStart(2, '0')}`).join('\n')
+    const activeModel = (count: number, shown: boolean) => model({
+      reasoningExpanded: shown, status: 'generating',
+      activeTurn: { turn: 1, assistantText: '', reasoningText: thoughts(count),
+        reasoningDurationMs: 0, toolCalls: [] },
+    })
+    const shell = (value: ViewModel, command?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'THOUGHT_FLOW', badge: '',
+      children: createElement(StreamView, { model: value, viewportCommand: command }),
+      status: createElement(Text, null, 'STATUS'), input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell(activeModel(30, false)), {
+      stdout: frameTtyStdout(stdout), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true,
+    })
+    const screen = () => atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+    try {
+      await instance.waitUntilRenderFlush()
+      expect(screen()).not.toContain('THOUGHT_00')
+      expect(screen()).not.toContain('✻ 思考')
+      instance.rerender(shell(activeModel(30, true)))
+      await instance.waitUntilRenderFlush()
+      await expect.poll(screen).toContain('THOUGHT_29')
+      expect(screen().match(/THOUGHT_\d+/gu)?.length).toBeGreaterThan(4)
+      const oldest = { sequence: 1, kind: 'edge', edge: 'oldest' } as const
+      instance.rerender(shell(activeModel(30, true), oldest))
+      await instance.waitUntilRenderFlush()
+      await expect.poll(screen).toContain('THOUGHT_00')
+      instance.rerender(shell(activeModel(40, true), oldest))
+      await instance.waitUntilRenderFlush()
+      expect(screen()).toContain('THOUGHT_00')
+      expect(screen()).toContain('End/G')
+      const completed = model({ reasoningExpanded: true, history: [{
+        id: 1, kind: 'assistant', text: 'ANSWER_FINAL', timestamp: 1,
+        turnOrdinal: 1, reasoningText: thoughts(40),
+      }] })
+      instance.rerender(shell(completed, { sequence: 2, kind: 'edge', edge: 'latest' }))
+      await instance.waitUntilRenderFlush()
+      expect(screen()).toContain('THOUGHT_39')
+      expect(screen()).toContain('ANSWER_FINAL')
+      instance.rerender(shell({ ...completed, reasoningExpanded: false }))
+      await instance.waitUntilRenderFlush()
+      expect(screen()).not.toMatch(/THOUGHT_\d+/u)
+      expect(screen()).not.toContain('✻ 思考')
+      expect(screen()).toContain('ANSWER_FINAL')
+      expect(screen()).toContain('> INPUT')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('paints each wheel animation row within the overscan window and reaches the exact target', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const stdout = ttyStdout(24)
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const history: ViewModel['history'] = [{
+      id: 1, kind: 'user', timestamp: 0,
+      text: Array.from({ length: 80 }, (_, index) => `SCROLL_ROW_${String(index).padStart(3, '0')}`).join('\n'),
+    }]
+    const shell = (command?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'SCROLL', badge: '', children: streamElement(history, command),
+      status: createElement(Text, null, 'STATUS'), input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell(), { stdout: frameTtyStdout(stdout), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    const firstRow = () => Number(/SCROLL_ROW_(\d+)/u.exec(visibleFrameSnapshot()?.rows[0]?.line.text ?? '')?.[1])
+    try {
+      await instance.waitUntilRenderFlush()
+      const initial = firstRow()
+      expect(Number.isFinite(initial)).toBe(true)
+      instance.rerender(shell({ sequence: 1, kind: 'scroll', delta: 4 }))
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBe(initial - 1)
+      for (let offset = 2; offset <= 4; offset += 1) {
+        await vi.advanceTimersByTimeAsync(renderPolicyDefaults().scroll.frameIntervalMs)
+        await instance.waitUntilRenderFlush()
+        expect(firstRow()).toBe(initial - offset)
+      }
+      instance.rerender(shell({ sequence: 2, kind: 'edge', edge: 'latest' }))
+      await instance.waitUntilRenderFlush()
+      instance.rerender(shell({ sequence: 3, kind: 'scroll', delta: 8 }))
+      await vi.advanceTimersByTimeAsync(renderPolicyDefaults().scroll.frameIntervalMs)
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBeLessThan(initial)
+      instance.rerender(shell({ sequence: 4, kind: 'scroll', delta: -3 }))
+      await vi.advanceTimersByTimeAsync(renderPolicyDefaults().scroll.frameIntervalMs)
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBe(initial)
+      expect(ttyFrame(atlas, 80, 24)).toContain('SCROLL_ROW_079')
+    } finally {
+      instance.unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it('toggles the scrollbar without moving a centered table or losing detached navigation', async () => {
+    const columns = 112
+    const stdout = ttyStdout(40, columns)
+    const atlas = new ScreenAtlas(columns, 40)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const history: ViewModel['history'] = [{ id: 1, kind: 'assistant', timestamp: 0,
+      text: `# Presets\n\n${PRESET_TABLE_MARKDOWN}\n\n${'tail\n\n'.repeat(30)}` }]
+    const shell = (scrollbar: boolean) => createElement(AppShell, {
+      title: 'TABLE', badge: '',
+      children: createElement(StreamView, { model: model({ history }), scrollbar,
+        viewportCommand: { sequence: 1, kind: 'edge', edge: 'oldest' } }),
+      status: createElement(Text, null, 'STATUS'), input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell(true), { stdout: frameTtyStdout(stdout, () => 'none'), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    const tableBounds = () => {
+      const row = visibleFrameSnapshot()?.rows.find(row => row.line.text.includes('┌'))
+      expect(row).toBeDefined()
+      const text = row!.line.text
+      const left = row!.col - 1 + displayWidth(text.slice(0, text.indexOf('┌')))
+      const right = columns - row!.col + 1 - displayWidth(text.slice(0, text.indexOf('┐') + 1))
+      return { left, right }
+    }
+    try {
+      await instance.waitUntilRenderFlush()
+      const bounds = tableBounds()
+      expect(bounds.left).toBe(bounds.right)
+      expect(visibleFrameSnapshot()?.geometry.rail).toBeDefined()
+      instance.rerender(shell(false))
+      await instance.waitUntilRenderFlush()
+      expect(visibleFrameSnapshot()?.geometry.rail).toBeUndefined()
+      expect(tableBounds()).toEqual(bounds)
+      expect(ttyFrame(atlas, columns, 40)).toContain('↓ 底部 · End/G')
+      for (let row = 3; row < 35; row += 1) expect(atlas.cellAt(columns, row)?.ch).not.toMatch(/[·█]/u)
+      instance.rerender(shell(true))
+      await instance.waitUntilRenderFlush()
+      expect(visibleFrameSnapshot()?.geometry.rail).toBeDefined()
+      expect(tableBounds()).toEqual(bounds)
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('keeps the fixed shell while edge commands replace physical viewport rows', async () => {
     const chunks: string[] = []
     const stdout = ttyStdout(24)
@@ -116,10 +366,7 @@ describe('StreamView', () => {
       input: createElement(Text, null, '> FIXED_INPUT'),
     })
     const instance = render(shell({ sequence: 1, kind: 'edge', edge: 'oldest' }), {
-      stdout: wrapStdoutForFrameBg(
-        stdout,
-        () => 'none',
-      ) as unknown as typeof stdout,
+      stdout: frameTtyStdout(stdout, () => 'none'),
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -137,6 +384,7 @@ describe('StreamView', () => {
       expect(oldest.match(/ROW_\d{3}/gu)?.length ?? 0).toBeGreaterThanOrEqual(5)
       expect(oldest).toContain('█')
       expect(oldest).toContain('·')
+      expect(oldest).toContain('↓ 底部 · End/G')
 
       chunks.length = 0
       instance.rerender(shell({ sequence: 2, kind: 'edge', edge: 'latest' }))
@@ -149,6 +397,7 @@ describe('StreamView', () => {
       expect(latest).toContain('ROW_099')
       expect(latest).not.toContain('ROW_000')
       expect(latest.match(/ROW_\d{3}/gu)?.length ?? 0).toBeGreaterThanOrEqual(5)
+      expect(latest).not.toContain('↓ 底部 · End/G')
     } finally {
       instance.unmount()
     }
@@ -198,7 +447,8 @@ describe('StreamView', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const afterLines = screen().split('\n')
-      expect(afterLines[beforeRow]).toBe(beforeAnchor)
+      expect(afterLines[beforeRow].slice(0, 78).trimEnd()).toBe(beforeAnchor.slice(0, 78).trimEnd())
+      expect(afterLines[beforeRow]).toContain('ROW_')
       expect(screen()).toContain('↓ 最新消息 · 3')
       expect(screen()).toContain('ANCHOR_TITLE')
       expect(screen()).toContain('ANCHOR_STATUS')
@@ -273,7 +523,9 @@ describe('StreamView', () => {
       instance.rerender(shell(settledModel, command))
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
-      expect(screen().split('\n')[anchorRow]).toBe(anchor)
+      const afterAnchor = screen().split('\n')[anchorRow]
+      expect(afterAnchor.slice(0, 78).trimEnd()).toBe(anchor.slice(0, 78).trimEnd())
+      expect(afterAnchor).toContain('ROW_')
       expect(screen()).toContain('SETTLE_ANCHOR_INPUT')
     } finally {
       instance.unmount()
@@ -300,10 +552,7 @@ describe('StreamView', () => {
       status: createElement(Text, null, 'LONG_STATUS'),
       input: createElement(Text, null, '> LONG_INPUT'),
     }), {
-      stdout: wrapStdoutForFrameBg(
-        stdout,
-        () => 'none',
-      ) as unknown as typeof stdout,
+      stdout: frameTtyStdout(stdout, () => 'none'),
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -388,7 +637,7 @@ describe('StreamView', () => {
     expect(out).toContain('> ')
   })
 
-  it('shows the live cursor while generating and markdown once settled', () => {
+  it('streams prose without painting a transcript cursor and keeps markdown once settled', () => {
     const active = {
       turn: 1,
       assistantText: 'streaming text',
@@ -401,7 +650,8 @@ describe('StreamView', () => {
         model: model({ activeTurn: active, status: 'generating' }),
       }),
     )
-    expect(stripAnsi(generating)).toContain('streaming text▌')
+    expect(stripAnsi(generating)).toContain('streaming text')
+    expect(stripAnsi(generating)).not.toContain('▌')
     const idle = renderToString(
       createElement(StreamView, {
         model: model({ activeTurn: active, status: 'idle' }),
@@ -425,7 +675,7 @@ describe('StreamView', () => {
         }),
       }),
     ))
-    expect(blankStart).toContain('● 正在思考…')
+    expect(blankStart).toContain('● 正在处理…')
 
     const withFirstPart = stripAnsi(renderToString(
       createElement(StreamView, {
@@ -441,8 +691,110 @@ describe('StreamView', () => {
         }),
       }),
     ))
-    expect(withFirstPart).toContain('● first token▌')
-    expect(withFirstPart).not.toContain('● 正在思考…')
+    expect(withFirstPart).toContain('● first token')
+    expect(withFirstPart).not.toContain('▌')
+    expect(withFirstPart).not.toContain('● 正在处理…')
+  })
+
+  it('advances the blank-start thinking duration without waiting for a model event', async () => {
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: '',
+        reasoningText: '',
+        toolCalls: [],
+        reasoningDurationMs: 0,
+      },
+      advanceMs: 300,
+    })
+    expect(result.output).toContain('正在处理… (0.3s)')
+    expect(result.activeTimerCount).toBeGreaterThan(0)
+    expect(result.remainingTimerCount).toBe(0)
+  })
+
+  it('advances the current reasoning header between streamed reasoning events', async () => {
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: '',
+        reasoningText: 'available reasoning summary',
+        toolCalls: [],
+        reasoningDurationMs: 100,
+      },
+      advanceMs: 300,
+    })
+    expect(result.output).toContain('思考 (0.4s)')
+    expect(result.activeTimerCount).toBeGreaterThan(0)
+    expect(result.remainingTimerCount).toBe(0)
+  })
+
+  it('stops the reasoning clock after streamed prose follows the reasoning run', async () => {
+    const proseOnly = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: 'continue with the answer',
+        reasoningText: '',
+        toolCalls: [],
+        reasoningDurationMs: 0,
+      },
+      advanceMs: 300,
+    })
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: 'continue with the answer',
+        reasoningText: 'finished reasoning',
+        toolCalls: [],
+        reasoningDurationMs: 800,
+        content: [
+          { kind: 'reasoning', text: 'finished reasoning', durationMs: 800 },
+          { kind: 'text', text: 'continue with the answer' },
+        ],
+      },
+      advanceMs: 300,
+    })
+    expect(result.output).toContain('思考 (0.8s)')
+    expect(result.output).not.toContain('思考 (1.1s)')
+    expect(result.activeTimerCount).toBe(proseOnly.activeTimerCount)
+    expect(result.remainingTimerCount).toBe(0)
+  })
+
+  it('stops the reasoning clock after a tool follows the reasoning run', async () => {
+    const toolCall = {
+      kind: 'tool-call' as const,
+      callId: ToolCallId('clock-tool'),
+      name: 'bash',
+      arguments: '{}',
+    }
+    const toolOnly = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: '',
+        reasoningText: '',
+        toolCalls: [],
+        reasoningDurationMs: 0,
+        content: [toolCall],
+      },
+      advanceMs: 300,
+    })
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: '',
+        reasoningText: 'finished reasoning',
+        toolCalls: [],
+        reasoningDurationMs: 800,
+        content: [
+          { kind: 'reasoning', text: 'finished reasoning', durationMs: 800 },
+          toolCall,
+        ],
+      },
+      advanceMs: 300,
+    })
+    expect(result.output).toContain('思考 (0.8s)')
+    expect(result.output).toContain('bash · 运行中')
+    expect(result.activeTimerCount).toBe(toolOnly.activeTimerCount)
+    expect(result.remainingTimerCount).toBe(0)
   })
 
   it('renders markdown formatting while the text is still streaming', () => {
@@ -459,12 +811,13 @@ describe('StreamView', () => {
       }),
     )
     const plain = stripAnsi(generating)
-    // Live markdown: the heading frame and strong text are already rendered,
-    // not the raw markers, and the cursor sits on the last row.
+    // Live markdown renders the heading frame and strong text instead of raw
+    // markers; the hardware cursor remains owned by the composer.
     expect(plain).toContain('━━━ Report ━━━')
     expect(plain).toContain('bold')
     expect(plain).not.toContain('**bold**')
-    expect(plain).toContain('claim▌')
+    expect(plain).toContain('claim')
+    expect(plain).not.toContain('▌')
   })
 
   it('shows the blank-start generating placeholder while the turn has no visible parts yet', () => {
@@ -488,7 +841,7 @@ describe('StreamView', () => {
       ),
     )
     expect(plain).toContain('你好')
-    expect(plain).toContain('● 正在思考…')
+    expect(plain).toContain('● 正在处理…')
     expect(plain).not.toContain('▌')
   })
 
@@ -523,7 +876,7 @@ describe('StreamView', () => {
     expect(table).not.toContain('| --- |')
   })
 
-  it('folds reasoning into the marker when not generating', () => {
+  it('hides reasoning and its header when not enabled', () => {
     const active = {
       turn: 1,
       assistantText: '',
@@ -536,11 +889,11 @@ describe('StreamView', () => {
         model: model({ activeTurn: active, status: 'idle' }),
       }),
     )
-    expect(out).toContain('✻ 思考 (1.2s)')
+    expect(out).not.toContain('✻ 思考')
     expect(out).not.toContain('deep thinking')
   })
 
-  it('keeps completed reasoning collapsed until Ctrl+O expansion is enabled', () => {
+  it('keeps completed reasoning hidden until Ctrl+O display is enabled', () => {
     const history: ViewModel['history'] = [{
       id: 1,
       kind: 'assistant',
@@ -558,7 +911,7 @@ describe('StreamView', () => {
         model: model({ history }),
       }),
     )
-    expect(collapsed).toContain('✻ 思考 (1.3s)')
+    expect(collapsed).not.toContain('✻ 思考')
     expect(collapsed).not.toContain('retained reasoning')
 
     const expanded = renderToString(
@@ -624,7 +977,7 @@ describe('StreamView', () => {
     expect(plain).not.toContain('> first')
     expect(plain).not.toContain('🐋')
     expect(out).toContain('\x1b[1m\x1b[38;2;77;107;254mDeepSeek')
-    expect(out).toContain('\x1b[38;2;247;247;248m有什么可以帮忙的')
+    expect(out).toContain('\x1b[38;2;238;240;242m有什么可以帮忙的')
   })
 
   it('hides the idle home once a transcript row exists', () => {
@@ -795,7 +1148,7 @@ describe('StreamView', () => {
     expect(stripAnsi(out)).toContain('● answer')
   })
 
-  it('keeps one blank line between the reasoning fold and the assistant row', () => {
+  it('keeps one blank line between visible reasoning and the assistant row', () => {
     const active = {
       turn: 1,
       assistantText: 'answer',
@@ -805,13 +1158,13 @@ describe('StreamView', () => {
     }
     const out = renderToString(
       createElement(StreamView, {
-        model: model({ activeTurn: active, status: 'idle' }),
+        model: model({ activeTurn: active, status: 'idle', reasoningExpanded: true }),
       }),
     )
     const lines = out.split('\n')
     expect(
       lines.findIndex(line => line.includes('answer')) -
-        lines.findIndex(line => line.includes('✻ 思考 (0.1s)')),
+        lines.findIndex(line => line.includes('deep')),
     ).toBe(2)
   })
 
@@ -844,7 +1197,7 @@ describe('StreamView', () => {
     )
     const plain = stripAnsi(out)
     expect(plain).toContain('● looking')
-    expect(plain).toContain('▸ bash · 完成')
+    expect(plain).toContain('▸ bash · ✓')
     expect(plain).not.toContain('> bash')
     expect(plain).not.toContain('● bash')
     expect(plain).not.toContain('有什么可以帮忙的')
@@ -902,7 +1255,7 @@ describe('StreamView', () => {
       }),
     )
     const plain = stripAnsi(out)
-    expect(plain).toContain('▾ bash · 完成')
+    expect(plain).toContain('▾ bash · ✓')
     expect(plain).toContain('参数')
     expect(plain).toContain('结果')
   })
@@ -936,11 +1289,11 @@ describe('StreamView', () => {
       }),
     ))
     expect(plain.indexOf('BEFORE_TOOL')).toBeGreaterThanOrEqual(0)
-    expect(plain.indexOf('▸ bash · 完成')).toBeGreaterThan(plain.indexOf('BEFORE_TOOL'))
-    expect(plain.indexOf('AFTER_TOOL')).toBeGreaterThan(plain.indexOf('▸ bash · 完成'))
+    expect(plain.indexOf('▸ bash · ✓')).toBeGreaterThan(plain.indexOf('BEFORE_TOOL'))
+    expect(plain.indexOf('AFTER_TOOL')).toBeGreaterThan(plain.indexOf('▸ bash · ✓'))
   })
 
-  it('does not dump the full reasoning essay while generating', () => {
+  it('hides reasoning completely by default while streaming the answer', () => {
     const reasoningText = Array.from(
       { length: 10 },
       (_, index) => `THINK_${index}`,
@@ -959,16 +1312,18 @@ describe('StreamView', () => {
         }),
       }),
     ))
-    expect(plain).toContain('✻ 思考 (48.8s)')
+    expect(plain).not.toContain('✻ 思考')
+    expect(plain).not.toContain('Ctrl+O 展开')
     expect(plain).toContain('looking')
     expect(plain).not.toContain('THINK_0')
-    expect(plain).toContain('THINK_9')
+    expect(plain).not.toContain('THINK_9')
   })
 
   it('labels each reasoning run with its own duration while generating', () => {
     const plain = stripAnsi(renderToString(
       createElement(StreamView, {
         model: model({
+          reasoningExpanded: true,
           activeTurn: {
             turn: 1,
             assistantText: '',
@@ -997,10 +1352,10 @@ describe('StreamView', () => {
       }),
     ))
     expect(plain).toContain('思考 (0.8s)')
-    expect(plain).toContain('思考 (2.1s)')
+    expect(plain).toMatch(/思考 \(2\.[12]s\)/u)
     expect(plain).not.toContain('思考 (21.7s)')
-    expect(plain).toContain('Ctrl+O 展开')
-    expect(plain).not.toContain('first think')
+    expect(plain).not.toContain('Ctrl+O 展开')
+    expect(plain).toContain('first think')
     expect(plain).toContain('second think')
   })
 
@@ -1021,10 +1376,10 @@ describe('StreamView', () => {
     const wrapped = plain.split('\n').filter(line => line.includes('W'))
     expect(wrapped.length).toBeGreaterThan(1)
     expect(plain).toContain('WRAP_HEAD')
-    expect(plain).toContain('WRAP_TAIL')
+    expect(plain.replace(/\n {4}/gu, '')).toContain('WRAP_TAIL')
   })
 
-  it('wraps generating text and keeps the cursor on the last row', () => {
+  it('wraps generating text without adding a transcript cursor', () => {
     const plain = stripAnsi(renderToString(
       createElement(StreamView, {
         model: model({
@@ -1041,7 +1396,8 @@ describe('StreamView', () => {
     ))
     const wrapped = plain.split('\n').filter(line => /G/.test(line))
     expect(wrapped.length).toBeGreaterThan(1)
-    expect(plain.trimEnd().endsWith('▌')).toBe(true)
+    expect(plain).toContain('TAIL')
+    expect(plain).not.toContain('▌')
   })
 
   it('does not paint wrapped assistant rows through the composer on a short TTY', async () => {
@@ -1100,6 +1456,7 @@ describe('StreamView', () => {
   })
 
   it('paints the TurnTail 产物 row and per-turn stats, hidden when empty', () => {
+    setHyperlinks(false)
     const editCall: ProjectedTurnContent = {
       kind: 'tool-call',
       callId: ToolCallId('call-edit'),
@@ -1117,8 +1474,8 @@ describe('StreamView', () => {
         presentCall: () => ({
           card: 'diff' as const,
           title: 'Edit a.ts',
-          diffs: [{ path: 'a.ts', oldText: 'x', newText: 'y' }],
-          locations: [{ path: 'a.ts' }],
+          diffs: [{ path: '/workspace/a.ts', oldText: 'x', newText: 'y' }],
+          locations: [{ path: '/workspace/a.ts' }],
         }),
       }),
     }
@@ -1132,6 +1489,13 @@ describe('StreamView', () => {
             content: [editCall, editResult],
             timestamp: 1,
             usageOutputTokens: 12,
+            turnUsage: {
+              uncachedInputTokens: 18,
+              outputTokens: 12,
+              totalTokens: 50,
+              cacheReadTokens: 20,
+              cacheWriteTokens: 0,
+            },
             stepWallMs: 340,
             turnOrdinal: 3,
           }],
@@ -1142,10 +1506,12 @@ describe('StreamView', () => {
     const plainTail = stripAnsi(withTail)
     expect(plainTail).toContain('── 已完成 ──')
     expect(plainTail).toContain('产物 · ')
-    expect(plainTail).toContain('a.ts')
-    expect(plainTail).toContain('turn 3 · 12 tok · 340 ms')
-    expect(plainTail.indexOf('── 已完成 ──')).toBeLessThan(plainTail.indexOf('产物 · '))
-    expect(plainTail.indexOf('产物 · ')).toBeLessThan(plainTail.indexOf('turn 3 · 12 tok · 340 ms'))
+    expect(plainTail).toContain('/workspace/a.ts')
+    const producedLine = plainTail.split('\n').find(line => line.includes('产物 · '))
+    expect(producedLine?.match(/\/workspace\/a\.ts/gu)).toHaveLength(1)
+    expect(plainTail).toContain('turn 3 · ↑38 · ↓12 · 340 ms · 缓存命中 53%')
+    expect(plainTail.indexOf('产物 · ')).toBeLessThan(plainTail.indexOf('turn 3 · ↑38'))
+    expect(plainTail.indexOf('turn 3 · ↑38')).toBeLessThan(plainTail.indexOf('── 已完成 ──'))
     const bare = renderToString(
       createElement(StreamView, {
         model: model({
@@ -1158,7 +1524,7 @@ describe('StreamView', () => {
     expect(plainBare).not.toContain(' tok')
   })
 
-  it('collapses dense settled history into the exact digest row until expansion is enabled', () => {
+  it('shows all reasoning only when enabled in a dense settled turn', () => {
     const content = Array.from({ length: 21 }, (_, index) =>
       index % 2 === 0
         ? { kind: 'text' as const, text: `PART_${index}` }
@@ -1178,8 +1544,10 @@ describe('StreamView', () => {
         model: baseModel,
       }),
     ))
-    expect(collapsed.replace(/\s+/g, ' ')).toContain('● 过程摘要 · 10 叙述 · 10 思考 · 0 工具')
-    expect(collapsed).not.toContain('PART_0')
+    expect(collapsed).not.toContain('● 过程摘要')
+    expect(collapsed).not.toContain('✻ 思考')
+    expect(collapsed).not.toContain('THINK_')
+    expect(collapsed).toContain('PART_0')
     expect(collapsed).toContain('PART_20')
 
     const expanded = stripAnsi(renderToString(
@@ -1187,7 +1555,7 @@ describe('StreamView', () => {
         model: { ...baseModel, reasoningExpanded: true },
       }),
     ))
-    expect(expanded).not.toContain('● 过程摘要')
+    expect(expanded.match(/▾ ✻ 思考/gu)).toHaveLength(10)
     expect(expanded).toContain('PART_0')
     expect(expanded).toContain('PART_20')
 
@@ -1199,21 +1567,27 @@ describe('StreamView', () => {
     expect(toolExpanded).not.toContain('● 过程摘要')
     expect(toolExpanded).toContain('PART_0')
 
-    for (const columns of [123, 98] as const) {
-      const rendered = renderToString(
-        createElement(StreamView, { model: baseModel }),
-        { columns },
-      )
-      expect(stripAnsi(rendered)).toContain('过程摘要')
-    }
   })
 
-  it('collapses a dense generating tool prefix and counts completed cards', () => {
-    const content = Array.from({ length: 20 }, (_, index) => {
+  it('bounds dense tool history while retaining the latest failure and final Markdown', () => {
+    const content = Array.from({ length: 10 }, (_, index) => {
       const callId = ToolCallId(`dense-${String(index)}`)
       return [
-        { kind: 'tool-call' as const, callId, name: 'read', arguments: '{}' },
-        { kind: 'tool-result' as const, callId, text: 'ok', isError: false },
+        {
+          kind: 'tool-call' as const,
+          callId,
+          name: `bash-${String(index)}`,
+          arguments: JSON.stringify({ command: `command-${String(index)}` }),
+        },
+        {
+          kind: 'tool-result' as const,
+          callId,
+          text: index === 2 ? 'command failed' : 'ok',
+          isError: index === 2,
+          ...(index === 2
+            ? { error: { name: 'ToolError', code: 'E2' } }
+            : {}),
+        },
       ]
     }).flat()
     content.push({ kind: 'text', text: 'FINAL' } as never)
@@ -1230,12 +1604,32 @@ describe('StreamView', () => {
         },
       }),
     })))
-    expect(out.replace(/\s+/g, ' ')).toContain('● 过程摘要 · 0 叙述 · 0 思考 · 20 工具')
+    expect(out).toContain('▸ 工具记录 · 已收起 7 个 · Ctrl+E 展开')
+    expect(out.match(/▸ bash-/gu)).toHaveLength(3)
+    expect(out).toContain('▸ bash-2 · 失败 E2 · command failed')
+    expect(out).toContain('▸ bash-8 · ✓ command-8')
+    expect(out).toContain('▸ bash-9 · ✓ command-9')
+    expect(out).not.toContain('bash-0')
     expect(out).toContain('FINAL')
+
+    const expanded = stripAnsi(renderToString(createElement(StreamView, {
+      model: model({
+        toolCardsExpanded: true,
+        history: [{
+          id: 1,
+          kind: 'assistant',
+          text: 'FINAL',
+          content,
+          timestamp: 1,
+        }],
+      }),
+    })))
+    expect(expanded).not.toContain('工具记录')
+    expect(expanded.match(/▾ bash-/gu)).toHaveLength(10)
   })
 
-  it('does not create a digest when a dense settled turn has no answer text', () => {
-    const content = Array.from({ length: 20 }, (_, index) => ({
+  it('bounds a dense running tool stack before answer text exists', () => {
+    const content = Array.from({ length: 10 }, (_, index) => ({
       kind: 'tool-call' as const,
       callId: ToolCallId(`running-${String(index)}`),
       name: 'read',
@@ -1246,7 +1640,8 @@ describe('StreamView', () => {
         history: [{ id: 1, kind: 'assistant', text: '', content, timestamp: 1 }],
       }),
     })))
-    expect(out).not.toContain('● 过程摘要')
+    expect(out).toContain('▸ 工具记录 · 已收起 7 个 · 运行中 7 · Ctrl+E 展开')
+    expect(out.match(/▸ read · 运行中/gu)).toHaveLength(3)
   })
 
   it('merges adjacent text and reasoning and enriches a matched card', () => {
@@ -1341,6 +1736,97 @@ describe('StreamView', () => {
 })
 
 describe('StreamView physical-row virtualization', () => {
+  it('keeps the tool-summary expansion hint on a narrow terminal', async () => {
+    const columns = 30
+    const rows = 24
+    const stdout = ttyStdout(rows, columns)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const content = Array.from({ length: 10 }, (_, index) => {
+      const callId = ToolCallId(`narrow-${String(index)}`)
+      return [
+        { kind: 'tool-call' as const, callId, name: 'bash', arguments: '{}' },
+        { kind: 'tool-result' as const, callId, text: 'ok', isError: false },
+      ]
+    }).flat()
+    const instance = render(createElement(AppShell, {
+      title: 'NARROW_TOOL_TITLE',
+      badge: 'b',
+      children: createElement(StreamView, {
+        model: model({
+          history: [{ id: 1, kind: 'assistant', text: 'FINAL', content, timestamp: 1 }],
+        }),
+      }),
+      status: createElement(Text, null, 'NARROW_TOOL_STATUS'),
+      input: createElement(Text, null, '> NARROW_TOOL_INPUT'),
+    }), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      expect(ttyFrame(atlas, columns, rows)).toContain('▸ 工具 7 · Ctrl+E')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('stacks adjacent tool cards without blank transcript rows', async () => {
+    const columns = 80
+    const rows = 24
+    const stdout = ttyStdout(rows, columns)
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const first = ToolCallId('first')
+    const second = ToolCallId('second')
+    const instance = render(
+      createElement(AppShell, {
+        title: 'TOOL_GAP_TITLE',
+        badge: 'b',
+        children: createElement(StreamView, {
+          model: model({
+            history: [{
+              id: 1,
+              kind: 'assistant',
+              text: '',
+              timestamp: 1,
+              content: [
+                { kind: 'tool-call', callId: first, name: 'first-tool', arguments: '{}' },
+                { kind: 'tool-result', callId: first, text: 'ok', isError: false },
+                { kind: 'tool-call', callId: second, name: 'second-tool', arguments: '{}' },
+                { kind: 'tool-result', callId: second, text: 'ok', isError: false },
+              ],
+            }],
+          }),
+        }),
+        status: createElement(Text, null, 'TOOL_GAP_STATUS'),
+        input: createElement(Text, null, '> TOOL_GAP_INPUT'),
+      }),
+      {
+        stdout,
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const lines = ttyFrame(atlas, columns, rows).split('\n')
+      const firstRow = lines.findIndex(line => line.includes('first-tool'))
+      const secondRow = lines.findIndex(line => line.includes('second-tool'))
+      expect(firstRow).toBeGreaterThanOrEqual(0)
+      expect(secondRow - firstRow).toBe(1)
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('reserves the assistant marker columns before projecting physical rows', async () => {
     const columns = 80
     const rows = 24
@@ -1384,7 +1870,7 @@ describe('StreamView physical-row virtualization', () => {
     }
   })
 
-  it('reserves the streaming cursor column before projecting active physical rows', async () => {
+  it('uses the former cursor column when projecting active physical rows', async () => {
     const columns = 80
     const rows = 24
     const body = `${'y'.repeat(conversationWidth(columns) - 3)}Z`
@@ -1422,7 +1908,8 @@ describe('StreamView physical-row virtualization', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const frame = ttyFrame(atlas, columns, rows)
-      expect(frame).toContain('Z▌')
+      expect(frame).toContain('Z')
+      expect(frame).not.toContain('▌')
       expect(frame).not.toContain('…')
     } finally {
       instance.unmount()
@@ -1477,6 +1964,7 @@ describe('StreamView physical-row virtualization', () => {
     try {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
+      expect(ttyFrame(atlas, 80, 24)).toContain('line_09999')
       const mountedRows = metrics.snapshot().mountedRows.total
       // The slice budget is roughly one viewport + a bounded overscan
       // for both directions; the legacy full-block mount path would have
@@ -1529,9 +2017,10 @@ describe('StreamView physical-row virtualization', () => {
       await instance.waitUntilRenderFlush()
       const follow = ttyFrame(atlas, 80, 24)
       const tail = follow.split('\n').find(line => line.includes('live_00999'))
-      expect(tail).toContain('▌')
+      expect(tail).not.toContain('▌')
       expect(tail).not.toContain('●')
       expect(metrics.snapshot().mountedRows.total).toBeLessThan(500)
+      expect(metrics.snapshot().mountedRows.windowMax).toBeLessThanOrEqual(48)
 
       instance.rerender(shell({ sequence: 1, kind: 'position', fraction: 0.5 }))
       await instance.waitUntilRenderFlush()
@@ -1542,6 +2031,70 @@ describe('StreamView physical-row virtualization', () => {
       expect(Math.max(...indexes)).toBeGreaterThan(500)
       expect(Math.max(...indexes)).toBeLessThan(700)
       expect(detached).not.toContain('live_00999')
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('generating+follow still mounts configured overscan and one scroll up reveals an already-projected row', async () => {
+    const lines = Array.from({ length: 200 }, (_, i) => `stream_row_${i.toString().padStart(4, '0')}`).join('\n')
+    const activeTurn = {
+      turn: 1,
+      assistantText: lines,
+      reasoningText: '',
+      reasoningDurationMs: 0,
+      toolCalls: [],
+    }
+    const stdout = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
+      isTTY: boolean
+      columns: number
+      rows: number
+    }
+    stdout.isTTY = true
+    stdout.columns = 80
+    stdout.rows = 24
+    const atlas = new ScreenAtlas(80, 24)
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
+    const metrics = createFrameMetrics()
+    const shell = (viewportCommand?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'TITLE',
+      badge: 'B',
+      children: createElement(StreamView, {
+        model: {
+          history: [],
+          activeTurn,
+          status: 'generating',
+          reasoningExpanded: false,
+          toolCardsExpanded: false,
+        },
+        viewportCommand,
+        frameMetrics: metrics,
+      }),
+      status: createElement(Text, null, 'STATUS'),
+      input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell(), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const followFrame = ttyFrame(atlas, 80, 24)
+      expect(followFrame).toContain('stream_row_0199')
+      // Mounted rows in follow mode should be greater than viewport height (reflecting configured overscan)
+      const mountedDuringFollow = metrics.snapshot().mountedRows.windowMax
+      expect(mountedDuringFollow).toBeGreaterThan(18)
+
+      // One single row scroll up reveals an already-projected overscan row
+      instance.rerender(shell({ sequence: 1, kind: 'scroll', delta: 1 }))
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      const scrolledFrame = ttyFrame(atlas, 80, 24)
+      expect(scrolledFrame).not.toContain('stream_row_0199')
     } finally {
       instance.unmount()
     }
@@ -1658,5 +2211,93 @@ describe('StreamView physical-row virtualization', () => {
     expect(plain2).toContain('STABLE SETTLED ANSWER')
     expect(plain1).toContain('streaming answer')
     expect(plain2).toContain('streaming answer expanded')
+  })
+
+  it('keeps only the latest pending complete stream snapshot', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const stdout = fakeTtyStdout()
+    const metrics = createFrameMetrics()
+    const activeModel = (text: string): ViewModel => model({
+      activeTurn: {
+        turn: 1,
+        assistantText: text,
+        reasoningText: '',
+        toolCalls: [],
+        reasoningDurationMs: 0,
+      },
+      status: 'generating',
+    })
+    const element = (text: string) => createElement(StreamView, {
+      model: activeModel(text),
+      frameMetrics: metrics,
+    })
+    const instance = render(element('snapshot one'), {
+      stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: false,
+    })
+    let unmounted = false
+    try {
+      await instance.waitUntilRenderFlush()
+      instance.rerender(element('snapshot two'))
+      await instance.waitUntilRenderFlush()
+      instance.rerender(element('snapshot three'))
+      await instance.waitUntilRenderFlush()
+
+      expect(metrics.snapshot().renderQueue.maxDepth).toBe(1)
+
+      await vi.advanceTimersByTimeAsync(renderPolicyDefaults().stream.frameIntervalMs)
+      await instance.waitUntilRenderFlush()
+      expect(metrics.snapshot().renderQueue.currentDepth).toBe(0)
+      instance.unmount()
+      unmounted = true
+      await instance.waitUntilExit()
+    } finally {
+      if (!unmounted) instance.unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it('excludes tool cards in focus mode so conclusions dominate', () => {
+    const cardId = ToolCallId('tc_focus_01')
+    const assistantMessage: ViewModel['history'][number] = {
+      id: 1,
+      kind: 'assistant',
+      text: 'BEFORE_TOOL AFTER_TOOL',
+      content: [
+        { kind: 'text', text: 'BEFORE_TOOL' },
+        {
+          kind: 'tool-call',
+          callId: cardId,
+          name: 'bash',
+          arguments: '{"command":"cargo build"}',
+        },
+        {
+          kind: 'tool-result',
+          callId: cardId,
+          text: 'build ok',
+          isError: false,
+        },
+        { kind: 'text', text: 'AFTER_TOOL' },
+      ],
+      timestamp: 1,
+    }
+    const standard = stripAnsi(renderToString(createElement(StreamView, {
+      model: model({ history: [assistantMessage] }),
+      mode: 'agent',
+    })))
+    expect(standard).toContain('bash')
+    expect(standard).toContain('BEFORE_TOOL')
+    expect(standard).toContain('AFTER_TOOL')
+
+    const focus = stripAnsi(renderToString(createElement(StreamView, {
+      model: model({ history: [assistantMessage] }),
+      mode: 'focus',
+    })))
+    expect(focus).not.toContain('bash')
+    expect(focus).toContain('BEFORE_TOOL')
+    expect(focus).toContain('AFTER_TOOL')
   })
 })

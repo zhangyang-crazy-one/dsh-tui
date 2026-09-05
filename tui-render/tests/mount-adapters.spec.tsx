@@ -26,6 +26,7 @@ import {
   type TuiController,
 } from '../src/index.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { renderPolicyDefaults } from '../src/render-policy.ts'
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -37,13 +38,31 @@ describe('TUI mount adapters', () => {
     expect(mocks.attachMouseIo).toHaveBeenCalledOnce()
     expect(mocks.render).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       alternateScreen: true,
+      incrementalRendering: false,
       patchConsole: false,
       exitOnCtrlC: false,
+      maxFps: 62.5,
     }))
 
     dispose()
     expect(mocks.unmount).toHaveBeenCalledOnce()
     expect(mocks.disposeMouse).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { scrollMs: 10, streamMs: 40, maxFps: 100 },
+    { scrollMs: 40, streamMs: 20, maxFps: 50 },
+  ])('lets Ink paint at the faster configured cadence ($maxFps fps)', ({ scrollMs, streamMs, maxFps }) => {
+    const policy = renderPolicyDefaults()
+    const dispose = mountTuiRender(createElement(Text, null, 'cadence'), {
+      renderPolicy: {
+        ...policy,
+        scroll: { ...policy.scroll, frameIntervalMs: scrollMs },
+        stream: { ...policy.stream, frameIntervalMs: streamMs },
+      },
+    })
+    expect(mocks.render).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ maxFps }))
+    dispose()
   })
 
   it('wraps a frame probe and forwards injected IO and Ctrl+C ownership', () => {

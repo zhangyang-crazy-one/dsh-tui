@@ -57,6 +57,17 @@ function policyWith(overrides: {
 }
 
 describe('renderPolicy Config schema', () => {
+  it('accepts explicit tool budgets and rejects invalid or unbounded tool settings', () => {
+    const tools = { previewRows: 4, detailPageRows: 24, cacheEntries: 64, cacheRows: 512 }
+    expect(Config({ task: '', renderPolicy: { ...baselinePolicy(), tools } }).renderPolicy?.tools).toEqual(tools)
+    for (const [field, invalid] of [
+      ['previewRows', 0], ['previewRows', 51], ['previewRows', 2.5],
+      ['detailPageRows', 0], ['detailPageRows', 201],
+      ['cacheEntries', 0], ['cacheEntries', 4097], ['cacheRows', 0], ['cacheRows', 1_000_001],
+    ] as const) {
+      expect(() => Config({ task: '', renderPolicy: { ...baselinePolicy(), tools: { ...tools, [field]: invalid } } }), `${field}=${invalid}`).toThrow()
+    }
+  })
   it('accepts the bare minimum {task} without a renderPolicy (fallback defaults apply at run())', () => {
     const config = Config({ task: 'hi' })
     expect(config.renderPolicy).toBeUndefined()
@@ -77,6 +88,7 @@ describe('renderPolicy Config schema', () => {
       task: 'hi',
       renderPolicy: {
         transcriptOverscan: 8,
+        tools: { previewRows: 4, detailPageRows: 24, cacheEntries: 64, cacheRows: 1024 },
         stream: {
           frameIntervalMs: 8,
           entryDepth: 128,
@@ -108,6 +120,7 @@ describe('renderPolicy Config schema', () => {
     expect(config.renderPolicy?.scroll.maxCatchUpStep).toBe(12)
     expect(config.renderPolicy?.cache.maxRows).toBe(8192)
     expect(config.renderPolicy?.cache.maxBytes).toBe(8 * 1024 * 1024)
+    expect(config.renderPolicy?.tools).toEqual({ previewRows: 4, detailPageRows: 24, cacheEntries: 64, cacheRows: 1024 })
   })
 
   it('rejects a negative transcript overscan and reports the field name', () => {

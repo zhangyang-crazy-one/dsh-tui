@@ -43,6 +43,7 @@ import type { FeedbackPaneState } from '../src/feedback-pane.tsx'
 import { applyTheme } from '../src/theme.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 import type { FakeTtyStdin } from './helpers.ts'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
 
 const IDLE_MODEL: ViewModel = {
   history: [],
@@ -103,10 +104,11 @@ function stubController(
   searchPane: SearchPaneState = EMPTY_SEARCH,
   title = 'test',
   feedback?: string,
+  getModel: () => ViewModel = () => IDLE_MODEL,
 ): TuiController {
   const listeners = new Set<() => void>()
   return {
-    getModel: () => IDLE_MODEL,
+    getModel,
     getInteraction: () => 'idle',
     getBadge: () => 'test',
     getTitle: () => title,
@@ -193,6 +195,29 @@ function renderPhaseErrors(): string[] {
 }
 
 describe('TuiLoop real input path', () => {
+  it.each([false, true])('keeps one model label and explicitly selects footer details=%s', (details) => {
+    const footer = {
+      provider: 'provider', model: 'unique-model', status: '空闲',
+      tokenUsage: { uncachedInputTokens: 5, outputTokens: 10, cacheReadTokens: 995, cacheWriteTokens: 0 },
+      contextPressure: { projectedTokens: 1000, contextWindow: 10000 },
+    }
+    const controller: TuiController = {
+      ...stubController(() => {}, []),
+      getBadge: () => 'provider · unique-model',
+      getStatusDetails: () => details,
+      getAdaptiveInfoFooter: () => footer,
+    }
+    const out = renderToString(createElement(TuiLoop, { title: 'test', controller })).replace(/\x1b\[[0-9;]*m/gu, '')
+    expect(out.match(/unique-model/gu)).toHaveLength(1)
+    expect(out).toContain('缓存命中 99.5%')
+    expect(out).toContain('上下文 [█░░░░░░░░░] 10%')
+    if (details) expect(out).toContain('↑1000 · ↓10')
+    else {
+      expect(out).not.toContain('↑1000')
+      expect(out).toContain('思考关')
+    }
+  })
+
   it.each(['正在新建会话…', '正在切换会话…'])(
     'renders %s and suppresses repeated session actions',
     async (feedback) => {
@@ -893,7 +918,7 @@ describe('TuiLoop real input path', () => {
     )
     expect(out).toContain('· 待办 写快照')
     expect(out).toContain('待发 2 · ↑ 取出')
-    expect(out).toContain('\x1b[38;2;77;107;254m│ > ')
+    expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
   })
   it('paints the goal footer and todo HUD while the composer keeps input', async () => {
     applyTheme('truecolor')
@@ -910,10 +935,12 @@ describe('TuiLoop real input path', () => {
       { content: '写测试', status: 'pending' },
       { content: '改界面', status: 'in_progress' },
     ] as const
+    const footerView = { provider: 'deepseek-official', model: 'deepseek-v4-flash', status: '生成中' }
     const controller: TuiController = {
       ...stubController(dispatch, owners),
       getGoalFooter: () => goalFooter,
       getTodoHud: () => todoHud,
+      getAdaptiveInfoFooter: () => footerView,
     }
     const { instance, stdin, stdout } = mount(controller, true)
     const chunks: string[] = []
@@ -956,6 +983,77 @@ describe('TuiLoop real input path', () => {
       // The activity stamp precedes the dispatch in the loop, mirroring the
       // product path so the quiet-input window arms before the action fires.
       expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(renderPhaseErrors()).toEqual([])
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('expands and collapses tool rows through two Ctrl+E inputs in one mount', async () => {
+    const owners: (string | null)[] = []
+    const baseModel: ViewModel = {
+      ...IDLE_MODEL,
+      history: [{
+        id: 1,
+        kind: 'assistant',
+        text: '完成',
+        timestamp: 1,
+        content: [
+          {
+            kind: 'tool-call',
+            callId: ToolCallId('fold-card'),
+            name: 'bash',
+            arguments: '{"command":"pwd"}',
+          },
+          {
+            kind: 'tool-result',
+            callId: ToolCallId('fold-card'),
+            text: '/workspace',
+            isError: false,
+          },
+        ],
+      }],
+    }
+    let currentModel = baseModel
+    const dispatch = vi.fn((action: unknown) => {
+      if (
+        typeof action === 'object'
+        && action !== null
+        && 'kind' in action
+        && action.kind === 'toggle-tool-cards'
+      ) {
+        currentModel = {
+          ...currentModel,
+          toolCardsExpanded: !currentModel.toolCardsExpanded,
+        }
+      }
+    })
+    const controller = stubController(
+      dispatch,
+      owners,
+      EMPTY_SEARCH,
+      'test',
+      undefined,
+      () => currentModel,
+    )
+    const { instance, stdin, stdout } = mount(controller, true)
+    const chunks: string[] = []
+    stdout.on('data', chunk => chunks.push(chunk))
+    try {
+      await instance.waitUntilRenderFlush()
+      await press(stdin, '\x05')
+      await instance.waitUntilRenderFlush()
+      await press(stdin, '\x05')
+      await instance.waitUntilRenderFlush()
+      const output = chunks.join('')
+      const collapsedAt = output.indexOf('▸ bash · ')
+      const expandedAt = output.indexOf('▾ bash · ', collapsedAt + 1)
+      const collapsedAgainAt = output.indexOf('▸ bash · ', expandedAt + 1)
+      expect(collapsedAt).toBeGreaterThanOrEqual(0)
+      expect(expandedAt).toBeGreaterThan(collapsedAt)
+      expect(collapsedAgainAt).toBeGreaterThan(expandedAt)
+      expect(dispatch).toHaveBeenCalledTimes(2)
+      expect(owners).toEqual([null, null])
       expect(renderPhaseErrors()).toEqual([])
     } finally {
       instance.unmount()

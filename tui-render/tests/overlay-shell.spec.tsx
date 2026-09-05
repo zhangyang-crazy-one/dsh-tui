@@ -34,7 +34,7 @@ describe('OverlayShell', () => {
     expect(out).toContain('暂无子代理')
     expect(out).toContain('Esc 关闭 · 有运行中的子代理时再打开')
     expect(out).toContain('\x1b[1m')
-    expect(out).toContain('\x1b[38;2;247;247;248m')
+    expect(out).toContain('\x1b[38;2;238;240;242m')
     expect(out).not.toContain('\x1b[38;2;77;107;254m')
     expect(out).not.toContain('Submit')
     expect(out).not.toContain('OK')

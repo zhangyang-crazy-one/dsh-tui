@@ -2,8 +2,8 @@
  * DeepSeek brand token table and the single styling helper. Every render-path
  * style goes through {@link styled}; content reaches it only after
  * {@link escapeContent}. The three-tier fallback (truecolor → 256 → 16 →
- * none) is owned here, per 02-UI-SPEC §1.1. Accent is DeepSeek logo blue
- * (`#4D6BFE`), not Grok/Tailwind `#3B82F6`. The runtime installs the
+ * none) is owned here, per 02-UI-SPEC §1.1. Soft Slate uses DeepSeek logo
+ * blue (`#4D6BFE`) for brand marks and a lighter blue for small text. The runtime installs the
  * detected tier once at mount via {@link installTheme}; every {@link styled}
  * call then maps tokens through that tier, and `none` leaves text unstyled.
  * @module @deepseek-ai/dsh-tui-render/theme
@@ -15,67 +15,160 @@ import { detectColorSupport, type ColorTier } from './terminal-capabilities.ts'
 /** Theme token names available to render code. */
 export type StyleToken =
   | 'bg'
+  | 'messageBg'
+  | 'toolBg'
+  | 'inputBg'
+  | 'codeBg'
   | 'fg'
+  | 'fgSoft'
   | 'fgDim'
   | 'accent'
+  | 'accentText'
   | 'accentDim'
   | 'success'
+  | 'warning'
   | 'error'
-  | 'codeBg'
+  | 'line'
+  | 'codeKeyword'
+  | 'codeString'
+  | 'codeComment'
+  | 'codeCommand'
+  | 'markdownStrong'
+  | 'markdownEmphasis'
+  | 'markdownCode'
+  | 'markdownLink'
+
+/** Tokens that paint terminal cell backgrounds rather than foreground glyphs. */
+export type BackgroundToken = 'bg' | 'messageBg' | 'toolBg' | 'inputBg' | 'codeBg'
 
 /** Concrete colors for one tier. Empty strings at `none` disable styling. */
 export interface ThemeTokens {
   bg: string
+  messageBg: string
+  toolBg: string
+  inputBg: string
+  codeBg: string
   fg: string
+  fgSoft: string
   fgDim: string
   accent: string
+  accentText: string
   accentDim: string
   success: string
+  warning: string
   error: string
-  codeBg: string
+  line: string
+  codeKeyword: string
+  codeString: string
+  codeComment: string
+  codeCommand: string
+  markdownStrong: string
+  markdownEmphasis: string
+  markdownCode: string
+  markdownLink: string
 }
 
 /** Per-tier token tables, per 02-UI-SPEC §1.1. */
 export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
   truecolor: {
-    bg: '#000000',
-    fg: '#F7F7F8',
-    fgDim: '#8A8F98',
+    bg: '#151618',
+    messageBg: '#25282C',
+    toolBg: '#1A1C1F',
+    inputBg: '#23262B',
+    codeBg: '#202328',
+    fg: '#EEF0F2',
+    fgSoft: '#D1D4D8',
+    fgDim: '#A4A9B0',
     accent: '#4D6BFE',
+    accentText: '#7589FF',
     accentDim: '#34415B',
-    success: '#22C55E',
-    error: '#EF4444',
-    codeBg: '#0F1115',
+    success: '#75B984',
+    warning: '#D5AE6B',
+    error: '#E27D77',
+    line: '#3A3E44',
+    codeKeyword: '#7EB6FF',
+    codeString: '#B9A4E8',
+    codeComment: '#A4A9B0',
+    codeCommand: '#75B984',
+    markdownStrong: '#E4C58A',
+    markdownEmphasis: '#C4AEF2',
+    markdownCode: '#9BC9B1',
+    markdownLink: '#80C7D9',
   },
   '256': {
-    bg: '16',
+    bg: '233',
+    messageBg: '235',
+    toolBg: '234',
+    inputBg: '235',
+    codeBg: '235',
     fg: '255',
-    fgDim: '245',
+    fgSoft: '252',
+    fgDim: '248',
     accent: '69',
+    accentText: '105',
     accentDim: '60',
-    success: '40',
-    error: '196',
-    codeBg: '233',
+    success: '108',
+    warning: '179',
+    error: '174',
+    line: '240',
+    codeKeyword: '111',
+    codeString: '141',
+    codeComment: '248',
+    codeCommand: '108',
+    markdownStrong: '223',
+    markdownEmphasis: '183',
+    markdownCode: '151',
+    markdownLink: '116',
   },
   '16': {
     bg: 'black',
+    messageBg: 'black',
+    toolBg: 'black',
+    inputBg: 'bright-black',
+    codeBg: 'black',
     fg: 'white',
-    fgDim: 'bright-black',
+    fgSoft: 'white',
+    fgDim: 'white',
     accent: 'bright-blue',
+    accentText: 'bright-blue',
     accentDim: 'blue',
     success: 'green',
+    warning: 'yellow',
     error: 'red',
-    codeBg: 'black',
+    line: 'bright-black',
+    codeKeyword: 'cyan',
+    codeString: 'magenta',
+    codeComment: 'bright-black',
+    codeCommand: 'green',
+    markdownStrong: 'bright-yellow',
+    markdownEmphasis: 'bright-magenta',
+    markdownCode: 'bright-green',
+    markdownLink: 'bright-cyan',
   },
   none: {
     bg: '',
+    messageBg: '',
+    toolBg: '',
+    inputBg: '',
+    codeBg: '',
     fg: '',
+    fgSoft: '',
     fgDim: '',
     accent: '',
+    accentText: '',
     accentDim: '',
     success: '',
+    warning: '',
     error: '',
-    codeBg: '',
+    line: '',
+    codeKeyword: '',
+    codeString: '',
+    codeComment: '',
+    codeCommand: '',
+    markdownStrong: '',
+    markdownEmphasis: '',
+    markdownCode: '',
+    markdownLink: '',
   },
 }
 
@@ -98,6 +191,10 @@ const ANSI_16: Readonly<Record<string, number>> = {
   'bright-cyan': 96,
   'bright-white': 97,
 }
+
+/** Bounded cache for identical full-row background padding strings. */
+const BACKGROUND_PADDING_CACHE_LIMIT = 256
+const backgroundPaddingCache = new Map<string, string>()
 
 /** The active tier; {@link styled} styles against it. Tests may swap. */
 let activeTier: ColorTier = 'truecolor'
@@ -136,7 +233,7 @@ export function installTheme(env: NodeJS.ProcessEnv): ColorTier {
  * Map one token to its terminal sequence at the active tier. truecolor
  * values use 38;2/48;2 form; 256 values use 38;5/48;5; 16 values map the
  * ANSI name to its SGR code (background = foreground + 10). Tokens are
- * foreground styles except `bg`/`codeBg`, which are background styles.
+ * foreground styles except the five surface tokens, which are backgrounds.
  * @param token - theme token.
  * @param tier - tier to map at (defaults to the installed tier).
  * @returns the SGR sequence prefix, or '' at `none`.
@@ -147,7 +244,7 @@ function tokenSequence(
 ): string {
   const value = THEME_LEVELS[tier][token]
   if (value === '') return ''
-  const background = token === 'bg' || token === 'codeBg'
+  const background = BACKGROUND_TOKENS.has(token)
   if (value.startsWith('#')) {
     const hex = value.slice(1)
     const r = parseInt(hex.slice(0, 2), 16)
@@ -195,11 +292,9 @@ export function inkColor(
 }
 
 /**
- * Wrap escaped plain text in the paired sequence for one theme token. The
- * optional bold flag is the strong tier of the accent brightness matrix
- * (PITFALLS C3: gradient → bold/普通/dim 三档): it prepends SGR 1 so
- * {@link paintRow} rows and standalone markers can carry a bold accent run
- * without adding a second reset (a single `\x1b[0m` closes both).
+ * Wrap escaped text in the paired sequence for one theme token. Inline
+ * Markdown code includes its codeBg surface in every row-painting path.
+ * A single reset closes the foreground, background, and optional weight.
  * @param text - escaped plain text.
  * @param token - theme token to style with.
  * @param tier - tier to map at (defaults to the installed tier).
@@ -214,7 +309,8 @@ export function styled(
 ): string {
   const sequence = tokenSequence(token, tier)
   if (sequence === '') return text
-  return `${bold ? '\x1b[1m' : ''}${sequence}${text}\x1b[0m`
+  const surface = token === 'markdownCode' ? tokenSequence('codeBg', tier) : ''
+  return `${surface}${bold ? '\x1b[1m' : ''}${sequence}${text}\x1b[0m`
 }
 
 /**
@@ -247,12 +343,34 @@ export function paintRow(
  */
 export function paintBackgroundRow(
   parts: readonly string[],
-  background: 'bg' | 'codeBg',
+  background: BackgroundToken,
   columns: number,
   tier: ColorTier = activeTier,
 ): string {
   const content = parts.map(part => styled(part, background, tier)).join('')
   const padding = Math.max(0, columns - displayWidth(parts.join('')))
   if (padding === 0 || tokenSequence(background, tier) === '') return content
-  return `${content}${styled(' '.repeat(padding), background, tier)}`
+  const cacheKey = `${tier}:${background}:${String(padding)}`
+  const cached = backgroundPaddingCache.get(cacheKey)
+  if (cached !== undefined) {
+    backgroundPaddingCache.delete(cacheKey)
+    backgroundPaddingCache.set(cacheKey, cached)
+    return `${content}${cached}`
+  }
+  const paintedPadding = styled(' '.repeat(padding), background, tier)
+  backgroundPaddingCache.set(cacheKey, paintedPadding)
+  if (backgroundPaddingCache.size > BACKGROUND_PADDING_CACHE_LIMIT) {
+    const oldest = backgroundPaddingCache.keys().next().value
+    if (oldest !== undefined) backgroundPaddingCache.delete(oldest)
+  }
+  return `${content}${paintedPadding}`
 }
+
+/** Closed background-token set used by the ANSI mapper. */
+const BACKGROUND_TOKENS: ReadonlySet<StyleToken> = new Set<StyleToken>([
+  'bg',
+  'messageBg',
+  'toolBg',
+  'inputBg',
+  'codeBg',
+])

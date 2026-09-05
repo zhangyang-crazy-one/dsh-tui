@@ -184,6 +184,21 @@ describe('text input delivery', () => {
     }
   })
 
+  it('collapses batched j/k keystrokes into net scroll delta while the composer is empty', () => {
+    const effect = mapKeyEvent(
+      EMPTY,
+      'kjkjk',
+      keyInfo(),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+    )
+    expect(effect.kind).toBe('dispatch')
+    if (effect.kind === 'dispatch') {
+      expect(effect.action).toEqual({ kind: 'scroll', delta: 1 })
+    }
+  })
+
   it('scrolls on arrow keys while the composer is empty', () => {
     const down = mapKeyEvent(
       EMPTY,
@@ -2377,7 +2392,7 @@ describe('styled status and feedback lines', () => {
   })
 
   it('shows the fgDim key hint only beside generating/stopped status rows (W2-T6)', () => {
-    expect(statusHint('generating')).toContain('\x1b[38;2;138;143;152m')
+    expect(statusHint('generating')).toContain('\x1b[38;2;164;169;176m')
     expect(statusHint('generating')).toContain('↑↓/jk 滚动')
     expect(statusHint('generating')).not.toContain('/ 命令')
     expect(statusHint('stopped')).toContain('↑↓/jk 滚动')
@@ -2389,7 +2404,7 @@ describe('styled status and feedback lines', () => {
 
   it('composes the status slot as the accent label plus the fgDim hint', () => {
     expect(statusSlot('generating')).toContain('\x1b[38;2;77;107;254m⏹ Ctrl+C 停止')
-    expect(statusSlot('generating')).toContain('\x1b[38;2;138;143;152m↑↓/jk 滚动')
+    expect(statusSlot('generating')).toContain('\x1b[38;2;164;169;176m↑↓/jk 滚动')
     expect(statusSlot('generating', true)).not.toContain('↑↓/jk 滚动')
     expect(statusSlot('stopped')).toContain('\x1b[38;2;77;107;254m继续生成')
     expect(statusSlot('exit-armed')).toContain('\x1b[38;2;77;107;254m再按一次 Ctrl+C 退出')
@@ -2439,16 +2454,16 @@ describe('styled status and feedback lines', () => {
   })
 
   it('maps the ✓ glyph to success and other feedback to error', () => {
-    expect(feedbackLine('✗ 删除失败')).toContain('\x1b[38;2;239;68;68m✗ 删除失败')
-    expect(feedbackLine('✓ 已切换会话')).toContain('\x1b[38;2;34;197;94m✓ 已切换会话')
+    expect(feedbackLine('✗ 删除失败')).toContain('\x1b[38;2;226;125;119m✗ 删除失败')
+    expect(feedbackLine('✓ 已切换会话')).toContain('\x1b[38;2;117;185;132m✓ 已切换会话')
     expect(feedbackLine(undefined)).toBeUndefined()
   })
 
   it('renders the neutral feedback variant in plain foreground (no ✓/✗ coercion)', () => {
     const line = feedbackLine('模型已切换', 'neutral')
-    expect(line).toContain('\x1b[38;2;247;247;248m模型已切换')
-    expect(line).not.toContain('\x1b[38;2;239;68;68m')
-    expect(line).not.toContain('\x1b[38;2;34;197;94m')
+    expect(line).toContain('\x1b[38;2;238;240;242m模型已切换')
+    expect(line).not.toContain('\x1b[38;2;226;125;119m')
+    expect(line).not.toContain('\x1b[38;2;117;185;132m')
   })
 
   it('escapes before styling feedback (A3)', () => {

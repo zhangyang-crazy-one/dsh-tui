@@ -1,8 +1,6 @@
 /**
- * Reasoning fold: a labeled dim block. While the turn generates, only a short
- * live tail is painted so the thinking channel cannot overflow later rows.
- * After the turn settles the block collapses to one marker and expands on
- * Ctrl+O.
+ * Optional dim reasoning in the main transcript. Hidden blocks occupy no rows;
+ * visible blocks retain their complete text during streaming and settlement.
  * @module @deepseek-ai/dsh-tui-render/reasoning
  */
 
@@ -11,23 +9,19 @@ import type { ReactNode } from 'react'
 import { escapeContent, wrapDisplayLines } from './content.ts'
 import { paintRow, styled } from './theme.ts'
 
-/** Fold state for one reasoning block. */
+/** Display state for one reasoning block. */
 export interface ReasoningBlockProps {
   /** The assembled reasoning text. */
   text: string
-  /** One fold marker when true; body (or live tail) when false. */
+  /** Hide the entire block when true. */
   collapsed: boolean
   /** Milliseconds the turn has run; the fold label. */
   durationMs: number
-  /**
-   * Generating live tail: header plus the last {@link REASONING_LIVE_TAIL}
-   * wrapped rows, not the full essay. Ignored when `collapsed` is true.
-   */
+  /** Whether the duration is still advancing. Does not limit body rows. */
   live?: boolean
+  /** Reading-area width including the mirrored two-column body insets. */
+  maxCols?: number
 }
-
-/** Wrapped rows kept on screen while reasoning is still streaming. */
-export const REASONING_LIVE_TAIL = 4
 
 /** Format a millisecond duration as one decimal second. */
 export function formatSeconds(ms: number): string {
@@ -55,11 +49,9 @@ function bodyRow(line: string, key: number): ReactNode {
 }
 
 /**
- * The reasoning row: a live tail while generating, a dim fold marker once
- * settled, and the full indented body on toggle. The collapsed row carries
- * the ▸ glyph and an explicit expansion hint so the fold is discoverable
- * without trial (L4: `▸`/`▾` + title; A3: glyph + copy, not color alone).
- * @param props - fold state.
+ * Render complete reasoning under a dim header, or nothing when hidden.
+ * The containing transcript owns clipping and scrolling.
+ * @param props - display state and available width.
  * @returns the element tree.
  */
 export function ReasoningBlock({
@@ -67,37 +59,15 @@ export function ReasoningBlock({
   collapsed,
   durationMs,
   live = false,
+  maxCols,
 }: ReasoningBlockProps): ReactNode {
   const { columns } = useWindowSize()
-  const maxCols = Math.max(1, columns - 2)
-  if (collapsed && text === '') return null
-  if (collapsed) {
-    return (
-      <Text>
-        {paintRow([
-          styled(
-            `▸ ✻ 思考 (${formatSeconds(durationMs)}s) · ${escapeContent(text).split('\n').length} 行 · Ctrl+O 展开`,
-            'fgDim',
-          ),
-        ])}
-      </Text>
-    )
-  }
+  if (collapsed || text === '') return null
   const escaped = escapeContent(text)
-  const wrapped = wrapDisplayLines(escaped, maxCols)
-  const body = live && wrapped.length > REASONING_LIVE_TAIL
-    ? wrapped.slice(-REASONING_LIVE_TAIL)
-    : wrapped
+  const body = wrapDisplayLines(escaped, Math.max(1, (maxCols ?? columns) - 4))
   return (
     <Box flexDirection="column" width="100%">
       <Text>{thinkingHeader(durationMs, !live)}</Text>
-      {live && wrapped.length > REASONING_LIVE_TAIL
-        ? (
-          <Text key="tail-ellipsis">
-            {paintRow([styled('  …', 'fgDim')])}
-          </Text>
-        )
-        : null}
       {body.map((line, index) => bodyRow(line, index))}
     </Box>
   )

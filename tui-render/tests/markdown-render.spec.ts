@@ -50,19 +50,39 @@ describe('createStyledMarkdownBlockRenderer', () => {
     })
   })
 
-  it('emits an accent+bold span for h1 with the ━━━ cap', () => {
+  it.each(['', '- ', '1. '])('preserves distinct inline semantic styles after the %j prefix', (prefix) => {
+    const lines = render(`${prefix}plain **strong** *emphasis* \`code\` [link](https://example.com)`, { hyperlinks: true })
+    const spans = lines.flatMap(line => line.spans)
+    expect(spans).toEqual(expect.arrayContaining([
+      expect.objectContaining({ token: 'markdownStrong', bold: true }),
+      expect.objectContaining({ token: 'markdownEmphasis', bold: false }),
+      expect.objectContaining({ token: 'markdownCode', bold: false }),
+      expect.objectContaining({ token: 'markdownLink', href: 'https://example.com' }),
+    ]))
+  })
+
+  it('retains nested code and link semantics inside strong text without styling the following text', () => {
+    const [line] = render('**bold \`code\` [link](https://example.com)** plain', { hyperlinks: true })
+    expect(line?.spans).toEqual(expect.arrayContaining([
+      expect.objectContaining({ token: 'markdownCode', bold: true }),
+      expect.objectContaining({ token: 'markdownLink', bold: true, href: 'https://example.com' }),
+    ]))
+    expect(line?.spans.at(-1)).toMatchObject({ token: 'fg', bold: false })
+  })
+
+  it('emits a readable blue bold span for h1 with the ━━━ cap', () => {
     const lines = render('# title')
     expect(lines[0]?.text).toBe('━━━ title ━━━')
     expect(displayWidth(lines[0]?.text ?? '')).toBe(13)
     expect(lines[0]?.spans[0]).toMatchObject({
       start: 0,
       end: 13,
-      token: 'accent',
+      token: 'accentText',
       bold: true,
     })
   })
 
-  it('emits an accent span and appends (href) when hyperlinks are off', () => {
+  it('emits the link token and appends (href) when hyperlinks are off', () => {
     const lines = render('[docs](https://example.com)')
     expect(lines[0]?.text).toBe('docs (https://example.com)')
     const spans = lines[0]?.spans ?? []
@@ -70,7 +90,7 @@ describe('createStyledMarkdownBlockRenderer', () => {
     expect(spans[0]).toMatchObject({
       start: 0,
       end: 4,
-      token: 'accent',
+      token: 'markdownLink',
       bold: false,
       href: 'https://example.com',
     })
@@ -87,7 +107,7 @@ describe('createStyledMarkdownBlockRenderer', () => {
     expect(lines[0]?.text).toBe('https://example.com')
     expect(lines[0]?.spans).toHaveLength(1)
     expect(lines[0]?.spans[0]).toMatchObject({
-      token: 'accent',
+      token: 'markdownLink',
       href: 'https://example.com',
     })
   })
@@ -97,7 +117,7 @@ describe('createStyledMarkdownBlockRenderer', () => {
     expect(lines[0]?.text).toBe('docs')
     expect(lines[0]?.spans).toHaveLength(1)
     expect(lines[0]?.spans[0]).toMatchObject({
-      token: 'accent',
+      token: 'markdownLink',
       href: 'https://example.com',
     })
   })
@@ -109,7 +129,7 @@ describe('createStyledMarkdownBlockRenderer', () => {
     // covers it; the strip itself rides on the line-level background flag.
     expect(lines[0]?.text).toBe('  const x = 1')
     expect(lines[0]?.background).toBe('codeBg')
-    expect(lines[0]?.spans.every(span => span.token === 'fg')).toBe(true)
+    expect(lines[0]?.spans.some(span => span.token === 'codeKeyword')).toBe(true)
   })
 
   it('emits fgDim spans for blockquotes', () => {
@@ -118,13 +138,13 @@ describe('createStyledMarkdownBlockRenderer', () => {
     expect(lines[0]?.spans[0]).toMatchObject({ token: 'fgDim' })
   })
 
-  it('emits accent+bold spans for table header rows and fg for body rows', () => {
+  it('emits readable blue bold spans for table header rows and fg for body rows', () => {
     const lines = render('| a | b |\n| --- | --- |\n| 1 | 2 |')
     const top = lines.find(line => line.text.startsWith('┌─'))
     const header = lines.find(line => line.text.includes('a') && line.text.includes('│') && !line.text.startsWith('│ 1'))
     const body = lines.find(line => line.text.startsWith('│ 1 '))
     expect(top?.spans[0]).toMatchObject({ token: 'fgDim' })
-    expect(header?.spans.some(s => s.token === 'accent' && s.bold)).toBe(true)
+    expect(header?.spans.some(s => s.token === 'accentText' && s.bold)).toBe(true)
     expect(body?.spans.some(s => s.token === 'fg')).toBe(true)
   })
 
@@ -134,6 +154,35 @@ describe('createStyledMarkdownBlockRenderer', () => {
     for (const line of lines) {
       expect(displayWidth(line.text)).toBeLessThanOrEqual(80)
     }
+  })
+
+  it('preserves every physical line and the final marker of a 5001-line paragraph', () => {
+    const source = Array.from({ length: 5001 }, (_, index) => `history-${index}`).join('\n') + '\nFINAL_COMPLETE'
+    const lines = render(source)
+    expect(lines.map(line => line.text).join('\n')).toBe(source)
+    expect(lines.at(-1)?.text).toBe('FINAL_COMPLETE')
+    expect(lines.every(line => line.displayWidth <= 80)).toBe(true)
+  })
+
+  it('retains all 5001 highlighted fence rows for shared-viewport navigation', () => {
+    const source = Array.from({ length: 5001 }, (_, index) => `const row${index} = ${index}`).join('\n')
+    const lines = render(`\`\`\`ts\n${source}\n\`\`\``)
+    expect(lines).toHaveLength(5001)
+    expect(lines.at(-1)?.text).toBe('  const row5000 = 5000')
+    expect(lines.every(line => line.background === 'codeBg')).toBe(true)
+  })
+
+  it('does not drop buffered text when the next styled segment needs multiple rows', () => {
+    const text = 'word'.repeat(51)
+    const lines = render(`prefix **${text}** suffix`)
+    expect(lines.map(line => line.text).join('')).toBe(`prefix ${text} suffix`)
+    expect(lines.every(line => line.displayWidth <= 80)).toBe(true)
+    expect(lines.flatMap(line => line.spans).some(span => span.bold)).toBe(true)
+  })
+
+  it('wraps an exact-width segment before later text and honors Markdown hard breaks', () => {
+    expect(render(`${'a'.repeat(80)}**b**`).map(line => line.text)).toEqual(['a'.repeat(80), 'b'])
+    expect(render('first  \nsecond').map(line => line.text)).toEqual(['first', 'second'])
   })
 
   it('wraps a list item with marker preserved on the first row', () => {

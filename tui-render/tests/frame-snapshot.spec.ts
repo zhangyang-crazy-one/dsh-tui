@@ -50,6 +50,30 @@ describe('diffVisibleFrameSnapshots', () => {
     expect(diff.changes[0]?.line?.text).toBe('短')
   })
 
+  it('clears and replaces the complete surface width rather than only its text', () => {
+    const previous = snapshot('plain')
+    const surfaced = {
+      ...previous,
+      revision: 'surfaced',
+      rows: [createFrameSnapshotRow({
+        id: 'b1:0',
+        row: 3,
+        col: 3,
+        line: createPhysicalLine({
+          blockId: 'b1',
+          spans: [{ text: '> hi', token: 'fgSoft' }],
+          sourceStart: 0,
+          sourceEnd: 2,
+          blockRow: 0,
+          background: 'messageBg',
+          backgroundColumns: 40,
+        }),
+      })],
+    }
+    expect(diffVisibleFrameSnapshots(previous, surfaced).changes[0]?.clearColumns).toBe(40)
+    expect(diffVisibleFrameSnapshots(surfaced, snapshot('next')).changes[0]?.clearColumns).toBe(40)
+  })
+
   it('forces all visible rows after terminal geometry changes', () => {
     const diff = diffVisibleFrameSnapshots(snapshot('same', 80), snapshot('same', 100))
     expect(diff.forced).toBe(true)

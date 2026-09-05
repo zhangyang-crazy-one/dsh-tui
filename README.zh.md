@@ -166,7 +166,7 @@ npx --yes npm@11 trust github @crazyhappyone/dsh-tui \
 每次发布时，先提升 `package.json` 版本，等待 CI 通过并合并，然后创建 tag 与 package version 一致的 GitHub Release：
 
 ```text
-gh release create v0.1.0-alpha.3 --prerelease --generate-notes
+gh release create v0.1.0-alpha.4 --prerelease --generate-notes
 ```
 
 `Publish npm` workflow 会在发布前再次运行测试与 packed-package 验证。不要重新运行旧的 release tag：npm version 不可覆盖。提升到 stable 必须使用新版本并发布 non-prerelease GitHub Release。

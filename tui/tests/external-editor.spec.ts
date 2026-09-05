@@ -329,7 +329,7 @@ describe('RuntimeController external-editor settlement', () => {
     const listener = vi.fn()
     controller.subscribe(listener)
     controller.redraw()
-    expect(listener).toHaveBeenCalledOnce()
+    await vi.waitFor(() => { expect(listener).toHaveBeenCalledOnce() })
     const child = internals.editorSpawn(
       process.execPath,
       ['-e', 'process.exit(0)'],

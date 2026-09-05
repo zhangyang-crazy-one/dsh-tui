@@ -2,7 +2,8 @@
  * ModelPane: the in-terminal model selection panel. Rows render the provider
  * route and model id through {@link escapeContent} before the theme layer —
  * provider names and model ids are external catalog data (P5) — and the list
- * windows to {@link MODEL_WINDOW} rows. The component is purely
+ * keeps the highlighted row inside a {@link MODEL_WINDOW}-row moving window.
+ * The component is purely
  * presentational: keys route through {@link mapKeyEvent} in the loop owner
  * (the `/model` command opens the panel, j/k move the highlight, printable
  * keys filter the catalog, Enter switches, Esc closes).
@@ -63,7 +64,7 @@ export interface ModelPaneState {
   error?: string
 }
 
-/** Maximum visible rows before the truncation hint. */
+/** Maximum visible rows in the selection-following catalog window. */
 export const MODEL_WINDOW = 30
 
 /**
@@ -78,7 +79,17 @@ export function ModelPane({
   status = 'idle',
   error,
 }: ModelPaneProps): ReactNode {
-  const visible = rows.slice(0, MODEL_WINDOW)
+  const windowStart = Math.min(
+    Math.max(0, selectedIndex - MODEL_WINDOW + 1),
+    Math.max(0, rows.length - MODEL_WINDOW),
+  )
+  const visible = rows.slice(windowStart, windowStart + MODEL_WINDOW)
+  const hiddenBelow = rows.length - windowStart - visible.length
+  const windowHint = windowStart === 0
+    ? `… 还有 ${hiddenBelow} 个模型`
+    : hiddenBelow === 0
+      ? `… 上方 ${windowStart} 个模型`
+      : `… 上方 ${windowStart} 个 · 下方 ${hiddenBelow} 个模型`
   return (
     <Box flexDirection="column" width="100%">
       <Text>模型: {escapeContent(filter)}</Text>
@@ -95,7 +106,7 @@ export function ModelPane({
         <Text>{styled(escapeContent('无可用模型'), 'fgDim')}</Text>
       ) : (
         visible.map((row, index) => {
-          const highlighted = index === selectedIndex
+          const highlighted = windowStart + index === selectedIndex
           return (
             <Box key={row.id} width="100%">
               <Text>{highlighted ? styled(escapeContent('› '), 'accent', undefined, true) : '  '}</Text>
@@ -113,7 +124,7 @@ export function ModelPane({
         })
       )}
       {status !== 'loading' && status !== 'error' && rows.length > MODEL_WINDOW ? (
-        <Text dimColor>… 还有 {rows.length - MODEL_WINDOW} 个模型</Text>
+        <Text dimColor>{windowHint}</Text>
       ) : null}
       <Text>{styled(escapeContent('↑↓/jk 选择 · Enter 切换 · Esc 关闭'), 'fgDim')}</Text>
     </Box>

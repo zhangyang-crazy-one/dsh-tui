@@ -87,6 +87,7 @@ async function bench(options?: {
       submitOnEnter: false,
       colorTier: '16' as const,
       brandAnimation: 'off' as const,
+      scrollbar: false,
     }
     ctx.provide('settings', {
       describe: () => [{ ns: NS }],
@@ -141,6 +142,80 @@ async function bench(options?: {
 }
 
 describe('SettingsPane intercept', () => {
+  it('starts quiet with thinking hidden and exposes each display command with its current state', async () => {
+    const { ctx, controller } = await bench({ settings: false })
+    try {
+      expect(controller.getStatusDetails()).toBe(false)
+      expect(controller.getModel().reasoningExpanded).toBe(false)
+      expect(controller.getLocale()).toBe('zh-CN')
+      expect(controller.commands.find(command => command.name === 'scrollbar')?.description).toContain('(开)')
+      controller.dispatch({ kind: 'command', query: 'status' })
+      controller.dispatch({ kind: 'command', query: 'scrollbar' })
+      controller.dispatch({ kind: 'command', query: 'reasoning' })
+      expect(controller.getStatusDetails()).toBe(true)
+      expect(controller.getScrollbarVisible()).toBe(false)
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+      expect(controller.commands.find(command => command.name === 'reasoning')?.description).toContain('(开)')
+    } finally {
+      await controller.dispose()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('serializes rapid display changes and retains the latest visible choice until it is saved', async () => {
+    const { ctx, controller } = await bench()
+    const stored = { reasoning: false, scrollbar: true, statusDetails: false, locale: 'en-US' }
+    const writes: { patch: object; resolve(): void }[] = []
+    const settings = ctx.get('settings')!
+    settings.get = () => stored
+    settings.update = vi.fn((_ns: string, patch: object) => new Promise<void>((resolve) => {
+      writes.push({ patch, resolve: () => { Object.assign(stored, patch); resolve() } })
+    }))
+    try {
+      controller.dispatch({ kind: 'toggle-reasoning' })
+      controller.dispatch({ kind: 'toggle-reasoning' })
+      controller.dispatch({ kind: 'toggle-reasoning' })
+      await vi.waitFor(() =>{  expect(writes).toHaveLength(1) })
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+      writes[0]!.resolve()
+      await vi.waitFor(() =>{  expect(writes).toHaveLength(2) })
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+      writes[1]!.resolve()
+      await vi.waitFor(() =>{  expect(writes).toHaveLength(3) })
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+      writes[2]!.resolve()
+      await controller.dispose()
+      expect(writes.map(write => write.patch)).toEqual([{ reasoning: true }, { reasoning: false }, { reasoning: true }])
+      expect(stored.reasoning).toBe(true)
+      expect(controller.getLocale()).toBe('en-US')
+      expect(controller.commands.find(command => command.name === 'reasoning')?.description).toContain('(on)')
+    } finally {
+      for (const write of writes) write.resolve()
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('restores the saved value when a display-setting write fails and permits the next toggle', async () => {
+    const { ctx, controller } = await bench()
+    const stored = { reasoning: false }
+    const settings = ctx.get('settings')!
+    settings.get = () => stored
+    settings.update = vi.fn().mockRejectedValueOnce(new Error('read-only settings'))
+      .mockImplementation(async (_ns, patch) => { Object.assign(stored, patch) })
+    try {
+      controller.dispatch({ kind: 'toggle-reasoning' })
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+      await vi.waitFor(() =>{  expect(controller.getFeedback()).toContain('显示设置未保存') })
+      expect(controller.getModel().reasoningExpanded).toBe(false)
+      controller.dispatch({ kind: 'toggle-reasoning' })
+      await vi.waitFor(() =>{  expect(stored.reasoning).toBe(true) })
+      expect(controller.getModel().reasoningExpanded).toBe(true)
+    } finally {
+      await controller.dispose()
+      await ctx.fiber.dispose()
+    }
+  })
+
   it('opens the overlay from empty /settings with the host baseURL row', async () => {
     const { ctx, controller } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
@@ -326,6 +401,18 @@ describe('SettingsPane intercept', () => {
     settings.get = () => ({ submitOnEnter: false })
     expect(controller.getSubmitOnEnter()).toBe(false)
     await ctx.fiber.dispose()
+  })
+
+  it('reads scrollbar visibility from global and registered settings with visible as the default', async () => {
+    const fallback = await bench()
+    expect(fallback.controller.getScrollbarVisible()).toBe(true)
+    const settings = fallback.ctx.get('settings')!
+    settings.get = () => ({ scrollbar: false })
+    expect(fallback.controller.getScrollbarVisible()).toBe(false)
+    settings.get = () => ({ scrollbar: true })
+    expect(fallback.controller.getScrollbarVisible()).toBe(true)
+    const registered = await bench({ registerTui: true })
+    expect(registered.controller.getScrollbarVisible()).toBe(false)
   })
 
   it('reads brandAnimation from global and registered tui settings with auto as the default', async () => {

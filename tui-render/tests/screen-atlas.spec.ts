@@ -21,6 +21,38 @@ describe('orderedPoints', () => {
 })
 
 describe('ScreenAtlas', () => {
+  it('reuses unchanged physical cells while replacing a revised row', () => {
+    const atlas = new ScreenAtlas(20, 4)
+    const line = (text: string) => createPhysicalLine({ blockId: text,
+      spans: [{ text, token: 'fg', href: 'https://example.test' }], sourceStart: 0, sourceEnd: text.length, blockRow: 0 })
+    const stable = createFrameSnapshotRow({ id: 'stable', row: 1, col: 2, line: line('中 stable') })
+    const geometry = { columns: 20, rows: 4, transcriptTop: 1, transcriptLeft: 2, transcriptWidth: 16, transcriptRows: 3 }
+    atlas.applyFrameSnapshot({ revision: '1', geometry,
+      rows: [stable, createFrameSnapshotRow({ id: 'tail', row: 2, col: 2, line: line('old tail') })] })
+    const cell = atlas.cellAt(2, 1)
+    atlas.applyFrameSnapshot({ revision: '2', geometry,
+      rows: [stable, createFrameSnapshotRow({ id: 'tail', row: 2, col: 2, line: line('new') })] })
+    expect(atlas.cellAt(2, 1)).toBe(cell)
+    expect(atlas.urlAt(5, 1)).toBe('https://example.test')
+    expect(atlas.extract({ col: 1, row: 1 }, { col: 20, row: 2 })).toBe(' 中 stable\n new')
+    atlas.applyFrameSnapshot({ revision: '3', geometry, rows: [] })
+    expect(atlas.extract({ col: 1, row: 1 }, { col: 20, row: 2 })).toBe('\n')
+  })
+
+  it('reports the terminal cursor position and visibility after controls and resize', () => {
+    const atlas = new ScreenAtlas(80, 24)
+    expect(atlas.cursorPosition).toEqual({ col: 1, row: 1 })
+    expect(atlas.cursorVisible).toBe(true)
+    atlas.feed('\x1b[21;5H\x1b[?25l')
+    expect(atlas.cursorPosition).toEqual({ col: 5, row: 21 })
+    expect(atlas.cursorVisible).toBe(false)
+    atlas.feed('\x1b[?25h中a')
+    expect(atlas.cursorPosition).toEqual({ col: 8, row: 21 })
+    expect(atlas.cursorVisible).toBe(true)
+    atlas.resize(40, 12)
+    expect(atlas.cursorPosition).toEqual({ col: 8, row: 12 })
+  })
+
   it('applies shared physical rows with CJK and span-local OSC geometry', () => {
     const atlas = new ScreenAtlas(12, 4)
     const line = createPhysicalLine({
@@ -91,6 +123,12 @@ describe('ScreenAtlas', () => {
     expect(stripVTControlCharacters(
       atlas.restoreOverlay({ col: 1, row: 1 }, { col: 8, row: 1 }),
     )).toBe('abcdef')
+    atlas.applyFrameSnapshot({ revision: 'rail-hidden', geometry: {
+      columns: 8, rows: 2, transcriptTop: 1, transcriptLeft: 1, transcriptWidth: 8, transcriptRows: 1,
+    }, rows: [createFrameSnapshotRow({ id: 'wide-rail:0', row: 1, col: 1, line })] })
+    expect(atlas.cellAt(7, 1)?.ch).toBe('前')
+    expect(atlas.cellAt(8, 1)?.ch).toBe('')
+    expect(atlas.extract({ col: 1, row: 1 }, { col: 8, row: 1 })).toBe('abcdef前')
   })
 
   it('writes graphemes, OSC 8, and CUP', () => {

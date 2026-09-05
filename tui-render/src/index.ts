@@ -23,6 +23,13 @@ import { attachMouseIo } from './mouse-io.ts'
 import { detectHyperlinks, setHyperlinks } from './hyperlink.ts'
 import { detectBrandRenderTier } from './terminal-capabilities.ts'
 import type { RenderPolicy } from './render-policy.ts'
+import { renderPolicyDefaults } from './render-policy.ts'
+import { observeReactTiming } from './react-timing.ts'
+export { ToolDetailsPane, EMPTY_TOOL_DETAILS_PANE } from './tool-details-pane.tsx'
+export type { ToolDetailsPaneState, ToolDetailsInput } from './tool-details-pane.tsx'
+export { createToolBodyDocument, planToolBodyWindow, toolCardOriginalText } from './tool-body.ts'
+export type { ToolBodyCursor } from './tool-body.ts'
+export { ToolPresenterCache } from './tool-presenter-cache.ts'
 
 export { renderToString }
 export { AppShell, layoutTitleBar } from './app-shell.tsx'
@@ -82,7 +89,9 @@ export type {
 } from './transcript-viewport.ts'
 export { TranscriptLayoutCache } from './transcript-layout-cache.ts'
 export type { TranscriptLayoutCacheInput } from './transcript-layout-cache.ts'
-export { SessionPane, relativeTime, LIST_WINDOW } from './session-pane.tsx'
+export { SessionPane, relativeTime } from './session-pane.tsx'
+export { tuiCopy } from './ui-copy.ts'
+export type { TuiCopyKey, TuiLocale } from './ui-copy.ts'
 export type {
   SessionRow,
   SessionPaneProps,
@@ -183,7 +192,16 @@ export {
 export type { FrameCaret, FrameRail } from './frame-fill.ts'
 export { goalFooterHead, goalFooterRuns, formatGoalFooter } from './goal-footer.ts'
 export type { GoalFooterRuns, GoalFooterView } from './goal-footer.ts'
-export { formatAdaptiveInfoFooter } from './adaptive-info-footer.ts'
+export {
+  formatAdaptiveInfoFooter,
+  formatAdaptiveInfoFooterRows,
+  formatQuietStatusRow,
+  formatCompactTokens,
+} from './adaptive-info-footer.ts'
+export type {
+  AdaptiveInfoFooterRow,
+  AdaptiveInfoFooterRun,
+} from './adaptive-info-footer.ts'
 export type {
   AdaptiveContextPressure,
   AdaptiveInfoFooterView,
@@ -230,6 +248,7 @@ export type {
 } from './frame-metrics.ts'
 export {
   renderPolicyDefaults,
+  toolPolicyDefaults,
   RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES,
   RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS,
   RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD,
@@ -253,6 +272,7 @@ export {
 export type {
   RenderPolicy,
   RenderPolicyCache,
+  RenderPolicyTools,
   RenderPolicyScroll,
   RenderPolicyStream,
 } from './render-policy.ts'
@@ -263,7 +283,7 @@ export type {
   InteractionEvent,
 } from './interaction-state.ts'
 export { TuiLoop } from './loop.tsx'
-export type { TuiLoopProps, TuiController, LoopAction } from './loop.tsx'
+export type { TuiLoopProps, TuiController, LoopAction, LoopMode } from './loop.tsx'
 export { InputBar, handleInput, EMPTY_INPUT } from './input-bar.tsx'
 export type {
   InputBarProps,
@@ -321,6 +341,7 @@ export function mountTuiRender(
   options: TuiRenderOptions = {},
 ): () => void {
   const env = options.env ?? process.env
+  const policy = options.renderPolicy ?? renderPolicyDefaults()
   installTheme(env)
   setHyperlinks(detectHyperlinks(env))
   const wrapped =
@@ -336,16 +357,31 @@ export function mountTuiRender(
       ? {}
       : { wheelRows: options.renderPolicy.scroll.wheelRows }),
   })
-  const instance = render(wrapped, {
-    alternateScreen: true,
-    patchConsole: false,
-    exitOnCtrlC: options.exitOnCtrlC ?? false,
-    stdout: wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
-    stdin: mouse.stdin,
-  })
-  return () => {
-    instance.unmount()
+  const releaseTiming = observeReactTiming()
+  let instance: ReturnType<typeof render>
+  try {
+    instance = render(wrapped, {
+      alternateScreen: true,
+      incrementalRendering: false,
+      patchConsole: false,
+      exitOnCtrlC: options.exitOnCtrlC ?? false,
+      maxFps: 1000 / Math.min(policy.scroll.frameIntervalMs, policy.stream.frameIntervalMs),
+      stdout: wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
+      stdin: mouse.stdin,
+    })
+  } catch (error) {
+    releaseTiming()
     mouse.dispose()
+    throw error
+  }
+  let disposed = false
+  return () => {
+    if (disposed) return
+    disposed = true
+    try { instance.unmount() } finally {
+      releaseTiming()
+      mouse.dispose()
+    }
   }
 }
 

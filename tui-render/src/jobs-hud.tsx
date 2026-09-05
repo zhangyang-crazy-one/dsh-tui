@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { escapeContent } from './content.ts'
 import { paintRow, styled } from './theme.ts'
 import { truncateDisplay } from './tool-cards.ts'
+import type { StyleToken } from './theme.ts'
 
 /** One jobs-HUD row; the host maps its registry snapshot onto this. */
 export interface JobHudItem {
@@ -40,16 +41,24 @@ export function JobsHud({
   if (jobs.length === 0) return null
   return (
     <>
-      {jobs.map(job => (
-        <Text key={job.id} wrap="truncate">
-          {paintRow([
-            styled(
-              truncateDisplay(escapeContent(`${job.id} · ${job.status} · ${job.label}`), maxCols),
-              'fgDim',
-            ),
-          ])}
-        </Text>
-      ))}
+      {jobs.map((job) => {
+        const rowText = `${job.id} · ${job.status} · ${job.label}`
+        const statusToken: StyleToken = job.status === 'running'
+          ? 'accentText'
+          : job.status === 'failed' || job.status === 'killed'
+            ? 'error'
+            : 'fgDim'
+        return (
+          <Text key={job.id} wrap="truncate">
+            {paintRow([
+              styled(
+                truncateDisplay(escapeContent(rowText), maxCols),
+                statusToken,
+              ),
+            ])}
+          </Text>
+        )
+      })}
     </>
   )
 }

@@ -7,7 +7,7 @@
  * @module @deepseek-ai/dsh-tui-render/composer-cursor
  */
 
-import { displayWidth } from './content.ts'
+import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
 
 /** Grapheme splitter for left/right caret steps. */
 const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
@@ -39,6 +39,36 @@ export function composerCursorPosition(
   // v8 ignore next -- String.prototype.split('\n') always yields at least one string.
   const lastLine = lines[lines.length - 1] ?? ''
   return { row: lines.length - 1, col: displayWidth(lastLine) }
+}
+
+/**
+ * Keep a caret and its surrounding text visible inside one horizontal input row.
+ * @param text - one logical composer line, without its newline.
+ * @param caretIndex - caret offset in that line; undefined shows its beginning.
+ * @param columns - available columns after the prompt, including the cursor cell.
+ * @returns escaped visible text, source display offset, and zero-based visible caret column.
+ */
+export function composerLineWindow(text: string, caretIndex: number | undefined, columns: number): {
+  text: string
+  startColumn: number
+  caretColumn: number
+  hiddenPrefix: boolean
+} {
+  const safe = (value: string): string => escapeContent(value).replace(/\t/gu, '\\t')
+  const escaped = safe(text)
+  const caret = caretIndex === undefined ? 0 : displayWidth(safe(text.slice(0, caretIndex)))
+  const hiddenPrefix = caret >= columns
+  const budget = Math.max(1, columns - 1 - (hiddenPrefix ? 1 : 0))
+  const desiredStart = Math.max(0, caret - budget)
+  let startColumn = 0
+  let startOffset = 0
+  if (desiredStart > 0) for (const part of GRAPHEME.segment(escaped)) {
+    if (startColumn >= desiredStart) break
+    startColumn += displayWidth(part.segment)
+    startOffset += part.segment.length
+  }
+  return { text: wcwidthSafeSlice(escaped.slice(startOffset), budget), startColumn,
+    caretColumn: caret - startColumn + (hiddenPrefix ? 1 : 0), hiddenPrefix }
 }
 
 /**

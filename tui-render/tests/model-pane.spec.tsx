@@ -49,8 +49,8 @@ describe('ModelPane', () => {
       selectedIndex: 0,
     })
     expect(out).toContain('\x1b[1m\x1b[38;2;77;107;254m› ')
-    expect(out).toContain('\x1b[38;2;138;143;152mdeepseek-official')
-    expect(out).toContain('\x1b[38;2;138;143;152m↑↓/jk 选择 · Enter 切换 · Esc 关闭')
+    expect(out).toContain('\x1b[38;2;164;169;176mdeepseek-official')
+    expect(out).toContain('\x1b[38;2;164;169;176m↑↓/jk 选择 · Enter 切换 · Esc 关闭')
   })
 
   it('marks the live selection with the accentDim tail', () => {
@@ -93,6 +93,41 @@ describe('ModelPane', () => {
     expect(out).toContain('m-0')
     expect(out).not.toContain('m-34')
     expect(out).toContain('还有 5 个模型')
+  })
+
+  it('moves the window to keep a selection beyond the first page visible', () => {
+    const many = Array.from({ length: 65 }, (_, index) => ({
+      id: `p:model-${index}`,
+      provider: 'p',
+      model: `model-${index}`,
+      name: `model-${index}`,
+      fallback: false,
+      current: false,
+    }))
+    const out = renderPane({ rows: many, selectedIndex: 34 })
+
+    expect(out).not.toContain('model-0 ')
+    expect(out).toContain('model-5 ')
+    expect(out).toMatch(/› .*model-34/u)
+    expect(out).toContain('上方 5 个 · 下方 30 个模型')
+  })
+
+  it('anchors the final window at the end of the catalog', () => {
+    const many = Array.from({ length: 65 }, (_, index) => ({
+      id: `p:model-${index}`,
+      provider: 'p',
+      model: `model-${index}`,
+      name: `model-${index}`,
+      fallback: false,
+      current: false,
+    }))
+    const out = renderPane({ rows: many, selectedIndex: 64 })
+
+    expect(out).not.toContain('model-34 ')
+    expect(out).toContain('model-35 ')
+    expect(out).toMatch(/› .*model-64/u)
+    expect(out).toContain('上方 35 个模型')
+    expect(out).not.toContain('下方')
   })
 
   it('shows the loading, error, and empty states mutually exclusively', () => {

@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiet Shell — TUI 目标原型</title>
+  <style>
+    :root {
+      --bg: #151618;
+      --message: #25282c;
+      --tool: #1a1c1f;
+      --input: #23262b;
+      --code: #202328;
+      --fg: #eef0f2;
+      --fg-soft: #d1d4d8;
+      --fg-dim: #a4a9b0;
+      --accent: #4d6bfe;
+      --accent-text: #7589ff;
+      --accent-dim: #34415b;
+      --success: #75b984;
+      --warning: #d5ae6b;
+      --error: #e27d77;
+      --line: #3a3e44;
+      --page: #0e0f11;
+      --mono: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--page); color: var(--fg); font-family: var(--mono); }
+    body { display: flex; flex-direction: column; min-height: 100%; }
+
+    .page-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 16px 24px 12px;
+      border-bottom: 1px solid var(--line);
+      flex-wrap: wrap;
+    }
+    .page-bar h1 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--fg);
+    }
+    .page-bar p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--fg-dim);
+      flex: 1;
+      min-width: 220px;
+    }
+    .scenes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .scenes button {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--fg-soft);
+      font: inherit;
+      font-size: 12px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .scenes button[aria-current="true"] {
+      border-color: var(--accent);
+      color: var(--fg);
+      background: var(--accent-dim);
+    }
+    .scenes button:focus-visible { outline: 1px solid var(--accent-text); }
+
+    .stage {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 20px;
+      padding: 20px 24px 24px;
+      min-height: 0;
+    }
+    @media (max-width: 980px) {
+      .stage { grid-template-columns: 1fr; }
+    }
+
+    .tty {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .tty-title {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--fg-dim);
+      border-bottom: 1px solid var(--line);
+    }
+    .tty-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      white-space: pre;
+      width: 100%;
+    }
+    button.row {
+      background: none;
+      border: 0;
+      font: inherit;
+      color: inherit;
+      padding: 0;
+      text-align: left;
+    }
+    .row > span:last-child { color: var(--fg-dim); flex-shrink: 0; }
+    .pad { padding: 0 12px; }
+    .grow { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px 12px; }
+    .dim { color: var(--fg-dim); }
+    .soft { color: var(--fg-soft); }
+    .ok { color: var(--success); }
+    .warn { color: var(--warning); }
+    .err { color: var(--error); }
+    .accent { color: var(--accent-text); }
+    .brand { color: var(--accent); }
+    .prose { color: var(--fg); white-space: pre-wrap; }
+    .gap { height: 10px; }
+    .gap-sm { height: 6px; }
+    .rule { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
+    .clickable { cursor: pointer; }
+    .clickable:hover { color: var(--fg-soft); }
+
+    .hdr, .ftr, .composer-wrap { flex-shrink: 0; }
+    .hdr { padding: 8px 12px 4px; display: flex; justify-content: space-between; color: var(--fg-dim); }
+    .ftr { padding: 4px 12px 8px; color: var(--fg-dim); font-size: 12px; display: flex; justify-content: space-between; gap: 12px; }
+
+    .composer {
+      position: relative;
+      margin: 8px 12px 16px;
+      border: 1px solid var(--line);
+      background: var(--input);
+      min-height: 28px;
+      padding: 5px 10px 8px;
+    }
+    .composer.bare {
+      border: 0;
+      background: transparent;
+      margin: 2px 12px;
+      padding: 4px 0;
+    }
+    .composer-line { display: flex; gap: 8px; color: var(--fg); }
+    .prompt { color: var(--accent-text); }
+    .caret {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: var(--fg);
+      animation: blink 1s steps(1) infinite;
+      vertical-align: text-bottom;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .model-chip {
+      position: absolute;
+      right: 10px;
+      bottom: -7px;
+      background: var(--bg);
+      color: var(--fg-dim);
+      padding: 0 6px;
+      font-size: 11px;
+    }
+    .composer.multiline { min-height: 64px; }
+    .composer.multiline .model-chip { bottom: -7px; }
+
+    .home {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .splash {
+      border: 1px solid var(--line);
+      padding: 20px 24px 16px;
+      width: min(520px, 100%);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px 20px;
+    }
+    .fish {
+      color: var(--accent);
+      font-size: 9px;
+      line-height: 1.05;
+      white-space: pre;
+      margin: 0;
+    }
+    .splash h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .ver { color: var(--fg-dim); font-size: 12px; font-weight: 400; }
+    .change { margin: 10px 0 14px; color: var(--fg-dim); font-size: 12px; }
+    .change div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .menu { display: grid; gap: 6px; font-size: 13px; }
+    .menu-row { display: flex; justify-content: space-between; color: var(--fg); }
+    .menu-row kbd { color: var(--fg-dim); font: inherit; }
+
+    .inspect {
+      margin: 2px 0 8px 14px;
+      border: 1px solid var(--line);
+      background: var(--code);
+      color: var(--fg-soft);
+      padding: 6px 8px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.45;
+    }
+    .h-purple { color: #b9a4e8; }
+    .code-blue { color: #7eb6ff; }
+    .link { color: #7ec8c8; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+    .perm {
+      margin: 0 12px 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--accent-dim);
+      color: var(--fg-soft);
+      font-size: 12px;
+    }
+    .perm button {
+      background: none;
+      border: 0;
+      font: inherit;
+      color: inherit;
+      padding: 0;
+      cursor: pointer;
+    }
+    .chip { color: var(--accent-text); }
+
+    .notes h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .notes p, .notes li { font-size: 12px; color: var(--fg-dim); line-height: 1.55; }
+    .notes ul { margin: 0; padding-left: 16px; }
+    .notes li { margin: 0 0 6px; }
+    .notes strong { color: var(--fg-soft); font-weight: 600; }
+
+    .todo-now span { display: inline-block; min-width: 4.5em; }
+    .busy { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header class="page-bar">
+    <h1>Quiet Shell</h1>
+    <p>同一「查单测为什么红」场景。1–4 切换画面，点击工具行展开，Stretch 下 Shift+Tab 切模式，Y/N 处理权限。</p>
+    <nav class="scenes" aria-label="场景">
+      <button type="button" data-scene="now">1 现在</button>
+      <button type="button" data-scene="target">2 目标</button>
+      <button type="button" data-scene="home">3 空闲</button>
+      <button type="button" data-scene="stretch">4 Stretch</button>
+    </nav>
+  </header>
+
+  <div class="stage">
+    <section class="tty" aria-label="终端原型">
+      <div class="tty-title">
+        <span>deepseek-tui</span>
+        <span id="tty-meta">113 × 32</span>
+      </div>
+      <div class="tty-screen" id="screen"></div>
+    </section>
+    <aside class="notes" id="notes"></aside>
+  </div>
+
+  <script>
+    const FISH = [
+      "                  ▄▄▄▄▄       █▄",
+      "      ▄▄▄█████████████       ███▄▄",
+      "    ▄█████████████████▄▄     ██████▄",
+      "  ▄██████████████████████▄    ████████",
+      " ▄█████████████████████████▄   ▀████▀",
+      "▄████████████████████████████▄   ██▀",
+      "███       ▀▀███████████▀▀▀████████",
+      "███           ▀████████▀█  ▀████▀",
+      "████             ████████▄   ████",
+      "▀███▄             ▀████████▄███",
+      " ████▄              ██████████",
+      "  ████▄       ▄▄     ▀██████▀",
+      "   ▀████▄     ▀███▄    ▀████▀",
+      "     ▀█████▄▄▄▄█████▄▄   ▀███▄",
+      "       ▀██████████████████▀▀▀",
+      "          ▀▀▀█████████▀▀▀",
+    ].join("\n");
+
+    const state = {
+      scene: "target",
+      open: new Set(),
+      mode: "agent",
+      perm: "ask",
+    };
+
+    const NOTES = {
+      now: {
+        title: "现在：过程监视器",
+        body: `<p>复原图一的信息重量。答案几乎不在屏上。</p>
+          <ul>
+            <li><strong>回声</strong>：工具卡和 bash-1…N 讲同一批命令。</li>
+            <li><strong>完成态占行</strong>：每个成功都写「完成」。</li>
+            <li><strong>Chrome 6 行</strong>：模型出现两次，页脚是仪表盘。</li>
+            <li><strong>Todo 全开</strong>：已完成任务和正在跑的命令抢视网膜。</li>
+          </ul>
+          <p>这一屏是对照，不是目标。TUI 里能保留这些数据，但不能默认全画出来。</p>`,
+      },
+      target: {
+        title: "目标：对话优先",
+        body: `<p>P0+P1 落地后应长这样。还是同一场生成，但结论占主视觉。</p>
+          <ul>
+            <li><strong>同一事实一次</strong>：路径在顶栏，模型在输入框边框，上下文是 28K/500K。</li>
+            <li><strong>完成态安静</strong>：成功工具一行 dim，没有「完成」二字。</li>
+            <li><strong>Todo 收成一条</strong>：▸ 跑单测 · 4/6。</li>
+            <li><strong>页脚一行</strong>：快捷键 + 状态词。</li>
+          </ul>
+          <p>点击 ◆ 行可展开，对应现有 Ctrl+O。思考块保留，只是降为次级。</p>`,
+      },
+      home: {
+        title: "空闲：产品而不日志",
+        body: `<p>对标 Grok Build 的居中卡片，鱼标仍用现有 brand 字模。</p>
+          <ul>
+            <li>冷启动给动作，不给问候语顶栏。</li>
+            <li>Changelog 三条，截断，不当主阅读。</li>
+            <li>快捷键右对齐，和会话态 composer 同一套键盘习惯。</li>
+          </ul>
+          <p>会话一旦开始，这张卡片消失，顶栏改成 cwd。</p>`,
+      },
+      stretch: {
+        title: "Stretch：仍是 TUI",
+        body: `<p>比目标多四件事，全部能在 113 列里做，不要做成 IDE。</p>
+          <ul>
+            <li><strong>工具抽屉</strong>：展开后是 4 行 inset，不是整段 dump。</li>
+            <li><strong>权限一条</strong>：写操作进输入框上方，Y/N/A。</li>
+            <li><strong>多行 composer</strong> + 模式名嵌在边框（agent/plan/focus）。</li>
+            <li><strong>Focus</strong>：Shift+Tab 藏工具，只留结论。</li>
+          </ul>
+          <p>小节标题用淡紫，路径用青，对标 Grok 图四的诊断排版——这是「答完」该有的样子。</p>`,
+      },
+    };
+
+    function caret() {
+      return '<span class="caret" aria-hidden="true"></span>';
+    }
+
+    function header(left, right) {
+      return `<div class="hdr"><span>${left}</span><span>${right}</span></div>`;
+    }
+
+    function footer(left, right) {
+      return `<div class="ftr"><span>${left}</span><span>${right}</span></div>`;
+    }
+
+    function composer({ bare = false, multiline = false, model = "v4-flash", extra = "", value = "" }) {
+      const cls = ["composer", bare ? "bare" : "", multiline ? "multiline" : ""].filter(Boolean).join(" ");
+      const chip = bare ? "" : `<span class="model-chip">${model}${extra}</span>`;
+      const placeholder = value
+        ? `<span class="prose">${value}</span>${caret()}`
+        : `<span class="dim">输入消息</span>${caret()}`;
+      const second = multiline ? `<div class="dim" style="height:18px"></div>` : "";
+      return `<div class="${cls}">
+        <div class="composer-line"><span class="prompt">&gt;</span> ${placeholder}</div>
+        ${second}
+        ${chip}
+      </div>`;
+    }
+
+    function toolRow(id, label, meta = "") {
+      const open = state.open.has(id);
+      const glyph = open ? "▾" : "◆";
+      return `<button type="button" class="row clickable dim" data-toggle="${id}"><span>${glyph} ${label}</span><span>${meta}</span></button>`;
+    }
+
+    function sceneNow() {
+      const jobs = Array.from({ length: 13 }, (_, i) => {
+        const cmds = [
+          "pnpm test",
+          "node scripts/gate.mjs",
+          "grep -R '完成' packages/tui",
+          "sed -n '1,40p' REVIEW.md",
+          "timeout 30 pnpm exec vitest",
+        ];
+        return `<div class="row dim"><span>bash-${i + 1} · completed · ${cmds[i % cmds.length]} …</span><span></span></div>`;
+      }).join("");
+      return `
+        ${header('<span class="soft">你好</span>', '<span class="accent">deepseek-official · deepseek-v4-flash</span>')}
+        <div class="grow">
+          <div class="row clickable" data-toggle="grep"><span><span class="dim">▸</span> grep -R "max-warnings" packages/tui …</span><span class="ok">完成</span></div>
+          <div class="row clickable" data-toggle="think1"><span><span class="dim">* 思考</span>  15.4s · 27 行</span><span class="dim">Ctrl+O 展开</span></div>
+          <div class="row"><span class="accent">● 正在核对失败是 lint 还是断言…</span><span></span></div>
+          <div class="row clickable" data-toggle="think2"><span><span class="dim">* 思考</span>  22.5s · 83 行</span><span class="dim">Ctrl+O 展开</span></div>
+          <div class="gap-sm"></div>
+          <div class="todo-now">
+            <div class="row"><span><span class="ok">✓ 完成</span> <span class="dim">收集仓库状态</span></span><span></span></div>
+            <div class="row"><span><span class="ok">✓ 完成</span> <span class="dim">扫描静态标记</span></span><span></span></div>
+            <div class="row"><span><span class="ok">✓ 完成</span> <span class="dim">跑质量门禁</span></span><span></span></div>
+            <div class="row"><span><span class="busy">▸ 进行中</span> <span class="dim">跑单元测试套件</span></span><span></span></div>
+            <div class="row"><span><span class="dim">· 待办 汇总输出警告列表</span></span><span></span></div>
+          </div>
+          <div class="gap-sm"></div>
+          ${jobs}
+        </div>
+        ${composer({ bare: true })}
+        <div class="pad dim">~/my_programes/deepseek-harness          状态 <span class="accent">生成中</span></div>
+        <div class="pad dim">deepseek-official/<span class="accent">deepseek-v4-flash</span>  上下文 [<span class="brand">██</span><span class="dim">░░░░░░░░</span>] 8%  ↑1685499  ↓30483  缓存命中 98%</div>
+        <div class="ftr"><span>↑↓/jk 滚动</span><span></span></div>
+      `;
+    }
+
+    function sceneTarget() {
+      const bashOpen = state.open.has("bash");
+      const thinkOpen = state.open.has("think");
+      return `
+        ${header('<span>~/my_programes/deepseek-harness</span>', '28K / 500K')}
+        <div class="grow">
+          <div class="row"><span><span class="prompt">&gt;</span> 查一下单测为什么红了，顺便清掉临时文件</span><span>8:57 AM</span></div>
+          <hr class="rule" />
+          <div class="prose">有 3 个失败集中在 ESLint 配置，不是测试逻辑本身。
+临时目录 <span class="soft">.tmp-gate/</span> 被扫进去，把警告数顶过了 max-warnings。</div>
+          <div class="gap"></div>
+          ${toolRow("bash", "bash  pnpm test", "12.4s")}
+          ${bashOpen ? `<div class="inspect dim">exit 1
+FAIL  visual-conformance.spec.tsx
+error  Unexpected '完成'</div>` : ""}
+          ${toolRow("think", "思考  22.5s", "Ctrl+O")}
+          ${thinkOpen ? `<div class="inspect dim">先看失败是断言还是门禁。
+vitest 汇总指向 lint，而不是 expect()。</div>` : ""}
+          <div class="gap-sm"></div>
+          <div class="row dim"><span>▸ 跑单测 · 4/6</span><span></span></div>
+        </div>
+        ${composer({ model: "v4-flash" })}
+        ${footer("Shift+Tab 模式   Ctrl+O 展开", '<span class="accent">生成中</span>')}
+      `;
+    }
+
+    function sceneHome() {
+      return `
+        ${header('<span>~/my_programes/deepseek-harness</span>', '0 / 500K')}
+        <div class="home">
+          <div class="splash">
+            <pre class="fish">${FISH}</pre>
+            <div>
+              <h2>DeepSeek <span class="ver">tui</span></h2>
+              <div class="change">
+                <div class="dim">Changelog</div>
+                <div>· 工具卡按 presenter 展开，不再平铺 payload</div>
+                <div>· 页脚按高度裁剪 workspace / metrics</div>
+                <div>· 生成品牌字模从 FishLogo 栅格化</div>
+              </div>
+              <div class="menu">
+                <div class="menu-row"><span>新会话</span><kbd>ctrl+n</kbd></div>
+                <div class="menu-row"><span>恢复会话</span><kbd>ctrl+s</kbd></div>
+                <div class="menu-row"><span>更新说明</span><kbd></kbd></div>
+                <div class="menu-row"><span>退出</span><kbd>ctrl+q</kbd></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${composer({ model: "v4-flash" })}
+        ${footer("Shift+Tab 模式   Ctrl+X 快捷键", "空闲")}
+      `;
+    }
+
+    function sceneStretch() {
+      const focus = state.mode === "focus";
+      const bashOpen = state.open.has("bash") && !focus;
+      const perm = state.perm === "ask"
+        ? `<div class="perm">允许删除 <span class="soft">.tmp-gate/</span> 吗？
+          <button type="button" class="chip" data-perm="allow">[Y]</button> 允许 &nbsp; <button type="button" class="dim" data-perm="deny">[n]</button> 拒绝 &nbsp; <button type="button" class="dim" data-perm="allow">[a]</button> 本会话总是</div>`
+        : state.perm === "allow"
+          ? `<div class="perm dim">已允许删除 .tmp-gate/ · 本会话</div>`
+          : `<div class="perm dim">已拒绝删除 .tmp-gate/</div>`;
+      const tools = focus ? "" : `
+          ${toolRow("bash", "bash  pnpm test", "12.4s")}
+          ${bashOpen ? `<div class="inspect"><span class="dim">exit 1 · 末 4 行</span>
+<span class="err">FAIL</span>  visual-conformance.spec.tsx
+error  Unexpected '<span class="soft">完成</span>'
+<span class="dim">Ctrl+O 收起 · 完整输出 48 行</span></div>` : ""}
+          ${toolRow("think", "思考  22.5s", "")}
+      `;
+      return `
+        ${header('<span>~/my_programes/deepseek-harness</span>', '28K / 500K')}
+        <div class="grow">
+          <div class="row"><span><span class="prompt">&gt;</span> 查一下单测为什么红了，顺便清掉临时文件</span><span>8:57 AM</span></div>
+          <hr class="rule" />
+          <div class="prose">有 3 个失败集中在 ESLint 配置，不是测试逻辑本身。</div>
+          <div class="gap-sm"></div>
+          <div class="h-purple">问题原因</div>
+          <div class="dim">  pnpm test 在 packages/tui/tui-render 停在 max-warnings。</div>
+          <div class="dim">  临时文件 .tmp-gate/ 没有进 ignore，污染了扫描。</div>
+          <div class="gap-sm"></div>
+          <div class="h-purple">建议</div>
+          <div class="dim">  1. 先修 3 条 lint，再把 max-warnings 改回 0</div>
+          <div class="dim">  2. 删除 .tmp-gate/ 并写入 gitignore</div>
+          <div class="gap-sm"></div>
+          <div><span class="link">packages/tui/tui-render/tests/visual-conformance.spec.tsx</span>
+            <span class="link">[打开]</span></div>
+          <div class="gap"></div>
+          ${tools}
+        </div>
+        ${perm}
+        ${composer({ multiline: true, model: "v4-flash · " + state.mode, value: "把这 3 条 lint 也列出来" })}
+        ${footer("Shift+Tab 模式   Ctrl+O 展开   1 running", '<span class="accent">生成中</span>')}
+      `;
+    }
+
+    const renderers = { now: sceneNow, target: sceneTarget, home: sceneHome, stretch: sceneStretch };
+
+    function render() {
+      document.getElementById("screen").innerHTML = renderers[state.scene]();
+      document.getElementById("notes").innerHTML = `<h2>${NOTES[state.scene].title}</h2>${NOTES[state.scene].body}`;
+      document.querySelectorAll(".scenes button").forEach((btn) => {
+        if (btn.dataset.scene === state.scene) btn.setAttribute("aria-current", "true");
+        else btn.removeAttribute("aria-current");
+      });
+      const meta = {
+        now: "现在 · 6 行 chrome",
+        target: "目标 · 3 行 chrome",
+        home: "空闲 · splash",
+        stretch: "Stretch · 仍 113 列",
+      };
+      document.getElementById("tty-meta").textContent = meta[state.scene];
+    }
+
+    document.querySelector(".scenes").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-scene]");
+      if (!btn) return;
+      state.scene = btn.dataset.scene;
+      state.open.clear();
+      render();
+    });
+
+    document.getElementById("screen").addEventListener("click", (e) => {
+      const perm = e.target.closest("[data-perm]");
+      if (perm) {
+        state.perm = perm.getAttribute("data-perm");
+        render();
+        return;
+      }
+      const row = e.target.closest("[data-toggle]");
+      if (!row) return;
+      const id = row.getAttribute("data-toggle");
+      if (state.open.has(id)) state.open.delete(id);
+      else state.open.add(id);
+      render();
+    });
+
+    const modes = ["agent", "plan", "focus"];
+
+    window.addEventListener("keydown", (e) => {
+      if (e.target && ["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+      const map = { Digit1: "now", Digit2: "target", Digit3: "home", Digit4: "stretch",
+                    Numpad1: "now", Numpad2: "target", Numpad3: "home", Numpad4: "stretch" };
+      if (map[e.code]) {
+        state.scene = map[e.code];
+        state.open.clear();
+        render();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "o" || e.key === "O") {
+        if (state.open.has("bash")) state.open.delete("bash");
+        else state.open.add("bash");
+        render();
+      }
+      if (e.key === "Tab" && state.scene === "stretch") {
+        const i = modes.indexOf(state.mode);
+        state.mode = modes[(i + (e.shiftKey ? modes.length - 1 : 1)) % modes.length];
+        render();
+        e.preventDefault();
+      }
+      if (state.scene === "stretch" && state.perm === "ask") {
+        if (e.key === "y" || e.key === "Y") { state.perm = "allow"; render(); }
+        if (e.key === "n" || e.key === "N") { state.perm = "deny"; render(); }
+        if (e.key === "a" || e.key === "A") { state.perm = "allow"; render(); }
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

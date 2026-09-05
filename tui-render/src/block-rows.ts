@@ -8,13 +8,15 @@
  * re-measure a block to know its height. This module owns that projection.
  *
  * Each transcript block — user/assistant prose, reasoning, tool cards,
- * compactions, turn tails, dense digests, the active-turn placeholder —
+ * compactions, turn tails, tool summaries, the active-turn placeholder —
  * is reduced to one ordered array of {@link MarkdownRenderLine} records
  * whose row count is exact. Markdown blocks reuse the existing
  * {@link createMarkdownProjector} (Decision 2) so the projector cache and
  * table scanner stay in one place; non-markdown blocks assemble their
  * own rows from the immutable projection records that own their shape
- * (tool card / divider / turn tail / digest / reasoning fold marker).
+ * (tool card / divider / turn tail / tool summary / reasoning fold marker).
+ * Parsed top-level Markdown blocks contribute one physical spacer row; an
+ * unfinished raw tail remains attached to its current block while streaming.
  *
  * The projection is pure: it never reads from Ink, React, the
  * `TranscriptRenderStore`, or the `useStdout` / `useWindowSize` hooks.
@@ -41,6 +43,7 @@ import {
   type MarkdownRenderScope,
   type MarkdownRenderLine,
   type MarkdownRenderSpan,
+  type MarkdownStyleToken,
   type MarkdownProjector as MarkdownProjectorHandle,
   type MarkdownCollector as MarkdownCollectorHandle,
   type SafeFullRecomputeReason,
@@ -56,12 +59,16 @@ import {
 import type { StreamingTableRenderCache } from './markdown-render.ts'
 import { parseMarkdownSource } from './markdown-parse.ts'
 import { parsePipeTableCells, TableScanner } from './table-scanner.ts'
-import { collapsedCardSummary, truncateDisplay } from './tool-cards.ts'
 import type {
   ToolCardCallView,
+  ToolCardModel,
   ToolCardResultView,
   ToolCardStatus,
 } from './tool-cards.ts'
+import { ToolRowCache, truncateMiddleDisplay } from './tool-rows.ts'
+import { toolPolicyDefaults } from './render-policy.ts'
+import type { TuiLocale } from './ui-copy.ts'
+import type { BackgroundToken } from './theme.ts'
 
 /**
  * Identity of the visible-row-projection entry. Stable across re-renders so
@@ -78,7 +85,7 @@ export interface BlockRowsEntry {
    * `user`, `assistant-prose`) hold the markdown source; reasoning holds
    * the raw reasoning text; tool cards hold either a JSON-encoded
    * representation (preferred) or the result text (fallback); the
-   * digests, dividers, and tailers hold a precomputed string the
+   * summaries, dividers, and tails hold a precomputed string the
    * projector joins literally.
    */
   readonly source: string
@@ -95,17 +102,17 @@ export type BlockRowsKind =
   | 'divider'
   | 'compaction'
   | 'turn-tail'
-  | 'dense-digest'
+  | 'tool-summary'
   | 'active-placeholder'
   | 'markdown'
 
 /** Per-kind metadata; fields outside the active kind are ignored. */
 export interface BlockRowsMeta {
-  /** Reasoning block. */
+  /** Whether the complete reasoning block is visible. */
   readonly reasoningExpanded?: boolean
   /** Reasoning duration stamp (the `1.2s`/`48.8s` label). */
   readonly reasoningDurationMs?: number
-  /** Reasoning live-tail: header plus the last tail rows when generating. */
+  /** Whether this reasoning run's duration is still advancing. */
   readonly reasoningLive?: boolean
   /** Tool-card collapsed summary overrides; placeholder while we still
    * re-render via the JSX components — future task will move to lines. */
@@ -122,10 +129,12 @@ export interface BlockRowsMeta {
   readonly turnTailStats?: string
   /** Whether the turn tail shows the `── 已完成 ──` separator. */
   readonly turnTailCompletionBoundary?: boolean
-  /** Dense-digest row text (if non-empty). */
-  readonly denseDigestText?: string
+  /** Highest-priority status represented by a collapsed tool summary. */
+  readonly toolSummaryStatus?: ToolCardStatus
   /** Active-turn placeholder row text (`● 正在思考…`). */
   readonly activePlaceholder?: string
+  /** Whether the user entry is followed by another turn and should emit the two-row message gap. */
+  readonly userMessageGap?: boolean
 }
 
 /** Pre-paired tool-card data the row builder needs. */
@@ -139,7 +148,9 @@ export interface ToolCardProjection {
   /** Concatenated result text or undefined for running cards. */
   readonly resultText?: string
   /** Tool-private JSON presentation metadata. */
-  readonly meta?: unknown
+  readonly meta?: ToolCardModel['meta']
+  /** Stable internal failure identity, when the tool supplied one. */
+  readonly error?: ToolCardModel['error']
   /** Presenter call view, when the registry supplies one. */
   readonly callView?: ToolCardCallView
   /** Presenter result view, when the registry supplies one. */
@@ -148,13 +159,15 @@ export interface ToolCardProjection {
 
 /** Inputs that change the projected row output for any block. */
 export interface BlockRowsScope {
+  /** Locale for tool status and detail copy. */
+  readonly locale?: TuiLocale
   /** Conversation column width in columns (after gutter). */
   readonly width: number
   /** Theme tier identifier; matches {@link MarkdownRenderScope.theme}. */
   readonly theme: 'truecolor' | '256' | '16' | 'none'
   /** Fold mode (drives the reasoning fold and tool card collapse). */
   readonly fold: BlockRowsFold
-  /** Render mode — settled blocks lose the streaming cursor. */
+  /** Render mode used by the streaming and settled Markdown projections. */
   readonly renderMode: 'settled' | 'streaming'
   /** Pre-built composite scope key for caching; see {@link computeBlockRowsScopeKey}. */
   readonly scopeKey: string
@@ -338,13 +351,13 @@ export function projectBlockRows(
     case 'tool-card':
       return projectToolCardEntry(entry, scope)
     case 'divider':
-      return projectDividerEntry(entry)
+      return projectDividerEntry(entry, scope)
     case 'compaction':
       return projectCompactionEntry(entry)
     case 'turn-tail':
       return projectTurnTailEntry(entry, scope)
-    case 'dense-digest':
-      return projectDenseDigestEntry(entry)
+    case 'tool-summary':
+      return projectToolSummaryEntry(entry, scope)
     case 'active-placeholder':
       return projectActivePlaceholderEntry(entry)
   }
@@ -420,16 +433,19 @@ function projectMarkdownEntry(
       width: Math.max(1, scope.width),
       hyperlinks: false,
     })
-    const lines = root.children.flatMap((block, blockIndex) => renderer.renderBlock(
-      block,
-      {
-        width: Math.max(1, scope.width),
-        theme: scope.theme,
-        fold: 'expanded',
-        renderMode: scope.renderMode,
-      },
-      blockIndex,
-    ))
+    const lines: MarkdownRenderLine[] = []
+    for (const [blockIndex, block] of root.children.entries()) {
+      appendMarkdownBlock(lines, renderer.renderBlock(
+        block,
+        {
+          width: Math.max(1, scope.width),
+          theme: scope.theme,
+          fold: 'expanded',
+          renderMode: scope.renderMode,
+        },
+        blockIndex,
+      ))
+    }
     const next: BlockRowsProjection = {
       revision: state.collector.revision(),
       sourceLength: entry.source.length,
@@ -573,11 +589,11 @@ function flattenProjectionWithActiveTable(
         tableStart,
         previous,
       )
-      out.push(...rendered.lines)
+      appendMarkdownBlock(out, rendered.lines)
       previous = rendered.cache
       continue
     }
-    out.push(...block.lines)
+    appendMarkdownBlock(out, block.lines)
   }
   if (projection.tail !== undefined && !consumesTail) {
     out.push(...wrapRawTailRows(projection.tail, width))
@@ -599,10 +615,31 @@ function flattenMarkdownProjection(
 ): readonly MarkdownRenderLine[] {
   const out: MarkdownRenderLine[] = []
   for (const block of projection.blocks) {
-    for (const line of block.lines) out.push(line)
+    appendMarkdownBlock(out, block.lines)
   }
   if (projection.tail !== undefined) out.push(...wrapRawTailRows(projection.tail, width))
   return out
+}
+
+/** Shared physical spacer between parsed top-level Markdown blocks. */
+const MARKDOWN_BLOCK_GAP_LINE: MarkdownRenderLine = Object.freeze({
+  text: ' ',
+  displayWidth: 1,
+  spans: Object.freeze([{ start: 0, end: 1, token: 'fg' as const, bold: false }]),
+  rowInBlock: 0,
+  sourceStart: -1,
+  sourceEnd: -1,
+  rawTail: false,
+})
+
+/** Append one non-empty Markdown block with one stable inter-block spacer. */
+function appendMarkdownBlock(
+  out: MarkdownRenderLine[],
+  lines: readonly MarkdownRenderLine[],
+): void {
+  if (lines.length === 0) return
+  if (out.length > 0) out.push(MARKDOWN_BLOCK_GAP_LINE)
+  out.push(...lines)
 }
 
 /**
@@ -632,6 +669,9 @@ function wrapRawTailRows(
       sourceEnd: index === pieces.length - 1 ? line.sourceEnd : -1,
       rawTail: true,
       ...(line.background === undefined ? {} : { background: line.background }),
+      ...(line.backgroundColumns === undefined
+        ? {}
+        : { backgroundColumns: line.backgroundColumns }),
     }
   })
 }
@@ -653,7 +693,13 @@ function projectUserEntry(
   const wrapCols = Math.max(1, scope.width - 2)
   const wrapped = wrapDisplayLines(escapeContent(entry.source), wrapCols)
   const lines: MarkdownRenderLine[] = wrapped.map((row, blockRow) =>
-    lineForText(`> ${row}`, 'fg', false, blockRow))
+    surfaceLine([
+      { text: '> ', token: 'fgDim', bold: false },
+      { text: row, token: 'fgSoft', bold: false },
+    ], blockRow, 'messageBg', scope.width))
+  if (entry.meta?.userMessageGap === true) {
+    lines.push(...messageGapLines(scope.width, lines.length))
+  }
   return { revision: 0, sourceLength: entry.source.length, lines }
 }
 
@@ -661,13 +707,9 @@ function projectUserEntry(
  * Non-markdown row builders
  * ========================================================================== */
 
-/** Number of body rows the reasoning live tail keeps on screen. */
-const REASONING_LIVE_TAIL = 4
-
 /**
- * Render the reasoning block's row list. Collapsed states always emit
- * one row (the dim fold marker); expanded states wrap the reasoning
- * text under a header; live tails under a tight bound.
+ * Hidden reasoning emits no rows. Visible reasoning retains its complete
+ * body under a dim header; only the main transcript viewport clips it.
  * @param entry - reasoning entry (id + source + meta).
  * @param scope - rendering scope.
  * @returns ordered rows.
@@ -680,25 +722,15 @@ function projectReasoningEntry(
   const expanded = entry.meta?.reasoningExpanded === true
   const live = entry.meta?.reasoningLive === true
   const secondsLabel = (reasoningDurationMs / 1000).toFixed(1)
-  if (!expanded) {
-    const text = entry.source === ''
-      ? ''
-      : `▸ ✻ 思考 (${secondsLabel}s) · ${String(entry.source.split('\n').length)} 行 · Ctrl+O 展开`
-    const line = lineForText(text, 'fgDim', false, 0)
-    return { revision: 0, sourceLength: entry.source.length, lines: [line] }
+  if (!expanded || entry.source === '') {
+    return { revision: 0, sourceLength: entry.source.length, lines: [] }
   }
-  const headerText = `▾ ✻ 思考 (${secondsLabel}s)`
+  const headerText = `${live ? '' : '▾ '}✻ 思考 (${secondsLabel}s)`
   const lines: MarkdownRenderLine[] = [
     lineForText(headerText, 'fgDim', false, 0),
   ]
   const escaped = escapeContent(entry.source)
-  const wrapped = wrapDisplayLines(escaped, Math.max(1, scope.width))
-  if (live && wrapped.length > REASONING_LIVE_TAIL) {
-    lines.push(lineForText('  …', 'fgDim', false, lines.length))
-  }
-  const body = live && wrapped.length > REASONING_LIVE_TAIL
-    ? wrapped.slice(-REASONING_LIVE_TAIL)
-    : wrapped
+  const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4))
   for (const row of body) {
     lines.push(lineForText(`  ${row}`, 'fgDim', false, lines.length))
   }
@@ -723,241 +755,9 @@ function projectToolCardEntry(
     const line = lineForText(entry.source, 'fg', false, 0)
     return { revision: 0, sourceLength: entry.source.length, lines: [line] }
   }
-  const heading = escapeContent(card.resultView?.title ?? card.callView?.title ?? card.name)
-  const statusLabel = toolCardStatusLabel(card.status)
-  const headingBudget = Math.max(
-    1,
-    scope.width - displayWidth(`${toolCardGlyph(scope.fold.tools)}  · ${statusLabel}`),
-  )
-  const fittedHeading = card.callView?.card === 'terminal'
-    ? truncateMiddleDisplay(heading, headingBudget, 0.72)
-    : truncateMiddleDisplay(heading, headingBudget)
-  const titlePrefix = `${toolCardGlyph(scope.fold.tools)} ${fittedHeading} · `
-  const summary = scope.fold.tools ? undefined : collapsedCardSummaryText(card)
-  const summaryBudget = scope.width - displayWidth(`${titlePrefix}${statusLabel} `)
-  const clippedSummary = summary === undefined || summaryBudget < 2
-    ? undefined
-    : truncateDisplay(summary, summaryBudget)
-  const lines: MarkdownRenderLine[] = [mixedLine([
-    { text: titlePrefix, token: 'fg', bold: false },
-    { text: statusLabel, token: toolCardStatusToken(card.status), bold: false },
-    ...(clippedSummary === undefined
-      ? []
-      : [{ text: ` ${clippedSummary}`, token: 'fgDim' as const, bold: false }]),
-  ], 0)]
-  if (scope.fold.tools) {
-    const body = toolCardBodyLines(card, Math.max(1, scope.width - 2))
-    for (const row of body) {
-      lines.push(lineForText(row.text, row.token, false, lines.length))
-    }
-  }
+  const cache = new ToolRowCache(toolPolicyDefaults())
+  const lines = cache.rows(entry.id, card, scope.width, scope.fold.tools, scope.locale ?? 'zh-CN').slice()
   return { revision: 0, sourceLength: entry.source.length, lines }
-}
-
-/** Glyph prefix for the heading row. */
-function toolCardGlyph(expanded: boolean): string {
-  return expanded ? '▾' : '▸'
-}
-
-/** Human-readable status label. */
-function toolCardStatusLabel(status: ToolCardStatus): string {
-  return status === 'running' ? '运行中' : status === 'error' ? '失败' : '完成'
-}
-
-/** Semantic status color matching {@link ToolCard}. */
-function toolCardStatusToken(status: ToolCardStatus): 'accent' | 'success' | 'error' {
-  return status === 'running' ? 'accent' : status === 'error' ? 'error' : 'success'
-}
-
-/**
- * Fit a presenter heading while retaining both its action prefix and the
- * identifying tail of a path, URL, or command.
- * @param text - escaped single-line presenter heading.
- * @param maxCols - available display columns.
- * @param leadingShare - fraction of retained columns assigned to the prefix.
- * @returns the original heading or a display-width-safe middle truncation.
- */
-function truncateMiddleDisplay(text: string, maxCols: number, leadingShare = 0.5): string {
-  if (maxCols <= 0) return ''
-  if (displayWidth(text) <= maxCols) return text
-  if (maxCols === 1) return '…'
-  const contentBudget = maxCols - 1
-  const startBudget = Math.max(1, Math.min(contentBudget, Math.ceil(contentBudget * leadingShare)))
-  const endBudget = contentBudget - startBudget
-  let start = ''
-  let startWidth = 0
-  for (const grapheme of text) {
-    const width = displayWidth(grapheme)
-    if (startWidth + width > startBudget) break
-    start += grapheme
-    startWidth += width
-  }
-  let end = ''
-  let endWidth = 0
-  for (const grapheme of Array.from(text).reverse()) {
-    const width = displayWidth(grapheme)
-    if (endWidth + width > endBudget) break
-    end = `${grapheme}${end}`
-    endWidth += width
-  }
-  return `${start}…${end}`
-}
-
-/** Get the collapsed-row summary without depending on the JSX branch. */
-function collapsedCardSummaryText(card: ToolCardProjection): string | undefined {
-  const result = card.resultView
-  const kind = result?.card ?? card.callView?.card ?? 'generic'
-  switch (kind) {
-    case 'terminal':
-      if (result?.card === 'terminal' && result.exitCode !== undefined) {
-        return `exitCode ${String(result.exitCode)}`
-      }
-      if (result?.card === 'terminal' && result.signal !== undefined) {
-        return `signal ${result.signal}`
-      }
-      if (result?.card === 'terminal' && result.output !== undefined && result.output !== '') {
-        return escapeContent(result.output.replace(/\n/g, ' '))
-      }
-      return card.callView?.card === 'terminal' && card.callView.cwd !== undefined
-        ? escapeContent(card.callView.cwd)
-        : undefined
-    case 'diff': {
-      const paths = card.callView?.card === 'diff'
-        ? (card.callView.locations ?? card.callView.diffs.map(diff => ({ path: diff.path })))
-        : (result as Extract<ToolCardResultView, { card: 'diff' }>).diffs
-          .map(diff => ({ path: diff.path }))
-      return paths.length === 0
-        ? undefined
-        : escapeContent(paths.map(entry => entry.path).join(' · '))
-    }
-    case 'search':
-      return result?.card === 'search' ? `${String(result.total)} matches` : undefined
-    case 'read':
-      return result?.card === 'read' ? escapeContent(result.path) : undefined
-    case 'web':
-      if (result?.card !== 'web') return undefined
-      if (result.kind === 'fetch') {
-        return escapeContent(`${result.url} · ${String(result.statusCode)}`)
-      }
-      if (result.sources.length === 0) return undefined
-      return escapeContent(result.sources.length === 1
-        ? (result.sources[0]?.title ?? result.sources[0]?.url as string)
-        : `${String(result.sources.length)} sources`)
-    default:
-      return card.callView === undefined ? collapsedCardSummary(card.arguments) : undefined
-  }
-}
-
-/** One expanded tool-card row and its paint token. */
-interface ToolCardBodyLine {
-  readonly text: string
-  readonly token: 'fgDim' | 'codeBg'
-}
-
-/** Append a labeled expanded payload block, matching the JSX card layout. */
-function appendToolCardBody(
-  out: ToolCardBodyLine[],
-  label: string,
-  body: readonly string[],
-  width: number,
-): void {
-  out.push({ text: `  ${label}`, token: 'fgDim' })
-  for (const logicalLine of body) {
-    for (const line of wrapDisplayLines(escapeContent(logicalLine), width)) {
-      out.push({ text: `  ${line}`, token: 'codeBg' })
-    }
-  }
-}
-
-/** Body rows for expanded tool cards, specialized by presenter view. */
-function toolCardBodyLines(card: ToolCardProjection, width: number): ToolCardBodyLine[] {
-  const out: ToolCardBodyLine[] = []
-  const result = card.resultView
-  const kind = result?.card ?? card.callView?.card ?? 'generic'
-  switch (kind) {
-    case 'terminal': {
-      const output = result?.card === 'terminal' ? result.output : undefined
-      if (output !== undefined && output !== '') {
-        appendToolCardBody(out, '结果', output.split('\n'), width)
-      }
-      if (result?.card === 'terminal' && result.exitCode !== undefined) {
-        appendToolCardBody(out, 'meta', [`exitCode ${String(result.exitCode)}`], width)
-      } else if (result?.card === 'terminal' && result.signal !== undefined) {
-        appendToolCardBody(out, 'meta', [`signal ${result.signal}`], width)
-      }
-      if (out.length === 0) appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-      return out
-    }
-    case 'diff': {
-      const diffs = result?.card === 'diff'
-        ? result.diffs
-        : (card.callView as Extract<ToolCardCallView, { card: 'diff' }>).diffs
-      if (diffs.length === 0) {
-        appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-        return out
-      }
-      const body: string[] = []
-      for (const diff of diffs) {
-        body.push(`--- ${diff.path}`)
-        if (diff.oldText !== null) {
-          for (const line of diff.oldText.split('\n')) body.push(`- ${line}`)
-        }
-        for (const line of diff.newText.split('\n')) body.push(`+ ${line}`)
-      }
-      appendToolCardBody(out, 'diff', body, width)
-      return out
-    }
-    case 'search': {
-      if (result?.card !== 'search') {
-        appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-        return out
-      }
-      const body: string[] = []
-      if (result.shape === 'matches') {
-        for (const file of result.files) {
-          for (const match of file.matches) {
-            body.push(`${file.path}:${String(match.lineNumber)} ${match.line}`)
-          }
-        }
-      } else {
-        body.push(...result.paths)
-      }
-      if (result.truncated) body.push('…')
-      appendToolCardBody(out, '结果', body, width)
-      return out
-    }
-    case 'read':
-      if (result?.card === 'read') {
-        appendToolCardBody(out, '结果', result.lines.map(line => `${String(line.number)} ${line.text}`), width)
-      } else {
-        appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-      }
-      return out
-    case 'web':
-      if (result?.card !== 'web') {
-        appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-        return out
-      }
-      if (result.kind === 'fetch') {
-        appendToolCardBody(out, '结果', [`${result.url} · ${String(result.statusCode)}`], width)
-      } else {
-        const body = result.sources.map(source => source.title === undefined
-          ? source.url
-          : `${source.title} · ${source.url}`)
-        if (result.truncated) body.push('…')
-        appendToolCardBody(out, '结果', body, width)
-      }
-      return out
-    default:
-      appendToolCardBody(out, '参数', card.arguments.split('\n'), width)
-      if (card.resultText !== undefined) {
-        appendToolCardBody(out, '结果', card.resultText.split('\n'), width)
-      }
-      if (card.meta !== undefined) {
-        appendToolCardBody(out, 'meta', [JSON.stringify(card.meta)], width)
-      }
-      return out
-  }
 }
 
 /**
@@ -967,7 +767,11 @@ function toolCardBodyLines(card: ToolCardProjection, width: number): ToolCardBod
  */
 function projectDividerEntry(
   entry: BlockRowsEntry,
+  scope: BlockRowsScope,
 ): BlockRowsProjection {
+  if (entry.source === '' || entry.source === '─') {
+    return { revision: 0, sourceLength: entry.source.length, lines: [messageSeparatorLine(scope.width)] }
+  }
   const line = lineForText(entry.source, 'fgDim', false, 0)
   return { revision: 0, sourceLength: entry.source.length, lines: [line] }
 }
@@ -1001,8 +805,8 @@ function projectCompactionEntry(
 }
 
 /**
- * Render the turn tail. The completion boundary, the produced-paths
- * row, and the stats row are independent lines; an empty tail yields
+ * Render the turn tail. The produced-paths row, stats row, and closing
+ * completion boundary are independent lines; an empty tail yields
  * zero rows so the caller can skip the entry entirely.
  * @param entry - turn-tail entry.
  * @param scope - rendering scope used to fit produced paths.
@@ -1013,9 +817,6 @@ function projectTurnTailEntry(
   scope: BlockRowsScope,
 ): BlockRowsProjection {
   const lines: MarkdownRenderLine[] = []
-  if (entry.meta?.turnTailCompletionBoundary === true) {
-    lines.push(lineForText('── 已完成 ──', 'fgDim', false, lines.length))
-  }
   const produced = entry.meta?.turnTailProduced ?? []
   if (produced.length > 0) {
     const joined = produced.map(escapeContent).join(' · ')
@@ -1031,22 +832,20 @@ function projectTurnTailEntry(
   if (stats !== undefined) {
     lines.push(lineForText(stats, 'fgDim', false, lines.length))
   }
+  if (entry.meta?.turnTailCompletionBoundary === true) {
+    lines.push(lineForText('── 已完成 ──', 'fgDim', false, lines.length))
+  }
   return { revision: 0, sourceLength: entry.source.length, lines }
 }
 
-/**
- * Render the dense digest row. The collision-detection logic in
- * {@link stream-view.denseDigestForParts} drives whether the digest
- * appears at all; this projector is only invoked when the digest is on
- * screen, so the row is a single fg-dim line.
- * @param entry - dense-digest entry.
- * @returns a single-row projection.
- */
-function projectDenseDigestEntry(
+/** Render one collapsed tool-history summary on the tool-card surface. */
+function projectToolSummaryEntry(
   entry: BlockRowsEntry,
+  scope: BlockRowsScope,
 ): BlockRowsProjection {
-  const text = entry.meta?.denseDigestText ?? entry.source
-  const line = lineForText(text, 'fgDim', false, 0)
+  const status = entry.meta?.toolSummaryStatus
+  const token = status === 'error' ? 'error' : status === 'running' ? 'accentText' : 'fgDim'
+  const line = lineForText(entry.source, token, false, 0, 'toolBg', scope.width)
   return { revision: 0, sourceLength: entry.source.length, lines: [line] }
 }
 
@@ -1061,7 +860,7 @@ function projectActivePlaceholderEntry(
   const text = entry.meta?.activePlaceholder ?? '● 正在思考…'
   const segments = text.startsWith('● ')
     ? [
-      { text: '● ', token: 'accent' as const, bold: true },
+      { text: '● ', token: 'accentText' as const, bold: true },
       { text: text.slice(2), token: 'fg' as const, bold: false },
     ]
     : [
@@ -1084,13 +883,17 @@ function projectActivePlaceholderEntry(
  * @param token - the theme token the entire row maps to.
  * @param bold - whether the row rides the bold SGR flag.
  * @param blockRow - zero-based row index inside the owning block.
+ * @param background - optional surface token painted behind the row.
+ * @param backgroundColumns - optional full surface width in terminal cells.
  * @returns the frozen row record.
  */
 export function lineForText(
   text: string,
-  token: 'fg' | 'fgDim' | 'accent' | 'accentDim' | 'success' | 'error' | 'codeBg',
+  token: MarkdownStyleToken,
   bold: boolean,
   blockRow: number,
+  background?: BackgroundToken,
+  backgroundColumns?: number,
 ): MarkdownRenderLine {
   const width = displayWidth(text)
   return {
@@ -1101,6 +904,8 @@ export function lineForText(
     sourceStart: blockRow === 0 ? 0 : -1,
     sourceEnd: -1,
     rawTail: false,
+    ...(background === undefined ? {} : { background }),
+    ...(backgroundColumns === undefined ? {} : { backgroundColumns }),
   }
 }
 
@@ -1115,7 +920,7 @@ export function lineForText(
 export function mixedLine(
   segments: ReadonlyArray<{
     readonly text: string
-    readonly token: 'fg' | 'fgDim' | 'accent' | 'accentDim' | 'success' | 'error' | 'codeBg'
+    readonly token: MarkdownStyleToken
     readonly bold: boolean
   }>,
   blockRow: number,
@@ -1146,6 +951,96 @@ export function mixedLine(
     sourceEnd: -1,
     rawTail: false,
   }
+}
+
+/** Build a mixed foreground row on one full-width Soft Slate surface. */
+function surfaceLine(
+  segments: ReadonlyArray<{
+    readonly text: string
+    readonly token: MarkdownStyleToken
+    readonly bold: boolean
+  }>,
+  blockRow: number,
+  background: BackgroundToken,
+  backgroundColumns: number,
+): MarkdownRenderLine {
+  return {
+    ...mixedLine(segments, blockRow),
+    background,
+    backgroundColumns: Math.max(1, backgroundColumns),
+  }
+}
+
+/* ============================================================================
+ * Spacing, separator, and turn part helpers
+ * ========================================================================== */
+
+/** Blank row matching the one-row margin between semantic modules. */
+export const GAP_LINE: MarkdownRenderLine = MARKDOWN_BLOCK_GAP_LINE
+
+/**
+ * Create a single physical row separator with token 'line' across the width.
+ * Used between semantic modules such as user and assistant turns.
+ * @param width - available content columns.
+ * @param rowInBlock - row index within owning block (defaults to 0).
+ * @returns physical row with '─' repeated across width.
+ */
+export function messageSeparatorLine(
+  width: number,
+  rowInBlock = 0,
+): MarkdownRenderLine {
+  const cols = Math.max(1, width)
+  const text = '─'.repeat(cols)
+  return {
+    text,
+    displayWidth: cols,
+    spans: Object.freeze([{ start: 0, end: cols, token: 'line' as const, bold: false }]),
+    rowInBlock,
+    sourceStart: -1,
+    sourceEnd: -1,
+    rawTail: false,
+  }
+}
+
+/**
+ * Two-row gap between message turns: one 'line' token separator row followed
+ * by one blank row.
+ * @param width - available content columns.
+ * @param startRowInBlock - starting row index for the gap.
+ * @returns array containing the separator row and a blank row.
+ */
+export function messageGapLines(
+  width: number,
+  startRowInBlock = 0,
+): readonly MarkdownRenderLine[] {
+  return Object.freeze([
+    messageSeparatorLine(width, startRowInBlock),
+    {
+      ...MARKDOWN_BLOCK_GAP_LINE,
+      rowInBlock: startRowInBlock + 1,
+    },
+  ])
+}
+
+/** Semantic turn component classification for inter-module spacing. */
+export type TurnPartKind = 'text' | 'reasoning' | 'card' | 'tool-summary'
+
+/**
+ * Physical row gap between turn components.
+ * Adjacent tool cards/summaries remain gapless (0 rows); different semantic
+ * modules (reasoning, tool stack, prose) keep a 1-row blank gap.
+ * @param previous - kind of the preceding part.
+ * @param current - kind of the succeeding part.
+ * @returns number of blank spacer rows (0 or 1).
+ */
+export function turnPartGap(
+  previous: TurnPartKind | undefined,
+  current: TurnPartKind,
+): number {
+  if (previous === undefined) return 0
+  const previousIsTool = previous === 'card' || previous === 'tool-summary'
+  const currentIsTool = current === 'card' || current === 'tool-summary'
+  return previousIsTool && currentIsTool ? 0 : 1
 }
 
 /* ============================================================================

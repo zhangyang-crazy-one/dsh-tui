@@ -166,7 +166,7 @@ The equivalent npm website settings are organization or user `zhangyang-crazy-on
 For each release, bump `package.json`, merge the change after CI passes, then create a GitHub Release whose tag matches the package version:
 
 ```text
-gh release create v0.1.0-alpha.3 --prerelease --generate-notes
+gh release create v0.1.0-alpha.4 --prerelease --generate-notes
 ```
 
 The `Publish npm` workflow runs tests and packed-package verification again before publishing. Do not rerun an old release tag: npm versions are immutable. Promotion to stable is a new version and a non-prerelease GitHub Release.

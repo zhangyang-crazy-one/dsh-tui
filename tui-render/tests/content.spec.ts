@@ -62,6 +62,11 @@ describe('displayWidth', () => {
 })
 
 describe('wcwidthSafeSlice', () => {
+  it('preserves combining marks, variation selectors, and joined emoji at the cut', () => {
+    expect(wcwidthSafeSlice('a\u0301b', 1)).toBe('a\u0301')
+    expect(wcwidthSafeSlice('👩‍💻x', 2)).toBe('👩‍💻')
+    expect(wcwidthSafeSlice('❤️x', 2)).toBe('❤️')
+  })
   it('never cuts inside a wide glyph', () => {
     expect(wcwidthSafeSlice('中文ab', 2)).toBe('中')
     expect(wcwidthSafeSlice('中文ab', 4)).toBe('中文')

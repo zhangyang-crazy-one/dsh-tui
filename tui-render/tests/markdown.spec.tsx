@@ -5,6 +5,7 @@ import { MarkdownBlock, tokenize } from '../src/markdown.tsx'
 import { displayWidth } from '../src/content.ts'
 import { applyTheme } from '../src/theme.ts'
 import { setHyperlinks, wrapOsc8 } from '../src/hyperlink.ts'
+import { PRESET_TABLE_MARKDOWN } from './fixtures/preset-table.ts'
 
 function renderText(source: string): string {
   return renderToString(createElement(MarkdownBlock, { source }))
@@ -16,10 +17,30 @@ afterEach(() => {
 })
 
 describe('MarkdownBlock', () => {
-  it('renders an h1 closed by the ━━━ suffix in accent (T2)', () => {
+  it('keeps every identifier in an active mixed-language table within its display width', () => {
+    const output = renderToString(createElement(MarkdownBlock, {
+      source: `${PRESET_TABLE_MARKDOWN}\n`, maxCols: 105, tail: '▌', settled: false,
+    }), { columns: 105 }).replace(/\x1b\[[0-9;]*m/g, '')
+    expect(output).toContain('bash/pwsh')
+    expect(output).toContain('tool-cordis')
+    expect(output).toContain('includeRuntimeContext:')
+    expect(output).toContain('false')
+    expect(output.split('\n').every(line => displayWidth(line) <= 105)).toBe(true)
+  })
+
+  it('renders an h1 closed by the ━━━ suffix in readable blue', () => {
     const out = renderText('# 标题')
     expect(out).toContain('━━━ 标题 ━━━')
-    expect(out).toContain('\x1b[38;2;77;107;254m')
+    expect(out).toContain('\x1b[38;2;117;137;255m')
+  })
+
+  it('keeps one physical blank row between parsed top-level blocks', () => {
+    const plain = renderText('# Title\n\nBody').replace(/\x1b\[[0-9;]*m/g, '')
+    const lines = plain.split('\n')
+    const heading = lines.findIndex(line => line.includes('Title'))
+    const body = lines.findIndex(line => line.includes('Body'))
+    expect(body - heading).toBe(2)
+    expect(lines[heading + 1]?.trim()).toBe('')
   })
 
   it('renders list items with markers', () => {
@@ -86,7 +107,7 @@ describe('MarkdownBlock', () => {
     expect(plain).toContain('脚本')
     expect(plain).toContain('trilium_to_obsidian.py')
     expect(plain).toContain('✅')
-    expect(out).toContain('\x1b[38;2;77;107;254m')
+    expect(out).toContain('\x1b[38;2;117;137;255m')
   })
 
   it('wraps a long paragraph onto multiple rows', () => {
@@ -100,7 +121,7 @@ describe('MarkdownBlock', () => {
     expect(lines.length).toBeGreaterThan(1)
   })
 
-  it('wraps a table cell that overflows the column budget', () => {
+  it('uses labeled records when intact table identifiers cannot share the column budget', () => {
     const out = renderToString(
       createElement(MarkdownBlock, {
         source: '| wide-column-name | other |\n| --- | --- |\n| value | x |',
@@ -110,10 +131,10 @@ describe('MarkdownBlock', () => {
     const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
     expect(plain).toContain('wide')
     expect(plain).toContain('other')
-    expect(plain).not.toContain('wide-column-name')
-    expect(plain).toContain('┌')
-    const rowLines = plain.split('\n').filter(line => line.includes('│'))
-    expect(rowLines.length).toBeGreaterThan(2)
+    expect(plain).toContain('wide-column-name: value')
+    expect(plain).toContain('other: x')
+    expect(plain).not.toContain('┌')
+    expect(plain.split('\n').every(line => displayWidth(line) <= 24)).toBe(true)
   })
 
   it('grows a short column toward its natural width before wrapping a long one', () => {
@@ -174,7 +195,7 @@ describe('MarkdownBlock', () => {
     expect(new Set(tableLines.map(displayWidth)).size).toBe(1)
   })
 
-  it('shrinks a wider later column before a short first column', () => {
+  it('keeps all record fields when a later identifier exceeds the entire narrow row', () => {
     const out = renderToString(
       createElement(MarkdownBlock, {
         source: '| a | long-second-header-name |\n| --- | --- |\n| x | y |',
@@ -182,9 +203,11 @@ describe('MarkdownBlock', () => {
       }),
     )
     const plain = out.replace(/\x1b\[[0-9;]*m/g, '')
-    expect(plain).toContain('┌')
-    expect(plain).toContain('a')
-    expect(plain).not.toContain('long-second-header-name')
+    expect(plain).not.toContain('┌')
+    expect(plain).toContain('a: x')
+    expect(plain.replace(/\s/gu, '')).toContain('long-second-header-name:y')
+    expect(plain.split('\n').slice(1).every(line => line.startsWith('  '))).toBe(true)
+    expect(plain.split('\n').every(line => displayWidth(line) <= 22)).toBe(true)
   })
 
   it('falls back to labeled records when the window cannot hold a boxed grid', () => {
@@ -303,33 +326,34 @@ describe('MarkdownBlock', () => {
 })
 
 describe('tier-mapped code and inline tokens', () => {
-  it('lays the codeBg strip under neutral syntax spans at truecolor (C4)', () => {
+  it('lays the codeBg strip under syntax spans at truecolor', () => {
     const out = renderText('```ts\nconst x = "s"\n```')
-    expect(out).toContain('\x1b[48;2;15;17;21m')
-    // keyword = bold fg (C3 bold tier), then the bold closes so the rest of
-    // the line stays plain fg; the success green is gone from code entirely.
-    // Per-span fg re-assertion happens pre-normalization; Ink compacts the
-    // redundant sequences, so assert the normalized byte shape.
-    expect(out).toContain('\x1b[38;2;247;247;248m')
-    expect(out).toContain('\x1b[1mconst\x1b[22m')
+    expect(out).toContain('\x1b[48;2;32;35;40m')
+    // keyword = codeKeyword (#7EB6FF: 126;182;255), string = codeString (#B9A4E8: 185;164;232).
+    expect(out).toContain('\x1b[38;2;126;182;255m')
+    expect(out).toContain('const')
+    expect(out).toContain('\x1b[38;2;185;164;232m')
     expect(out).toContain('"s"')
-    expect(out).not.toContain('\x1b[38;2;34;197;94m')
+    // accent is not leaked onto code spans.
+    expect(out).not.toContain('\x1b[38;2;77;107;254m')
   })
 
   it('maps code tokens through the 256 tier', () => {
     applyTheme('256')
-    const out = renderText('```ts\nconst x = 1\n```')
-    expect(out).toContain('\x1b[48;5;233m')
-    expect(out).toContain('\x1b[38;5;255m')
-    expect(out).toContain('\x1b[1mconst\x1b[22m')
+    const out = renderText('```ts\nconst x = "s"\n```')
+    expect(out).toContain('\x1b[48;5;235m')
+    expect(out).toContain('\x1b[38;5;111m')
+    expect(out).toContain('const')
+    expect(out).toContain('\x1b[38;5;141m')
   })
 
   it('maps code tokens through the 16 tier', () => {
     applyTheme('16')
-    const out = renderText('```ts\nconst x = 1\n```')
+    const out = renderText('```ts\nconst x = "s"\n```')
     expect(out).toContain('\x1b[40m')
-    expect(out).toContain('\x1b[37m')
-    expect(out).toContain('\x1b[1mconst\x1b[22m')
+    expect(out).toContain('\x1b[36m')
+    expect(out).toContain('const')
+    expect(out).toContain('\x1b[35m')
   })
 
   it('renders code unstyled at none', () => {
@@ -348,32 +372,33 @@ describe('tier-mapped code and inline tokens', () => {
     expect(plain?.startsWith('  z')).toBe(true)
   })
 
-  it('folds huge fences with a fold glyph and honest copy', () => {
-    const out = renderText(`\`\`\`ts\n${'a\n'.repeat(505)}\`\`\``)
-    expect(out).toContain('▾ … 还有 485 行')
-    expect(out).not.toContain('expand later')
+  it('retains a huge fence through its last highlighted line', () => {
+    const out = renderText(`\`\`\`ts\n${'a\n'.repeat(505)}FENCE_END\n\`\`\``)
+    expect(out).toContain('FENCE_END')
+    expect(out).not.toContain('还有')
   })
 
-  it('styles inline code with the codeBg token', () => {
+  it('styles inline code with an independent foreground and codeBg background', () => {
     applyTheme('256')
     // Ink's Text renderer normalizes the trailing reset to the default-bg
     // form, so assert the applied strip + text rather than the reset bytes.
-    expect(renderText('a `b` c')).toContain('\x1b[48;5;233mb')
+    expect(renderText('a `b` c')).toContain('\x1b[48;5;235m\x1b[38;5;151mb')
+    expect(renderText('a `b` c')).toContain('\x1b[48;5;233m\x1b[38;5;255m c')
     expect(renderText('a `b` c')).toContain('\x1b[49m')
   })
 
   it('paints prose paragraphs on the frame bg, not a gray plate', () => {
     const out = renderText('hello')
-    expect(out).toContain('\x1b[48;2;0;0;0m')
+    expect(out).toContain('\x1b[48;2;21;22;24m')
     expect(out).toContain('hello')
-    expect(out).not.toContain('\x1b[48;2;15;17;21m')
+    expect(out).not.toContain('\x1b[48;2;32;35;40m')
   })
 
   it('paints strong, strikethrough, h2, and ordered lists', () => {
     expect(renderText('**bold**')).toContain('bold')
     expect(renderText('~~strike~~')).toContain('strike')
     expect(renderText('## sub')).toContain('━ sub')
-    expect(renderText('## sub')).toContain('\x1b[38;2;77;107;254m')
+    expect(renderText('## sub')).toContain('\x1b[38;2;117;137;255m')
     expect(renderText('## sub')).not.toContain('━━━')
     expect(renderText('1. one')).toContain('1. one')
     expect(renderText('# ![x](y)')).toContain('━━━')
@@ -383,14 +408,32 @@ describe('tier-mapped code and inline tokens', () => {
     expect(renderText('hello\n\n---\n\nworld')).toContain('world')
   })
 
-  it('marks inline links and emphasis with the accent token', () => {
+  it('distinguishes cyan links, lavender emphasis, and gold strong text', () => {
     const link = renderText('[docs](https://example.com)')
-    expect(link).toContain('\x1b[38;2;77;107;254mdocs')
+    expect(link).toContain('\x1b[38;2;128;199;217mdocs')
     expect(link).toContain(' (https://example.com)')
     const same = renderText('[https://example.com](https://example.com)')
     expect(same).not.toContain(' (https://example.com)')
     const emphasis = renderText('*note*')
-    expect(emphasis).toContain('\x1b[38;2;77;107;254mnote')
+    expect(emphasis).toContain('\x1b[38;2;196;174;242mnote')
+    expect(renderText('**important**')).toContain('\x1b[1m\x1b[38;2;228;197;138mimportant')
+  })
+
+  it.each(['truecolor', '256', '16', 'none'] as const)('preserves text and emphasis through streaming and settlement at %s', (tier) => {
+    applyTheme(tier)
+    const source = '普通 **重点** *强调* `code` [link](https://example.com)\n\n- **列表重点** tail\n'
+    const frames = [false, true].map(settled => renderToString(createElement(MarkdownBlock, {
+      source, settled, maxCols: 80,
+    }), { columns: 80 }))
+    expect(frames[0]).toBe(frames[1])
+    const output = frames[0]
+    expect(output.replace(/\x1b\[[0-9;]*m/g, '')).toContain('普通 重点 强调 code link (https://example.com)')
+    if (tier === 'none') {
+      expect(output).not.toContain('\x1b')
+    } else {
+      const strongSequence = { truecolor: '38;2;228;197;138', '256': '38;5;223', '16': '93' }[tier]
+      expect(output).toContain(`\x1b[${strongSequence}m列表重点`)
+    }
   })
 
   it('wraps markdown links in OSC 8 when hyperlinks are installed', () => {

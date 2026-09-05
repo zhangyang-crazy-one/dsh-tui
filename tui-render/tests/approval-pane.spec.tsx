@@ -73,24 +73,22 @@ const OPEN_APPROVAL = {
 }
 
 describe('ApprovalPane', () => {
-  it('renders the waiting heading, tool name, and exact footnote', () => {
+  it('renders the inline question, tool name, and exact footnote', () => {
     const out = render()
-    expect(out).toContain('等待审批')
+    expect(out).toContain('允许执行 bash "git push" 吗？')
     expect(out).toContain('bash')
-    expect(out).toContain('允许一次')
+    expect(out).toContain('允许')
     expect(out).toContain('拒绝')
-    expect(out).toContain('详情')
-    expect(out).toContain('y 允许一次 · n 拒绝 · i 详情')
+    expect(out).toContain('[Y] 允许 · [n] 拒绝 · [a] 本会话总是')
     expect(out).not.toContain('OK')
     expect(out).not.toContain('Submit')
     expect(out).not.toContain('Cancel')
-    expect(out).not.toContain('git push')
   })
 
   it('styles the heading bold fg rather than accent', () => {
     const out = render()
     expect(out).toContain('\x1b[1m')
-    expect(out).not.toContain('\x1b[38;2;77;107;254m等待审批')
+    expect(out).not.toContain('\x1b[38;2;77;107;254m允许执行')
   })
 
   it('opens details with the escaped reason and bash command', () => {
@@ -193,9 +191,9 @@ describe('TuiLoop approval slot', () => {
     const out = renderToString(
       createElement(TuiLoop, { title: 't', controller }),
     )
-    expect(out).toContain('等待审批')
-    expect(out).toContain('y 允许一次 · n 拒绝 · i 详情')
+    expect(out).toContain('允许执行')
+    expect(out).toContain('[Y] 允许 · [n] 拒绝 · [a] 本会话总是')
     expect(out).toContain('有什么可以帮忙的')
-    expect(out).not.toContain('\x1b[38;2;77;107;254m> ')
+    expect(out).toContain('› 输入消息')
   })
 })

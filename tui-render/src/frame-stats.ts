@@ -13,25 +13,15 @@
  * @module @deepseek-ai/dsh-tui-render/frame-stats
  */
 
+import { DurationStats } from './duration-stats.ts'
+import type { DurationSnapshot as FrameStatsSnapshot } from './duration-stats.ts'
+export type { DurationSnapshot as FrameStatsSnapshot } from './duration-stats.ts'
+
 import { createElement, Profiler } from 'react'
 import type { ProfilerOnRenderCallback, ReactNode } from 'react'
 
 /** Bounded ring capacity for recorded render durations. */
 export const FRAME_STATS_CAPACITY = 120
-
-/** Bounded summary of one measurement channel's recorded durations (ms). */
-export interface FrameStatsSnapshot {
-  /** Number of samples currently in the ring. */
-  count: number
-  /** Arithmetic mean of the ring samples (0 when empty). */
-  mean: number
-  /** Largest ring sample (0 when empty). */
-  max: number
-  /** Sorted-quantile 95th percentile of the ring samples (0 when empty). */
-  p95: number
-  /** The ring samples, oldest first. */
-  samples: readonly number[]
-}
 
 /** Stats store the render tree reports commits into. */
 export interface FrameProbeHandle {
@@ -47,31 +37,6 @@ export interface FrameProbeHandle {
   elapsedMs(): number
 }
 
-/** Summarize one bounded ring; empty rings report zeroed stats. */
-function summarize(samples: number[]): FrameStatsSnapshot {
-  const count = samples.length
-  if (count === 0) {
-    return { count: 0, mean: 0, max: 0, p95: 0, samples: [] }
-  }
-  let sum = 0
-  let max = 0
-  for (const sample of samples) {
-    sum += sample
-    if (sample > max) max = sample
-  }
-  const sorted = [...samples].sort((a, b) => a - b)
-  const rank = Math.min(count, Math.max(1, Math.ceil(count * 0.95)))
-  // v8 ignore next -- rank is clamped to [1, count], so the indexed read is always defined.
-  const p95 = sorted[rank - 1] ?? 0
-  return {
-    count,
-    mean: sum / count,
-    max,
-    p95,
-    samples: samples.slice(),
-  }
-}
-
 /**
  * Create a probe store. `now` is injectable so tests drive pacing with a
  * deterministic clock.
@@ -83,23 +48,22 @@ export function createFrameProbe(
   now: () => number = () => performance.now(),
   capacity: number = FRAME_STATS_CAPACITY,
 ): FrameProbeHandle {
-  const samples: number[] = []
+  const samples = new DurationStats(capacity)
   let startedAt = now()
   let commits = 0
   let measurementStarted = false
   return {
     record(renderMs: number) {
       commits += 1
-      samples.push(renderMs)
-      if (samples.length > capacity) samples.splice(0, samples.length - capacity)
+      samples.record(renderMs)
     },
     snapshot() {
-      return summarize(samples)
+      return samples.snapshot()
     },
     beginMeasurement() {
       if (measurementStarted) return
       measurementStarted = true
-      samples.length = 0
+      samples.reset()
       commits = 0
       startedAt = now()
     },

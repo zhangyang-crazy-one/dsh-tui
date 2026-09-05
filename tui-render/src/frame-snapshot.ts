@@ -86,6 +86,7 @@ export function physicalLineIdentity(line: PhysicalLine): string {
     line.text,
     line.displayWidth,
     line.background ?? 'bg',
+    line.backgroundColumns ?? line.displayWidth,
     line.spans.map(span => [
       span.text,
       span.token,
@@ -118,6 +119,11 @@ function geometryIdentity(geometry: FrameGeometry): string {
 
 function screenRowKey(row: Pick<FrameSnapshotRow, 'row' | 'col'>): string {
   return `${String(row.row)}:${String(row.col)}`
+}
+
+/** Number of terminal cells one physical row paints, including surface fill. */
+function paintedColumns(line: PhysicalLine): number {
+  return line.backgroundColumns ?? line.displayWidth
 }
 
 /**
@@ -154,7 +160,10 @@ export function diffVisibleFrameSnapshots(
       row: row.row,
       col: row.col,
       line: row.line,
-      clearColumns: Math.max(old?.line.displayWidth ?? 0, row.line.displayWidth),
+      clearColumns: Math.max(
+        old === undefined ? 0 : paintedColumns(old.line),
+        paintedColumns(row.line),
+      ),
     })
   }
   for (const old of oldRows.values()) {
@@ -162,7 +171,7 @@ export function diffVisibleFrameSnapshots(
       row: old.row,
       col: old.col,
       line: undefined,
-      clearColumns: old.line.displayWidth,
+      clearColumns: paintedColumns(old.line),
     })
   }
   return { forced, changes, unchangedRows }

@@ -11,6 +11,8 @@ import {
   cardsFromTurn,
   collapsedCardSummary,
   fileUrlFromToolArguments,
+  tokenizeCommandHeading,
+  toolCardDisplayStatus,
   truncateDisplay,
 } from '../src/tool-cards.ts'
 import type { ProjectedTurnContent } from '../src/projection.ts'
@@ -241,6 +243,24 @@ describe('attachPresenterViews', () => {
     expect(attached.resultView).toEqual({ card: 'generic', title: 'done' })
   })
 
+  it('reports nonzero exits and signals as failed presentation states', () => {
+    const done = { ...running, status: 'ok' as const, resultText: 'command output' }
+    const nonzero = attachPresenterViews({
+      get: () => ({
+        presentResult: () => ({ card: 'terminal', output: 'compile failed', exitCode: 2 }),
+      }),
+    }, done)
+    expect(toolCardDisplayStatus(nonzero)).toBe('error')
+    expect(toolCardDisplayStatus({
+      ...done,
+      resultView: { card: 'terminal', output: '', signal: 'SIGTERM' },
+    })).toBe('error')
+    expect(toolCardDisplayStatus({
+      ...done,
+      resultView: { card: 'terminal', output: 'ok', exitCode: 0 },
+    })).toBe('ok')
+  })
+
   it('passes empty result text and metadata and accepts a result-only view', () => {
     const done = { ...running, status: 'ok' as const, meta: { source: 'test' } }
     let observed: unknown
@@ -282,5 +302,22 @@ describe('fileUrlFromToolArguments', () => {
     expect(fileUrlFromToolArguments('"text"')).toBeUndefined()
     expect(fileUrlFromToolArguments('{"path":"/tmp/\\u0000bad"}')).toBeUndefined()
     expect(fileUrlFromToolArguments('{"file_path":"/tmp/good"}')).toContain('file:///tmp/good')
+  })
+})
+
+describe('tokenizeCommandHeading', () => {
+  it('highlights the command name token with codeCommand', () => {
+    expect(tokenizeCommandHeading('pnpm test')).toEqual([
+      { text: 'pnpm', token: 'codeCommand' },
+      { text: ' test', token: 'fgSoft' },
+    ])
+    expect(tokenizeCommandHeading('  git status -s')).toEqual([
+      { text: '  ', token: 'fgSoft' },
+      { text: 'git', token: 'codeCommand' },
+      { text: ' status -s', token: 'fgSoft' },
+    ])
+    expect(tokenizeCommandHeading('ls')).toEqual([
+      { text: 'ls', token: 'codeCommand' },
+    ])
   })
 })

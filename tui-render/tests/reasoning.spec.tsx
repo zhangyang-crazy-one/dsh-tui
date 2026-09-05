@@ -1,14 +1,9 @@
-/**
- * ReasoningBlock fold surface: the collapsed marker carries the ▸ glyph and
- * the Ctrl+O hint so the fold is discoverable without trial (02-UI-SPEC
- * §1.3 L4 glyph + copy; A3 readable without color), expanded reasoning
- * renders dim, and an empty fold skips entirely.
- */
+/** Reasoning visibility and full-length, dim transcript rendering. */
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
-import { ReasoningBlock, REASONING_LIVE_TAIL } from '../src/reasoning.tsx'
+import { ReasoningBlock } from '../src/reasoning.tsx'
 import { applyTheme } from '../src/theme.ts'
 
 afterEach(() => {
@@ -39,22 +34,20 @@ describe('ReasoningBlock', () => {
     expect(render(false)).toContain('second line')
   })
 
-  it('marks the collapsed fold with ▸ and the Ctrl+O hint (L4/A3)', () => {
-    const out = render(true)
-    expect(out).toContain('▸ ✻ 思考 (1.2s) · 2 行 · Ctrl+O 展开')
-    expect(out).toContain('\x1b[38;2;138;143;152m')
+  it('hides the whole block without leaving a fold marker', () => {
+    expect(render(true)).toBe('')
   })
 
-  it('keeps the fold marker readable without color at none (A3)', () => {
+  it('keeps visible reasoning readable without color', () => {
     applyTheme('none')
-    const out = render(true)
-    expect(out).toContain('▸ ✻ 思考 (1.2s) · 2 行 · Ctrl+O 展开')
+    const out = render(false)
+    expect(out).toContain('✻ 思考 (1.2s)')
     expect(out).not.toContain('\x1b')
   })
 
-  it('paints only the live tail while generating', () => {
+  it('paints every streamed reasoning line without a local tail window', () => {
     const lines = Array.from(
-      { length: REASONING_LIVE_TAIL + 6 },
+      { length: 12 },
       (_, index) => `THINK_${index}`,
     )
     const out = renderToString(
@@ -66,9 +59,8 @@ describe('ReasoningBlock', () => {
       }),
     )
     expect(out).toContain('✻ 思考 (48.8s)')
-    expect(out).toContain('…')
-    expect(out).not.toContain('THINK_0')
-    expect(out).toContain(`THINK_${REASONING_LIVE_TAIL + 5}`)
+    expect(out).not.toContain('…')
+    for (const line of lines) expect(out).toContain(line)
   })
 
   it('dumps the full body when expanded and not live', () => {

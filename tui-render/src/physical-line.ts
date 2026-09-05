@@ -16,7 +16,7 @@
  */
 
 import { displayWidth } from './content.ts'
-import type { StyleToken } from './theme.ts'
+import type { BackgroundToken, StyleToken } from './theme.ts'
 
 /**
  * OSC 8 hyperlink target covering a physical line. One target per line
@@ -67,7 +67,9 @@ export interface PhysicalLine {
   /** Zero-based row inside the owning block. */
   readonly blockRow: number
   /** Background semantics used by row identity and forced repaint. */
-  readonly background?: 'bg' | 'codeBg'
+  readonly background?: BackgroundToken
+  /** Cell width painted through `background`; defaults to `displayWidth`. */
+  readonly backgroundColumns?: number
   /** OSC 8 hyperlink target covering the line, when present. */
   readonly osc8?: PhysicalLineOsc8
   /**
@@ -112,7 +114,9 @@ export function createPhysicalLine(input: {
   /** Zero-based row inside the block. */
   blockRow: number
   /** Background semantics for this row. */
-  background?: 'bg' | 'codeBg'
+  background?: BackgroundToken
+  /** Cell width painted through `background`; defaults to `displayWidth`. */
+  backgroundColumns?: number
   /** OSC 8 hyperlink target, when the whole line is one link. */
   osc8?: PhysicalLineOsc8
   /**
@@ -133,6 +137,12 @@ export function createPhysicalLine(input: {
   }
   if (!Number.isInteger(input.blockRow) || input.blockRow < 0) {
     throw new Error('createPhysicalLine: blockRow must be a non-negative integer')
+  }
+  if (
+    input.backgroundColumns !== undefined
+    && (!Number.isInteger(input.backgroundColumns) || input.backgroundColumns < 1)
+  ) {
+    throw new Error('createPhysicalLine: backgroundColumns must be a positive integer')
   }
   if (input.osc8 !== undefined && input.osc8.href === '') {
     throw new Error('createPhysicalLine: osc8.href must be non-empty')
@@ -176,6 +186,9 @@ export function createPhysicalLine(input: {
     sourceEnd: input.sourceEnd,
     blockRow: input.blockRow,
     ...(input.background === undefined ? {} : { background: input.background }),
+    ...(input.backgroundColumns === undefined
+      ? {}
+      : { backgroundColumns: input.backgroundColumns }),
     ...(input.osc8 === undefined
       ? {}
       : { osc8: Object.freeze({ href: input.osc8.href, id: input.osc8.id }) }),
