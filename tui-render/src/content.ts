@@ -40,12 +40,39 @@ export function escapeContent(text: string): string {
 }
 
 /**
+ * Pattern matching enclosed / circled digits and BMP symbols/emojis that
+ * `string-width` treats as 1 column, but render as 2 columns in terminal fonts
+ * or require a 2-cell placeholder.
+ */
+const WIDE_SYMBOLS_OR_EMOJIS =
+  /[\u2460-\u24F4\u2776-\u2793\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/gu
+
+/**
  * The number of terminal columns a string occupies.
+ *
+ * Counts printable ASCII as 1 column, CJK glyphs as 2 columns, standard emojis
+ * and ZWJ sequences as 2 columns, and enclosed/circled digits (U+2460–U+24F4,
+ * U+2776–U+2793) and single-codepoint emojis (⚠️, ⚙, ℹ, ⏱, etc.) as 2 columns.
+ *
  * @param text - the string to measure.
  * @returns its display width in columns.
  */
 export function displayWidth(text: string): number {
-  return stringWidth(text)
+  if (text === '') return 0
+  if (/^[\x20-\x7e]*$/u.test(text)) return text.length
+  const base = stringWidth(text)
+  if (!/[\u2460-\u24F4\u2776-\u2793\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text)) {
+    return base
+  }
+  let extra = 0
+  for (const match of text.matchAll(WIDE_SYMBOLS_OR_EMOJIS)) {
+    const idx = match.index
+    if (idx !== undefined && text.charCodeAt(idx + 1) === 0xFE0F) {
+      continue
+    }
+    extra += 1
+  }
+  return base + extra
 }
 
 /**
@@ -62,12 +89,50 @@ export function wcwidthSafeSlice(text: string, maxCols: number): string {
   let cols = 0
   let end = 0
   for (const { segment } of GRAPHEME.segment(text)) {
-    const width = stringWidth(segment)
+    const width = displayWidth(segment)
     if (cols + width > maxCols) break
     cols += width
     end += segment.length
   }
   return text.slice(0, end)
+}
+
+/**
+ * Format symbols and emojis with balanced spacing and variation selectors so
+ * they don't collide with adjacent CJK characters or get clipped in monospace
+ * terminal grids.
+ *
+ * 1. Attaches VS16 (\uFE0F) to common BMP emojis missing presentation selector
+ *    (e.g. ⚠ -> ⚠️, ⚙ -> ⚙️).
+ * 2. Adds padding space between circled numbers / emojis and adjacent CJK ideographs
+ *    (e.g. "①和" -> "① 和", "把①" -> "把 ①", "⚠️注意" -> "⚠️ 注意").
+ *
+ * @param text - source plain text.
+ * @returns text with balanced symbol spacing.
+ */
+export function formatSymbolSpacing(text: string): string {
+  if (text === '' || /^[\x20-\x7e]*$/u.test(text)) return text
+  let res = text.replace(
+    /([\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764])(?!\uFE0F)/gu,
+    '$1\uFE0F',
+  )
+  res = res.replace(
+    /([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])([\u4E00-\u9FFF\u3400-\u4DBF])/gu,
+    '$1 $2',
+  )
+  res = res.replace(
+    /([\u4E00-\u9FFF\u3400-\u4DBF])([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])/gu,
+    '$1 $2',
+  )
+  res = res.replace(
+    /([\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?)([\u4E00-\u9FFF\u3400-\u4DBF])/gu,
+    '$1 $2',
+  )
+  res = res.replace(
+    /([\u4E00-\u9FFF\u3400-\u4DBF])([\u{1F300}-\u{1FAFF}\u2600-\u27BF])/gu,
+    '$1 $2',
+  )
+  return res
 }
 
 /**

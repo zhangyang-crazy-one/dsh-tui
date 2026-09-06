@@ -55,7 +55,7 @@ export {
   selectBrandRenderTier,
 } from './pixel-fish-home.tsx'
 export type { PixelFishHomeProps } from './pixel-fish-home.tsx'
-export { escapeContent, displayWidth, wcwidthSafeSlice } from './content.ts'
+export { escapeContent, displayWidth, formatSymbolSpacing, wcwidthSafeSlice } from './content.ts'
 export { isHumanUserMessage } from './message-visibility.ts'
 export { StreamView } from './stream-view.tsx'
 export type { StreamViewProps } from './stream-view.tsx'

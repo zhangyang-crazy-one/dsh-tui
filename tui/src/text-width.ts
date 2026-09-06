@@ -12,4 +12,4 @@
  * @module @deepseek-ai/dsh-tui/text-width
  */
 
-export { displayWidth, wcwidthSafeSlice } from '@deepseek-ai/dsh-tui-render'
+export { displayWidth, formatSymbolSpacing, wcwidthSafeSlice } from '@deepseek-ai/dsh-tui-render'

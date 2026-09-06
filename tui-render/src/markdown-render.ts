@@ -22,7 +22,7 @@
  */
 
 import type { Heading, List, Paragraph, PhrasingContent, RootContent, Table, TableCell, TableRow } from 'mdast'
-import { displayWidth, escapeContent, padDisplayEnd, wcwidthSafeSlice, wrapDisplayLines } from './content.ts'
+import { displayWidth, escapeContent, formatSymbolSpacing, padDisplayEnd, wcwidthSafeSlice, wrapDisplayLines } from './content.ts'
 import { linkNeedsUrlSuffix } from './hyperlink.ts'
 import {
   appendedRowsPreserveTableMetrics,
@@ -122,7 +122,7 @@ function inlineToSegments(
 ): InlineSegment[] {
   switch (node.type) {
     case 'text':
-      return [{ text: escapeContent(node.value), token: 'fg', bold: false }]
+      return [{ text: escapeContent(formatSymbolSpacing(node.value)), token: 'fg', bold: false }]
     case 'inlineCode':
       return [{ text: escapeContent(node.value), token: 'markdownCode', bold: false }]
     case 'strong':
@@ -262,7 +262,7 @@ function renderHeading(
   const depth = node.depth === 1
   const prefix = depth ? '━━━ ' : '━ '
   const suffix = depth ? ' ━━━' : ''
-  const wrapped = wrapDisplayLines(`${prefix}${escapeContent(text)}${suffix}`, width)
+  const wrapped = wrapDisplayLines(`${prefix}${escapeContent(formatSymbolSpacing(text))}${suffix}`, width)
   return wrapped.map((line, index) => {
     const buffer = makeBuffer()
     appendSegment(buffer, { text: line, token: 'accentText', bold: true })
