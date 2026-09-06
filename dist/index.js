@@ -1,3 +1,4 @@
+import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -91,9 +92,9 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.production.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.production.js
 var require_react_production = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.production.js"(exports) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.production.js"(exports) {
     "use strict";
     var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
     var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
@@ -532,9 +533,9 @@ var require_react_production = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js
 var require_react_development = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js"(exports, module) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js"(exports, module) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function defineDeprecationWarning(methodName, info) {
@@ -1504,9 +1505,9 @@ var require_react_development = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/index.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/index.js
 var require_react = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/index.js"(exports, module) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/index.js"(exports, module) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module.exports = require_react_production();
@@ -1516,9 +1517,9 @@ var require_react = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js
+// node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js
 var require_signals = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js"(exports, module) {
+  "node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js"(exports, module) {
     module.exports = [
       "SIGABRT",
       "SIGALRM",
@@ -1553,9 +1554,9 @@ var require_signals = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js
+// node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js"(exports, module) {
+  "node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js"(exports, module) {
     var process15 = global.process;
     var processOk = function(process16) {
       return process16 && typeof process16 === "object" && typeof process16.removeListener === "function" && typeof process16.emit === "function" && typeof process16.reallyExit === "function" && typeof process16.listeners === "function" && typeof process16.kill === "function" && typeof process16.pid === "number" && typeof process16.on === "function";
@@ -1712,9 +1713,9 @@ var require_signal_exit = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js
 var require_react_reconciler_constants_production = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js"(exports) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.production.js"(exports) {
     "use strict";
     exports.ConcurrentRoot = 1;
     exports.ContinuousEventPriority = 8;
@@ -1726,17 +1727,17 @@ var require_react_reconciler_constants_production = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.development.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.development.js
 var require_react_reconciler_constants_development = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.development.js"(exports) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler-constants.development.js"(exports) {
     "use strict";
     "production" !== process.env.NODE_ENV && (exports.ConcurrentRoot = 1, exports.ContinuousEventPriority = 8, exports.DefaultEventPriority = 32, exports.DiscreteEventPriority = 2, exports.IdleEventPriority = 268435456, exports.LegacyRoot = 0, exports.NoEventPriority = 0);
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/constants.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/constants.js
 var require_constants = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/constants.js"(exports, module) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/constants.js"(exports, module) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module.exports = require_react_reconciler_constants_production();
@@ -1746,9 +1747,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js
+// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js
 var require_scheduler_production = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js"(exports) {
+  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js"(exports) {
     "use strict";
     function push3(heap, node2) {
       var index2 = heap.length;
@@ -2019,9 +2020,9 @@ var require_scheduler_production = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js
+// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js
 var require_scheduler_development = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js"(exports) {
+  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js"(exports) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function performWorkUntilDeadline() {
@@ -2278,9 +2279,9 @@ var require_scheduler_development = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js
+// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js
 var require_scheduler = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js"(exports, module) {
+  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js"(exports, module) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module.exports = require_scheduler_production();
@@ -2290,9 +2291,9 @@ var require_scheduler = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.production.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.production.js
 var require_react_reconciler_production = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.production.js"(exports, module) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.production.js"(exports, module) {
     "use strict";
     module.exports = function($$$config) {
       function createFiber(tag, pendingProps, key, mode) {
@@ -10469,9 +10470,9 @@ var require_react_reconciler_production = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js
 var require_react_reconciler_development = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js"(exports, module) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js"(exports, module) {
     "use strict";
     "production" !== process.env.NODE_ENV && (module.exports = function($$$config) {
       function findHook(fiber, id) {
@@ -24242,9 +24243,9 @@ var require_react_reconciler_development = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/index.js
+// node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/index.js
 var require_react_reconciler = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/index.js"(exports, module) {
+  "node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/index.js"(exports, module) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module.exports = require_react_reconciler_production();
@@ -24254,9 +24255,9 @@ var require_react_reconciler = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js
 var require_constants2 = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -24277,9 +24278,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants2();
     var FastBuffer = Buffer[Symbol.species];
@@ -24352,9 +24353,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -24402,9 +24403,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -24785,9 +24786,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js
 var require_validation = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants2();
@@ -24986,9 +24987,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -25618,9 +25619,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -26111,9 +26112,9 @@ var require_sender = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants2();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -26340,9 +26341,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function push3(dest, name2, elem) {
@@ -26493,9 +26494,9 @@ var require_extension = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var https = __require("https");
@@ -27389,9 +27390,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -27487,9 +27488,9 @@ var require_stream = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function parse4(header) {
@@ -27532,9 +27533,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var http = __require("http");
@@ -27933,10 +27934,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs
+// node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server, wrapper_default;
 var init_wrapper = __esm({
-  "../deepseek-harness/node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs"() {
+  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -27949,10 +27950,10 @@ var init_wrapper = __esm({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools-window-polyfill.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools-window-polyfill.js
 var customGlobal;
 var init_devtools_window_polyfill = __esm({
-  "../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools-window-polyfill.js"() {
+  "node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools-window-polyfill.js"() {
     init_wrapper();
     customGlobal = globalThis;
     customGlobal.WebSocket ||= wrapper_default;
@@ -28021,11 +28022,11 @@ var init_react_devtools_core_shim = __esm({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools.js
 var devtools_exports = {};
 var isDevToolsReachable;
 var init_devtools = __esm({
-  async "../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools.js"() {
+  async "node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools.js"() {
     init_devtools_window_polyfill();
     init_wrapper();
     init_react_devtools_core_shim();
@@ -28056,9 +28057,9 @@ var init_devtools = __esm({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/mimic-fn@2.1.0/node_modules/mimic-fn/index.js
+// node_modules/.pnpm/mimic-fn@2.1.0/node_modules/mimic-fn/index.js
 var require_mimic_fn = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/mimic-fn@2.1.0/node_modules/mimic-fn/index.js"(exports, module) {
+  "node_modules/.pnpm/mimic-fn@2.1.0/node_modules/mimic-fn/index.js"(exports, module) {
     "use strict";
     var mimicFn = (to, from2) => {
       for (const prop of Reflect.ownKeys(from2)) {
@@ -28071,9 +28072,9 @@ var require_mimic_fn = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/onetime@5.1.2/node_modules/onetime/index.js
+// node_modules/.pnpm/onetime@5.1.2/node_modules/onetime/index.js
 var require_onetime = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/onetime@5.1.2/node_modules/onetime/index.js"(exports, module) {
+  "node_modules/.pnpm/onetime@5.1.2/node_modules/onetime/index.js"(exports, module) {
     "use strict";
     var mimicFn = require_mimic_fn();
     var calledFunctions = /* @__PURE__ */ new WeakMap();
@@ -28109,9 +28110,9 @@ var require_onetime = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/escape-string-regexp@2.0.0/node_modules/escape-string-regexp/index.js
+// node_modules/.pnpm/escape-string-regexp@2.0.0/node_modules/escape-string-regexp/index.js
 var require_escape_string_regexp = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/escape-string-regexp@2.0.0/node_modules/escape-string-regexp/index.js"(exports, module) {
+  "node_modules/.pnpm/escape-string-regexp@2.0.0/node_modules/escape-string-regexp/index.js"(exports, module) {
     "use strict";
     var matchOperatorsRegex = /[|\\{}()[\]^$+*?.-]/g;
     module.exports = (string6) => {
@@ -28123,9 +28124,9 @@ var require_escape_string_regexp = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/stack-utils@2.0.6/node_modules/stack-utils/index.js
+// node_modules/.pnpm/stack-utils@2.0.6/node_modules/stack-utils/index.js
 var require_stack_utils = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/stack-utils@2.0.6/node_modules/stack-utils/index.js"(exports, module) {
+  "node_modules/.pnpm/stack-utils@2.0.6/node_modules/stack-utils/index.js"(exports, module) {
     "use strict";
     var escapeStringRegexp2 = require_escape_string_regexp();
     var cwd2 = typeof process === "object" && process && typeof process.cwd === "function" ? process.cwd() : ".";
@@ -28376,9 +28377,9 @@ var require_stack_utils = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js
 var require_react_jsx_runtime_production = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
     "use strict";
     var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
     var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -28406,9 +28407,9 @@ var require_react_jsx_runtime_production = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js
 var require_react_jsx_runtime_development = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function getComponentNameFromType(type) {
@@ -28663,9 +28664,9 @@ var require_react_jsx_runtime_development = __commonJS({
   }
 });
 
-// ../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js
+// node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js
 var require_jsx_runtime = __commonJS({
-  "../deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js"(exports, module) {
+  "node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js"(exports, module) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module.exports = require_react_jsx_runtime_production();
@@ -28675,11 +28676,11 @@ var require_jsx_runtime = __commonJS({
   }
 });
 
-// ../deepseek-harness/packages/tui/tui/src/index.ts
+// packages/tui/tui/src/index.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import { spawn as spawn3 } from "node:child_process";
 
-// ../deepseek-harness/packages/tui/tui/src/reload-argv.ts
+// packages/tui/tui/src/reload-argv.ts
 import { constants as osConstants } from "node:os";
 function rebuildReloadArgv(processArgv, innerArgs, options) {
   const script = processArgv[1];
@@ -28738,7 +28739,7 @@ function exitStatus(code2, signal) {
   return code2 ?? 1;
 }
 
-// ../deepseek-harness/packages/tui/tui/src/external-editor.ts
+// packages/tui/tui/src/external-editor.ts
 import {
   chmod,
   lstat,
@@ -28886,7 +28887,7 @@ async function editDraftExternally(command, draft, options) {
   }
 }
 
-// ../deepseek-harness/packages/tui/tui/src/notify.ts
+// packages/tui/tui/src/notify.ts
 var NOTIFY_TITLE = "DeepSeek";
 var DEFAULT_NOTIFY_QUIET_INPUT_SECONDS = 10;
 var NOTIFY_SUMMARY_LIMIT = 80;
@@ -28959,13 +28960,13 @@ function truncateCodePoints(text4, limit) {
   return codePoints.slice(0, limit).join("");
 }
 
-// ../deepseek-harness/packages/tui/tui/src/index.ts
+// packages/tui/tui/src/index.ts
 import { constants as constants2 } from "node:fs";
 import { access, lstat as lstat2, readFile as readFile2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname as dirname3, resolve as resolve4 } from "node:path";
 
-// ../deepseek-harness/vendor/cosmokit/src/misc.ts
+// vendor/cosmokit/src/misc.ts
 function isNullable(value) {
   return value === null || value === void 0;
 }
@@ -28990,7 +28991,7 @@ function defineProperty(object2, key, value) {
   return Object.defineProperty(object2, key, { writable: true, value, enumerable: false });
 }
 
-// ../deepseek-harness/vendor/cosmokit/src/types.ts
+// vendor/cosmokit/src/types.ts
 function is(type, value) {
   if (arguments.length === 1) return (value2) => is(type, value2);
   return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
@@ -29099,7 +29100,7 @@ function deepEqual(a, b, strict) {
   }) ?? Object.keys({ ...a, ...b }).every((key) => deepEqual(a[key], b[key], strict));
 }
 
-// ../deepseek-harness/vendor/cosmokit/src/string.ts
+// vendor/cosmokit/src/string.ts
 function tokenize(source, delimiters, delimiter) {
   const output = [];
   let state = 0 /* DELIM */;
@@ -29138,7 +29139,7 @@ function paramCase(source) {
 }
 var hyphenate = paramCase;
 
-// ../deepseek-harness/vendor/cosmokit/src/time.ts
+// vendor/cosmokit/src/time.ts
 var Time;
 ((Time2) => {
   Time2.millisecond = 1;
@@ -29218,7 +29219,7 @@ var Time;
   Time2.template = template;
 })(Time || (Time = {}));
 
-// ../deepseek-harness/vendor/schemastery/src/index.ts
+// vendor/schemastery/src/index.ts
 var kSchema = /* @__PURE__ */ Symbol.for("schemastery");
 var kValidationError = /* @__PURE__ */ Symbol.for("ValidationError");
 globalThis.__schemastery_index__ ??= 0;
@@ -29850,7 +29851,7 @@ defineMethod("intersect", ["list"], ({ list: list2 }) => {
 defineMethod("transform", ["inner", "callback", "preserve"], ({ inner }, isInner) => inner.toString(isInner));
 var src_default = Schema;
 
-// ../deepseek-harness/vendor/cordis/src/utils.ts
+// vendor/cordis/src/utils.ts
 var DisposableList = class {
   sn = 0;
   map = /* @__PURE__ */ new Map();
@@ -30075,7 +30076,7 @@ function buildOuterStack(offset = 0) {
   return () => outerError.stack.split("\n").slice(3 + offset);
 }
 
-// ../deepseek-harness/vendor/cordis/src/events.ts
+// vendor/cordis/src/events.ts
 function isBailed(value) {
   return value !== null && value !== false && value !== void 0;
 }
@@ -30253,7 +30254,7 @@ var EventsService = class {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/logger.ts
+// vendor/cordis/src/logger.ts
 var defaultFormatters = {
   s: (value) => String(value),
   d: (value) => Math.trunc(Number(value)),
@@ -30492,7 +30493,7 @@ var LoggerService = class _LoggerService {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/fiber.ts
+// vendor/cordis/src/fiber.ts
 var kValidationError2 = /* @__PURE__ */ Symbol.for("ValidationError");
 var ValidationError2 = class extends TypeError {
   name = "ValidationError";
@@ -31046,7 +31047,7 @@ var Fiber = class {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/reflect.ts
+// vendor/cordis/src/reflect.ts
 function enhanceError(error51) {
   const lines = error51.stack.split("\n");
   lines.splice(0, 2, `Error: ${error51.message}`);
@@ -31323,7 +31324,7 @@ var ReflectService = class {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/registry.ts
+// vendor/cordis/src/registry.ts
 function isApplicable(object2) {
   return object2 && typeof object2 === "object" && typeof object2.apply === "function";
 }
@@ -31502,7 +31503,7 @@ var RegistryService = class {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/context.ts
+// vendor/cordis/src/context.ts
 var Context = class _Context {
   /** Symbol key under which a disposer exposes its {@link EffectMeta} diagnostics tree. */
   static effect = symbols.effect;
@@ -31588,7 +31589,7 @@ var Context = class _Context {
   }
 };
 
-// ../deepseek-harness/vendor/cordis/src/service.ts
+// vendor/cordis/src/service.ts
 var Service = class _Service {
   /**
    * Register this instance as `name` in the current context.
@@ -31686,7 +31687,7 @@ var Service = class _Service {
   }
 };
 
-// ../deepseek-harness/packages/core/agent/src/model-selection.ts
+// packages/core/agent/src/model-selection.ts
 function installModelSelection(agentCtx, selection) {
   const disposeAssembly = agentCtx.on("system-prompt/assemble", async (_assembly, _context, next) => {
     const selected = selection.current;
@@ -31723,12 +31724,12 @@ function installModelSelection(agentCtx, selection) {
   };
 }
 
-// ../deepseek-harness/packages/util/brand/src/index.ts
+// packages/util/brand/src/index.ts
 function brandString(value) {
   return value;
 }
 
-// ../deepseek-harness/packages/credentials/credentials/src/index.ts
+// packages/credentials/credentials/src/index.ts
 var REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function credentialRef(value) {
   if (!isCredentialRefName(value)) {
@@ -31740,7 +31741,7 @@ function isCredentialRefName(value) {
   return REF_PATTERN.test(value);
 }
 
-// ../deepseek-harness/packages/typert/protocol/src/remote-error.ts
+// packages/typert/protocol/src/remote-error.ts
 var RemoteError = class extends Error {
   /**
    * @param code - stable failure code declared in {@link RemoteErrorDetailsMap}.
@@ -31760,7 +31761,7 @@ var RemoteError = class extends Error {
   isDSHRemoteError = true;
 };
 
-// ../deepseek-harness/packages/typert/protocol/src/index.ts
+// packages/typert/protocol/src/index.ts
 var TYPERT_REMOTE_SEGMENT_PATTERN = /^[A-Za-z0-9_$.-]+$/;
 function isTypertRemoteSegment(value) {
   return value !== "." && value !== ".." && TYPERT_REMOTE_SEGMENT_PATTERN.test(value);
@@ -31870,7 +31871,7 @@ function validateName(subject, value) {
   }
 }
 
-// ../deepseek-harness/packages/util/values/src/index.ts
+// packages/util/values/src/index.ts
 function assertNever(value, context) {
   const rendered = JSON.stringify(value) ?? String(value);
   throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
@@ -32021,7 +32022,7 @@ function deepFreeze(value) {
   return value;
 }
 
-// ../deepseek-harness/packages/util/crypto/src/index.ts
+// packages/util/crypto/src/index.ts
 function randomUUID() {
   const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
   const hex3 = Array.from(bytes, (byte, index2) => {
@@ -32031,7 +32032,7 @@ function randomUUID() {
   return `${hex3.slice(0, 8)}-${hex3.slice(8, 12)}-${hex3.slice(12, 16)}-${hex3.slice(16, 20)}-${hex3.slice(20)}`;
 }
 
-// ../deepseek-harness/packages/llm/llm/src/message.ts
+// packages/llm/llm/src/message.ts
 function freezeMessage(message) {
   return deepFreeze(structuredClone(message));
 }
@@ -32048,10 +32049,10 @@ function createUserMessage(input) {
   });
 }
 
-// ../deepseek-harness/packages/util/timeout/src/index.ts
+// packages/util/timeout/src/index.ts
 var MAX_TIMER_DELAY_MS = 2147483647;
 
-// ../deepseek-harness/packages/llm/llm/src/error.ts
+// packages/llm/llm/src/error.ts
 var HarnessError = class extends Error {
   /** Stable machine-routable failure class (e.g. `RATE_LIMIT`); route on this, never by parsing `message`. */
   code;
@@ -32075,7 +32076,7 @@ var EXCEEDS_MODEL_CONTEXT = new RegExp(
   "i"
 );
 
-// ../deepseek-harness/packages/llm/llm/src/retry-policy.ts
+// packages/llm/llm/src/retry-policy.ts
 var DEFAULT_MAX_RETRIES = 5;
 var DEFAULT_INITIAL_DELAY_MS = 500;
 var DEFAULT_MAX_DELAY_MS = 1e4;
@@ -32187,7 +32188,7 @@ function resolveRetryPolicy(config2, path2) {
   }
 }
 
-// ../deepseek-harness/packages/llm/llm/src/call-config.ts
+// packages/llm/llm/src/call-config.ts
 var AGENT_LOOP_REQUESTS = /* @__PURE__ */ new WeakSet();
 function callConfigEquals(a, b) {
   if (a.provider !== b.provider || a.model !== b.model || a.reasoningEffort !== b.reasoningEffort || a.temperature !== b.temperature || a.maxTokens !== b.maxTokens) return false;
@@ -32198,7 +32199,7 @@ function isAgentLoopRequest(request) {
   return AGENT_LOOP_REQUESTS.has(request);
 }
 
-// ../deepseek-harness/packages/llm/llm/src/adapter-failure.ts
+// packages/llm/llm/src/adapter-failure.ts
 function normalizeLlmFailure(value) {
   const error51 = value instanceof Error ? value : new HarnessError(thrownMessage(value), "UNKNOWN", { cause: value });
   const carried = ownFailureSnapshot(error51);
@@ -32265,7 +32266,7 @@ function harnessErrorCode(error51) {
   return error51 instanceof HarnessError ? error51.code : "UNKNOWN";
 }
 
-// ../deepseek-harness/packages/llm/llm/src/content.ts
+// packages/llm/llm/src/content.ts
 function textOnlyImageText(ref) {
   const digest = String(ref.attachmentId).slice("sha256:".length, "sha256:".length + 8);
   return `[image omitted because this model accepts text only; attachment sha256:${digest}]`;
@@ -32301,11 +32302,11 @@ function projectImagesForTextModel(messages) {
   });
 }
 
-// ../deepseek-harness/packages/llm/llm/src/attribution.ts
+// packages/llm/llm/src/attribution.ts
 import { createRequire } from "node:module";
 var { version } = createRequire(import.meta.url)("../package.json");
 
-// ../deepseek-harness/packages/llm/llm/src/assembler.ts
+// packages/llm/llm/src/assembler.ts
 var BlockAssembler = class {
   partials = /* @__PURE__ */ new Map();
   order = [];
@@ -32463,7 +32464,7 @@ var BlockAssembler = class {
   }
 };
 
-// ../deepseek-harness/packages/llm/llm/src/index.ts
+// packages/llm/llm/src/index.ts
 var LlmError = class extends HarnessError {
   /** Serializable facts retained beside this live Error. */
   failure;
@@ -33081,7 +33082,7 @@ function adapterFailureChunk(error51, signal) {
   };
 }
 
-// ../deepseek-harness/packages/interaction/user-questions/src/index.ts
+// packages/interaction/user-questions/src/index.ts
 var UserQuestionError = class extends HarnessError {
   constructor(message, code2, options) {
     super(message, code2, options);
@@ -33089,16 +33090,16 @@ var UserQuestionError = class extends HarnessError {
   }
 };
 
-// ../deepseek-harness/packages/core/session/src/index.ts
+// packages/core/session/src/index.ts
 import { isAbsolute } from "node:path";
 
-// ../deepseek-harness/packages/core/session/src/types.ts
+// packages/core/session/src/types.ts
 function SessionId(id) {
   return brandString(id);
 }
 var SESSION_FORMAT_VERSION = 0;
 
-// ../deepseek-harness/packages/core/session/src/surface.ts
+// packages/core/session/src/surface.ts
 var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
   "user/message",
   "assistant/message",
@@ -33351,7 +33352,7 @@ var SurfaceManager = class {
   }
 };
 
-// ../deepseek-harness/packages/core/session/src/request-header.ts
+// packages/core/session/src/request-header.ts
 function canonicalHeader(header) {
   const adapterDefaults = header.adapterDefaults;
   return {
@@ -33369,7 +33370,7 @@ function foldRequestHeader(events, from2) {
   return state;
 }
 
-// ../deepseek-harness/packages/core/session/src/index.ts
+// packages/core/session/src/index.ts
 function validateSessionHeader(id, input) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("session header is not a plain JSON record");
@@ -33847,7 +33848,7 @@ var Session = class _Session {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
   $brand: () => $brand,
@@ -34090,7 +34091,7 @@ __export(external_exports, {
   xor: () => xor
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/index.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/index.js
 var core_exports2 = {};
 __export(core_exports2, {
   $ZodAny: () => $ZodAny,
@@ -34369,7 +34370,7 @@ __export(core_exports2, {
   version: () => version2
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
 var _a2;
 var NEVER = /* @__PURE__ */ Object.freeze({
   status: "aborted"
@@ -34446,7 +34447,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -35142,7 +35143,7 @@ var Class = class {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -35281,7 +35282,7 @@ function prettifyError(error51) {
   return lines.join("\n");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -35369,7 +35370,7 @@ var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
 var regexes_exports = {};
 __export(regexes_exports, {
   base64: () => base64,
@@ -35528,7 +35529,7 @@ var sha512_hex = /^[0-9a-fA-F]{128}$/;
 var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
 var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a4;
   inst._zod ?? (inst._zod = {});
@@ -36076,7 +36077,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -36112,14 +36113,14 @@ var Doc = class {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
 var version2 = {
   major: 4,
   minor: 4,
   patch: 3
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a4;
   inst ?? (inst = {});
@@ -38212,7 +38213,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/index.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/index.js
 var locales_exports = {};
 __export(locales_exports, {
   ar: () => ar_default,
@@ -38269,7 +38270,7 @@ __export(locales_exports, {
   zhTW: () => zh_TW_default
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ar.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0641", verb: "\u0623\u0646 \u064A\u062D\u0648\u064A" },
@@ -38376,7 +38377,7 @@ function ar_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/az.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmal\u0131d\u0131r" },
@@ -38482,7 +38483,7 @@ function az_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/be.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/be.js
 function getBelarusianPlural(count, one2, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -38639,7 +38640,7 @@ function be_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/bg.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/bg.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0430", verb: "\u0434\u0430 \u0441\u044A\u0434\u044A\u0440\u0436\u0430" },
@@ -38760,7 +38761,7 @@ function bg_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ca.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ca.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "car\xE0cters", verb: "contenir" },
@@ -38869,7 +38870,7 @@ function ca_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/cs.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/cs.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "znak\u016F", verb: "m\xEDt" },
@@ -38981,7 +38982,7 @@ function cs_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/da.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/da.js
 var error7 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "havde" },
@@ -39097,7 +39098,7 @@ function da_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/de.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/de.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -39206,7 +39207,7 @@ function de_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/el.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/el.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "\u03C7\u03B1\u03C1\u03B1\u03BA\u03C4\u03AE\u03C1\u03B5\u03C2", verb: "\u03BD\u03B1 \u03AD\u03C7\u03B5\u03B9" },
@@ -39316,7 +39317,7 @@ function el_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/en.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/en.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -39429,7 +39430,7 @@ function en_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/eo.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/eo.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "karaktrojn", verb: "havi" },
@@ -39539,7 +39540,7 @@ function eo_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/es.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/es.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -39672,7 +39673,7 @@ function es_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fa.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fa.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "\u06A9\u0627\u0631\u0627\u06A9\u062A\u0631", verb: "\u062F\u0627\u0634\u062A\u0647 \u0628\u0627\u0634\u062F" },
@@ -39787,7 +39788,7 @@ function fa_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fi.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fi.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "merkki\xE4", subject: "merkkijonon" },
@@ -39900,7 +39901,7 @@ function fi_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fr.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fr.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -40026,7 +40027,7 @@ function fr_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fr-CA.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/fr-CA.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -40134,7 +40135,7 @@ function fr_CA_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/he.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/he.js
 var error17 = () => {
   const TypeNames = {
     string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
@@ -40329,7 +40330,7 @@ function he_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hr.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hr.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "znakova", verb: "imati" },
@@ -40452,7 +40453,7 @@ function hr_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hu.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hu.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -40561,7 +40562,7 @@ function hu_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hy.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/hy.js
 function getArmenianPlural(count, one2, many) {
   return Math.abs(count) === 1 ? one2 : many;
 }
@@ -40709,7 +40710,7 @@ function hy_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/id.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/id.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -40816,7 +40817,7 @@ function id_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/is.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/is.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "stafi", verb: "a\xF0 hafa" },
@@ -40926,7 +40927,7 @@ function is_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/it.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/it.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -41035,7 +41036,7 @@ function it_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ja.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ja.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "\u6587\u5B57", verb: "\u3067\u3042\u308B" },
@@ -41143,7 +41144,7 @@ function ja_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ka.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ka.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "\u10E1\u10D8\u10DB\u10D1\u10DD\u10DA\u10DD", verb: "\u10E3\u10DC\u10D3\u10D0 \u10E8\u10D4\u10D8\u10EA\u10D0\u10D5\u10D3\u10D4\u10E1" },
@@ -41256,7 +41257,7 @@ function ka_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/km.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/km.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "\u178F\u17BD\u17A2\u1780\u17D2\u179F\u179A", verb: "\u1782\u17BD\u179A\u1798\u17B6\u1793" },
@@ -41367,12 +41368,12 @@ function km_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/kh.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/kh.js
 function kh_default() {
   return km_default();
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ko.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ko.js
 var error27 = () => {
   const Sizable = {
     string: { unit: "\uBB38\uC790", verb: "to have" },
@@ -41484,7 +41485,7 @@ function ko_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/lt.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/lt.js
 var capitalizeFirstCharacter = (text4) => {
   return text4.charAt(0).toUpperCase() + text4.slice(1);
 };
@@ -41688,7 +41689,7 @@ function lt_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/mk.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/mk.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "\u0437\u043D\u0430\u0446\u0438", verb: "\u0434\u0430 \u0438\u043C\u0430\u0430\u0442" },
@@ -41798,7 +41799,7 @@ function mk_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ms.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ms.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -41906,7 +41907,7 @@ function ms_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/nl.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/nl.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "tekens", verb: "heeft" },
@@ -42017,7 +42018,7 @@ function nl_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/no.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/no.js
 var error32 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "\xE5 ha" },
@@ -42126,7 +42127,7 @@ function no_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ota.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ota.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmal\u0131d\u0131r" },
@@ -42236,7 +42237,7 @@ function ota_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ps.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ps.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "\u062A\u0648\u06A9\u064A", verb: "\u0648\u0644\u0631\u064A" },
@@ -42351,7 +42352,7 @@ function ps_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/pl.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/pl.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "znak\xF3w", verb: "mie\u0107" },
@@ -42461,7 +42462,7 @@ function pl_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/pt.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/pt.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -42570,7 +42571,7 @@ function pt_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ro.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ro.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "caractere", verb: "s\u0103 aib\u0103" },
@@ -42690,7 +42691,7 @@ function ro_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ru.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ru.js
 function getRussianPlural(count, one2, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -42847,7 +42848,7 @@ function ru_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/sl.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/sl.js
 var error39 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -42957,7 +42958,7 @@ function sl_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/sv.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/sv.js
 var error40 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -43068,7 +43069,7 @@ function sv_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ta.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ta.js
 var error41 = () => {
   const Sizable = {
     string: { unit: "\u0B8E\u0BB4\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BCD\u0B95\u0BB3\u0BCD", verb: "\u0B95\u0BCA\u0BA3\u0BCD\u0B9F\u0BBF\u0BB0\u0BC1\u0B95\u0BCD\u0B95 \u0BB5\u0BC7\u0BA3\u0BCD\u0B9F\u0BC1\u0BAE\u0BCD" },
@@ -43179,7 +43180,7 @@ function ta_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/th.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/th.js
 var error42 = () => {
   const Sizable = {
     string: { unit: "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23", verb: "\u0E04\u0E27\u0E23\u0E21\u0E35" },
@@ -43290,7 +43291,7 @@ function th_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/tr.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/tr.js
 var error43 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "olmal\u0131" },
@@ -43396,7 +43397,7 @@ function tr_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/uk.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/uk.js
 var error44 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432", verb: "\u043C\u0430\u0442\u0438\u043C\u0435" },
@@ -43505,12 +43506,12 @@ function uk_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ua.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ua.js
 function ua_default() {
   return uk_default();
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ur.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ur.js
 var error45 = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0648\u0641", verb: "\u06C1\u0648\u0646\u0627" },
@@ -43621,7 +43622,7 @@ function ur_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/uz.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/uz.js
 var error46 = () => {
   const Sizable = {
     string: { unit: "belgi", verb: "bo\u2018lishi kerak" },
@@ -43732,7 +43733,7 @@ function uz_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/vi.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/vi.js
 var error47 = () => {
   const Sizable = {
     string: { unit: "k\xFD t\u1EF1", verb: "c\xF3" },
@@ -43841,7 +43842,7 @@ function vi_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/zh-CN.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/zh-CN.js
 var error48 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u7B26", verb: "\u5305\u542B" },
@@ -43951,7 +43952,7 @@ function zh_CN_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/zh-TW.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/zh-TW.js
 var error49 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u5143", verb: "\u64C1\u6709" },
@@ -44059,7 +44060,7 @@ function zh_TW_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/yo.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/yo.js
 var error50 = () => {
   const Sizable = {
     string: { unit: "\xE0mi", verb: "n\xED" },
@@ -44167,7 +44168,7 @@ function yo_default() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
 var _a3;
 var $output = /* @__PURE__ */ Symbol("ZodOutput");
 var $input = /* @__PURE__ */ Symbol("ZodInput");
@@ -44217,7 +44218,7 @@ function registry() {
 (_a3 = globalThis).__zod_globalRegistry ?? (_a3.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
 // @__NO_SIDE_EFFECTS__
 function _string(Class2, params) {
   return new Class2({
@@ -45256,7 +45257,7 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
   return inst;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
 function initializeContext(params) {
   let target = params?.target ?? "draft-2020-12";
   if (target === "draft-4")
@@ -45615,7 +45616,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   return finalize(ctx, schema);
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
 var formatMap = {
   guid: "uuid",
   url: "uri",
@@ -46159,7 +46160,7 @@ function toJSONSchema(input, params) {
   return finalize(ctx, input);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-generator.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-generator.js
 var JSONSchemaGenerator = class {
   /** @deprecated Access via ctx instead */
   get metadataRegistry() {
@@ -46234,10 +46235,10 @@ var JSONSchemaGenerator = class {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
 var schemas_exports2 = {};
 __export(schemas_exports2, {
   ZodAny: () => ZodAny,
@@ -46408,7 +46409,7 @@ __export(schemas_exports2, {
   xor: () => xor
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/checks.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/checks.js
 var checks_exports2 = {};
 __export(checks_exports2, {
   endsWith: () => _endsWith,
@@ -46442,7 +46443,7 @@ __export(checks_exports2, {
   uppercase: () => _uppercase
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -46483,7 +46484,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -46523,7 +46524,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -46537,7 +46538,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
 var _installedGroups = /* @__PURE__ */ new WeakMap();
 function _installLazyMethods(inst, group, methods) {
   const proto2 = Object.getPrototypeOf(inst);
@@ -47827,7 +47828,7 @@ function preprocess(fn, schema) {
   });
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/compat.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/compat.js
 var ZodIssueCode = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -47853,7 +47854,7 @@ var ZodFirstPartyTypeKind;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/from-json-schema.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/from-json-schema.js
 var z = {
   ...schemas_exports2,
   ...checks_exports2,
@@ -48333,7 +48334,7 @@ function fromJSONSchema(schema, params) {
   return convertSchema(normalized, ctx);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/coerce.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/coerce.js
 var coerce_exports = {};
 __export(coerce_exports, {
   bigint: () => bigint3,
@@ -48358,10 +48359,10 @@ function date5(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
+// node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// ../deepseek-harness/packages/session/session-title/src/normalize.ts
+// packages/session/session-title/src/normalize.ts
 var OSC_SEQUENCE = /(?:\u001B\]|\u009D)(?:(?!\u0007|\u001B\\)[\s\S])*(?:\u0007|\u001B\\|$)/gu;
 var CSI_SEQUENCE = /(?:\u001B\[|\u009B)[0-?]*[ -/]*[@-~]/gu;
 var ESC_SEQUENCE = /\u001B[@-_]/gu;
@@ -48397,7 +48398,7 @@ function fallbackSessionTitle(input, maxWords, maxBytes) {
   return truncateTitleUtf8(words.join(" "), maxBytes).trimEnd();
 }
 
-// ../deepseek-harness/packages/session/session-title/src/index.ts
+// packages/session/session-title/src/index.ts
 var SessionTitleInvalidError = class extends Error {
   name = "SessionTitleInvalidError";
 };
@@ -48995,15 +48996,15 @@ var SessionTitleService = class extends Service {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render.js
 import { Stream } from "node:stream";
 import process14 from "node:process";
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
 var import_react16 = __toESM(require_react(), 1);
 import process13 from "node:process";
 
-// ../deepseek-harness/node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/function/debounce.mjs
+// node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/function/debounce.mjs
 function debounce(func, debounceMs, { signal, edges } = {}) {
   let pendingThis = void 0;
   let pendingArgs = null;
@@ -49057,7 +49058,7 @@ function debounce(func, debounceMs, { signal, edges } = {}) {
   return debounced;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/function/debounce.mjs
+// node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/function/debounce.mjs
 function debounce2(func, debounceMs = 0, options = {}) {
   if (typeof options !== "object") options = {};
   const { leading = false, trailing = true, maxWait } = options;
@@ -49093,7 +49094,7 @@ function debounce2(func, debounceMs = 0, options = {}) {
   return debounced;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/function/throttle.mjs
+// node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/function/throttle.mjs
 function throttle(func, throttleMs = 0, options = {}) {
   const { leading = true, trailing = true } = options;
   return debounce2(func, throttleMs, {
@@ -49103,7 +49104,7 @@ function throttle(func, throttleMs = 0, options = {}) {
   });
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ansi-escapes@7.3.0/node_modules/ansi-escapes/base.js
+// node_modules/.pnpm/ansi-escapes@7.3.0/node_modules/ansi-escapes/base.js
 var base_exports = {};
 __export(base_exports, {
   ConEmu: () => ConEmu,
@@ -49147,7 +49148,7 @@ __export(base_exports, {
 import process3 from "node:process";
 import os from "node:os";
 
-// ../deepseek-harness/node_modules/.pnpm/environment@1.1.0/node_modules/environment/index.js
+// node_modules/.pnpm/environment@1.1.0/node_modules/environment/index.js
 var isBrowser = globalThis.window?.document !== void 0;
 var isNode = globalThis.process?.versions?.node !== void 0;
 var isBun = globalThis.process?.versions?.bun !== void 0;
@@ -49165,7 +49166,7 @@ var isLinux = platform === "Linux" || globalThis.navigator?.platform?.startsWith
 var isIos = platform === "iOS" || globalThis.navigator?.platform === "MacIntel" && globalThis.navigator?.maxTouchPoints > 1 || /iPad|iPhone|iPod/.test(globalThis.navigator?.platform);
 var isAndroid = platform === "Android" || globalThis.navigator?.platform === "Android" || globalThis.navigator?.userAgent?.includes(" Android ") === true || globalThis.process?.platform === "android";
 
-// ../deepseek-harness/node_modules/.pnpm/ansi-escapes@7.3.0/node_modules/ansi-escapes/base.js
+// node_modules/.pnpm/ansi-escapes@7.3.0/node_modules/ansi-escapes/base.js
 var ESC = "\x1B[";
 var OSC = "\x1B]";
 var BEL = "\x07";
@@ -49305,13 +49306,13 @@ var ConEmu = {
 };
 var setCwd = (cwd2 = cwdFunction()) => iTerm.setCwd(cwd2) + ConEmu.setCwd(cwd2);
 
-// ../deepseek-harness/node_modules/.pnpm/is-in-ci@2.0.0/node_modules/is-in-ci/index.js
+// node_modules/.pnpm/is-in-ci@2.0.0/node_modules/is-in-ci/index.js
 import { env } from "node:process";
 var check2 = (key) => key in env && env[key] !== "0" && env[key] !== "false";
 var isInCi = check2("CI") || check2("CONTINUOUS_INTEGRATION");
 var is_in_ci_default = isInCi;
 
-// ../deepseek-harness/node_modules/.pnpm/auto-bind@5.0.1/node_modules/auto-bind/index.js
+// node_modules/.pnpm/auto-bind@5.0.1/node_modules/auto-bind/index.js
 var getAllProperties = (object2) => {
   const properties = /* @__PURE__ */ new Set();
   do {
@@ -49344,10 +49345,10 @@ function autoBind(self, { include, exclude } = {}) {
   return self;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
 var import_signal_exit2 = __toESM(require_signal_exit(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/patch-console@2.0.0/node_modules/patch-console/dist/index.js
+// node_modules/.pnpm/patch-console@2.0.0/node_modules/patch-console/dist/index.js
 import { PassThrough } from "node:stream";
 var consoleMethods = [
   "assert",
@@ -49393,10 +49394,10 @@ var patchConsole = (callback) => {
 };
 var dist_default = patchConsole;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
 var import_constants2 = __toESM(require_constants(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/binaries/yoga-wasm-base64-esm.js
+// node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/binaries/yoga-wasm-base64-esm.js
 var loadYoga = (() => {
   var _scriptDir = import.meta.url;
   return (function(loadYoga2) {
@@ -50627,7 +50628,7 @@ var loadYoga = (() => {
 })();
 var yoga_wasm_base64_esm_default = loadYoga;
 
-// ../deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/generated/YGEnums.js
+// node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/generated/YGEnums.js
 var Align = /* @__PURE__ */ (function(Align2) {
   Align2[Align2["Auto"] = 0] = "Auto";
   Align2[Align2["FlexStart"] = 1] = "FlexStart";
@@ -50830,7 +50831,7 @@ var constants = {
 };
 var YGEnums_default = constants;
 
-// ../deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/wrapAssembly.js
+// node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/wrapAssembly.js
 function wrapAssembly(lib) {
   function patch(prototype, name2, fn) {
     const original = prototype[name2];
@@ -50931,11 +50932,11 @@ function wrapAssembly(lib) {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/index.js
+// node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/src/index.js
 var Yoga = wrapAssembly(await yoga_wasm_base64_esm_default());
 var src_default2 = Yoga;
 
-// ../deepseek-harness/node_modules/.pnpm/ansi-regex@6.2.2/node_modules/ansi-regex/index.js
+// node_modules/.pnpm/ansi-regex@6.2.2/node_modules/ansi-regex/index.js
 function ansiRegex({ onlyFirst = false } = {}) {
   const ST = "(?:\\u0007|\\u001B\\u005C|\\u009C)";
   const osc = `(?:\\u001B\\][\\s\\S]*?${ST})`;
@@ -50944,7 +50945,7 @@ function ansiRegex({ onlyFirst = false } = {}) {
   return new RegExp(pattern2, onlyFirst ? void 0 : "g");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/strip-ansi@7.2.0/node_modules/strip-ansi/index.js
+// node_modules/.pnpm/strip-ansi@7.2.0/node_modules/strip-ansi/index.js
 var regex = ansiRegex();
 function stripAnsi(string6) {
   if (typeof string6 !== "string") {
@@ -50956,7 +50957,7 @@ function stripAnsi(string6) {
   return string6.replace(regex, "");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup-data.js
+// node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup-data.js
 var ambiguousMinimalCodePoint = 161;
 var ambiguousMaximumCodePoint = 1114109;
 var ambiguousRanges = [161, 161, 164, 164, 167, 168, 170, 170, 173, 174, 176, 180, 182, 186, 188, 191, 198, 198, 208, 208, 215, 216, 222, 225, 230, 230, 232, 234, 236, 237, 240, 240, 242, 243, 247, 250, 252, 252, 254, 254, 257, 257, 273, 273, 275, 275, 283, 283, 294, 295, 299, 299, 305, 307, 312, 312, 319, 322, 324, 324, 328, 331, 333, 333, 338, 339, 358, 359, 363, 363, 462, 462, 464, 464, 466, 466, 468, 468, 470, 470, 472, 472, 474, 474, 476, 476, 593, 593, 609, 609, 708, 708, 711, 711, 713, 715, 717, 717, 720, 720, 728, 731, 733, 733, 735, 735, 768, 879, 913, 929, 931, 937, 945, 961, 963, 969, 1025, 1025, 1040, 1103, 1105, 1105, 8208, 8208, 8211, 8214, 8216, 8217, 8220, 8221, 8224, 8226, 8228, 8231, 8240, 8240, 8242, 8243, 8245, 8245, 8251, 8251, 8254, 8254, 8308, 8308, 8319, 8319, 8321, 8324, 8364, 8364, 8451, 8451, 8453, 8453, 8457, 8457, 8467, 8467, 8470, 8470, 8481, 8482, 8486, 8486, 8491, 8491, 8531, 8532, 8539, 8542, 8544, 8555, 8560, 8569, 8585, 8585, 8592, 8601, 8632, 8633, 8658, 8658, 8660, 8660, 8679, 8679, 8704, 8704, 8706, 8707, 8711, 8712, 8715, 8715, 8719, 8719, 8721, 8721, 8725, 8725, 8730, 8730, 8733, 8736, 8739, 8739, 8741, 8741, 8743, 8748, 8750, 8750, 8756, 8759, 8764, 8765, 8776, 8776, 8780, 8780, 8786, 8786, 8800, 8801, 8804, 8807, 8810, 8811, 8814, 8815, 8834, 8835, 8838, 8839, 8853, 8853, 8857, 8857, 8869, 8869, 8895, 8895, 8978, 8978, 9312, 9449, 9451, 9547, 9552, 9587, 9600, 9615, 9618, 9621, 9632, 9633, 9635, 9641, 9650, 9651, 9654, 9655, 9660, 9661, 9664, 9665, 9670, 9672, 9675, 9675, 9678, 9681, 9698, 9701, 9711, 9711, 9733, 9734, 9737, 9737, 9742, 9743, 9756, 9756, 9758, 9758, 9792, 9792, 9794, 9794, 9824, 9825, 9827, 9829, 9831, 9834, 9836, 9837, 9839, 9839, 9886, 9887, 9919, 9919, 9926, 9933, 9935, 9939, 9941, 9953, 9955, 9955, 9960, 9961, 9963, 9969, 9972, 9972, 9974, 9977, 9979, 9980, 9982, 9983, 10045, 10045, 10102, 10111, 11094, 11097, 12872, 12879, 57344, 63743, 65024, 65039, 65533, 65533, 127232, 127242, 127248, 127277, 127280, 127337, 127344, 127373, 127375, 127376, 127387, 127404, 917760, 917999, 983040, 1048573, 1048576, 1114109];
@@ -50967,7 +50968,7 @@ var wideMinimalCodePoint = 4352;
 var wideMaximumCodePoint = 262141;
 var wideRanges = [4352, 4447, 8986, 8987, 9001, 9002, 9193, 9196, 9200, 9200, 9203, 9203, 9725, 9726, 9748, 9749, 9776, 9783, 9800, 9811, 9855, 9855, 9866, 9871, 9875, 9875, 9889, 9889, 9898, 9899, 9917, 9918, 9924, 9925, 9934, 9934, 9940, 9940, 9962, 9962, 9970, 9971, 9973, 9973, 9978, 9978, 9981, 9981, 9989, 9989, 9994, 9995, 10024, 10024, 10060, 10060, 10062, 10062, 10067, 10069, 10071, 10071, 10133, 10135, 10160, 10160, 10175, 10175, 11035, 11036, 11088, 11088, 11093, 11093, 11904, 11929, 11931, 12019, 12032, 12245, 12272, 12287, 12289, 12350, 12353, 12438, 12441, 12543, 12549, 12591, 12593, 12686, 12688, 12773, 12783, 12830, 12832, 12871, 12880, 42124, 42128, 42182, 43360, 43388, 44032, 55203, 63744, 64255, 65040, 65049, 65072, 65106, 65108, 65126, 65128, 65131, 94176, 94180, 94192, 94198, 94208, 101589, 101631, 101662, 101760, 101874, 110576, 110579, 110581, 110587, 110589, 110590, 110592, 110882, 110898, 110898, 110928, 110930, 110933, 110933, 110948, 110951, 110960, 111355, 119552, 119638, 119648, 119670, 126980, 126980, 127183, 127183, 127374, 127374, 127377, 127386, 127488, 127490, 127504, 127547, 127552, 127560, 127568, 127569, 127584, 127589, 127744, 127776, 127789, 127797, 127799, 127868, 127870, 127891, 127904, 127946, 127951, 127955, 127968, 127984, 127988, 127988, 127992, 128062, 128064, 128064, 128066, 128252, 128255, 128317, 128331, 128334, 128336, 128359, 128378, 128378, 128405, 128406, 128420, 128420, 128507, 128591, 128640, 128709, 128716, 128716, 128720, 128722, 128725, 128728, 128732, 128735, 128747, 128748, 128756, 128764, 128992, 129003, 129008, 129008, 129292, 129338, 129340, 129349, 129351, 129535, 129648, 129660, 129664, 129674, 129678, 129734, 129736, 129736, 129741, 129756, 129759, 129770, 129775, 129784, 131072, 196605, 196608, 262141];
 
-// ../deepseek-harness/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/utilities.js
+// node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/utilities.js
 var isInRange = (ranges, codePoint) => {
   let low = 0;
   let high = Math.floor(ranges.length / 2) - 1;
@@ -50985,7 +50986,7 @@ var isInRange = (ranges, codePoint) => {
   return false;
 };
 
-// ../deepseek-harness/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup.js
+// node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup.js
 var commonCjkCodePoint = 19968;
 var [wideFastPathStart, wideFastPathEnd] = /* @__PURE__ */ findWideFastPathRange(wideRanges);
 function findWideFastPathRange(ranges) {
@@ -51026,7 +51027,7 @@ var isWide = (codePoint) => {
   return isInRange(wideRanges, codePoint);
 };
 
-// ../deepseek-harness/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/index.js
+// node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/index.js
 function validate(codePoint) {
   if (!Number.isSafeInteger(codePoint)) {
     throw new TypeError(`Expected a code point, got \`${typeof codePoint}\`.`);
@@ -51040,7 +51041,7 @@ function eastAsianWidth(codePoint, { ambiguousAsWide = false } = {}) {
   return 1;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js
+// node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js
 var segmenter = new Intl.Segmenter();
 var zeroWidthClusterRegex = new RegExp("^(?:\\p{Default_Ignorable_Code_Point}|\\p{Control}|\\p{Format}|\\p{Nonspacing_Mark}|\\p{Enclosing_Mark}|\\p{Surrogate})+$", "v");
 var leadingNonPrintingRegex = new RegExp("^[\\p{Default_Ignorable_Code_Point}\\p{Control}\\p{Format}\\p{Nonspacing_Mark}\\p{Enclosing_Mark}\\p{Surrogate}]+", "v");
@@ -51166,7 +51167,7 @@ function stringWidth(input, options = {}) {
   return width;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ansi-styles@6.2.3/node_modules/ansi-styles/index.js
+// node_modules/.pnpm/ansi-styles@6.2.3/node_modules/ansi-styles/index.js
 var ANSI_BACKGROUND_OFFSET = 10;
 var wrapAnsi16 = (offset = 0) => (code2) => `\x1B[${code2 + offset}m`;
 var wrapAnsi256 = (offset = 0) => (code2) => `\x1B[${38 + offset};5;${code2}m`;
@@ -51352,7 +51353,7 @@ function assembleStyles() {
 var ansiStyles = assembleStyles();
 var ansi_styles_default = ansiStyles;
 
-// ../deepseek-harness/node_modules/.pnpm/wrap-ansi@10.0.0/node_modules/wrap-ansi/index.js
+// node_modules/.pnpm/wrap-ansi@10.0.0/node_modules/wrap-ansi/index.js
 var ANSI_ESCAPE = "\x1B";
 var ANSI_ESCAPE_CSI = "\x9B";
 var ESCAPES = /* @__PURE__ */ new Set([
@@ -51697,7 +51698,7 @@ function wrapAnsi(string6, columns, options) {
   return String(string6).normalize().replaceAll("\r\n", "\n").split("\n").map((line8) => exec(expandTabs(line8), columns, options)).join("\n");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/terminal-size@4.0.1/node_modules/terminal-size/index.js
+// node_modules/.pnpm/terminal-size@4.0.1/node_modules/terminal-size/index.js
 import process4 from "node:process";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -51803,7 +51804,7 @@ var resize = () => {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/utils.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/utils.js
 var getWindowSize = (stdout) => {
   const { columns, rows } = stdout;
   if (columns && rows) {
@@ -51816,14 +51817,14 @@ var getWindowSize = (stdout) => {
   };
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js
 var import_react_reconciler = __toESM(require_react_reconciler(), 1);
 var import_constants = __toESM(require_constants(), 1);
 var Scheduler = __toESM(require_scheduler(), 1);
 import process5 from "node:process";
 var import_react = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/widest-line@6.0.0/node_modules/widest-line/index.js
+// node_modules/.pnpm/widest-line@6.0.0/node_modules/widest-line/index.js
 function widestLine(string6) {
   let lineWidth = 0;
   for (const line8 of string6.split("\n")) {
@@ -51832,7 +51833,7 @@ function widestLine(string6) {
   return lineWidth;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/measure-text.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/measure-text.js
 var cache = /* @__PURE__ */ new Map();
 var measureText = (text4) => {
   if (text4.length === 0) {
@@ -51853,7 +51854,7 @@ var measureText = (text4) => {
 };
 var measure_text_default = measureText;
 
-// ../deepseek-harness/node_modules/.pnpm/is-fullwidth-code-point@5.1.0/node_modules/is-fullwidth-code-point/index.js
+// node_modules/.pnpm/is-fullwidth-code-point@5.1.0/node_modules/is-fullwidth-code-point/index.js
 function isFullwidthCodePoint(codePoint) {
   if (!Number.isInteger(codePoint)) {
     return false;
@@ -51861,7 +51862,7 @@ function isFullwidthCodePoint(codePoint) {
   return isFullWidth(codePoint) || isWide(codePoint);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/tokenize-ansi.js
+// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/tokenize-ansi.js
 var ESCAPE_CODE_POINT = 27;
 var C1_DCS_CODE_POINT = 144;
 var C1_SOS_CODE_POINT = 152;
@@ -52467,7 +52468,7 @@ function tokenizeAnsi(string6, { endCharacter = Number.POSITIVE_INFINITY } = {})
   return tokens;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/index.js
+// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/index.js
 function applySgrFragments(activeStyles, fragments) {
   for (const fragment of fragments) {
     switch (fragment.type) {
@@ -52697,7 +52698,7 @@ function sliceAnsi(string6, start, end) {
   return returnValue;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/cli-truncate@6.1.1/node_modules/cli-truncate/index.js
+// node_modules/.pnpm/cli-truncate@6.1.1/node_modules/cli-truncate/index.js
 var validPositions = /* @__PURE__ */ new Set(["start", "middle", "end"]);
 function getIndexOfNearestSpace(string6, wantedIndex, shouldSearchRight) {
   if (string6.charAt(wantedIndex) === " ") {
@@ -52839,7 +52840,7 @@ function cliTruncate(text4, columns, options = {}) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/wrap-text.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/wrap-text.js
 var cache2 = {};
 var wrapText = (text4, maxWidth, wrapType) => {
   const cacheKey = text4 + String(maxWidth) + String(wrapType);
@@ -52876,7 +52877,7 @@ var wrapText = (text4, maxWidth, wrapType) => {
 };
 var wrap_text_default = wrapText;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ansi-tokenizer.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ansi-tokenizer.js
 var bellCharacter = "\x07";
 var escapeCharacter = "\x1B";
 var stringTerminatorCharacter = "\x9C";
@@ -53183,7 +53184,7 @@ var tokenizeAnsi2 = (text4) => {
   return tokens;
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/sanitize-ansi.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/sanitize-ansi.js
 var sgrParametersRegex = /^[\d:;]*$/;
 var sanitizeAnsi = (text4) => {
   if (!hasAnsiControlCharacters(text4)) {
@@ -53203,7 +53204,7 @@ var sanitizeAnsi = (text4) => {
 };
 var sanitize_ansi_default = sanitizeAnsi;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/squash-text-nodes.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/squash-text-nodes.js
 var squashTextNodes = (node2) => {
   let text4 = "";
   for (let index2 = 0; index2 < node2.childNodes.length; index2++) {
@@ -53228,7 +53229,7 @@ var squashTextNodes = (node2) => {
 };
 var squash_text_nodes_default = squashTextNodes;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/dom.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/dom.js
 var createNode = (nodeName) => {
   const node2 = {
     nodeName,
@@ -53352,7 +53353,7 @@ var emitLayoutListeners = (rootNode) => {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/styles.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/styles.js
 var positionEdges = [
   ["top", src_default2.EDGE_TOP],
   ["right", src_default2.EDGE_RIGHT],
@@ -53639,7 +53640,7 @@ var styles2 = (node2, style = {}, currentStyle = style) => {
 };
 var styles_default = styles2;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js
 if (process5.env["DEV"] === "true") {
   let isDevtoolsInstalled = false;
   try {
@@ -53926,7 +53927,7 @@ var reconciler_default = (0, import_react_reconciler.default)({
   rendererVersion: packageInfo.version
 });
 
-// ../deepseek-harness/node_modules/.pnpm/indent-string@5.0.0/node_modules/indent-string/index.js
+// node_modules/.pnpm/indent-string@5.0.0/node_modules/indent-string/index.js
 function indentString(string6, count = 1, options = {}) {
   const {
     indent: indent2 = " ",
@@ -53959,13 +53960,13 @@ function indentString(string6, count = 1, options = {}) {
   return string6.replace(regex2, indent2.repeat(count));
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/get-max-width.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/get-max-width.js
 var getMaxWidth = (yogaNode) => {
   return yogaNode.getComputedWidth() - yogaNode.getComputedPadding(src_default2.EDGE_LEFT) - yogaNode.getComputedPadding(src_default2.EDGE_RIGHT) - yogaNode.getComputedBorder(src_default2.EDGE_LEFT) - yogaNode.getComputedBorder(src_default2.EDGE_RIGHT);
 };
 var get_max_width_default = getMaxWidth;
 
-// ../deepseek-harness/node_modules/.pnpm/cli-boxes@4.0.1/node_modules/cli-boxes/boxes.json
+// node_modules/.pnpm/cli-boxes@4.0.1/node_modules/cli-boxes/boxes.json
 var boxes_default = {
   single: {
     topLeft: "\u250C",
@@ -54049,10 +54050,10 @@ var boxes_default = {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/cli-boxes@4.0.1/node_modules/cli-boxes/index.js
+// node_modules/.pnpm/cli-boxes@4.0.1/node_modules/cli-boxes/index.js
 var cli_boxes_default = boxes_default;
 
-// ../deepseek-harness/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/ansi-styles/index.js
+// node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/ansi-styles/index.js
 var ANSI_BACKGROUND_OFFSET2 = 10;
 var wrapAnsi162 = (offset = 0) => (code2) => `\x1B[${code2 + offset}m`;
 var wrapAnsi2562 = (offset = 0) => (code2) => `\x1B[${38 + offset};5;${code2}m`;
@@ -54238,7 +54239,7 @@ function assembleStyles2() {
 var ansiStyles2 = assembleStyles2();
 var ansi_styles_default2 = ansiStyles2;
 
-// ../deepseek-harness/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
+// node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
 import process6 from "node:process";
 import os2 from "node:os";
 import tty2 from "node:tty";
@@ -54370,7 +54371,7 @@ var supportsColor = {
 };
 var supports_color_default = supportsColor;
 
-// ../deepseek-harness/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/utilities.js
+// node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/utilities.js
 function stringReplaceAll(string6, substring, replacer) {
   let index2 = string6.indexOf(substring);
   if (index2 === -1) {
@@ -54400,7 +54401,7 @@ function stringEncaseCRLFWithFirstIndex(string6, prefix, postfix, index2) {
   return returnValue;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js
+// node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js
 var { stdout: stdoutColor, stderr: stderrColor } = supports_color_default;
 var GENERATOR = /* @__PURE__ */ Symbol("GENERATOR");
 var STYLER = /* @__PURE__ */ Symbol("STYLER");
@@ -54547,7 +54548,7 @@ var chalk = createChalk();
 var chalkStderr = createChalk({ level: stderrColor ? stderrColor.level : 0 });
 var source_default = chalk;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/colorize.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/colorize.js
 var rgbRegex = /^rgb\(\s?(\d+),\s?(\d+),\s?(\d+)\s?\)$/;
 var ansiRegex2 = /^ansi256\(\s?(\d+)\s?\)$/;
 var isNamedColor = (color2) => {
@@ -54589,7 +54590,7 @@ var colorize = (str, color2, type) => {
 };
 var colorize_default = colorize;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-border.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-border.js
 var stylePiece = (segment2, fg, bg, dim) => {
   let styled2 = colorize_default(segment2, fg, "foreground");
   styled2 = colorize_default(styled2, bg, "background");
@@ -54660,7 +54661,7 @@ var renderBorder = (x, y, node2, output) => {
 };
 var render_border_default = renderBorder;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-background.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-background.js
 var renderBackground = (x, y, node2, output) => {
   if (!node2.style.backgroundColor) {
     return;
@@ -54683,7 +54684,7 @@ var renderBackground = (x, y, node2, output) => {
 };
 var render_background_default = renderBackground;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-node-to-output.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-node-to-output.js
 var applyPaddingToText = (node2, text4) => {
   const yogaNode = node2.childNodes[0]?.yogaNode;
   if (yogaNode) {
@@ -54791,7 +54792,7 @@ var renderNodeToOutput = (node2, output, options) => {
 };
 var render_node_to_output_default = renderNodeToOutput;
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/consts.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/consts.js
 var BEL2 = "\x07";
 var ESC2 = "\x1B";
 var BACKSLASH = "\\";
@@ -54815,7 +54816,7 @@ var linkEndCode = `${ESC2}${OSC2}8;;${BEL2}`;
 var linkEndCodeST = `${ESC2}${OSC2}8;;${ESC2}${BACKSLASH}`;
 var linkEndCodeC1ST = `${ESC2}${OSC2}8;;${C1_ST}`;
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js
 var endCodesSet = /* @__PURE__ */ new Set();
 var endCodesMap = /* @__PURE__ */ new Map();
 for (const [start, end] of ansi_styles_default.codes) {
@@ -54855,7 +54856,7 @@ function isIntensityCode(code2) {
   return code2.code === ansi_styles_default.bold.open || code2.code === ansi_styles_default.dim.open;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/reduce.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/reduce.js
 function reduceAnsiCodes(codes) {
   return reduceAnsiCodesIncremental([], codes);
 }
@@ -54880,7 +54881,7 @@ function reduceAnsiCodesIncremental(codes, newCodes) {
   return ret;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/undo.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/undo.js
 function undoAnsiCodes2(codes) {
   return reduceAnsiCodes(codes).reverse().map((code2) => ({
     ...code2,
@@ -54888,7 +54889,7 @@ function undoAnsiCodes2(codes) {
   }));
 }
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/diff.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/diff.js
 function diffAnsiCodes(from2, to) {
   const endCodesInTo = new Set(to.map((code2) => code2.endCode));
   const startCodesInTo = new Set(to.map((code2) => code2.code));
@@ -54907,7 +54908,7 @@ function diffAnsiCodes(from2, to) {
   ];
 }
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js
 function styledCharsFromTokens(tokens) {
   let codes = [];
   const ret = [];
@@ -54940,7 +54941,7 @@ function styledCharsToString(chars) {
   return ret;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js
 var segmenter3 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function isFullwidthGrapheme(grapheme, baseCodePoint) {
   if (isFullwidthCodePoint(baseCodePoint))
@@ -55089,7 +55090,7 @@ function tokenize2(str, endChar = Number.POSITIVE_INFINITY) {
   return ret;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js
 var OutputCaches = class {
   widths = /* @__PURE__ */ new Map();
   blockWidths = /* @__PURE__ */ new Map();
@@ -55277,7 +55278,7 @@ var Output = class {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/renderer.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/renderer.js
 var renderer = (node2, isScreenReaderEnabled) => {
   if (node2.yogaNode) {
     if (isScreenReaderEnabled) {
@@ -55333,7 +55334,7 @@ var renderer = (node2, isScreenReaderEnabled) => {
 };
 var renderer_default = renderer;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/cursor-helpers.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/cursor-helpers.js
 var showCursorEscape = "\x1B[?25h";
 var hideCursorEscape = "\x1B[?25l";
 var cursorPositionChanged = (a, b) => a?.x !== b?.x || a?.y !== b?.y;
@@ -55364,10 +55365,10 @@ var buildReturnToBottomPrefix = (cursorWasShown, previousLineCount, previousCurs
   return hideCursorEscape + buildReturnToBottom(previousLineCount, previousCursorPosition);
 };
 
-// ../deepseek-harness/node_modules/.pnpm/cli-cursor@4.0.0/node_modules/cli-cursor/index.js
+// node_modules/.pnpm/cli-cursor@4.0.0/node_modules/cli-cursor/index.js
 import process8 from "node:process";
 
-// ../deepseek-harness/node_modules/.pnpm/restore-cursor@4.0.0/node_modules/restore-cursor/index.js
+// node_modules/.pnpm/restore-cursor@4.0.0/node_modules/restore-cursor/index.js
 var import_onetime = __toESM(require_onetime(), 1);
 var import_signal_exit = __toESM(require_signal_exit(), 1);
 import process7 from "node:process";
@@ -55378,7 +55379,7 @@ var restoreCursor = (0, import_onetime.default)(() => {
 });
 var restore_cursor_default = restoreCursor;
 
-// ../deepseek-harness/node_modules/.pnpm/cli-cursor@4.0.0/node_modules/cli-cursor/index.js
+// node_modules/.pnpm/cli-cursor@4.0.0/node_modules/cli-cursor/index.js
 var isHidden = false;
 var cliCursor = {};
 cliCursor.show = (writableStream = process8.stderr) => {
@@ -55408,7 +55409,7 @@ cliCursor.toggle = (force, writableStream) => {
 };
 var cli_cursor_default = cliCursor;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/log-update.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/log-update.js
 var visibleLineCount = (lines, str) => str.endsWith("\n") ? lines.length - 1 : lines.length;
 var createStandard = (stream, { showCursor = false } = {}) => {
   let previousLineCount = 0;
@@ -55638,23 +55639,23 @@ var create2 = (stream, { showCursor = false, incremental = false } = {}) => {
 var logUpdate = { create: create2 };
 var log_update_default = logUpdate;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/write-synchronized.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/write-synchronized.js
 var bsu = "\x1B[?2026h";
 var esu = "\x1B[?2026l";
 function shouldSynchronize(stream, interactive) {
   return "isTTY" in stream && stream.isTTY && (interactive ?? !is_in_ci_default);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/instances.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/instances.js
 var instances = /* @__PURE__ */ new WeakMap();
 var instances_default = instances;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/App.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/App.js
 var import_react15 = __toESM(require_react(), 1);
 import { EventEmitter as EventEmitter2 } from "node:events";
 import process12 from "node:process";
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/input-parser.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/input-parser.js
 var escape = "\x1B";
 var pasteStart = "\x1B[200~";
 var pasteEnd = "\x1B[201~";
@@ -55839,7 +55840,7 @@ var createInputParser = () => {
   };
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AppContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AppContext.js
 var import_react2 = __toESM(require_react(), 1);
 var noopSuspension = {
   async resume() {
@@ -55864,7 +55865,7 @@ var AppContext = (0, import_react2.createContext)(defaultValue);
 AppContext.displayName = "InternalAppContext";
 var AppContext_default = AppContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StdinContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StdinContext.js
 var import_react3 = __toESM(require_react(), 1);
 import { EventEmitter } from "node:events";
 import process9 from "node:process";
@@ -55883,7 +55884,7 @@ var StdinContext = (0, import_react3.createContext)({
 StdinContext.displayName = "InternalStdinContext";
 var StdinContext_default = StdinContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StdoutContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StdoutContext.js
 var import_react4 = __toESM(require_react(), 1);
 import process10 from "node:process";
 var StdoutContext = (0, import_react4.createContext)({
@@ -55894,7 +55895,7 @@ var StdoutContext = (0, import_react4.createContext)({
 StdoutContext.displayName = "InternalStdoutContext";
 var StdoutContext_default = StdoutContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StderrContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/StderrContext.js
 var import_react5 = __toESM(require_react(), 1);
 import process11 from "node:process";
 var StderrContext = (0, import_react5.createContext)({
@@ -55905,7 +55906,7 @@ var StderrContext = (0, import_react5.createContext)({
 StderrContext.displayName = "InternalStderrContext";
 var StderrContext_default = StderrContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/FocusContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/FocusContext.js
 var import_react6 = __toESM(require_react(), 1);
 var FocusContext = (0, import_react6.createContext)({
   activeId: void 0,
@@ -55931,7 +55932,7 @@ var FocusContext = (0, import_react6.createContext)({
 FocusContext.displayName = "InternalFocusContext";
 var FocusContext_default = FocusContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AnimationContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AnimationContext.js
 var import_react7 = __toESM(require_react(), 1);
 var animationContext = (0, import_react7.createContext)({
   renderThrottleMs: 0,
@@ -55946,7 +55947,7 @@ var animationContext = (0, import_react7.createContext)({
 animationContext.displayName = "InternalAnimationContext";
 var AnimationContext_default = animationContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/CursorContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/CursorContext.js
 var import_react8 = __toESM(require_react(), 1);
 var CursorContext = (0, import_react8.createContext)({
   setCursorPosition() {
@@ -55955,22 +55956,22 @@ var CursorContext = (0, import_react8.createContext)({
 CursorContext.displayName = "InternalCursorContext";
 var CursorContext_default = CursorContext;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorBoundary.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorBoundary.js
 var import_react14 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorOverview.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorOverview.js
 var import_react13 = __toESM(require_react(), 1);
 var import_stack_utils = __toESM(require_stack_utils(), 1);
 import * as fs2 from "node:fs";
 import { cwd } from "node:process";
 
-// ../deepseek-harness/node_modules/.pnpm/convert-to-spaces@2.0.1/node_modules/convert-to-spaces/dist/index.js
+// node_modules/.pnpm/convert-to-spaces@2.0.1/node_modules/convert-to-spaces/dist/index.js
 var convertToSpaces = (input, spaces = 2) => {
   return input.replace(/^\t+/gm, ($1) => " ".repeat($1.length * spaces));
 };
 var dist_default2 = convertToSpaces;
 
-// ../deepseek-harness/node_modules/.pnpm/code-excerpt@4.0.0/node_modules/code-excerpt/dist/index.js
+// node_modules/.pnpm/code-excerpt@4.0.0/node_modules/code-excerpt/dist/index.js
 var generateLineNumbers = (line8, around) => {
   const lineNumbers = [];
   const min = line8 - around;
@@ -55996,20 +55997,20 @@ var codeExcerpt = (source, line8, options = {}) => {
 };
 var dist_default3 = codeExcerpt;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js
 var import_react11 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AccessibilityContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/AccessibilityContext.js
 var import_react9 = __toESM(require_react(), 1);
 var accessibilityContext = (0, import_react9.createContext)({
   isScreenReaderEnabled: false
 });
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/BackgroundContext.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/BackgroundContext.js
 var import_react10 = __toESM(require_react(), 1);
 var backgroundContext = (0, import_react10.createContext)(void 0);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js
 var Box = (0, import_react11.forwardRef)(({ children, backgroundColor, "aria-label": ariaLabel, "aria-hidden": ariaHidden, "aria-role": role2, "aria-state": ariaState, ...style }, ref) => {
   const { isScreenReaderEnabled } = (0, import_react11.useContext)(accessibilityContext);
   const label = ariaLabel ? import_react11.default.createElement("ink-text", null, ariaLabel) : void 0;
@@ -56037,7 +56038,7 @@ var Box = (0, import_react11.forwardRef)(({ children, backgroundColor, "aria-lab
 Box.displayName = "Box";
 var Box_default = Box;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Text.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Text.js
 var import_react12 = __toESM(require_react(), 1);
 function Text({ color: color2, backgroundColor, dimColor = false, bold = false, italic = false, underline = false, strikethrough = false, inverse = false, wrap = "wrap", children, "aria-label": ariaLabel, "aria-hidden": ariaHidden = false }) {
   const { isScreenReaderEnabled } = (0, import_react12.useContext)(accessibilityContext);
@@ -56080,7 +56081,7 @@ function Text({ color: color2, backgroundColor, dimColor = false, bold = false, 
   return import_react12.default.createElement("ink-text", { style: { flexGrow: 0, flexShrink: 1, flexDirection: "row", textWrap: wrap }, internal_transform: transform2 }, childrenOrAriaLabel);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorOverview.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorOverview.js
 var cleanupPath = (path2) => {
   return path2?.replace(`file://${cwd()}/`, "");
 };
@@ -56193,7 +56194,7 @@ function ErrorOverview({ error: error51 }) {
   );
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorBoundary.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/ErrorBoundary.js
 var ErrorBoundary = class extends import_react14.PureComponent {
   static displayName = "InternalErrorBoundary";
   static getDerivedStateFromError(error51) {
@@ -56213,7 +56214,7 @@ var ErrorBoundary = class extends import_react14.PureComponent {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/App.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/App.js
 var tab = "	";
 var shiftTab = "\x1B[Z";
 var escape2 = "\x1B";
@@ -56725,7 +56726,7 @@ function App({ children, stdin, stdout, stderr, writeToStdout, writeToStderr, ex
 App.displayName = "InternalApp";
 var App_default = App;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/kitty-keyboard.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/kitty-keyboard.js
 var kittyFlags = {
   disambiguateEscapeCodes: 1,
   reportEventTypes: 2,
@@ -56751,7 +56752,7 @@ var kittyModifiers = {
   numLock: 128
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/ink.js
 var noop = () => {
 };
 var textEncoder = new TextEncoder();
@@ -57547,7 +57548,7 @@ var Ink = class {
   }
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render.js
 var render = (node2, options) => {
   const inkOptions = {
     stdout: process14.stdout,
@@ -57598,25 +57599,25 @@ var getInstance = (stdout, createInstance) => {
   return instance;
 };
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-to-string.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-to-string.js
 var import_constants3 = __toESM(require_constants(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Static.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Static.js
 var import_react17 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Transform.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Transform.js
 var import_react18 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Newline.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Newline.js
 var import_react19 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Spacer.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Spacer.js
 var import_react20 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-input.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-input.js
 var import_react22 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/parse-keypress.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/parse-keypress.js
 var textDecoder = new TextDecoder();
 var metaKeyCodeRe = /^(?:\x1b)([a-zA-Z0-9])$/;
 var fnKeyRe = /^(?:\x1b+)(O|N|\[|\[\[)(?:(\d+)(?:;(\d+))?([~^$])|(?:1;)?(\d+)?([a-zA-Z]))/;
@@ -58048,11 +58049,11 @@ var parseKeypress = (s = "") => {
 };
 var parse_keypress_default = parseKeypress;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stdin.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stdin.js
 var import_react21 = __toESM(require_react(), 1);
 var useStdinContext = () => (0, import_react21.useContext)(StdinContext_default);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-input.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-input.js
 var useInput = (inputHandler, options = {}) => {
   const { setRawMode, internal_exitOnCtrlC, internal_eventEmitter } = useStdinContext();
   (0, import_react22.useEffect)(() => {
@@ -58132,7 +58133,7 @@ var useInput = (inputHandler, options = {}) => {
 };
 var use_input_default = useInput;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-paste.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-paste.js
 var import_react23 = __toESM(require_react(), 1);
 var usePaste = (handler, options = {}) => {
   const { setRawMode, setBracketedPasteMode, internal_eventEmitter } = useStdinContext();
@@ -58164,33 +58165,33 @@ var usePaste = (handler, options = {}) => {
 };
 var use_paste_default = usePaste;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-app.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-app.js
 var import_react24 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stdout.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stdout.js
 var import_react25 = __toESM(require_react(), 1);
 var useStdout = () => (0, import_react25.useContext)(StdoutContext_default);
 var use_stdout_default = useStdout;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stderr.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-stderr.js
 var import_react26 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-focus.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-focus.js
 var import_react27 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-focus-manager.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-focus-manager.js
 var import_react28 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-is-screen-reader-enabled.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-is-screen-reader-enabled.js
 var import_react29 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-cursor.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-cursor.js
 var import_react30 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-animation.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-animation.js
 var import_react31 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-window-size.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-window-size.js
 var import_react32 = __toESM(require_react(), 1);
 var useWindowSize = () => {
   const { stdout } = use_stdout_default();
@@ -58208,10 +58209,10 @@ var useWindowSize = () => {
 };
 var use_window_size_default = useWindowSize;
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-box-metrics.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/hooks/use-box-metrics.js
 var import_react33 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/measure-element.js
+// node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/measure-element.js
 var measureElement = (node2) => {
   const { yogaNode } = node2;
   if (!yogaNode) {
@@ -58236,10 +58237,10 @@ var measureElement = (node2) => {
 };
 var measure_element_default = measureElement;
 
-// ../deepseek-harness/packages/tui/tui-render/src/index.ts
+// packages/tui/tui-render/src/index.ts
 var import_react40 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/packages/tui/tui-render/src/content.ts
+// packages/tui/tui-render/src/content.ts
 var GRAPHEME = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function firstGrapheme(text4) {
   for (const part of GRAPHEME.segment(text4)) return part.segment;
@@ -58314,7 +58315,7 @@ function wrapDisplayLines(text4, maxCols) {
   return out;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/terminal-capabilities.ts
+// packages/tui/tui-render/src/terminal-capabilities.ts
 var ESC_TIMEOUT_MS = 40;
 function detectColorSupport(env3) {
   if (env3.NO_COLOR !== void 0) return "none";
@@ -58377,7 +58378,7 @@ function sanitizeOscPayload(text4, limit = 80, titleSuffix) {
   return codePoints.slice(0, limit).join("");
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/theme.ts
+// packages/tui/tui-render/src/theme.ts
 var THEME_LEVELS = {
   truecolor: {
     bg: "#151618",
@@ -58576,7 +58577,7 @@ var BACKGROUND_TOKENS = /* @__PURE__ */ new Set([
   "codeBg"
 ]);
 
-// ../deepseek-harness/packages/tui/tui-render/src/brand.ts
+// packages/tui/tui-render/src/brand.ts
 var BRAND_HALF_BLOCK = [
   "                  \u2584\u2584\u2584\u2584\u2584       \u2588\u2584            ",
   "      \u2584\u2584\u2584\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588       \u2588\u2588\u2588\u2584\u2584        \u2584\u2584",
@@ -58709,7 +58710,7 @@ var BRAND_PLAIN_WORDMARK = "DeepSeek";
 var BRAND_HOME_LINE = "\u6709\u4EC0\u4E48\u53EF\u4EE5\u5E2E\u5FD9\u7684";
 var BRAND_APP_TITLE = "DeepSeek \xB7 deepseek-tui";
 
-// ../deepseek-harness/packages/tui/tui-render/src/app-shell.tsx
+// packages/tui/tui-render/src/app-shell.tsx
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
 var TITLE_BAR_ELLIPSIS = "\u2026";
 function fitDisplayWidth(text4, maxCols) {
@@ -58784,10 +58785,10 @@ function AppShell({ title, badge, children, status, input }) {
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/stream-view.tsx
+// packages/tui/tui-render/src/stream-view.tsx
 var import_react37 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/packages/tui/tui-render/src/hyperlink.ts
+// packages/tui/tui-render/src/hyperlink.ts
 import { execSync } from "node:child_process";
 var hyperlinks = false;
 function probeTmuxHyperlinks(exec3 = execSync) {
@@ -58844,7 +58845,7 @@ function linkNeedsUrlSuffix(visible, href) {
   return visible !== href && visible !== comparable;
 }
 
-// ../deepseek-harness/packages/llm/token-meter/src/cache-hit.ts
+// packages/llm/token-meter/src/cache-hit.ts
 function roundedPercentUnits(cacheReadTokens, denominator, decimalPlaces) {
   const unitsPerPercent = decimalPlaces === 0 ? 1 : 10;
   const scale = unitsPerPercent * 100;
@@ -58895,7 +58896,7 @@ function formatCacheHitPercent(cacheReadTokens, promptTokens, decimalPlaces = 0)
   return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
 }
 
-// ../deepseek-harness/packages/llm/token-meter/src/turn-usage.ts
+// packages/llm/token-meter/src/turn-usage.ts
 function isCount(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
@@ -59076,7 +59077,7 @@ function deriveTurnTokenUsage(events) {
   return invalid || !sawEnd || state.kind !== "idle" ? void 0 : aggregateAttempts(attempts);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/turn-tail.ts
+// packages/tui/tui-render/src/turn-tail.ts
 function formatTurnTailStats(view) {
   const parts = [];
   if (view.turnOrdinal !== void 0) parts.push(`turn ${String(view.turnOrdinal)}`);
@@ -59115,14 +59116,14 @@ function producedPathsForTurn(cards) {
   return paths;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/stream-view.tsx
+// packages/tui/tui-render/src/stream-view.tsx
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 import { isAbsolute as isAbsolute3 } from "node:path";
 
-// ../deepseek-harness/packages/tui/tui-render/src/markdown.tsx
+// packages/tui/tui-render/src/markdown.tsx
 var import_react34 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-to-string@4.0.0/node_modules/mdast-util-to-string/lib/index.js
+// node_modules/.pnpm/mdast-util-to-string@4.0.0/node_modules/mdast-util-to-string/lib/index.js
 var emptyOptions = {};
 function toString2(value, options) {
   const settings = options || emptyOptions;
@@ -59159,7 +59160,7 @@ function node(value) {
   return Boolean(value && typeof value === "object");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/character-entities@2.0.2/node_modules/character-entities/index.js
+// node_modules/.pnpm/character-entities@2.0.2/node_modules/character-entities/index.js
 var characterEntities = {
   AElig: "\xC6",
   AMP: "&",
@@ -61288,13 +61289,13 @@ var characterEntities = {
   zwnj: "\u200C"
 };
 
-// ../deepseek-harness/node_modules/.pnpm/decode-named-character-reference@1.3.0/node_modules/decode-named-character-reference/index.js
+// node_modules/.pnpm/decode-named-character-reference@1.3.0/node_modules/decode-named-character-reference/index.js
 var own = {}.hasOwnProperty;
 function decodeNamedCharacterReference(value) {
   return own.call(characterEntities, value) ? characterEntities[value] : false;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-chunked@2.0.1/node_modules/micromark-util-chunked/index.js
+// node_modules/.pnpm/micromark-util-chunked@2.0.1/node_modules/micromark-util-chunked/index.js
 function splice(list2, start, remove, items) {
   const end = list2.length;
   let chunkStart = 0;
@@ -61328,7 +61329,7 @@ function push2(list2, items) {
   return items;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-combine-extensions@2.0.1/node_modules/micromark-util-combine-extensions/index.js
+// node_modules/.pnpm/micromark-util-combine-extensions@2.0.1/node_modules/micromark-util-combine-extensions/index.js
 var hasOwnProperty = {}.hasOwnProperty;
 function combineExtensions(extensions) {
   const all2 = {};
@@ -61368,7 +61369,7 @@ function constructs(existing, list2) {
   splice(existing, 0, 0, before);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-decode-numeric-character-reference@2.0.2/node_modules/micromark-util-decode-numeric-character-reference/index.js
+// node_modules/.pnpm/micromark-util-decode-numeric-character-reference@2.0.2/node_modules/micromark-util-decode-numeric-character-reference/index.js
 function decodeNumericCharacterReference(value, base) {
   const code2 = Number.parseInt(value, base);
   if (
@@ -61386,12 +61387,12 @@ function decodeNumericCharacterReference(value, base) {
   return String.fromCodePoint(code2);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-normalize-identifier@2.0.1/node_modules/micromark-util-normalize-identifier/index.js
+// node_modules/.pnpm/micromark-util-normalize-identifier@2.0.1/node_modules/micromark-util-normalize-identifier/index.js
 function normalizeIdentifier(value) {
   return value.replace(/[\t\n\r ]+/g, " ").replace(/^ | $/g, "").toLowerCase().toUpperCase();
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-character@2.1.1/node_modules/micromark-util-character/index.js
+// node_modules/.pnpm/micromark-util-character@2.1.1/node_modules/micromark-util-character/index.js
 var asciiAlpha = regexCheck(/[A-Za-z]/);
 var asciiAlphanumeric = regexCheck(/[\dA-Za-z]/);
 var asciiAtext = regexCheck(/[#-'*+\--9=?A-Z^-~]/);
@@ -61423,7 +61424,7 @@ function regexCheck(regex2) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-factory-space@2.0.1/node_modules/micromark-factory-space/index.js
+// node_modules/.pnpm/micromark-factory-space@2.0.1/node_modules/micromark-factory-space/index.js
 function factorySpace(effects, ok3, type, max) {
   const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
@@ -61445,7 +61446,7 @@ function factorySpace(effects, ok3, type, max) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/content.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/content.js
 var content = {
   tokenize: initializeContent
 };
@@ -61495,7 +61496,7 @@ function initializeContent(effects) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/document.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/document.js
 var document2 = {
   tokenize: initializeDocument
 };
@@ -61677,7 +61678,7 @@ function tokenizeContainer(effects, ok3, nok) {
   return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok3, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-classify-character@2.0.1/node_modules/micromark-util-classify-character/index.js
+// node_modules/.pnpm/micromark-util-classify-character@2.0.1/node_modules/micromark-util-classify-character/index.js
 function classifyCharacter(code2) {
   if (code2 === null || markdownLineEndingOrSpace(code2) || unicodeWhitespace(code2)) {
     return 1;
@@ -61687,7 +61688,7 @@ function classifyCharacter(code2) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-resolve-all@2.0.1/node_modules/micromark-util-resolve-all/index.js
+// node_modules/.pnpm/micromark-util-resolve-all@2.0.1/node_modules/micromark-util-resolve-all/index.js
 function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
@@ -61701,7 +61702,7 @@ function resolveAll(constructs2, events, context) {
   return events;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/attention.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/attention.js
 var attention = {
   name: "attention",
   resolveAll: resolveAllAttention,
@@ -61832,7 +61833,7 @@ function movePoint(point3, offset) {
   point3._bufferIndex += offset;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/autolink.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/autolink.js
 var autolink = {
   name: "autolink",
   tokenize: tokenizeAutolink
@@ -61933,7 +61934,7 @@ function tokenizeAutolink(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/blank-line.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/blank-line.js
 var blankLine = {
   partial: true,
   tokenize: tokenizeBlankLine
@@ -61948,7 +61949,7 @@ function tokenizeBlankLine(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/block-quote.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/block-quote.js
 var blockQuote = {
   continuation: {
     tokenize: tokenizeBlockQuoteContinuation
@@ -62006,7 +62007,7 @@ function exit(effects) {
   effects.exit("blockQuote");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-escape.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-escape.js
 var characterEscape = {
   name: "characterEscape",
   tokenize: tokenizeCharacterEscape
@@ -62032,7 +62033,7 @@ function tokenizeCharacterEscape(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-reference.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-reference.js
 var characterReference = {
   name: "characterReference",
   tokenize: tokenizeCharacterReference
@@ -62097,7 +62098,7 @@ function tokenizeCharacterReference(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-fenced.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-fenced.js
 var nonLazyContinuation = {
   partial: true,
   tokenize: tokenizeNonLazyContinuation
@@ -62280,7 +62281,7 @@ function tokenizeNonLazyContinuation(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-indented.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-indented.js
 var codeIndented = {
   name: "codeIndented",
   tokenize: tokenizeCodeIndented
@@ -62344,7 +62345,7 @@ function tokenizeFurtherStart(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-text.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-text.js
 var codeText = {
   name: "codeText",
   previous,
@@ -62459,7 +62460,7 @@ function tokenizeCodeText(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-subtokenize@2.1.0/node_modules/micromark-util-subtokenize/lib/splice-buffer.js
+// node_modules/.pnpm/micromark-util-subtokenize@2.1.0/node_modules/micromark-util-subtokenize/lib/splice-buffer.js
 var SpliceBuffer = class {
   /**
    * @param {ReadonlyArray<T> | null | undefined} [initial]
@@ -62652,7 +62653,7 @@ function chunkedPush(list2, right) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-subtokenize@2.1.0/node_modules/micromark-util-subtokenize/index.js
+// node_modules/.pnpm/micromark-util-subtokenize@2.1.0/node_modules/micromark-util-subtokenize/index.js
 function subtokenize(eventsArray) {
   const jumps = {};
   let index2 = -1;
@@ -62805,7 +62806,7 @@ function subcontent(events, eventIndex) {
   return gaps;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/content.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/content.js
 var content2 = {
   resolve: resolveContent,
   tokenize: tokenizeContent
@@ -62876,7 +62877,7 @@ function tokenizeContinuation(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-factory-destination@2.0.1/node_modules/micromark-factory-destination/index.js
+// node_modules/.pnpm/micromark-factory-destination@2.0.1/node_modules/micromark-factory-destination/index.js
 function factoryDestination(effects, ok3, nok, type, literalType, literalMarkerType, rawType, stringType, max) {
   const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
@@ -62968,7 +62969,7 @@ function factoryDestination(effects, ok3, nok, type, literalType, literalMarkerT
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-factory-label@2.0.1/node_modules/micromark-factory-label/index.js
+// node_modules/.pnpm/micromark-factory-label@2.0.1/node_modules/micromark-factory-label/index.js
 function factoryLabel(effects, ok3, nok, type, markerType, stringType) {
   const self = this;
   let size = 0;
@@ -63029,7 +63030,7 @@ function factoryLabel(effects, ok3, nok, type, markerType, stringType) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-factory-title@2.0.1/node_modules/micromark-factory-title/index.js
+// node_modules/.pnpm/micromark-factory-title@2.0.1/node_modules/micromark-factory-title/index.js
 function factoryTitle(effects, ok3, nok, type, markerType, stringType) {
   let marker;
   return start;
@@ -63091,7 +63092,7 @@ function factoryTitle(effects, ok3, nok, type, markerType, stringType) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-factory-whitespace@2.0.1/node_modules/micromark-factory-whitespace/index.js
+// node_modules/.pnpm/micromark-factory-whitespace@2.0.1/node_modules/micromark-factory-whitespace/index.js
 function factoryWhitespace(effects, ok3) {
   let seen;
   return start;
@@ -63110,7 +63111,7 @@ function factoryWhitespace(effects, ok3) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/definition.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/definition.js
 var definition = {
   name: "definition",
   tokenize: tokenizeDefinition
@@ -63196,7 +63197,7 @@ function tokenizeTitleBefore(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/hard-break-escape.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/hard-break-escape.js
 var hardBreakEscape = {
   name: "hardBreakEscape",
   tokenize: tokenizeHardBreakEscape
@@ -63217,7 +63218,7 @@ function tokenizeHardBreakEscape(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/heading-atx.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/heading-atx.js
 var headingAtx = {
   name: "headingAtx",
   resolve: resolveHeadingAtx,
@@ -63308,7 +63309,7 @@ function tokenizeHeadingAtx(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-html-tag-name@2.0.1/node_modules/micromark-util-html-tag-name/index.js
+// node_modules/.pnpm/micromark-util-html-tag-name@2.0.1/node_modules/micromark-util-html-tag-name/index.js
 var htmlBlockNames = [
   "address",
   "article",
@@ -63375,7 +63376,7 @@ var htmlBlockNames = [
 ];
 var htmlRawNames = ["pre", "script", "style", "textarea"];
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-flow.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-flow.js
 var htmlFlow = {
   concrete: true,
   name: "htmlFlow",
@@ -63754,7 +63755,7 @@ function tokenizeBlankLineBefore(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-text.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-text.js
 var htmlText = {
   name: "htmlText",
   tokenize: tokenizeHtmlText
@@ -64060,7 +64061,7 @@ function tokenizeHtmlText(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-end.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-end.js
 var labelEnd = {
   name: "labelEnd",
   resolveAll: resolveAllLabelEnd,
@@ -64286,7 +64287,7 @@ function tokenizeReferenceCollapsed(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-start-image.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-start-image.js
 var labelStartImage = {
   name: "labelStartImage",
   resolveAll: labelEnd.resolveAll,
@@ -64317,7 +64318,7 @@ function tokenizeLabelStartImage(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-start-link.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-start-link.js
 var labelStartLink = {
   name: "labelStartLink",
   resolveAll: labelEnd.resolveAll,
@@ -64339,7 +64340,7 @@ function tokenizeLabelStartLink(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/line-ending.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/line-ending.js
 var lineEnding = {
   name: "lineEnding",
   tokenize: tokenizeLineEnding
@@ -64354,7 +64355,7 @@ function tokenizeLineEnding(effects, ok3) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/thematic-break.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/thematic-break.js
 var thematicBreak = {
   name: "thematicBreak",
   tokenize: tokenizeThematicBreak
@@ -64393,7 +64394,7 @@ function tokenizeThematicBreak(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/list.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/list.js
 var list = {
   continuation: {
     tokenize: tokenizeListContinuation
@@ -64523,7 +64524,7 @@ function tokenizeListItemPrefixWhitespace(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/setext-underline.js
+// node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/setext-underline.js
 var setextUnderline = {
   name: "setextUnderline",
   resolveTo: resolveToSetextUnderline,
@@ -64615,7 +64616,7 @@ function tokenizeSetextUnderline(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/flow.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/flow.js
 var flow = {
   tokenize: initializeFlow
 };
@@ -64653,7 +64654,7 @@ function initializeFlow(effects) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/text.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/initialize/text.js
 var resolver = {
   resolveAll: createResolver()
 };
@@ -64792,7 +64793,7 @@ function resolveAllLineSuffixes(events, context) {
   return events;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/constructs.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/constructs.js
 var constructs_exports = {};
 __export(constructs_exports, {
   attentionMarkers: () => attentionMarkers,
@@ -64867,7 +64868,7 @@ var disable = {
   null: []
 };
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/create-tokenizer.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/create-tokenizer.js
 function createTokenizer(parser, initialize, from2) {
   let point3 = {
     _bufferIndex: -1,
@@ -65190,7 +65191,7 @@ function serializeChunks(chunks, expandTabs2) {
   return result.join("");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/parse.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/parse.js
 function parse3(options) {
   const settings = options || {};
   const constructs2 = (
@@ -65216,14 +65217,14 @@ function parse3(options) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/postprocess.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/postprocess.js
 function postprocess(events) {
   while (!subtokenize(events)) {
   }
   return events;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/preprocess.js
+// node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/lib/preprocess.js
 var search = /[\0\t\n\r]/g;
 function preprocess2() {
   let column = 1;
@@ -65302,7 +65303,7 @@ function preprocess2() {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-util-decode-string@2.0.1/node_modules/micromark-util-decode-string/index.js
+// node_modules/.pnpm/micromark-util-decode-string@2.0.1/node_modules/micromark-util-decode-string/index.js
 var characterEscapeOrReference = /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/gi;
 function decodeString(value) {
   return value.replace(characterEscapeOrReference, decode3);
@@ -65320,7 +65321,7 @@ function decode3($0, $1, $2) {
   return decodeNamedCharacterReference($2) || $0;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/unist-util-stringify-position@4.0.0/node_modules/unist-util-stringify-position/lib/index.js
+// node_modules/.pnpm/unist-util-stringify-position@4.0.0/node_modules/unist-util-stringify-position/lib/index.js
 function stringifyPosition(value) {
   if (!value || typeof value !== "object") {
     return "";
@@ -65346,7 +65347,7 @@ function index(value) {
   return value && typeof value === "number" ? value : 1;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-from-markdown@2.0.3/node_modules/mdast-util-from-markdown/lib/index.js
+// node_modules/.pnpm/mdast-util-from-markdown@2.0.3/node_modules/mdast-util-from-markdown/lib/index.js
 var own2 = {}.hasOwnProperty;
 function fromMarkdown(value, encoding, options) {
   if (encoding && typeof encoding === "object") {
@@ -66055,7 +66056,7 @@ function defaultOnError(left, right) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/ccount@2.0.1/node_modules/ccount/index.js
+// node_modules/.pnpm/ccount@2.0.1/node_modules/ccount/index.js
 function ccount(value, character) {
   const source = String(value);
   if (typeof character !== "string") {
@@ -66070,11 +66071,11 @@ function ccount(value, character) {
   return count;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/devlop@1.1.0/node_modules/devlop/lib/default.js
+// node_modules/.pnpm/devlop@1.1.0/node_modules/devlop/lib/default.js
 function ok() {
 }
 
-// ../deepseek-harness/node_modules/.pnpm/escape-string-regexp@5.0.0/node_modules/escape-string-regexp/index.js
+// node_modules/.pnpm/escape-string-regexp@5.0.0/node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string6) {
   if (typeof string6 !== "string") {
     throw new TypeError("Expected a string");
@@ -66082,7 +66083,7 @@ function escapeStringRegexp(string6) {
   return string6.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-// ../deepseek-harness/node_modules/.pnpm/unist-util-is@6.0.1/node_modules/unist-util-is/lib/index.js
+// node_modules/.pnpm/unist-util-is@6.0.1/node_modules/unist-util-is/lib/index.js
 var convert = (
   // Note: overloads in JSDoc can’t yet use different `@template`s.
   /**
@@ -66181,12 +66182,12 @@ function looksLikeANode(value) {
   return value !== null && typeof value === "object" && "type" in value;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/color.node.js
+// node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/color.node.js
 function color(d) {
   return "\x1B[33m" + d + "\x1B[39m";
 }
 
-// ../deepseek-harness/node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/index.js
+// node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/index.js
 var empty = [];
 var CONTINUE = true;
 var EXIT = false;
@@ -66263,7 +66264,7 @@ function toResult(value) {
   return value === null || value === void 0 ? empty : [value];
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-find-and-replace@3.0.2/node_modules/mdast-util-find-and-replace/lib/index.js
+// node_modules/.pnpm/mdast-util-find-and-replace@3.0.2/node_modules/mdast-util-find-and-replace/lib/index.js
 function findAndReplace(tree, list2, options) {
   const settings = options || {};
   const ignored = convert(settings.ignore || []);
@@ -66368,7 +66369,7 @@ function toFunction(replace2) {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js
 function gfmAutolinkLiteralFromMarkdown() {
   return {
     transforms: [transformGfmAutolinkLiterals],
@@ -66489,7 +66490,7 @@ function previous2(match, email3) {
   (!email3 || code2 !== 47);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0/node_modules/mdast-util-gfm-footnote/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0/node_modules/mdast-util-gfm-footnote/lib/index.js
 footnoteReference.peek = footnoteReferencePeek;
 function enterFootnoteCallString() {
   this.buffer();
@@ -66563,7 +66564,7 @@ function gfmFootnoteFromMarkdown() {
   };
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
 handleDelete.peek = peekDelete;
 function gfmStrikethroughFromMarkdown() {
   return {
@@ -66595,7 +66596,7 @@ function peekDelete() {
   return "~";
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm-table@2.0.0/node_modules/mdast-util-gfm-table/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-table@2.0.0/node_modules/mdast-util-gfm-table/lib/index.js
 function gfmTableFromMarkdown() {
   return {
     enter: {
@@ -66655,7 +66656,7 @@ function replace($0, $1) {
   return $1 === "|" ? $1 : $0;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
 function gfmTaskListItemFromMarkdown() {
   return {
     exit: {
@@ -66702,7 +66703,7 @@ function exitParagraphWithTaskListItem(token) {
   this.exit(token);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/mdast-util-gfm@3.1.0/node_modules/mdast-util-gfm/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm@3.1.0/node_modules/mdast-util-gfm/lib/index.js
 function gfmFromMarkdown() {
   return [
     gfmAutolinkLiteralFromMarkdown(),
@@ -66713,7 +66714,7 @@ function gfmFromMarkdown() {
   ];
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js
+// node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js
 var wwwPrefix = {
   tokenize: tokenizeWwwPrefix,
   partial: true
@@ -67055,7 +67056,7 @@ function previousUnbalanced(events) {
   return result;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-footnote@2.1.0/node_modules/micromark-extension-gfm-footnote/lib/syntax.js
+// node_modules/.pnpm/micromark-extension-gfm-footnote@2.1.0/node_modules/micromark-extension-gfm-footnote/lib/syntax.js
 var indent = {
   tokenize: tokenizeIndent2,
   partial: true
@@ -67330,7 +67331,7 @@ function tokenizeIndent2(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-strikethrough@2.1.0/node_modules/micromark-extension-gfm-strikethrough/lib/syntax.js
+// node_modules/.pnpm/micromark-extension-gfm-strikethrough@2.1.0/node_modules/micromark-extension-gfm-strikethrough/lib/syntax.js
 function gfmStrikethrough(options) {
   const options_ = options || {};
   let single = options_.singleTilde;
@@ -67424,7 +67425,7 @@ function gfmStrikethrough(options) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/edit-map.js
+// node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/edit-map.js
 var EditMap = class {
   /**
    * Create a new edit map.
@@ -67503,7 +67504,7 @@ function addImplementation(editMap, at, remove, add) {
   editMap.map.push([at, remove, add]);
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/infer.js
+// node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/infer.js
 function gfmTableAlign(events, index2) {
   let inDelimiterRow = false;
   const align = [];
@@ -67530,7 +67531,7 @@ function gfmTableAlign(events, index2) {
   return align;
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/syntax.js
+// node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/syntax.js
 function gfmTable() {
   return {
     flow: {
@@ -67916,7 +67917,7 @@ function getPoint(events, index2) {
   return event[1][side];
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm-task-list-item@2.1.0/node_modules/micromark-extension-gfm-task-list-item/lib/syntax.js
+// node_modules/.pnpm/micromark-extension-gfm-task-list-item@2.1.0/node_modules/micromark-extension-gfm-task-list-item/lib/syntax.js
 var tasklistCheck = {
   name: "tasklistCheck",
   tokenize: tokenizeTasklistCheck
@@ -67990,7 +67991,7 @@ function spaceThenNonSpace(effects, ok3, nok) {
   }
 }
 
-// ../deepseek-harness/node_modules/.pnpm/micromark-extension-gfm@3.0.0/node_modules/micromark-extension-gfm/index.js
+// node_modules/.pnpm/micromark-extension-gfm@3.0.0/node_modules/micromark-extension-gfm/index.js
 function gfm(options) {
   return combineExtensions([
     gfmAutolinkLiteral(),
@@ -68001,7 +68002,7 @@ function gfm(options) {
   ]);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/markdown-parse.ts
+// packages/tui/tui-render/src/markdown-parse.ts
 var MARKDOWN_PARSE_DEFAULT_CACHE_LIMIT = 2e3;
 var cache3 = /* @__PURE__ */ new Map();
 var cacheLimit = MARKDOWN_PARSE_DEFAULT_CACHE_LIMIT;
@@ -68066,7 +68067,7 @@ function trimPartialClosingFence(root, source) {
   node2.value = node2.value.slice(0, node2.value.length - lastLine.length).replace(/\n$/, "");
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/painted-line.ts
+// packages/tui/tui-render/src/painted-line.ts
 function paintLineFromRenderLine(line8, hyperlinks2 = hyperlinksEnabled()) {
   if (line8.spans.length === 0) return paintRow([]);
   const parts = [];
@@ -68090,7 +68091,7 @@ function paintLineFromRenderLine(line8, hyperlinks2 = hyperlinksEnabled()) {
   return paintRow(parts);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/markdown-projector.ts
+// packages/tui/tui-render/src/markdown-projector.ts
 var MARKDOWN_PROJECTOR_DEFAULT_CACHE_LIMIT = 2e3;
 function plainTextMarkdownBlockRenderer() {
   return PLAIN_TEXT_RENDERER;
@@ -68497,7 +68498,7 @@ function sameShape(previous3, current) {
   return prev.start.offset === curr.start.offset && prev.end.offset === curr.end.offset;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/table-layout.ts
+// packages/tui/tui-render/src/table-layout.ts
 var DEFAULT_WORD_CAP = 30;
 var DEFAULT_COMPACT_MIN = 1;
 var DEFAULT_NARRATIVE_MIN = 4;
@@ -68876,7 +68877,7 @@ function buildRecordLayout(headerCells, bodyCells, metrics, maxCols, indent2, di
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/markdown-render.ts
+// packages/tui/tui-render/src/markdown-render.ts
 function makeBuffer() {
   return { segments: [], cols: 0 };
 }
@@ -69424,7 +69425,7 @@ function createStyledMarkdownBlockRenderer(options) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/table-scanner.ts
+// packages/tui/tui-render/src/table-scanner.ts
 var FENCE_MIN = 3;
 var DELIMITER_CELL_PATTERN = /^[\s:]*-{1,}[\s:]*$/;
 var TableScanner = class {
@@ -69694,7 +69695,7 @@ function isDelimiterRow(cells) {
   return true;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/markdown.tsx
+// packages/tui/tui-render/src/markdown.tsx
 var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
 var MARKDOWN_CACHE_LIMIT = 2e3;
 function paintedLineFromRenderLine(line8, hyperlinks2) {
@@ -69960,7 +69961,7 @@ function blockPositionRange(node2) {
   return { start: position2.start.offset ?? -1, end: position2.end.offset ?? -1 };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/reasoning.tsx
+// packages/tui/tui-render/src/reasoning.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
 function formatSeconds(ms) {
   return (ms / 1e3).toFixed(1);
@@ -69994,7 +69995,7 @@ function ReasoningBlock({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/row-source.ts
+// packages/tui/tui-render/src/row-source.ts
 function indexedRows(length, read) {
   const offset = (index2) => Math.min(length, Math.max(0, index2 < 0 ? length + Math.trunc(index2) : Math.trunc(index2)));
   return Object.freeze({
@@ -70079,7 +70080,7 @@ var RowSequence = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/ui-copy.ts
+// packages/tui/tui-render/src/ui-copy.ts
 var zh = {
   on: "\u5F00",
   off: "\u5173",
@@ -70163,7 +70164,7 @@ function tuiCopy(key, locale = "zh-CN") {
   return dictionaries[locale][key];
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-body.ts
+// packages/tui/tui-render/src/tool-body.ts
 var graphemes = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function textLines(text4, prefix = "") {
   let length = 1;
@@ -70301,7 +70302,7 @@ function toolCardOriginalText(card, options) {
 `;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-cards.ts
+// packages/tui/tui-render/src/tool-cards.ts
 import { isAbsolute as isAbsolute2 } from "node:path";
 import { pathToFileURL } from "node:url";
 function toolCardDisplayStatus(card) {
@@ -70486,7 +70487,7 @@ function tokenizeCommandHeading(heading) {
   return Object.freeze(tokens);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-rows.ts
+// packages/tui/tui-render/src/tool-rows.ts
 var graphemes2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function truncateMiddleDisplay(text4, maxCols, leadingShare = 0.5) {
   if (maxCols <= 0) return "";
@@ -70634,7 +70635,7 @@ var ToolRowCache = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/render-policy.ts
+// packages/tui/tui-render/src/render-policy.ts
 var RENDER_POLICY_DEFAULT_STREAM_FRAME_INTERVAL_MS = 16;
 var RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH = 64;
 var RENDER_POLICY_DEFAULT_STREAM_EXIT_DEPTH = 32;
@@ -70685,7 +70686,7 @@ function renderPolicyDefaults() {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-card.tsx
+// packages/tui/tui-render/src/tool-card.tsx
 var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
 function ToolCard({ card, expanded = false, maxCols = 80, locale = "zh-CN", policy = toolPolicyDefaults() }) {
   const cache4 = new ToolRowCache(policy);
@@ -70693,7 +70694,7 @@ function ToolCard({ card, expanded = false, maxCols = 80, locale = "zh-CN", poli
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: rows.map((line8, index2) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Text, { wrap: "truncate", children: paintLineFromRenderLine(line8, hyperlinksEnabled()) }, index2)) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-presenter-cache.ts
+// packages/tui/tui-render/src/tool-presenter-cache.ts
 var ToolPresenterCache = class {
   /** @param capacity - maximum retained tool revisions, validated by the host. */
   constructor(capacity) {
@@ -70727,7 +70728,7 @@ var ToolPresenterCache = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/display-revision.ts
+// packages/tui/tui-render/src/display-revision.ts
 var DisplayRevisionIndex = class {
   next = 0;
   entries = /* @__PURE__ */ new WeakMap();
@@ -70746,7 +70747,7 @@ var DisplayRevisionIndex = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/plain-rows.ts
+// packages/tui/tui-render/src/plain-rows.ts
 var PlainTextRowCache = class {
   /** @param policy - host-validated row and byte budgets for derived text. */
   constructor(policy) {
@@ -70821,10 +70822,10 @@ var PlainTextRowCache = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/pixel-fish-home.tsx
+// packages/tui/tui-render/src/pixel-fish-home.tsx
 var import_react36 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/packages/tui/tui-render/src/duration-stats.ts
+// packages/tui/tui-render/src/duration-stats.ts
 import { createHistogram } from "node:perf_hooks";
 var DurationStats = class {
   /** @param capacity - number of exact recent samples retained for diagnostics. */
@@ -70888,7 +70889,7 @@ var DurationStats = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/frame-stats.ts
+// packages/tui/tui-render/src/frame-stats.ts
 var import_react35 = __toESM(require_react(), 1);
 var FRAME_STATS_CAPACITY = 120;
 function createFrameProbe(now = () => performance.now(), capacity = FRAME_STATS_CAPACITY) {
@@ -70936,7 +70937,7 @@ function profilerOnRender(probe) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/pixel-fish-home.tsx
+// packages/tui/tui-render/src/pixel-fish-home.tsx
 var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
 var BRAND_FRAME_MS = 320;
 var BRAND_ART_ROWS = BRAND_HALF_BLOCK.length;
@@ -71028,7 +71029,7 @@ function PixelFishHome({
   return frameProbe === void 0 ? home : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(FrameProbe, { probe: frameProbe, children: home });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/conversation-layout.ts
+// packages/tui/tui-render/src/conversation-layout.ts
 var WIDE_GUTTER_COLUMNS = 2;
 var GUTTER_BREAKPOINT_COLUMNS = 40;
 function conversationWidth(columns) {
@@ -71039,7 +71040,7 @@ function conversationLeft(columns, width) {
   return Math.max(0, Math.ceil((columns - width) / 2));
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/transcript-viewport.ts
+// packages/tui/tui-render/src/transcript-viewport.ts
 var EMPTY_TRANSCRIPT_VIEWPORT = Object.freeze({
   follow: true,
   offsetFromBottom: 0,
@@ -71239,7 +71240,7 @@ function physicalScrollRailGeometry(contentRows, viewportRows, offsetFromBottom)
   return { rows, thumbStart: travel - fromBottom, thumbRows };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/transcript-layout-cache.ts
+// packages/tui/tui-render/src/transcript-layout-cache.ts
 var TranscriptLayoutCache = class {
   scopeKey = "";
   measured = /* @__PURE__ */ new Map();
@@ -71291,10 +71292,10 @@ var TranscriptLayoutCache = class {
   }
 };
 
-// ../deepseek-harness/packages/tui/tui-render/src/mouse-io.ts
+// packages/tui/tui-render/src/mouse-io.ts
 import { PassThrough as PassThrough2 } from "node:stream";
 
-// ../deepseek-harness/packages/tui/tui-render/src/frame-metrics.ts
+// packages/tui/tui-render/src/frame-metrics.ts
 var FRAME_METRICS_CAPACITY = 120;
 var PENDING_DELTA_INGRESS = /* @__PURE__ */ new WeakMap();
 function markDeltaIngress(metrics, nowMs = performance.now()) {
@@ -71440,7 +71441,7 @@ function createFrameMetrics(now = () => performance.now(), capacity = FRAME_METR
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/frame-snapshot.ts
+// packages/tui/tui-render/src/frame-snapshot.ts
 var publishedSnapshot;
 function setVisibleFrameSnapshot(snapshot) {
   publishedSnapshot = snapshot;
@@ -71511,7 +71512,7 @@ function diffVisibleFrameSnapshots(previous3, next) {
   return { forced, changes, unchangedRows };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/frame-fill.ts
+// packages/tui/tui-render/src/frame-fill.ts
 var BG_OFF = "\x1B[49m";
 var SGR_RESET = "\x1B[0m";
 var ERASE_SCROLLBACK = "\x1B[3J";
@@ -71718,7 +71719,7 @@ function countWrittenCells(chunk) {
   return printable.split("\n").reduce((cells, line8) => cells + displayWidth(line8), 0);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/screen-atlas.ts
+// packages/tui/tui-render/src/screen-atlas.ts
 var GRAPHEME2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function paintSnapshotLine(line8) {
   const parts = line8.spans.map((span) => {
@@ -72255,7 +72256,7 @@ function readCsi(text4, start) {
   return void 0;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/sgr-mouse.ts
+// packages/tui/tui-render/src/sgr-mouse.ts
 var ENABLE_SGR_MOUSE = "\x1B[?1000h\x1B[?1002h\x1B[?1006h";
 var DISABLE_SGR_MOUSE = "\x1B[?1006l\x1B[?1002l\x1B[?1000l";
 var COMPLETE = /^\x1b\[<(\d+);(\d+);(\d+)([Mm])/;
@@ -72317,7 +72318,7 @@ function consumeMouseStdin(buffer) {
   return { mouse, forward, rest: "" };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/clipboard.ts
+// packages/tui/tui-render/src/clipboard.ts
 import { spawn } from "node:child_process";
 var OSC52_MAX_CHARS = 1e5;
 function encodeOsc52(text4) {
@@ -72349,7 +72350,7 @@ function copyText(text4, write, spawnFn = spawn, spec) {
   }
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/open-url.ts
+// packages/tui/tui-render/src/open-url.ts
 import { spawn as spawn2 } from "node:child_process";
 function openerSpec(platform2, href) {
   if (platform2 === "darwin") return { command: "open", args: [href] };
@@ -72371,7 +72372,7 @@ function openUrl(href, spawnFn = spawn2, platform2 = process.platform) {
   }
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/mouse-io.ts
+// packages/tui/tui-render/src/mouse-io.ts
 var scrollListener;
 var railListener;
 var railRegion;
@@ -72675,7 +72676,7 @@ function wrapStdin(raw, onMouse, wheelRows) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/block-rows.ts
+// packages/tui/tui-render/src/block-rows.ts
 function computeBlockRowsScopeKey(width, theme, fold, renderMode) {
   return `${width}|${theme}|${fold.reasoning ? "r1" : "r0"}|${fold.tools ? "t1" : "t0"}|${renderMode}`;
 }
@@ -73130,7 +73131,7 @@ function messageGapLines(width, startRowInBlock = 0) {
   ]);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/physical-line.ts
+// packages/tui/tui-render/src/physical-line.ts
 var GRAPHEME_SEGMENTER2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function joinSpanText(spans) {
   let joined = "";
@@ -73213,7 +73214,7 @@ function physicalLineByteSize(line8) {
   return bytes;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/transcript-line-store.ts
+// packages/tui/tui-render/src/transcript-line-store.ts
 var DEFAULT_TRANSCRIPT_CACHE_MAX_BYTES = 4 * 1024 * 1024;
 var MutableRevisionImpl = class {
   blockId;
@@ -73579,7 +73580,7 @@ function createTranscriptRenderStore(config2) {
   return new TranscriptRenderStoreImpl(config2);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/scroll-scheduler.ts
+// packages/tui/tui-render/src/scroll-scheduler.ts
 var SCROLL_SCHEDULER_DEFAULT_FRAME_INTERVAL_MS = 16;
 var SCROLL_SCHEDULER_DEFAULT_STEP_PER_FRAME = 1;
 var SCROLL_SCHEDULER_DEFAULT_CATCH_UP_THRESHOLD = 10;
@@ -73656,7 +73657,7 @@ function createScrollScheduler(options = {}) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/stream-queue.ts
+// packages/tui/tui-render/src/stream-queue.ts
 var STREAM_QUEUE_DEFAULT_SMOOTH_ROWS_PER_FRAME = 2;
 var STREAM_QUEUE_DEFAULT_CATCH_UP_ROWS_PER_FRAME = 16;
 var STREAM_QUEUE_DEFAULT_ENTRY_DEPTH = 64;
@@ -73757,7 +73758,7 @@ function createStreamQueue(options = {}) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/frame-arbiter.ts
+// packages/tui/tui-render/src/frame-arbiter.ts
 var FRAME_ARBITER_DEFAULT_FRAME_INTERVAL_MS = 16;
 function createFrameArbiter(options) {
   const frameIntervalMs = options.frameIntervalMs ?? FRAME_ARBITER_DEFAULT_FRAME_INTERVAL_MS;
@@ -73870,7 +73871,7 @@ function createFrameArbiter(options) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/stream-view.tsx
+// packages/tui/tui-render/src/stream-view.tsx
 var import_jsx_runtime6 = __toESM(require_jsx_runtime(), 1);
 var ASSISTANT_PROSE_PREFIX_COLUMNS = displayWidth("\u25CF ");
 var LIVE_DURATION_TICK_MS = 100;
@@ -75753,11 +75754,11 @@ function StreamView({
   return transcriptViewport;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/loop.tsx
+// packages/tui/tui-render/src/loop.tsx
 import { homedir } from "node:os";
 var import_react39 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/packages/tui/tui-render/src/session-pane.tsx
+// packages/tui/tui-render/src/session-pane.tsx
 var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
 var SESSION_ID_HINT_MIN_LENGTH = 8;
 function compactSessionId(id) {
@@ -75860,7 +75861,7 @@ function SessionPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/search-pane.tsx
+// packages/tui/tui-render/src/search-pane.tsx
 var import_jsx_runtime8 = __toESM(require_jsx_runtime(), 1);
 var SEARCH_WINDOW = 30;
 function SearchPane({
@@ -75895,7 +75896,7 @@ function SearchPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/model-pane.tsx
+// packages/tui/tui-render/src/model-pane.tsx
 var import_jsx_runtime9 = __toESM(require_jsx_runtime(), 1);
 var MODEL_WINDOW = 30;
 function ModelPane({
@@ -75934,7 +75935,7 @@ function ModelPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/help-pane.tsx
+// packages/tui/tui-render/src/help-pane.tsx
 var import_jsx_runtime10 = __toESM(require_jsx_runtime(), 1);
 var HELP_WINDOW = 20;
 function HelpPane({ lines, offset }) {
@@ -75952,7 +75953,7 @@ function HelpPane({ lines, offset }) {
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/approval-pane.tsx
+// packages/tui/tui-render/src/approval-pane.tsx
 var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
 var PROMPT_OPTIONS = "[Y] \u5141\u8BB8 \xB7 [n] \u62D2\u7EDD \xB7 [a] \u672C\u4F1A\u8BDD\u603B\u662F";
 var DELIVERY_NEXT = "\u5F53\u524D\u5DE5\u5177\u672A\u6267\u884C \xB7 \u53EF\u91CD\u8BD5\u8BE5\u8F6E";
@@ -76005,7 +76006,7 @@ function ApprovalPane({
   ] }) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/permission-pane.tsx
+// packages/tui/tui-render/src/permission-pane.tsx
 var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
 var TITLE = "\u6743\u9650\u9884\u8BBE";
 var FOOTNOTE = "\u2191\u2193/jk \u9009\u62E9 \xB7 1-3 \u76F4\u8FBE \xB7 Enter \u5E94\u7528 \xB7 Esc \u5173\u95ED";
@@ -76061,7 +76062,7 @@ function PermissionPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/settings-pane.tsx
+// packages/tui/tui-render/src/settings-pane.tsx
 var import_jsx_runtime13 = __toESM(require_jsx_runtime(), 1);
 var TITLE2 = "\u8BBE\u7F6E";
 var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
@@ -76150,7 +76151,7 @@ function SettingsPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/overlay-shell.tsx
+// packages/tui/tui-render/src/overlay-shell.tsx
 var import_jsx_runtime14 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_OVERLAY_PANE = { open: false };
 function line4(text4, token, bold = false) {
@@ -76174,7 +76175,7 @@ function OverlayShell({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/agent-hub-pane.tsx
+// packages/tui/tui-render/src/agent-hub-pane.tsx
 var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
 function formatTokens(value) {
   const scaled = (next) => next >= 100 ? String(Math.round(next)) : String(Math.round(next * 10) / 10);
@@ -76286,7 +76287,7 @@ function AgentHubPane({
   );
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/plan-directory-pane.tsx
+// packages/tui/tui-render/src/plan-directory-pane.tsx
 var import_jsx_runtime16 = __toESM(require_jsx_runtime(), 1);
 var TITLE3 = "\u8BA1\u5212";
 var FOOTNOTE3 = "j/k \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED";
@@ -76339,7 +76340,7 @@ function PlanDirectoryPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/plan-review-pane.tsx
+// packages/tui/tui-render/src/plan-review-pane.tsx
 var import_jsx_runtime17 = __toESM(require_jsx_runtime(), 1);
 var TITLE4 = "\u8BA1\u5212\u8BC4\u5BA1";
 var FOOTNOTE4 = "y \u6279\u51C6 \xB7 n \u7EE7\u7EED\u89C4\u5212 \xB7 Esc \u53D6\u6D88";
@@ -76373,7 +76374,7 @@ function PlanReviewPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/ask-user-pane.tsx
+// packages/tui/tui-render/src/ask-user-pane.tsx
 var import_jsx_runtime18 = __toESM(require_jsx_runtime(), 1);
 var FOOTNOTE5 = "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 Enter \u4F5C\u7B54 \xB7 Esc \u53D6\u6D88\u63D0\u95EE";
 var INVALID_TITLE = "\u2717 \u63D0\u95EE\u65E0\u6548";
@@ -76413,7 +76414,7 @@ function AskUserPane({
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/timeline-view.tsx
+// packages/tui/tui-render/src/timeline-view.tsx
 var import_jsx_runtime19 = __toESM(require_jsx_runtime(), 1);
 var FIRST_LINE_MAX = 120;
 var TIMELINE_WINDOW = 60;
@@ -76452,10 +76453,10 @@ function firstLine(text4) {
   return line8.length > FIRST_LINE_MAX ? `${line8.slice(0, FIRST_LINE_MAX)}\u2026` : line8;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/input-bar.tsx
+// packages/tui/tui-render/src/input-bar.tsx
 var import_react38 = __toESM(require_react(), 1);
 
-// ../deepseek-harness/packages/tui/tui-render/src/composer-cursor.ts
+// packages/tui/tui-render/src/composer-cursor.ts
 var GRAPHEME3 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function composerCursorPosition(text4, caretIndex) {
   const clamped = Math.max(0, Math.min(caretIndex, text4.length));
@@ -76522,7 +76523,7 @@ function composerFrameAnchor(text4, caretIndex, options) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/composer-tokens.ts
+// packages/tui/tui-render/src/composer-tokens.ts
 var IMAGE_TOKEN = /^\[图片 #[1-9]\d*\]/u;
 var COMMAND_TOKEN = /^\/[\p{L}\p{N}][\p{L}\p{N}._-]*/u;
 var MENTION_TOKEN = /^@\S+/u;
@@ -76562,7 +76563,7 @@ function tokenizeComposer(text4) {
   return Object.freeze(tokens);
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/input-bar.tsx
+// packages/tui/tui-render/src/input-bar.tsx
 var import_jsx_runtime20 = __toESM(require_jsx_runtime(), 1);
 var PROMPT_WIDTH = 2;
 var COMPOSER_PLACEHOLDER = tuiCopy("inputHint");
@@ -76663,7 +76664,7 @@ function InputBar({
   );
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/command-menu.tsx
+// packages/tui/tui-render/src/command-menu.tsx
 var import_jsx_runtime21 = __toESM(require_jsx_runtime(), 1);
 var COMMAND_MENU_WINDOW = 8;
 var MARKER_COLS2 = 2;
@@ -76733,7 +76734,7 @@ function CommandMenu({
   return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Box_default, { flexDirection: "column", width, children: matches.map((item, index2) => /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { children: paintRow(paletteRow(item, offset + index2 === clampedIndex, nameCols, width)) }) }, item.name)) }) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/mention.tsx
+// packages/tui/tui-render/src/mention.tsx
 var import_jsx_runtime22 = __toESM(require_jsx_runtime(), 1);
 var KIND_LABELS = {
   file: "\u6587\u4EF6",
@@ -76794,7 +76795,7 @@ function Mention({
   return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Box_default, { flexDirection: "column", width, children: rows }) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/goal-footer.ts
+// packages/tui/tui-render/src/goal-footer.ts
 function goalFooterHead(goal) {
   return `\u76EE\u6807 ${goal.phase} ${goal.roundsStarted}/${goal.maxGoalRounds}`;
 }
@@ -76806,7 +76807,7 @@ function goalFooterRuns(goal, maxObjectiveCols) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/adaptive-info-footer.ts
+// packages/tui/tui-render/src/adaptive-info-footer.ts
 function segment(text4, token) {
   return { runs: [{ text: text4, token }] };
 }
@@ -77029,7 +77030,7 @@ function formatQuietStatusRow(view, columns) {
   });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/todo-hud.tsx
+// packages/tui/tui-render/src/todo-hud.tsx
 var import_jsx_runtime23 = __toESM(require_jsx_runtime(), 1);
 var STATUS_PRESENTATION = {
   pending: { glyph: "\xB7", word: "\u5F85\u529E", token: "fgDim" },
@@ -77058,7 +77059,7 @@ function TodoHud({
   }) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/jobs-hud.tsx
+// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime24 = __toESM(require_jsx_runtime(), 1);
 function JobsHud({
   jobs,
@@ -77077,7 +77078,7 @@ function JobsHud({
   }) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/workflow-hud.tsx
+// packages/tui/tui-render/src/workflow-hud.tsx
 var import_jsx_runtime25 = __toESM(require_jsx_runtime(), 1);
 function WorkflowHud({
   run: run2,
@@ -77115,7 +77116,7 @@ function WorkflowHud({
   return rows.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(import_jsx_runtime25.Fragment, { children: rows });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/workflow-overlay.tsx
+// packages/tui/tui-render/src/workflow-overlay.tsx
 var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
 var WORKFLOW_OVERLAY_WINDOW = 8;
 var EMPTY_WORKFLOW_OVERLAY = { open: false, offset: 0 };
@@ -77150,7 +77151,7 @@ function WorkflowOverlay({
   return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", footnote: "j/k \u6EDA\u52A8 \xB7 Esc \u5173\u95ED", children: rows });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/workspace-pane.tsx
+// packages/tui/tui-render/src/workspace-pane.tsx
 var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_WORKSPACE_PANE = {
   open: false,
@@ -77200,7 +77201,7 @@ function WorkspacePane({
   );
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/feedback-pane.tsx
+// packages/tui/tui-render/src/feedback-pane.tsx
 var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_FEEDBACK_PANE = {
   open: false,
@@ -77252,7 +77253,7 @@ function FeedbackPane({
   );
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/keymap.ts
+// packages/tui/tui-render/src/keymap.ts
 var KEYMAP = [
   { key: "return", action: "send" },
   { key: "return", shift: true, action: "newline" },
@@ -77289,7 +77290,7 @@ function toolDetailsKeyAction(key, info) {
   return void 0;
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/tool-details-pane.tsx
+// packages/tui/tui-render/src/tool-details-pane.tsx
 var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_TOOL_DETAILS_PANE = Object.freeze({
   open: false,
@@ -77334,7 +77335,7 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
   ] });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/queue-chip.tsx
+// packages/tui/tui-render/src/queue-chip.tsx
 var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
 function queueChipText(count) {
   return count <= 0 ? void 0 : `\u5F85\u53D1 ${String(count)} \xB7 \u2191 \u53D6\u51FA`;
@@ -77344,7 +77345,7 @@ function QueueChip({ count }) {
   return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/loop.tsx
+// packages/tui/tui-render/src/loop.tsx
 var CHORD_WINDOW_MS = 600;
 function activeMentionQuery(text4) {
   if (!text4.startsWith("@")) return void 0;
@@ -79418,7 +79419,7 @@ function TuiLoop({
   });
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/react-timing.ts
+// packages/tui/tui-render/src/react-timing.ts
 import { performance as performance2, PerformanceObserver } from "node:perf_hooks";
 function isReactTiming(entry) {
   if (entry.entryType !== "measure" || !("detail" in entry)) return false;
@@ -79444,12 +79445,12 @@ function observeReactTiming() {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/message-visibility.ts
+// packages/tui/tui-render/src/message-visibility.ts
 function isHumanUserMessage(event) {
   return event.type === "user/message" && event.data.source.kind === "user";
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/projection.ts
+// packages/tui/tui-render/src/projection.ts
 function lastFencedCode(text4) {
   const lines = text4.split(/\r?\n/u);
   let openingLength;
@@ -79766,7 +79767,7 @@ function createProjector() {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/interaction-state.ts
+// packages/tui/tui-render/src/interaction-state.ts
 function reduceInteraction(state, event) {
   switch (state) {
     case "idle":
@@ -79806,7 +79807,7 @@ function reduceInteraction(state, event) {
   }
 }
 
-// ../deepseek-harness/packages/tui/tui-render/src/index.ts
+// packages/tui/tui-render/src/index.ts
 function mountTuiRender(node2, options = {}) {
   const env3 = options.env ?? process.env;
   const policy = options.renderPolicy ?? renderPolicyDefaults();
@@ -79876,7 +79877,7 @@ function mountTuiLoop(controller, options) {
   );
 }
 
-// ../deepseek-harness/packages/tui/tui/src/terminal-guard.ts
+// packages/tui/tui/src/terminal-guard.ts
 var NON_INTERACTIVE_MESSAGE = "deepseek-tui requires an interactive terminal\n";
 var environment = {
   isTTY: process.stdout.isTTY,
@@ -79888,7 +79889,7 @@ function assertInteractiveTerminal(env3 = environment, stderr = process.stderr, 
   exit3(0);
 }
 
-// ../deepseek-harness/packages/tui/tui/src/signal-semantics.ts
+// packages/tui/tui/src/signal-semantics.ts
 var SIGNAL_TABLE = {
   /** First Ctrl+C stops the current generation; a second one confirms exit. */
   SIGINT: "stop-generation",
@@ -79922,7 +79923,7 @@ function installSignalHooks(cleanup) {
   };
 }
 
-// ../deepseek-harness/packages/tui/tui/src/export.ts
+// packages/tui/tui/src/export.ts
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname as dirname2, resolve as resolve3 } from "node:path";
 function timeHeaderOf(time3) {
@@ -80020,7 +80021,7 @@ async function exportSessionMarkdown(session, dir) {
   return target;
 }
 
-// ../deepseek-harness/packages/tui/tui/src/settings-rows.ts
+// packages/tui/tui/src/settings-rows.ts
 var LEADING_NAMESPACES = [
   "tui",
   "llm-deepseek",
@@ -80119,7 +80120,7 @@ function settingsRowsFromDescribe(descriptors, read) {
   return [...ordered, ...rest];
 }
 
-// ../deepseek-harness/packages/tui/tui/src/index.ts
+// packages/tui/tui/src/index.ts
 try {
   if (typeof Session === "function" && !("events" in Session.prototype)) {
     Object.defineProperty(Session.prototype, "events", {
