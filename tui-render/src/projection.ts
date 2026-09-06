@@ -279,6 +279,57 @@ function contentText(
 }
 
 /**
+ * Format a turn failure into an actionable, user-facing error card text.
+ * @param error - failure details from the turn/end error payload.
+ * @returns formatted markdown error description.
+ */
+export function formatTurnError(error: { message?: string; code?: string; status?: number }): string {
+  const rawMessage = error.message || '未知错误'
+  const code = error.code
+  const status = error.status
+
+  if (rawMessage.includes('sk-') && (rawMessage.includes('apiKeyEnv') || rawMessage.includes('store sk-') || rawMessage.includes('export sk-'))) {
+    return '⚠️ **配置错误**：检测到 `apiKeyEnv` 中误填了明文密钥。`apiKeyEnv` 必须是环境变量名称（如 `DEEPSEEK_API_KEY`）。请在 `/settings` 中更正或检查 `~/.dsh/settings.yaml`，并使用 `/key` 命令配置密钥。'
+  }
+  if (
+    code === 'MISSING_CREDENTIAL'
+    || rawMessage.includes('DEEPSEEK_API_KEY')
+    || rawMessage.includes('MISSING_CREDENTIAL')
+    || rawMessage.includes('no API key')
+  ) {
+    return '⚠️ **API 密钥缺失**：未检测到有效密钥。请在终端执行 `export DEEPSEEK_API_KEY="sk-..."` 或输入 `/key` 命令进行配置。'
+  }
+  if (
+    status === 401
+    || code === 'AUTH'
+    || rawMessage.includes('401')
+    || rawMessage.toLowerCase().includes('authentication fails')
+    || rawMessage.toLowerCase().includes('invalid api key')
+    || rawMessage.toLowerCase().includes('unauthorized')
+  ) {
+    return `⚠️ **API 认证失败（HTTP 401）**：API Key 无效或未授权（${rawMessage}）。请检查密钥是否正确，或使用 \`/key\` 重新配置。`
+  }
+  if (
+    status === 429
+    || code === 'RATE_LIMIT'
+    || rawMessage.includes('429')
+    || rawMessage.toLowerCase().includes('quota')
+    || rawMessage.toLowerCase().includes('rate limit')
+  ) {
+    return `⚠️ **请求受限（HTTP 429）**：请求频率超限或账户余额不足（${rawMessage}）。请稍后重试或检查账户额度。`
+  }
+  if (
+    rawMessage.includes('ECONNREFUSED')
+    || rawMessage.includes('ETIMEDOUT')
+    || rawMessage.includes('ENOTFOUND')
+    || rawMessage.includes('fetch failed')
+  ) {
+    return `⚠️ **网络连接失败**：无法连接到模型服务（${rawMessage}），请检查网络连接或代理配置。`
+  }
+  return `⚠️ **模型请求失败**：${rawMessage}`
+}
+
+/**
  * Create an event projector for one caller-admitted Session stream. Each step
  * gets an independent block assembler while completed step content remains
  * ordered within its turn; completed assistant rows retain reasoning and tool
@@ -513,10 +564,7 @@ export function createProjector(): Projector {
             let text = activeTurn.assistantText
             const content = (activeTurn.content as ProjectedTurnContent[]).map(item => ({ ...item }))
             if (reason.kind === 'error') {
-              const rawMessage = reason.error.message || '未知错误'
-              const formattedError = rawMessage.includes('DEEPSEEK_API_KEY') || reason.error.code === 'MISSING_CREDENTIAL'
-                ? '⚠️ **API 密钥缺失**：未检测到 `DEEPSEEK_API_KEY`。请在终端执行 `export DEEPSEEK_API_KEY="sk-..."` 或在 `~/.dsh/.credentials.yaml` 中配置密钥。'
-                : `⚠️ **模型请求失败**：${rawMessage}`
+              const formattedError = formatTurnError(reason.error)
               if (text.trim() === '') {
                 text = formattedError
                 content.push({ kind: 'text', text: formattedError })

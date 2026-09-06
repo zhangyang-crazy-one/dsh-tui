@@ -193,7 +193,9 @@ export function SettingsPane({
           && (row.field === 'reasoning' || row.field === 'scrollbar'
             || row.field === 'statusDetails' || row.field === 'locale')
           ? `${row.field} · ${tuiCopy(row.field, locale)}`
-          : row.field
+          : row.field === 'apiKeyEnv'
+            ? `${row.field} · 环境变量名`
+            : row.field
         const label = `${row.namespace} · ${localized}`
         return (
           <Box key={`${row.namespace}:${row.field}`} width="100%">

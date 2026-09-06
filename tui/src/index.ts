@@ -911,6 +911,8 @@ export const SEARCH_DEBOUNCE_MS = 120
 const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
   { name: 'export', description: 'Export this session to a Markdown file' },
   { name: 'help', description: 'Show command help and key bindings' },
+  { name: 'key', description: 'Set or update API key' },
+  { name: 'login', description: 'Set or update API key' },
   { name: 'model', description: 'Switch the active model' },
   { name: 'reload', description: 'Relaunch this process and resume the session' },
   { name: 'resume', description: 'Switch or resume a session' },
@@ -4222,6 +4224,18 @@ export class RuntimeController implements TuiController {
       this.openHelpPane()
       return
     }
+    if (query === 'key' || query === 'key ' || query === 'login' || query === 'login ') {
+      if (this.blockingHead() !== undefined) return
+      this.openApiKeyPane()
+      return
+    }
+    if (query.startsWith('key ') || query.startsWith('login ')) {
+      const token = query.replace(/^(?:key|login)\s+/, '').trim()
+      if (token.length > 0) {
+        this.applyOnboardingKey(ONBOARDING_KEY, token)
+        return
+      }
+    }
     if (query === 'model') {
       this.openModelPane()
       return
@@ -4511,6 +4525,13 @@ export class RuntimeController implements TuiController {
       try {
         await credentials.set(credentialRef(field), value)
         if (this.closed) return
+        const settings = this.ctx.get('settings')
+        if (settings !== undefined) {
+          const ds = settings.get('llm-deepseek') as Record<string, unknown> | undefined
+          if (typeof ds?.apiKeyEnv === 'string' && ds.apiKeyEnv.startsWith('sk-')) {
+            await settings.update('llm-deepseek', { apiKeyEnv: 'DEEPSEEK_API_KEY' })
+          }
+        }
         this.settingsOnboarding = false
         this.settingsOpen = false
         this.settingsEditing = false
@@ -4581,6 +4602,24 @@ export class RuntimeController implements TuiController {
         },
       })
     })
+  }
+
+  /**
+   * Open the API-key configuration overlay directly from /key or /login.
+   */
+  private openApiKeyPane(): void {
+    this.closeOtherPanels()
+    this.settingsOnboarding = true
+    this.settingsEditing = true
+    this.settingsUpdateError = undefined
+    this.settingsRows = [{
+      namespace: 'credentials',
+      field: ONBOARDING_KEY,
+      value: '',
+    }]
+    this.settingsSelectedIndex = 0
+    this.settingsOpen = true
+    this.emit()
   }
 
   /**

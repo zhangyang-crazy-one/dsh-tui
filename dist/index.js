@@ -76135,7 +76135,7 @@ function SettingsPane({
     visible.map((row, index2) => {
       const absolute = start + index2;
       const selected = absolute === selectedIndex;
-      const localized = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.field;
+      const localized = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
       const label = `${row.namespace} \xB7 ${localized}`;
       return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Text, { children: paintRow(fieldRow(label, row.value, selected, width)) }) }, `${row.namespace}:${row.field}`);
     }),
@@ -79521,6 +79521,27 @@ function projectAssistantBlocks(blocks) {
 function contentText(content3, kind) {
   return content3.filter((item) => item.kind === kind).map((item) => item.text).join("");
 }
+function formatTurnError(error51) {
+  const rawMessage = error51.message || "\u672A\u77E5\u9519\u8BEF";
+  const code2 = error51.code;
+  const status = error51.status;
+  if (rawMessage.includes("sk-") && (rawMessage.includes("apiKeyEnv") || rawMessage.includes("store sk-") || rawMessage.includes("export sk-"))) {
+    return "\u26A0\uFE0F **\u914D\u7F6E\u9519\u8BEF**\uFF1A\u68C0\u6D4B\u5230 `apiKeyEnv` \u4E2D\u8BEF\u586B\u4E86\u660E\u6587\u5BC6\u94A5\u3002`apiKeyEnv` \u5FC5\u987B\u662F\u73AF\u5883\u53D8\u91CF\u540D\u79F0\uFF08\u5982 `DEEPSEEK_API_KEY`\uFF09\u3002\u8BF7\u5728 `/settings` \u4E2D\u66F4\u6B63\u6216\u68C0\u67E5 `~/.dsh/settings.yaml`\uFF0C\u5E76\u4F7F\u7528 `/key` \u547D\u4EE4\u914D\u7F6E\u5BC6\u94A5\u3002";
+  }
+  if (code2 === "MISSING_CREDENTIAL" || rawMessage.includes("DEEPSEEK_API_KEY") || rawMessage.includes("MISSING_CREDENTIAL") || rawMessage.includes("no API key")) {
+    return '\u26A0\uFE0F **API \u5BC6\u94A5\u7F3A\u5931**\uFF1A\u672A\u68C0\u6D4B\u5230\u6709\u6548\u5BC6\u94A5\u3002\u8BF7\u5728\u7EC8\u7AEF\u6267\u884C `export DEEPSEEK_API_KEY="sk-..."` \u6216\u8F93\u5165 `/key` \u547D\u4EE4\u8FDB\u884C\u914D\u7F6E\u3002';
+  }
+  if (status === 401 || code2 === "AUTH" || rawMessage.includes("401") || rawMessage.toLowerCase().includes("authentication fails") || rawMessage.toLowerCase().includes("invalid api key") || rawMessage.toLowerCase().includes("unauthorized")) {
+    return `\u26A0\uFE0F **API \u8BA4\u8BC1\u5931\u8D25\uFF08HTTP 401\uFF09**\uFF1AAPI Key \u65E0\u6548\u6216\u672A\u6388\u6743\uFF08${rawMessage}\uFF09\u3002\u8BF7\u68C0\u67E5\u5BC6\u94A5\u662F\u5426\u6B63\u786E\uFF0C\u6216\u4F7F\u7528 \`/key\` \u91CD\u65B0\u914D\u7F6E\u3002`;
+  }
+  if (status === 429 || code2 === "RATE_LIMIT" || rawMessage.includes("429") || rawMessage.toLowerCase().includes("quota") || rawMessage.toLowerCase().includes("rate limit")) {
+    return `\u26A0\uFE0F **\u8BF7\u6C42\u53D7\u9650\uFF08HTTP 429\uFF09**\uFF1A\u8BF7\u6C42\u9891\u7387\u8D85\u9650\u6216\u8D26\u6237\u4F59\u989D\u4E0D\u8DB3\uFF08${rawMessage}\uFF09\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\u6216\u68C0\u67E5\u8D26\u6237\u989D\u5EA6\u3002`;
+  }
+  if (rawMessage.includes("ECONNREFUSED") || rawMessage.includes("ETIMEDOUT") || rawMessage.includes("ENOTFOUND") || rawMessage.includes("fetch failed")) {
+    return `\u26A0\uFE0F **\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25**\uFF1A\u65E0\u6CD5\u8FDE\u63A5\u5230\u6A21\u578B\u670D\u52A1\uFF08${rawMessage}\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u6216\u4EE3\u7406\u914D\u7F6E\u3002`;
+  }
+  return `\u26A0\uFE0F **\u6A21\u578B\u8BF7\u6C42\u5931\u8D25**\uFF1A${rawMessage}`;
+}
 function createProjector() {
   const history = [];
   const compactionDividers = [];
@@ -79723,8 +79744,7 @@ function createProjector() {
             let text4 = activeTurn.assistantText;
             const content3 = activeTurn.content.map((item) => ({ ...item }));
             if (reason.kind === "error") {
-              const rawMessage = reason.error.message || "\u672A\u77E5\u9519\u8BEF";
-              const formattedError = rawMessage.includes("DEEPSEEK_API_KEY") || reason.error.code === "MISSING_CREDENTIAL" ? '\u26A0\uFE0F **API \u5BC6\u94A5\u7F3A\u5931**\uFF1A\u672A\u68C0\u6D4B\u5230 `DEEPSEEK_API_KEY`\u3002\u8BF7\u5728\u7EC8\u7AEF\u6267\u884C `export DEEPSEEK_API_KEY="sk-..."` \u6216\u5728 `~/.dsh/.credentials.yaml` \u4E2D\u914D\u7F6E\u5BC6\u94A5\u3002' : `\u26A0\uFE0F **\u6A21\u578B\u8BF7\u6C42\u5931\u8D25**\uFF1A${rawMessage}`;
+              const formattedError = formatTurnError(reason.error);
               if (text4.trim() === "") {
                 text4 = formattedError;
                 content3.push({ kind: "text", text: formattedError });
@@ -80096,6 +80116,16 @@ function parseSettingsFieldValue(namespace, field, current, draft) {
     if (draft === "auto" || draft === "on" || draft === "off") return draft;
     throw new TypeError("\u9700\u8981 \u81EA\u52A8\u3001\u5F00\u542F \u6216 \u5173\u95ED");
   }
+  if (field === "apiKeyEnv" || field === "secretEnv" || field.endsWith("Env") || field.endsWith("Ref")) {
+    const trimmed = draft.trim();
+    if (trimmed.startsWith("sk-") || trimmed.startsWith("ghp_") || trimmed.startsWith("Bearer ") || trimmed.length > 50) {
+      throw new TypeError(`${field} \u662F\u73AF\u5883\u53D8\u91CF\u540D\uFF08\u5982 DEEPSEEK_API_KEY\uFF09\uFF0C\u8BF7\u52FF\u8F93\u5165\u771F\u5B9E\u5BC6\u94A5\u3002\u8BF7\u4F7F\u7528 /key \u914D\u7F6E\u5BC6\u94A5`);
+    }
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
+      throw new TypeError(`${field} \u9700\u8981\u5408\u6CD5\u7684\u73AF\u5883\u53D8\u91CF\u540D\uFF08\u4F8B\u5982 DEEPSEEK_API_KEY\uFF09`);
+    }
+    return trimmed;
+  }
   return parseSettingValue(current, draft);
 }
 function settingsRowsFromDescribe(descriptors, read) {
@@ -80438,6 +80468,8 @@ var SEARCH_DEBOUNCE_MS = 120;
 var LOCAL_COMMANDS = [
   { name: "export", description: "Export this session to a Markdown file" },
   { name: "help", description: "Show command help and key bindings" },
+  { name: "key", description: "Set or update API key" },
+  { name: "login", description: "Set or update API key" },
   { name: "model", description: "Switch the active model" },
   { name: "reload", description: "Relaunch this process and resume the session" },
   { name: "resume", description: "Switch or resume a session" },
@@ -83438,6 +83470,18 @@ var RuntimeController = class _RuntimeController {
       this.openHelpPane();
       return;
     }
+    if (query === "key" || query === "key " || query === "login" || query === "login ") {
+      if (this.blockingHead() !== void 0) return;
+      this.openApiKeyPane();
+      return;
+    }
+    if (query.startsWith("key ") || query.startsWith("login ")) {
+      const token = query.replace(/^(?:key|login)\s+/, "").trim();
+      if (token.length > 0) {
+        this.applyOnboardingKey(ONBOARDING_KEY, token);
+        return;
+      }
+    }
     if (query === "model") {
       this.openModelPane();
       return;
@@ -83708,6 +83752,13 @@ var RuntimeController = class _RuntimeController {
       try {
         await credentials.set(credentialRef(field), value);
         if (this.closed) return;
+        const settings = this.ctx.get("settings");
+        if (settings !== void 0) {
+          const ds = settings.get("llm-deepseek");
+          if (typeof ds?.apiKeyEnv === "string" && ds.apiKeyEnv.startsWith("sk-")) {
+            await settings.update("llm-deepseek", { apiKeyEnv: "DEEPSEEK_API_KEY" });
+          }
+        }
         this.settingsOnboarding = false;
         this.settingsOpen = false;
         this.settingsEditing = false;
@@ -83775,6 +83826,23 @@ var RuntimeController = class _RuntimeController {
         }
       });
     });
+  }
+  /**
+   * Open the API-key configuration overlay directly from /key or /login.
+   */
+  openApiKeyPane() {
+    this.closeOtherPanels();
+    this.settingsOnboarding = true;
+    this.settingsEditing = true;
+    this.settingsUpdateError = void 0;
+    this.settingsRows = [{
+      namespace: "credentials",
+      field: ONBOARDING_KEY,
+      value: ""
+    }];
+    this.settingsSelectedIndex = 0;
+    this.settingsOpen = true;
+    this.emit();
   }
   /**
    * Open the first-run API-key overlay when idle boot has no configured

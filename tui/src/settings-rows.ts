@@ -113,6 +113,16 @@ export function parseSettingsFieldValue(
     if (draft === 'auto' || draft === 'on' || draft === 'off') return draft
     throw new TypeError('需要 自动、开启 或 关闭')
   }
+  if (field === 'apiKeyEnv' || field === 'secretEnv' || field.endsWith('Env') || field.endsWith('Ref')) {
+    const trimmed = draft.trim()
+    if (trimmed.startsWith('sk-') || trimmed.startsWith('ghp_') || trimmed.startsWith('Bearer ') || trimmed.length > 50) {
+      throw new TypeError(`${field} 是环境变量名（如 DEEPSEEK_API_KEY），请勿输入真实密钥。请使用 /key 配置密钥`)
+    }
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
+      throw new TypeError(`${field} 需要合法的环境变量名（例如 DEEPSEEK_API_KEY）`)
+    }
+    return trimmed
+  }
   return parseSettingValue(current, draft)
 }
 
