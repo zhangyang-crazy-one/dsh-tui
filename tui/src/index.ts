@@ -50,7 +50,7 @@ import type {} from '@deepseek-ai/dsh-plan-mode'
 // Type-only: declaration-merges ctx.permissionPresets. The service is composed
 // by the base patch; this plugin never injects it and never calls setApprovalPolicy.
 import type {} from '@deepseek-ai/dsh-permission-presets'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import { credentialRef, isCredentialRefName } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-settings'
 import {
   createUserMessage,
@@ -911,8 +911,8 @@ export const SEARCH_DEBOUNCE_MS = 120
 const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
   { name: 'export', description: 'Export this session to a Markdown file' },
   { name: 'help', description: 'Show command help and key bindings' },
-  { name: 'key', description: 'Set or update API key' },
-  { name: 'login', description: 'Set or update API key' },
+  { name: 'key', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
+  { name: 'login', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
   { name: 'model', description: 'Switch the active model' },
   { name: 'reload', description: 'Relaunch this process and resume the session' },
   { name: 'resume', description: 'Switch or resume a session' },
@@ -4230,9 +4230,19 @@ export class RuntimeController implements TuiController {
       return
     }
     if (query.startsWith('key ') || query.startsWith('login ')) {
-      const token = query.replace(/^(?:key|login)\s+/, '').trim()
-      if (token.length > 0) {
-        this.applyOnboardingKey(ONBOARDING_KEY, token)
+      const rest = query.replace(/^(?:key|login)\s+/, '').trim()
+      if (rest.length > 0) {
+        const parts = rest.split(/\s+/)
+        const first = parts[0]
+        if (first !== undefined && parts.length >= 2 && isCredentialRefName(first)) {
+          const secret = rest.slice(first.length).trim()
+          this.applyOnboardingKey(first, secret)
+        } else if (first !== undefined && parts.length === 1 && isCredentialRefName(first) && !first.startsWith('sk-')) {
+          if (this.blockingHead() !== undefined) return
+          this.openApiKeyPane(first)
+        } else {
+          this.applyOnboardingKey(ONBOARDING_KEY, rest)
+        }
         return
       }
     }
@@ -4536,7 +4546,7 @@ export class RuntimeController implements TuiController {
         this.settingsOpen = false
         this.settingsEditing = false
         this.settingsUpdateError = undefined
-        this.setFeedback('✓ 已保存 API key')
+        this.setFeedback(field === ONBOARDING_KEY ? '✓ 已保存 API key' : `✓ 已保存 ${field}`)
         this.openModelPane()
       } catch (error: unknown) {
         if (this.closed) return
@@ -4606,15 +4616,16 @@ export class RuntimeController implements TuiController {
 
   /**
    * Open the API-key configuration overlay directly from /key or /login.
+   * @param targetField - credential reference name (defaults to DEEPSEEK_API_KEY).
    */
-  private openApiKeyPane(): void {
+  private openApiKeyPane(targetField: string = ONBOARDING_KEY): void {
     this.closeOtherPanels()
     this.settingsOnboarding = true
     this.settingsEditing = true
     this.settingsUpdateError = undefined
     this.settingsRows = [{
       namespace: 'credentials',
-      field: ONBOARDING_KEY,
+      field: targetField,
       value: '',
     }]
     this.settingsSelectedIndex = 0

@@ -80507,8 +80507,8 @@ var SEARCH_DEBOUNCE_MS = 120;
 var LOCAL_COMMANDS = [
   { name: "export", description: "Export this session to a Markdown file" },
   { name: "help", description: "Show command help and key bindings" },
-  { name: "key", description: "Set or update API key" },
-  { name: "login", description: "Set or update API key" },
+  { name: "key", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
+  { name: "login", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
   { name: "model", description: "Switch the active model" },
   { name: "reload", description: "Relaunch this process and resume the session" },
   { name: "resume", description: "Switch or resume a session" },
@@ -83515,9 +83515,19 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     if (query.startsWith("key ") || query.startsWith("login ")) {
-      const token = query.replace(/^(?:key|login)\s+/, "").trim();
-      if (token.length > 0) {
-        this.applyOnboardingKey(ONBOARDING_KEY, token);
+      const rest = query.replace(/^(?:key|login)\s+/, "").trim();
+      if (rest.length > 0) {
+        const parts = rest.split(/\s+/);
+        const first = parts[0];
+        if (first !== void 0 && parts.length >= 2 && isCredentialRefName(first)) {
+          const secret = rest.slice(first.length).trim();
+          this.applyOnboardingKey(first, secret);
+        } else if (first !== void 0 && parts.length === 1 && isCredentialRefName(first) && !first.startsWith("sk-")) {
+          if (this.blockingHead() !== void 0) return;
+          this.openApiKeyPane(first);
+        } else {
+          this.applyOnboardingKey(ONBOARDING_KEY, rest);
+        }
         return;
       }
     }
@@ -83802,7 +83812,7 @@ var RuntimeController = class _RuntimeController {
         this.settingsOpen = false;
         this.settingsEditing = false;
         this.settingsUpdateError = void 0;
-        this.setFeedback("\u2713 \u5DF2\u4FDD\u5B58 API key");
+        this.setFeedback(field === ONBOARDING_KEY ? "\u2713 \u5DF2\u4FDD\u5B58 API key" : `\u2713 \u5DF2\u4FDD\u5B58 ${field}`);
         this.openModelPane();
       } catch (error51) {
         if (this.closed) return;
@@ -83868,15 +83878,16 @@ var RuntimeController = class _RuntimeController {
   }
   /**
    * Open the API-key configuration overlay directly from /key or /login.
+   * @param targetField - credential reference name (defaults to DEEPSEEK_API_KEY).
    */
-  openApiKeyPane() {
+  openApiKeyPane(targetField = ONBOARDING_KEY) {
     this.closeOtherPanels();
     this.settingsOnboarding = true;
     this.settingsEditing = true;
     this.settingsUpdateError = void 0;
     this.settingsRows = [{
       namespace: "credentials",
-      field: ONBOARDING_KEY,
+      field: targetField,
       value: ""
     }];
     this.settingsSelectedIndex = 0;
