@@ -78,3 +78,17 @@ jobs:
             npm_dist_tag="next"
           fi
           npm publish --access public --tag "${npm_dist_tag}"
+
+      - name: Update dist-tag
+        if: steps.registry.outputs.exists == 'true'
+        env:
+          RELEASE_IS_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || inputs.prerelease }}
+        run: |
+          npm_dist_tag="latest"
+          if [[ "${RELEASE_IS_PRERELEASE}" == "true" ]]; then
+            npm_dist_tag="next"
+          fi
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          npm dist-tag add "${package_name}@${package_version}" "${npm_dist_tag}" || true
+
