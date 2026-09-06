@@ -72,8 +72,76 @@ import {
   type AskUserQuestionItem,
   type AskUserQuestionRequest,
 } from '@deepseek-ai/dsh-user-questions'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionHeader, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session'
+import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SessionHeader, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session'
+
+/**
+ * Polyfill `session.events` getter on `Session.prototype` when running against
+ * earlier `@deepseek-ai/dsh-session` releases (such as 0.1.2-rc.1) where the
+ * event log was exposed via `session.snapshotEvents()` instead of `session.events`.
+ */
+try {
+  if (typeof Session === 'function' && Session.prototype && !('events' in Session.prototype)) {
+    Object.defineProperty(Session.prototype, 'events', {
+      get() {
+        return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+      },
+      configurable: true,
+      enumerable: false,
+    })
+  }
+} catch {
+  // Swallow defineProperty errors in sealed environments
+}
+
+/**
+ * Ensure `session.events` getter exists on the Session prototype or instance.
+ * @param session - candidate session object.
+ */
+export function ensureSessionEventsCompat(session: unknown): void {
+  if (!session || typeof session !== 'object') return
+  try {
+    const proto = Object.getPrototypeOf(session)
+    if (proto && typeof proto === 'object' && !('events' in proto)) {
+      Object.defineProperty(proto, 'events', {
+        get() {
+          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+        },
+        configurable: true,
+        enumerable: false,
+      })
+    } else if (!('events' in session)) {
+      Object.defineProperty(session, 'events', {
+        get() {
+          return typeof (this as any).snapshotEvents === 'function' ? (this as any).snapshotEvents() : []
+        },
+        configurable: true,
+        enumerable: false,
+      })
+    }
+  } catch {
+    // Non-fatal if object is frozen or sealed
+  }
+}
+
+/**
+ * Safely extract events from a session object across different DSH versions.
+ * Handles both the modern `session.events` getter and the legacy `session.snapshotEvents()`.
+ * @param session - candidate session object, or undefined.
+ * @returns an array or readonly array of session events.
+ */
+export function getSessionEvents(session: unknown): readonly SessionEvent[] {
+  if (!session || typeof session !== 'object') return []
+  const s = session as Record<string, unknown>
+  if (Array.isArray(s.events)) return s.events as readonly SessionEvent[]
+  if (typeof s.snapshotEvents === 'function') {
+    return (s.snapshotEvents as () => readonly SessionEvent[])()
+  }
+  if (s.events && typeof (s.events as any)[Symbol.iterator] === 'function') {
+    return s.events as readonly SessionEvent[]
+  }
+  return []
+}
 import {
   fallbackSessionTitle,
   foldSessionTitle,
@@ -1374,7 +1442,7 @@ export class RuntimeController implements TuiController {
    */
   getTitle(): string {
     if (this.session === undefined) return ''
-    return topBarTitle(this.session.events)
+    return topBarTitle(getSessionEvents(this.session))
   }
 
   /**
@@ -2591,7 +2659,7 @@ export class RuntimeController implements TuiController {
         const inspected = await (persistence as unknown as {
           inspect(id: SessionId, signal?: AbortSignal): Promise<{ events: readonly SessionEvent[] }>
         }).inspect(SessionId(childId), signal)
-        events = inspected.events
+        events = inspected.events ?? []
       }
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubTranscript = hubTranscriptOf(events)
@@ -3326,7 +3394,7 @@ export class RuntimeController implements TuiController {
    * in those cases and is not appropriate here.
    */
   private notifySessionTitle(): string | undefined {
-    return this.session === undefined ? undefined : notifySessionTitle(this.session.events)
+    return this.session === undefined ? undefined : notifySessionTitle(getSessionEvents(this.session))
   }
 
   /** Record local user input for the notification quiet window. */
@@ -3801,8 +3869,9 @@ export class RuntimeController implements TuiController {
         })
         const allocated = await this.allocateCandidate(request)
         candidate = allocated.handle
+        ensureSessionEventsCompat(candidate.agent.session)
         const projector = createProjector()
-        projector.seed(candidate.agent.session.events)
+        projector.seed(getSessionEvents(candidate.agent.session))
         this.setTransition({ phase: 'binding', intent: request.intent })
         this.commitCandidate({ ...allocated, projector })
       } catch (primaryError: unknown) {
@@ -4893,10 +4962,11 @@ export class RuntimeController implements TuiController {
 
   /** Fold the bound live session into a directory row without waiting for persistence. */
   private rowForLiveSession(session: Session): SessionRow {
+    const events = getSessionEvents(session)
     return {
       id: session.id,
-      title: listTitleOf(session.events),
-      updatedAt: session.events.at(-1)?.time ?? session.header.createdAt,
+      title: listTitleOf(events),
+      updatedAt: events.at(-1)?.time ?? session.header.createdAt,
     }
   }
 
@@ -4927,7 +4997,7 @@ export class RuntimeController implements TuiController {
         const inspection = await (persistence as unknown as {
           inspect(id: SessionId): Promise<{ meta: SessionHeader; events: readonly SessionEvent[] }>
         }).inspect(id)
-        events = inspection.events
+        events = inspection.events ?? []
         createdAt = inspection.meta.createdAt
       }
       return {
@@ -5033,7 +5103,7 @@ export class RuntimeController implements TuiController {
           const inspection = await (persistence as unknown as {
             inspect(id: SessionId): Promise<{ events: readonly SessionEvent[] }>
           }).inspect(hit.header.id)
-          events = inspection.events
+          events = inspection.events ?? []
         }
         title = listTitleOf(events)
       } catch {
@@ -5464,7 +5534,8 @@ export class RuntimeController implements TuiController {
  * @param events - the live session log.
  * @returns the top-bar title, or '' when the mount app name should show.
  */
-function topBarTitle(events: readonly SessionEvent[]): string {
+function topBarTitle(events?: readonly SessionEvent[]): string {
+  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return ''
   const folded = foldSessionTitle(events)
   if (folded === undefined) return ''
   if (folded.source.kind === 'fallback' && events.some(isHumanUserMessage)) {
@@ -5483,7 +5554,8 @@ function topBarTitle(events: readonly SessionEvent[]): string {
  * @param events - the live session log.
  * @returns the title text to append, or undefined when no suffix applies.
  */
-function notifySessionTitle(events: readonly SessionEvent[]): string | undefined {
+function notifySessionTitle(events?: readonly SessionEvent[]): string | undefined {
+  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return undefined
   return foldTitle(events)
 }
 
@@ -5495,7 +5567,8 @@ function notifySessionTitle(events: readonly SessionEvent[]): string | undefined
  * @param events - the inspected session log.
  * @returns a terminal-safe one-line title, or undefined when none exists.
  */
-function foldTitle(events: readonly SessionEvent[]): string | undefined {
+function foldTitle(events?: readonly SessionEvent[]): string | undefined {
+  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return undefined
   const folded = foldSessionTitle(events)
   if (folded !== undefined) return folded.title
   const firstUser = events.find(isHumanUserMessage)
@@ -5516,7 +5589,8 @@ function foldTitle(events: readonly SessionEvent[]): string | undefined {
  * @param events - the inspected session log.
  * @returns a terminal-safe one-line title.
  */
-function listTitleOf(events: readonly SessionEvent[]): string {
+function listTitleOf(events?: readonly SessionEvent[]): string {
+  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return '未命名会话'
   return foldTitle(events) ?? '未命名会话'
 }
 
@@ -5979,6 +6053,17 @@ async function run(
  * @param config - validated startup task, resume, cwd, and frame-stats values.
  */
 export function apply(ctx: Context, config: Config): void {
+  try {
+    if (typeof Session === 'function' && Session.prototype && !('events' in Session.prototype)) {
+      Object.defineProperty(Session.prototype, 'events', {
+        get() {
+          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+        },
+        configurable: true,
+        enumerable: false,
+      })
+    }
+  } catch {}
   // Read through the global service store, not the property proxy: appExit is
   // an optional host value, never an injected dependency.
   const exit = ctx.get('appExit')

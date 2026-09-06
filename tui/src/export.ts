@@ -149,6 +149,11 @@ export async function exportSessionMarkdown(
     throw new Error('session export target must be a direct child of the export directory')
   }
   await mkdir(resolvedDir, { recursive: true })
-  await writeFile(target, renderSessionMarkdown(session.events), 'utf8')
+  const events = Array.isArray(session.events)
+    ? session.events
+    : typeof (session as unknown as { snapshotEvents?: () => readonly SessionEvent[] }).snapshotEvents === 'function'
+      ? (session as unknown as { snapshotEvents: () => readonly SessionEvent[] }).snapshotEvents()
+      : session.events ?? []
+  await writeFile(target, renderSessionMarkdown(events), 'utf8')
   return target
 }

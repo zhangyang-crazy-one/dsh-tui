@@ -206,7 +206,7 @@ export interface Projector {
    * Replay an admitted durable event log in order, using the same fold as live delivery.
    * @param events - chronologically ordered events from the bound Session.
    */
-  seed(events: readonly SessionEvent[]): void
+  seed(events?: readonly SessionEvent[]): void
   /**
    * Read the current projection without copying the frozen history array.
    * @returns the latest history, active turn, render status, and fold-display state.
@@ -542,7 +542,8 @@ export function createProjector(): Projector {
 
   return {
     push,
-    seed(events: readonly SessionEvent[]) {
+    seed(events?: readonly SessionEvent[]) {
+      if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return
       for (const event of events) push(event)
     },
     snapshot(): ViewModel {
