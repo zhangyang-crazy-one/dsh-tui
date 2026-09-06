@@ -79717,17 +79717,35 @@ function createProjector() {
           activeTurn.reason = event.data.reason;
           updateActiveTurn();
           const turnUsage = deriveTurnTokenUsage(turnEvents);
-          if (turnContent.length > 0) {
+          const reason = event.data.reason;
+          if (turnContent.length > 0 || reason.kind === "error") {
             assistantTurnCount += 1;
+            let text4 = activeTurn.assistantText;
+            const content3 = activeTurn.content.map((item) => ({ ...item }));
+            if (reason.kind === "error") {
+              const rawMessage = reason.error.message || "\u672A\u77E5\u9519\u8BEF";
+              const formattedError = rawMessage.includes("DEEPSEEK_API_KEY") || reason.error.code === "MISSING_CREDENTIAL" ? '\u26A0\uFE0F **API \u5BC6\u94A5\u7F3A\u5931**\uFF1A\u672A\u68C0\u6D4B\u5230 `DEEPSEEK_API_KEY`\u3002\u8BF7\u5728\u7EC8\u7AEF\u6267\u884C `export DEEPSEEK_API_KEY="sk-..."` \u6216\u5728 `~/.dsh/.credentials.yaml` \u4E2D\u914D\u7F6E\u5BC6\u94A5\u3002' : `\u26A0\uFE0F **\u6A21\u578B\u8BF7\u6C42\u5931\u8D25**\uFF1A${rawMessage}`;
+              if (text4.trim() === "") {
+                text4 = formattedError;
+                content3.push({ kind: "text", text: formattedError });
+              } else {
+                text4 += `
+
+${formattedError}`;
+                content3.push({ kind: "text", text: `
+
+${formattedError}` });
+              }
+            }
             appendHistory({
               id: event.seq,
               kind: "assistant",
-              text: activeTurn.assistantText,
+              text: text4,
               reasoningText: activeTurn.reasoningText,
               reasoningDurationMs: activeTurn.reasoningDurationMs,
               // activeTurn.content is the stamped fold: raw turnContent items
               // still carry durationMs 0 from projectAssistantBlocks.
-              content: activeTurn.content.map((item) => ({ ...item })),
+              content: content3,
               timestamp: event.time,
               ...lastUsageOutputTokens === void 0 ? {} : { usageOutputTokens: lastUsageOutputTokens },
               ...lastStepWallMs === void 0 ? {} : { stepWallMs: lastStepWallMs },

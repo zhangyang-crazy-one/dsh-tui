@@ -507,17 +507,33 @@ export function createProjector(): Projector {
           activeTurn.reason = event.data.reason
           updateActiveTurn()
           const turnUsage = deriveTurnTokenUsage(turnEvents)
-          if (turnContent.length > 0) {
+          const reason = event.data.reason
+          if (turnContent.length > 0 || reason.kind === 'error') {
             assistantTurnCount += 1
+            let text = activeTurn.assistantText
+            const content = (activeTurn.content as ProjectedTurnContent[]).map(item => ({ ...item }))
+            if (reason.kind === 'error') {
+              const rawMessage = reason.error.message || '未知错误'
+              const formattedError = rawMessage.includes('DEEPSEEK_API_KEY') || reason.error.code === 'MISSING_CREDENTIAL'
+                ? '⚠️ **API 密钥缺失**：未检测到 `DEEPSEEK_API_KEY`。请在终端执行 `export DEEPSEEK_API_KEY="sk-..."` 或在 `~/.dsh/.credentials.yaml` 中配置密钥。'
+                : `⚠️ **模型请求失败**：${rawMessage}`
+              if (text.trim() === '') {
+                text = formattedError
+                content.push({ kind: 'text', text: formattedError })
+              } else {
+                text += `\n\n${formattedError}`
+                content.push({ kind: 'text', text: `\n\n${formattedError}` })
+              }
+            }
             appendHistory({
               id: event.seq,
               kind: 'assistant',
-              text: activeTurn.assistantText,
+              text,
               reasoningText: activeTurn.reasoningText,
               reasoningDurationMs: activeTurn.reasoningDurationMs,
               // activeTurn.content is the stamped fold: raw turnContent items
               // still carry durationMs 0 from projectAssistantBlocks.
-              content: (activeTurn.content as ProjectedTurnContent[]).map(item => ({ ...item })),
+              content,
               timestamp: event.time,
               ...(lastUsageOutputTokens === undefined
                 ? {}
