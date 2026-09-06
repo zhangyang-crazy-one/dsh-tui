@@ -153,7 +153,7 @@ import { EventEmitter } from "node:events";
 import childProcess from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
-import process from "node:process";
+import process2 from "node:process";
 import { stripVTControlCharacters as stripVTControlCharacters2 } from "node:util";
 
 // ../deepseek-harness/node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/help.js
@@ -1171,13 +1171,13 @@ var Command = class _Command extends EventEmitter {
     this._showSuggestionAfterError = true;
     this._savedState = null;
     this._outputConfiguration = {
-      writeOut: (str) => process.stdout.write(str),
-      writeErr: (str) => process.stderr.write(str),
+      writeOut: (str) => process2.stdout.write(str),
+      writeErr: (str) => process2.stderr.write(str),
       outputError: (str, write) => write(str),
-      getOutHelpWidth: () => process.stdout.isTTY ? process.stdout.columns : void 0,
-      getErrHelpWidth: () => process.stderr.isTTY ? process.stderr.columns : void 0,
-      getOutHasColors: () => useColor() ?? (process.stdout.isTTY && process.stdout.hasColors?.()),
-      getErrHasColors: () => useColor() ?? (process.stderr.isTTY && process.stderr.hasColors?.()),
+      getOutHelpWidth: () => process2.stdout.isTTY ? process2.stdout.columns : void 0,
+      getErrHelpWidth: () => process2.stderr.isTTY ? process2.stderr.columns : void 0,
+      getOutHasColors: () => useColor() ?? (process2.stdout.isTTY && process2.stdout.hasColors?.()),
+      getErrHasColors: () => useColor() ?? (process2.stderr.isTTY && process2.stderr.hasColors?.()),
       stripColor: (str) => stripVTControlCharacters2(str)
     };
     this._hidden = false;
@@ -1571,7 +1571,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
     if (this._exitCallback) {
       this._exitCallback(new CommanderError(exitCode, code, message));
     }
-    process.exit(exitCode);
+    process2.exit(exitCode);
   }
   /**
    * Register callback `fn` for the command.
@@ -1962,16 +1962,16 @@ Expecting one of '${allowedValues.join("', '")}'`);
     }
     parseOptions = parseOptions || {};
     if (argv === void 0 && parseOptions.from === void 0) {
-      if (process.versions?.electron) {
+      if (process2.versions?.electron) {
         parseOptions.from = "electron";
       }
-      const execArgv = process.execArgv ?? [];
+      const execArgv = process2.execArgv ?? [];
       if (execArgv.includes("-e") || execArgv.includes("--eval") || execArgv.includes("-p") || execArgv.includes("--print")) {
         parseOptions.from = "eval";
       }
     }
     if (argv === void 0) {
-      argv = process.argv;
+      argv = process2.argv;
     }
     this.rawArgs = argv.slice();
     let userArgs;
@@ -1982,7 +1982,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
         userArgs = argv.slice(2);
         break;
       case "electron":
-        if (process.defaultApp) {
+        if (process2.defaultApp) {
           this._scriptPath = argv[1];
           userArgs = argv.slice(2);
         } else {
@@ -2180,11 +2180,11 @@ Expecting one of '${allowedValues.join("', '")}'`);
     }
     const launchWithNode = sourceExt.includes(path.extname(executableFile));
     let proc;
-    if (process.platform !== "win32") {
+    if (process2.platform !== "win32") {
       if (launchWithNode) {
         args.unshift(executableFile);
-        args = incrementNodeInspectorPort(process.execArgv).concat(args);
-        proc = childProcess.spawn(process.argv[0], args, { stdio: "inherit" });
+        args = incrementNodeInspectorPort(process2.execArgv).concat(args);
+        proc = childProcess.spawn(process2.argv[0], args, { stdio: "inherit" });
       } else {
         proc = childProcess.spawn(executableFile, args, { stdio: "inherit" });
       }
@@ -2195,13 +2195,13 @@ Expecting one of '${allowedValues.join("', '")}'`);
         subcommand._name
       );
       args.unshift(executableFile);
-      args = incrementNodeInspectorPort(process.execArgv).concat(args);
-      proc = childProcess.spawn(process.execPath, args, { stdio: "inherit" });
+      args = incrementNodeInspectorPort(process2.execArgv).concat(args);
+      proc = childProcess.spawn(process2.execPath, args, { stdio: "inherit" });
     }
     if (!proc.killed) {
       const signals = ["SIGUSR1", "SIGUSR2", "SIGTERM", "SIGINT", "SIGHUP"];
       signals.forEach((signal) => {
-        process.on(signal, () => {
+        process2.on(signal, () => {
           if (proc.killed === false && proc.exitCode === null) {
             proc.kill(signal);
           }
@@ -2212,7 +2212,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
     proc.on("close", (code) => {
       code = code ?? 1;
       if (!exitCallback) {
-        process.exit(code);
+        process2.exit(code);
       } else {
         exitCallback(
           new CommanderError(
@@ -2234,7 +2234,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
         throw new Error(`'${executableFile}' not executable`);
       }
       if (!exitCallback) {
-        process.exit(1);
+        process2.exit(1);
       } else {
         const wrappedError = new CommanderError(
           1,
@@ -2734,13 +2734,13 @@ Expecting one of '${allowedValues.join("', '")}'`);
    */
   _parseOptionsEnv() {
     this.options.forEach((option) => {
-      if (option.envVar && option.envVar in process.env) {
+      if (option.envVar && option.envVar in process2.env) {
         const optionKey = option.attributeName();
         if (this.getOptionValue(optionKey) === void 0 || ["default", "config", "env"].includes(
           this.getOptionValueSource(optionKey)
         )) {
           if (option.required || option.optional) {
-            this.emit(`optionEnv:${option.name()}`, process.env[option.envVar]);
+            this.emit(`optionEnv:${option.name()}`, process2.env[option.envVar]);
           } else {
             this.emit(`optionEnv:${option.name()}`);
           }
@@ -3266,7 +3266,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
    */
   help(contextOptions) {
     this.outputHelp(contextOptions);
-    let exitCode = Number(process.exitCode ?? 0);
+    let exitCode = Number(process2.exitCode ?? 0);
     if (exitCode === 0 && contextOptions && typeof contextOptions !== "function" && contextOptions.error) {
       exitCode = 1;
     }
@@ -3356,9 +3356,9 @@ function incrementNodeInspectorPort(args) {
   });
 }
 function useColor() {
-  if (process.env.NO_COLOR || process.env.FORCE_COLOR === "0" || process.env.FORCE_COLOR === "false")
+  if (process2.env.NO_COLOR || process2.env.FORCE_COLOR === "0" || process2.env.FORCE_COLOR === "false")
     return false;
-  if (process.env.FORCE_COLOR || process.env.CLICOLOR_FORCE !== void 0)
+  if (process2.env.FORCE_COLOR || process2.env.CLICOLOR_FORCE !== void 0)
     return true;
   return void 0;
 }
@@ -3366,8 +3366,47 @@ function useColor() {
 // ../deepseek-harness/node_modules/.pnpm/commander@15.0.0/node_modules/commander/index.js
 var program = new Command();
 
+// ../deepseek-harness/packages/boot/cmdline/src/index.ts
+var internals = {
+  stdin: process.stdin,
+  stdout: process.stdout,
+  stderr: process.stderr
+};
+function parseCmdline(ctx, program2) {
+  const args = ctx.get("cmdlineArgs");
+  const exit = ctx.get("appExit");
+  if (args === void 0 || exit === void 0) {
+    throw new Error(`${program2.name()}: the launcher must provide ctx.cmdlineArgs and ctx.appExit before the tree mounts`);
+  }
+  if (!hasAction(program2)) {
+    throw new Error(`${program2.name()}: no command in the program declares an action; parseCmdline runs the invoked command's action on a successful parse, and app code there publishes its service`);
+  }
+  configureExitAndOutput(program2);
+  try {
+    program2.parse(args.get(), { from: "user" });
+  } catch (error) {
+    if (!isCommanderError(error)) throw error;
+    exit(error.exitCode);
+  }
+}
+function hasAction(command) {
+  if (typeof command._actionHandler === "function") return true;
+  return command.commands.some(hasAction);
+}
+function configureExitAndOutput(command) {
+  command.exitOverride().configureOutput({
+    writeOut: (text) => void internals.stdout.write(text),
+    writeErr: (text) => void internals.stderr.write(text)
+  });
+  for (const child of command.commands) configureExitAndOutput(child);
+}
+function isCommanderError(error) {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error;
+  return typeof candidate.code === "string" && candidate.code.startsWith("commander.") && typeof candidate.exitCode === "number";
+}
+
 // ../deepseek-harness/packages/tui/tui/src/startup.ts
-import { parseCmdline } from "@deepseek-ai/dsh-cmdline";
 var name = "tui-startup";
 var inject = ["cmdlineArgs"];
 var TUI_STARTUP_SERVICE = "tuiStartup";

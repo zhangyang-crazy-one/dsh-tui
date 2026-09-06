@@ -38,16 +38,22 @@ describe('session events backwards compatibility', () => {
       }
     }
     const instance = new MockLegacySession()
-    expect((instance as any).events).toBeUndefined()
+    expect((instance as unknown as { events?: unknown }).events).toBeUndefined()
 
     ensureSessionEventsCompat(instance)
-    expect((instance as any).events).toEqual(mockEvents)
+    expect((instance as unknown as { events?: readonly SessionEvent[] }).events).toEqual(mockEvents)
   })
 
   it('projector.seed does not throw on undefined or non-iterable events', () => {
     const projector = createProjector()
-    expect(() => projector.seed(undefined as unknown as readonly SessionEvent[])).not.toThrow()
-    expect(() => projector.seed(null as unknown as readonly SessionEvent[])).not.toThrow()
-    expect(() => projector.seed({} as unknown as readonly SessionEvent[])).not.toThrow()
+    expect(() => {
+      projector.seed(undefined)
+    }).not.toThrow()
+    expect(() => {
+      projector.seed(null as unknown as readonly SessionEvent[])
+    }).not.toThrow()
+    expect(() => {
+      projector.seed({} as unknown as readonly SessionEvent[])
+    }).not.toThrow()
   })
 })

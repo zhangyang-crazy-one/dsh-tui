@@ -75,15 +75,20 @@ import {
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session'
 
+interface LegacySessionTarget {
+  snapshotEvents?: () => readonly SessionEvent[]
+  events?: readonly SessionEvent[]
+}
+
 /**
  * Polyfill `session.events` getter on `Session.prototype` when running against
  * earlier `@deepseek-ai/dsh-session` releases (such as 0.1.2-rc.1) where the
  * event log was exposed via `session.snapshotEvents()` instead of `session.events`.
  */
 try {
-  if (typeof Session === 'function' && Session.prototype && !('events' in Session.prototype)) {
+  if (typeof Session === 'function' && !('events' in Session.prototype)) {
     Object.defineProperty(Session.prototype, 'events', {
-      get() {
+      get(this: LegacySessionTarget) {
         return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
       },
       configurable: true,
@@ -101,10 +106,10 @@ try {
 export function ensureSessionEventsCompat(session: unknown): void {
   if (!session || typeof session !== 'object') return
   try {
-    const proto = Object.getPrototypeOf(session)
+    const proto = Object.getPrototypeOf(session) as LegacySessionTarget | null
     if (proto && typeof proto === 'object' && !('events' in proto)) {
       Object.defineProperty(proto, 'events', {
-        get() {
+        get(this: LegacySessionTarget) {
           return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
         },
         configurable: true,
@@ -112,8 +117,8 @@ export function ensureSessionEventsCompat(session: unknown): void {
       })
     } else if (!('events' in session)) {
       Object.defineProperty(session, 'events', {
-        get() {
-          return typeof (this as any).snapshotEvents === 'function' ? (this as any).snapshotEvents() : []
+        get(this: LegacySessionTarget) {
+          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
         },
         configurable: true,
         enumerable: false,
@@ -132,13 +137,10 @@ export function ensureSessionEventsCompat(session: unknown): void {
  */
 export function getSessionEvents(session: unknown): readonly SessionEvent[] {
   if (!session || typeof session !== 'object') return []
-  const s = session as Record<string, unknown>
-  if (Array.isArray(s.events)) return s.events as readonly SessionEvent[]
+  const s = session as LegacySessionTarget
+  if (s.events !== undefined) return s.events
   if (typeof s.snapshotEvents === 'function') {
-    return (s.snapshotEvents as () => readonly SessionEvent[])()
-  }
-  if (s.events && typeof (s.events as any)[Symbol.iterator] === 'function') {
-    return s.events as readonly SessionEvent[]
+    return s.snapshotEvents()
   }
   return []
 }
@@ -2558,7 +2560,7 @@ export class RuntimeController implements TuiController {
       try {
         const items = await persistence.list(signal)
         for (const item of items) {
-          const header = (item as { header?: SessionHeader }).header ?? (item as SessionHeader)
+          const header = (item as { header?: SessionHeader }).header ?? item
           coldHeaders.set(header.id, header)
         }
       } catch {
@@ -2659,7 +2661,7 @@ export class RuntimeController implements TuiController {
         const inspected = await (persistence as unknown as {
           inspect(id: SessionId, signal?: AbortSignal): Promise<{ events: readonly SessionEvent[] }>
         }).inspect(SessionId(childId), signal)
-        events = inspected.events ?? []
+        events = inspected.events
       }
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubTranscript = hubTranscriptOf(events)
@@ -4927,7 +4929,7 @@ export class RuntimeController implements TuiController {
       const items = await persistence.list()
       const rows: SessionRow[] = []
       for (const item of items) {
-        const header = (item as { header?: SessionHeader }).header ?? (item as SessionHeader)
+        const header = (item as { header?: SessionHeader }).header ?? item
         rows.push(
           this.session?.id === header.id
             ? this.rowForLiveSession(this.session)
@@ -4997,7 +4999,7 @@ export class RuntimeController implements TuiController {
         const inspection = await (persistence as unknown as {
           inspect(id: SessionId): Promise<{ meta: SessionHeader; events: readonly SessionEvent[] }>
         }).inspect(id)
-        events = inspection.events ?? []
+        events = inspection.events
         createdAt = inspection.meta.createdAt
       }
       return {
@@ -5103,7 +5105,7 @@ export class RuntimeController implements TuiController {
           const inspection = await (persistence as unknown as {
             inspect(id: SessionId): Promise<{ events: readonly SessionEvent[] }>
           }).inspect(hit.header.id)
-          events = inspection.events ?? []
+          events = inspection.events
         }
         title = listTitleOf(events)
       } catch {
@@ -5535,7 +5537,7 @@ export class RuntimeController implements TuiController {
  * @returns the top-bar title, or '' when the mount app name should show.
  */
 function topBarTitle(events?: readonly SessionEvent[]): string {
-  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return ''
+  if (!Array.isArray(events)) return ''
   const folded = foldSessionTitle(events)
   if (folded === undefined) return ''
   if (folded.source.kind === 'fallback' && events.some(isHumanUserMessage)) {
@@ -5555,7 +5557,7 @@ function topBarTitle(events?: readonly SessionEvent[]): string {
  * @returns the title text to append, or undefined when no suffix applies.
  */
 function notifySessionTitle(events?: readonly SessionEvent[]): string | undefined {
-  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return undefined
+  if (!Array.isArray(events)) return undefined
   return foldTitle(events)
 }
 
@@ -5568,7 +5570,7 @@ function notifySessionTitle(events?: readonly SessionEvent[]): string | undefine
  * @returns a terminal-safe one-line title, or undefined when none exists.
  */
 function foldTitle(events?: readonly SessionEvent[]): string | undefined {
-  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return undefined
+  if (!Array.isArray(events)) return undefined
   const folded = foldSessionTitle(events)
   if (folded !== undefined) return folded.title
   const firstUser = events.find(isHumanUserMessage)
@@ -5590,7 +5592,7 @@ function foldTitle(events?: readonly SessionEvent[]): string | undefined {
  * @returns a terminal-safe one-line title.
  */
 function listTitleOf(events?: readonly SessionEvent[]): string {
-  if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return '未命名会话'
+  if (!Array.isArray(events)) return '未命名会话'
   return foldTitle(events) ?? '未命名会话'
 }
 
@@ -6054,9 +6056,9 @@ async function run(
  */
 export function apply(ctx: Context, config: Config): void {
   try {
-    if (typeof Session === 'function' && Session.prototype && !('events' in Session.prototype)) {
+    if (typeof Session === 'function' && !('events' in Session.prototype)) {
       Object.defineProperty(Session.prototype, 'events', {
-        get() {
+        get(this: LegacySessionTarget) {
           return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
         },
         configurable: true,

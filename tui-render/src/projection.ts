@@ -543,7 +543,7 @@ export function createProjector(): Projector {
   return {
     push,
     seed(events?: readonly SessionEvent[]) {
-      if (!events || typeof (events as any)[Symbol.iterator] !== 'function') return
+      if (!events || typeof (events as unknown as Record<symbol, unknown>)[Symbol.iterator] !== 'function') return
       for (const event of events) push(event)
     },
     snapshot(): ViewModel {
