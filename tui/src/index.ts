@@ -2488,7 +2488,9 @@ export class RuntimeController implements TuiController {
     if (persistence !== undefined && cache !== undefined
       && rows.some(row => this.ctx.sessions.get(row.id) === undefined)) {
       try {
-        for (const header of await persistence.list(signal)) {
+        const items = await persistence.list(signal)
+        for (const item of items) {
+          const header = (item as { header?: SessionHeader }).header ?? (item as SessionHeader)
           coldHeaders.set(header.id, header)
         }
       } catch {
@@ -2506,15 +2508,37 @@ export class RuntimeController implements TuiController {
         try {
           snapshot = cache.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS)
           if (snapshot === undefined) {
-            const borrowed = await persistence.borrowSession(row.id, signal)
-            try {
-              signal.throwIfAborted()
-              snapshot = cache.coldSnapshot(
-                borrowed.inspection.meta,
-                borrowed.inspection.events,
-              )
-            } finally {
-              borrowed[Symbol.dispose]()
+            if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+              const handle = await (persistence as unknown as {
+                open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
+                  header: SessionHeader
+                  read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<readonly SessionEvent[]>
+                  close(): Promise<void>
+                }>
+              }).open(row.id, 'read', { signal })
+              try {
+                signal.throwIfAborted()
+                const events = await handle.read(0, undefined, { signal })
+                snapshot = cache.coldSnapshot(handle.header, events)
+              } finally {
+                await handle.close()
+              }
+            } else if (typeof (persistence as unknown as { borrowSession?: unknown }).borrowSession === 'function') {
+              const borrowed = await (persistence as unknown as {
+                borrowSession(id: SessionId, signal?: AbortSignal): Promise<{
+                  inspection: { meta: SessionHeader; events: readonly SessionEvent[] }
+                  [Symbol.dispose](): void
+                }>
+              }).borrowSession(row.id, signal)
+              try {
+                signal.throwIfAborted()
+                snapshot = cache.coldSnapshot(
+                  borrowed.inspection.meta,
+                  borrowed.inspection.events,
+                )
+              } finally {
+                borrowed[Symbol.dispose]()
+              }
             }
           }
         } catch {
@@ -2525,12 +2549,13 @@ export class RuntimeController implements TuiController {
         if (projections === undefined) return row
         snapshot = projections.snapshot(live)
       }
+      if (snapshot === undefined) return row
       return { ...row, ...hubMetricsOf(snapshot.values, row.activity, now) }
     }))
   }
 
   /**
-   * Open the inspect transcript for one child via sessionPersistence.inspect
+   * Open the inspect transcript for one child via sessionPersistence.open or inspect
    * without activating the child Agent. Failure stays in the transcript
    * subview so Esc returns to the table.
    * @param childId - durable child session id.
@@ -2548,9 +2573,28 @@ export class RuntimeController implements TuiController {
       return
     }
     try {
-      const inspected = await persistence.inspect(SessionId(childId), signal)
+      let events: readonly SessionEvent[]
+      if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+        const handle = await (persistence as unknown as {
+          open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
+            read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<readonly SessionEvent[]>
+            close(): Promise<void>
+          }>
+        }).open(SessionId(childId), 'read', { signal })
+        try {
+          signal.throwIfAborted()
+          events = await handle.read(0, undefined, { signal })
+        } finally {
+          await handle.close()
+        }
+      } else {
+        const inspected = await (persistence as unknown as {
+          inspect(id: SessionId, signal?: AbortSignal): Promise<{ events: readonly SessionEvent[] }>
+        }).inspect(SessionId(childId), signal)
+        events = inspected.events
+      }
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
-      this.agentHubTranscript = hubTranscriptOf(inspected.events)
+      this.agentHubTranscript = hubTranscriptOf(events)
       this.agentHubError = undefined
       this.emit()
     } catch (error: unknown) {
@@ -4811,9 +4855,10 @@ export class RuntimeController implements TuiController {
     const persistence = this.ctx.get('sessionPersistence')
     if (persistence === undefined) return
     try {
-      const headers = await persistence.list()
+      const items = await persistence.list()
       const rows: SessionRow[] = []
-      for (const header of headers) {
+      for (const item of items) {
+        const header = (item as { header?: SessionHeader }).header ?? (item as SessionHeader)
         rows.push(
           this.session?.id === header.id
             ? this.rowForLiveSession(this.session)
@@ -4862,11 +4907,33 @@ export class RuntimeController implements TuiController {
       return { id, title: id, updatedAt: 0 }
     }
     try {
-      const inspection = await persistence.inspect(id)
+      let events: readonly SessionEvent[]
+      let createdAt = 0
+      if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+        const handle = await (persistence as unknown as {
+          open(id: SessionId, access: string): Promise<{
+            header: SessionHeader
+            read(offset?: number, length?: number): Promise<readonly SessionEvent[]>
+            close(): Promise<void>
+          }>
+        }).open(id, 'read')
+        try {
+          createdAt = handle.header.createdAt
+          events = await handle.read(0, undefined)
+        } finally {
+          await handle.close()
+        }
+      } else {
+        const inspection = await (persistence as unknown as {
+          inspect(id: SessionId): Promise<{ meta: SessionHeader; events: readonly SessionEvent[] }>
+        }).inspect(id)
+        events = inspection.events
+        createdAt = inspection.meta.createdAt
+      }
       return {
         id,
-        title: listTitleOf(inspection.events),
-        updatedAt: inspection.events.at(-1)?.time ?? inspection.meta.createdAt,
+        title: listTitleOf(events),
+        updatedAt: events.at(-1)?.time ?? createdAt,
       }
     } catch {
       return { id, title: id, updatedAt: Date.now() }
@@ -4949,8 +5016,26 @@ export class RuntimeController implements TuiController {
     let title: string = hit.header.id
     if (persistence !== undefined) {
       try {
-        const inspection = await persistence.inspect(hit.header.id)
-        title = listTitleOf(inspection.events)
+        let events: readonly SessionEvent[]
+        if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+          const handle = await (persistence as unknown as {
+            open(id: SessionId, access: string): Promise<{
+              read(offset?: number, length?: number): Promise<readonly SessionEvent[]>
+              close(): Promise<void>
+            }>
+          }).open(hit.header.id, 'read')
+          try {
+            events = await handle.read(0, undefined)
+          } finally {
+            await handle.close()
+          }
+        } else {
+          const inspection = await (persistence as unknown as {
+            inspect(id: SessionId): Promise<{ events: readonly SessionEvent[] }>
+          }).inspect(hit.header.id)
+          events = inspection.events
+        }
+        title = listTitleOf(events)
       } catch {
         // Keep the id as the row's title when the log is unavailable.
       }

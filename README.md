@@ -44,22 +44,34 @@ After sending `你好`:
 -----
 
 <a id="install-the-launcher"></a>
-## Install the launcher
+## Install the launcher and runtime modes
 
 The unscoped `dsh-tui` package belongs to another maintainer. This project publishes only under the authenticated `crazyhappyone` npm scope.
 
-The launcher requires Git, pnpm, and a DSH-supported Node version. Installing `@deepseek-ai/dsh` separately is neither required nor used: `dsh-tui` always runs the `deepseek-tui` profile from its dedicated source checkout.
+`dsh-tui` supports two runtime modes:
 
-Install the prerelease and complete the first launch:
+### Mode A: Lightweight Mode (Recommended, Zero-Clone)
+Install the official core engine and the TUI launcher globally (dozens of MB):
 
 ```text
+npm install --global @deepseek-ai/dsh
 npm install --global @crazyhappyone/dsh-tui@next
-dsh-tui version
-dsh-tui update
+dsh-tui probe
 dsh-tui
 ```
 
-Package installation creates only the launcher. It does not clone DSH, run `pnpm install`, prompt for Git credentials, or execute a postinstall script. The explicit `dsh-tui update` command creates the source runtime; its default private source requires repository authorization.
+In this mode, the launcher automatically detects the installed `dsh` executable and mounts the bundled prebuilt TUI extension without cloning the 2GB monorepo.
+
+### Mode B: Source Mode (Developer / Debugging)
+To debug or hack on TUI or DSH source directly:
+
+```text
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui update
+dsh-tui --source
+```
+
+The explicit `dsh-tui update` command clones the monorepo via Git and runs `pnpm install`. You can use `dsh-tui probe` anytime to inspect the detected engine.
 
 -----
 

@@ -30,6 +30,10 @@ function createFixture(options = {}) {
         if (value === undefined) throw new Error(`unexpected read: ${path}`)
         return value
       },
+      writeText(path, content) {
+        calls.push({ operation: 'writeText', path, content })
+        paths.set(path, 'file')
+      },
       run(command, args, runOptions = {}) {
         calls.push({ operation: 'run', command, args, options: runOptions })
         return results.shift() ?? { status: 0, stdout: '', stderr: '' }
@@ -50,6 +54,7 @@ function settings(overrides = {}) {
     sourceUrl: 'https://github.com/zhangyang-crazy-one/deepseek-harness.git',
     sourceRef: 'feat/deepseek-tui',
     packageManager: 'pnpm',
+    homeDirectory: '/home/test',
     ...overrides,
   }
 }
@@ -310,4 +315,154 @@ test('update reports dependency recovery after a successful fast-forward', () =>
   assert.equal(status, 9)
   assert.match(fixture.stderr.join(''), /pnpm install --frozen-lockfile/)
   assert.match(fixture.stderr.join(''), /newsha/)
+})
+
+test('parseLauncherInvocation parses probe, --source, and --lightweight options', () => {
+  assert.deepEqual(parseLauncherInvocation(['probe']), { kind: 'probe' })
+  assert.deepEqual(parseLauncherInvocation(['--source', '--resume', 's1']), {
+    kind: 'launch',
+    args: ['--resume', 's1'],
+    mode: 'source',
+  })
+  assert.deepEqual(parseLauncherInvocation(['--lightweight', 'hello']), {
+    kind: 'launch',
+    args: ['hello'],
+    mode: 'lightweight',
+  })
+  assert.throws(
+    () => parseLauncherInvocation(['probe', 'extra']),
+    /probe takes no arguments/,
+  )
+})
+
+test('probeInstalledDsh respects DSH_BIN override and inspects exit code', async () => {
+  const { probeInstalledDsh } = await import('../src/launcher.js')
+  const successFixture = createFixture({
+    results: [{ status: 0, stdout: '0.1.2-rc.1\n', stderr: '' }],
+  })
+  const res1 = probeInstalledDsh({
+    env: { DSH_BIN: '/opt/bin/custom-dsh' },
+    adapters: successFixture.adapters,
+  })
+  assert.equal(res1.ok, true)
+  assert.equal(res1.binPath, '/opt/bin/custom-dsh')
+  assert.equal(res1.version, '0.1.2-rc.1')
+
+  const failFixture = createFixture({
+    results: [{ status: 127, stdout: '', stderr: 'not found' }],
+  })
+  const res2 = probeInstalledDsh({
+    env: { DSH_BIN: '/bad/path' },
+    adapters: failFixture.adapters,
+  })
+  assert.equal(res2.ok, false)
+  assert.match(res2.reason, /failed to run/)
+})
+
+test('probeInstalledDsh probes PATH dsh --version', async () => {
+  const { probeInstalledDsh } = await import('../src/launcher.js')
+  const successFixture = createFixture({
+    results: [{ status: 0, stdout: '0.1.3-alpha.1\n', stderr: '' }],
+  })
+  const res1 = probeInstalledDsh({ env: {}, adapters: successFixture.adapters })
+  assert.equal(res1.ok, true)
+  assert.equal(res1.binPath, 'dsh')
+  assert.equal(res1.version, '0.1.3-alpha.1')
+
+  const notFoundFixture = createFixture({
+    results: [{ status: 1, stdout: '', stderr: 'command not found' }],
+  })
+  const res2 = probeInstalledDsh({ env: {}, adapters: notFoundFixture.adapters })
+  assert.equal(res2.ok, false)
+  assert.match(res2.reason, /was not found in PATH/)
+})
+
+test('probe command outputs probe details', () => {
+  const fixture = createFixture({
+    paths: {
+      '/pkg/cordis.patch.yml': 'file',
+    },
+    results: [{ status: 0, stdout: '0.1.2-rc.1\n', stderr: '' }],
+  })
+  const status = runLauncher({
+    invocation: { kind: 'probe' },
+    settings: settings({ packageRoot: '/pkg' }),
+    packageVersion: '0.1.0-alpha.1',
+    adapters: fixture.adapters,
+  })
+  assert.equal(status, 0)
+  assert.match(fixture.stdout.join(''), /dsh: installed/)
+  assert.match(fixture.stdout.join(''), /executable: dsh/)
+  assert.match(fixture.stdout.join(''), /bundled patch: \/pkg\/cordis\.patch\.yml/)
+})
+
+test('launch in lightweight mode runs dsh --profile tui --patch when bundled patch exists', () => {
+  const fixture = createFixture({
+    paths: {
+      '/pkg/tui/cordis.patch.yml': 'file',
+    },
+    results: [
+      { status: 0, stdout: '0.1.2-rc.1\n', stderr: '' }, // probe dsh --version
+      { status: 0, stdout: '', stderr: '' }, // dsh --profile tui --patch ...
+    ],
+  })
+  const status = runLauncher({
+    invocation: { kind: 'launch', args: ['my-task'] },
+    settings: settings({ packageRoot: '/pkg', homeDirectory: '/home/test' }),
+    packageVersion: '0.1.0-alpha.1',
+    adapters: fixture.adapters,
+  })
+  assert.equal(status, 0)
+  const mkdirCall = fixture.calls.find(c => c.operation === 'mkdir' && c.path === '/home/test/.dsh/profiles/tui')
+  assert.ok(mkdirCall, 'creates tui profile directory')
+  const writeCall = fixture.calls.find(c => c.operation === 'writeText' && c.path === '/home/test/.dsh/profiles/tui/package.json')
+  assert.ok(writeCall, 'writes tui profile package.json')
+  assert.match(writeCall.content, /@deepseek-ai\/dsh-base/)
+  assert.deepEqual(fixture.calls.at(-1), {
+    operation: 'run',
+    command: 'dsh',
+    args: ['--profile', 'tui', '--patch', '/pkg/tui/cordis.patch.yml', 'my-task'],
+    options: { stdio: 'inherit' },
+  })
+})
+
+test('launch with --source forces source mode even if bundled patch exists', () => {
+  const fixture = createFixture({
+    paths: {
+      '/pkg/cordis.patch.yml': 'file',
+      [RUNTIME]: 'directory',
+      [`${RUNTIME}/.git`]: 'directory',
+    },
+    results: [
+      { status: 0, stdout: '', stderr: '' }, // pnpm dsh ...
+    ],
+  })
+  const status = runLauncher({
+    invocation: { kind: 'launch', args: ['task'], mode: 'source' },
+    settings: settings({ packageRoot: '/pkg' }),
+    packageVersion: '0.1.0-alpha.1',
+    adapters: fixture.adapters,
+  })
+  assert.equal(status, 0)
+  assert.deepEqual(fixture.calls.at(-1), {
+    operation: 'run',
+    command: 'pnpm',
+    args: ['dsh', '--profile', 'deepseek-tui', 'task'],
+    options: { cwd: RUNTIME, stdio: 'inherit' },
+  })
+})
+
+test('launch provides friendly installation guidance when dsh is absent and runtime uninitialized', () => {
+  const fixture = createFixture({
+    paths: {},
+  })
+  const status = runLauncher({
+    invocation: { kind: 'launch', args: [] },
+    settings: settings({ packageRoot: '/pkg' }),
+    packageVersion: '0.1.0-alpha.1',
+    adapters: fixture.adapters,
+  })
+  assert.equal(status, 1)
+  assert.match(fixture.stderr.join(''), /npm install --global @deepseek-ai\/dsh/)
+  assert.match(fixture.stderr.join(''), /dsh-tui update/)
 })

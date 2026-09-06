@@ -1,5 +1,6 @@
 /**
- * Source-runtime launcher for the DeepSeek Harness TUI.
+ * Hybrid runtime launcher for the DeepSeek Harness TUI.
+ * Supports zero-clone lightweight launch via installed dsh, and source-runtime fallback.
  * @module @crazyhappyone/dsh-tui/launcher
  */
 
@@ -16,6 +17,10 @@ const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
  * @property {string} sourceUrl
  * @property {string} sourceRef
  * @property {string} packageManager
+ * @property {string} [dshBin]
+ * @property {'auto' | 'lightweight' | 'source'} [mode]
+ * @property {string} [packageRoot]
+ * @property {string} [homeDirectory]
  */
 
 /**
@@ -31,15 +36,16 @@ const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
  * @property {(path: string) => PathKind} inspectPath
  * @property {(path: string) => void} makeDirectory
  * @property {(path: string) => string} readText
+ * @property {(path: string, content: string) => void} [writeText]
  * @property {(command: string, args: string[], options?: {cwd?: string, stdio?: 'inherit', capture?: boolean}) => CommandResult} run
  * @property {(text: string) => void} writeOut
  * @property {(text: string) => void} writeError
  */
 
 /**
- * Parse the launcher's reserved management commands.
+ * Parse the launcher's reserved management commands and flags.
  * @param {readonly string[]} argv - arguments after the executable.
- * @returns {{kind: 'version'} | {kind: 'update'} | {kind: 'launch', args: string[]}}
+ * @returns {{kind: 'version'} | {kind: 'update'} | {kind: 'probe'} | {kind: 'launch', args: string[], mode?: 'auto' | 'lightweight' | 'source'}}
  */
 export function parseLauncherInvocation(argv) {
   if (argv[0] === '--') return { kind: 'launch', args: [...argv.slice(1)] }
@@ -51,42 +57,141 @@ export function parseLauncherInvocation(argv) {
     if (argv.length !== 1) throw new Error('update takes no arguments; use `dsh-tui -- update ...` to send it as a task')
     return { kind: 'update' }
   }
-  return { kind: 'launch', args: [...argv] }
+  if (argv[0] === 'probe') {
+    if (argv.length !== 1) throw new Error('probe takes no arguments; use `dsh-tui -- probe ...` to send it as a task')
+    return { kind: 'probe' }
+  }
+  let mode = undefined
+  const args = []
+  for (let i = 0; i < argv.length; i++) {
+    const item = argv[i]
+    if (item === '--source') {
+      mode = 'source'
+    } else if (item === '--lightweight') {
+      mode = 'lightweight'
+    } else {
+      args.push(item)
+    }
+  }
+  return mode !== undefined ? { kind: 'launch', args, mode } : { kind: 'launch', args }
 }
 
 /**
  * Resolve deployment settings without touching the filesystem.
- * @param {{env: Readonly<Record<string, string | undefined>>, homeDirectory: string}} input
+ * @param {{env: Readonly<Record<string, string | undefined>>, homeDirectory: string, packageRoot?: string}} input
  * @returns {LauncherSettings}
  */
-export function resolveLauncherSettings({ env, homeDirectory }) {
+export function resolveLauncherSettings({ env, homeDirectory, packageRoot }) {
   const runtimeDirectory = environmentValue(
     env,
     'DSH_TUI_RUNTIME_DIR',
     join(homeDirectory, '.local', 'share', 'dsh-tui', 'runtime'),
   )
   if (!isAbsolute(runtimeDirectory)) throw new Error('DSH_TUI_RUNTIME_DIR must be an absolute path')
-  return {
+  const envMode = env['DSH_TUI_MODE']
+  if (envMode !== undefined && envMode !== 'auto' && envMode !== 'lightweight' && envMode !== 'source') {
+    throw new Error(`DSH_TUI_MODE must be 'auto', 'lightweight', or 'source' (got '${envMode}')`)
+  }
+  const result = {
     runtimeDirectory,
     sourceUrl: environmentValue(env, 'DSH_TUI_SOURCE_URL', DEFAULT_SOURCE_URL),
     sourceRef: environmentValue(env, 'DSH_TUI_SOURCE_REF', DEFAULT_SOURCE_REF),
     packageManager: environmentValue(env, 'DSH_TUI_PNPM', 'pnpm'),
+    homeDirectory,
+  }
+  if (env['DSH_BIN']?.trim()) result.dshBin = env['DSH_BIN'].trim()
+  if (envMode) result.mode = envMode
+  if (packageRoot) result.packageRoot = packageRoot
+  return result
+}
+
+/**
+ * Probe whether a runnable `dsh` command is available on the system.
+ * @param {{env?: Readonly<Record<string, string | undefined>>, settings?: LauncherSettings, adapters: LauncherAdapters}} input
+ * @returns {{ok: true, binPath: string, version: string} | {ok: false, reason: string}}
+ */
+export function probeInstalledDsh({ env = {}, settings, adapters }) {
+  const explicit = settings?.dshBin ?? env['DSH_BIN']
+  if (explicit && explicit.trim() !== '') {
+    const trimmed = explicit.trim()
+    const probe = adapters.run(trimmed, ['--version'], { capture: true })
+    if (probe.status === 0) {
+      return { ok: true, binPath: trimmed, version: probe.stdout.trim() || 'unknown' }
+    }
+    const err = probe.stderr.trim()
+    return { ok: false, reason: `DSH_BIN is set to "${trimmed}" but failed to run${err ? `: ${err}` : ` (exit code ${probe.status})`}` }
+  }
+
+  const pathProbe = adapters.run('dsh', ['--version'], { capture: true })
+  if (pathProbe.status === 0) {
+    return { ok: true, binPath: 'dsh', version: pathProbe.stdout.trim() || 'unknown' }
+  }
+
+  return {
+    ok: false,
+    reason: 'dsh executable was not found in PATH or DSH_BIN',
+  }
+}
+
+/**
+ * Locate the bundled cordis.patch.yml within the package root.
+ * @param {string | undefined} packageRoot
+ * @param {LauncherAdapters} adapters
+ * @returns {string | undefined}
+ */
+export function findBundledPatch(packageRoot, adapters) {
+  if (!packageRoot || typeof packageRoot !== 'string') return undefined
+  const candidates = [
+    join(packageRoot, 'cordis.patch.yml'),
+    join(packageRoot, 'tui', 'cordis.patch.yml'),
+  ]
+  for (const candidate of candidates) {
+    if (adapters.inspectPath(candidate) === 'file') return candidate
+  }
+  return undefined
+}
+
+/**
+ * Ensure the tui profile manifest exists in DSH_HOME.
+ * @param {{homeDirectory?: string, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ */
+export function ensureTuiProfile({ homeDirectory, env = {}, adapters }) {
+  const dshHome = env['DSH_HOME'] || (homeDirectory ? join(homeDirectory, '.dsh') : undefined)
+  if (!dshHome) return
+  const profileDir = join(dshHome, 'profiles', 'tui')
+  const manifestPath = join(profileDir, 'package.json')
+  if (adapters.inspectPath(manifestPath) === 'file') return
+  adapters.makeDirectory(profileDir)
+  const manifest = {
+    name: 'dsh-profile-tui',
+    private: true,
+    dsh: {
+      profile: {
+        bundles: ['@deepseek-ai/dsh-base'],
+        patchReload: 'startup',
+      },
+    },
+  }
+  if (typeof adapters.writeText === 'function') {
+    adapters.writeText(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
   }
 }
 
 /**
  * Run one parsed launcher invocation.
- * @param {{invocation: ReturnType<typeof parseLauncherInvocation>, settings: LauncherSettings, packageVersion: string, adapters: LauncherAdapters}} input
+ * @param {{invocation: ReturnType<typeof parseLauncherInvocation>, settings: LauncherSettings, packageVersion: string, adapters: LauncherAdapters, env?: Readonly<Record<string, string | undefined>>}} input
  * @returns {number} process exit status.
  */
-export function runLauncher({ invocation, settings, packageVersion, adapters }) {
+export function runLauncher({ invocation, settings, packageVersion, adapters, env = {} }) {
   switch (invocation.kind) {
     case 'version':
       return showVersion({ settings, packageVersion, adapters })
     case 'update':
       return updateRuntime({ settings, adapters })
+    case 'probe':
+      return showProbe({ settings, adapters, env })
     case 'launch':
-      return launchTui({ args: invocation.args, settings, adapters })
+      return launchTui({ args: invocation.args, mode: invocation.mode, settings, adapters, env })
     default:
       return assertNever(invocation)
   }
@@ -111,7 +216,57 @@ function runtimeState(settings, adapters) {
   return { ok: true, initialized: true }
 }
 
-function launchTui({ args, settings, adapters }) {
+function launchTui({ args, mode, settings, adapters, env = {} }) {
+  const effectiveMode = mode ?? settings.mode ?? 'auto'
+
+  if (effectiveMode === 'source') {
+    return launchSourceTui({ args, settings, adapters })
+  }
+
+  const patchPath = findBundledPatch(settings.packageRoot, adapters)
+
+  if (patchPath !== undefined) {
+    const probe = probeInstalledDsh({ env, settings, adapters })
+    if (probe.ok) {
+      return launchLightweightTui({ args, binPath: probe.binPath, patchPath, adapters, env, settings })
+    }
+    if (effectiveMode === 'lightweight') {
+      return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh\` or use \`dsh-tui --source\``)
+    }
+  } else if (effectiveMode === 'lightweight') {
+    return reportError(adapters, `bundled TUI patch not found under ${settings.packageRoot}; run \`dsh-tui update\` to initialize source runtime`)
+  }
+
+  // Fallback to source runtime if initialized
+  const state = runtimeState(settings, adapters)
+  if (state.ok && state.initialized) {
+    return launchSourceTui({ args, settings, adapters })
+  }
+
+  if (state.ok && !state.initialized) {
+    adapters.writeError('dsh-tui: 未检测到系统已安装的 dsh 核心引擎。\n')
+    adapters.writeError('dsh-tui: 推荐通过 npm 极速安装官方运行时（无需克隆完整源码仓库，仅需数十 MB）：\n')
+    adapters.writeError('dsh-tui:   npm install --global @deepseek-ai/dsh\n\n')
+    adapters.writeError('dsh-tui: 若您需要进行底层源码开发与测试，可运行:\n')
+    adapters.writeError('dsh-tui:   dsh-tui update\n')
+    adapters.writeError('dsh-tui:   dsh-tui --source\n')
+    return reportError(adapters, `runtime is not initialized at ${settings.runtimeDirectory}; run \`dsh-tui update\` first`)
+  }
+
+  return launchSourceTui({ args, settings, adapters })
+}
+
+function launchLightweightTui({ args, binPath, patchPath, adapters, env = {}, settings }) {
+  ensureTuiProfile({ homeDirectory: settings?.homeDirectory, env, adapters })
+  const result = adapters.run(
+    binPath,
+    ['--profile', 'tui', '--patch', patchPath, ...args],
+    { stdio: 'inherit' },
+  )
+  return result.status
+}
+
+function launchSourceTui({ args, settings, adapters }) {
   const state = runtimeState(settings, adapters)
   if (!state.ok) return reportError(adapters, state.message)
   if (!state.initialized) {
@@ -123,6 +278,20 @@ function launchTui({ args, settings, adapters }) {
     { cwd: settings.runtimeDirectory, stdio: 'inherit' },
   )
   return result.status
+}
+
+function showProbe({ settings, adapters, env = {} }) {
+  const probe = probeInstalledDsh({ env, settings, adapters })
+  if (probe.ok) {
+    adapters.writeOut(`dsh: installed\n`)
+    adapters.writeOut(`executable: ${probe.binPath}\n`)
+    adapters.writeOut(`version: ${probe.version}\n`)
+    const patchPath = findBundledPatch(settings.packageRoot, adapters)
+    adapters.writeOut(`bundled patch: ${patchPath ?? 'missing'}\n`)
+    return 0
+  }
+  adapters.writeOut(`dsh: not installed (${probe.reason})\n`)
+  return 1
 }
 
 function showVersion({ settings, packageVersion, adapters }) {

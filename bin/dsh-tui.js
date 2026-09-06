@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Command-line entry for the dsh-tui source-runtime launcher. */
 
-import { lstatSync, mkdirSync, readFileSync } from 'node:fs'
+import { lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { constants, homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -50,17 +50,21 @@ function signalOutcome(signal) {
 
 const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'))
 
+const packageRoot = fileURLToPath(new URL('..', import.meta.url))
+
 try {
   const invocation = parseLauncherInvocation(process.argv.slice(2))
-  const settings = resolveLauncherSettings({ env: process.env, homeDirectory: homedir() })
+  const settings = resolveLauncherSettings({ env: process.env, homeDirectory: homedir(), packageRoot })
   process.exitCode = runLauncher({
     invocation,
     settings,
     packageVersion: manifest.version,
+    env: process.env,
     adapters: {
       inspectPath,
       makeDirectory: path => mkdirSync(path, { recursive: true, mode: 0o700 }),
       readText: path => readFileSync(path, 'utf8'),
+      writeText: (path, content) => writeFileSync(path, content, 'utf8'),
       run,
       writeOut: text => process.stdout.write(text),
       writeError: text => process.stderr.write(text),

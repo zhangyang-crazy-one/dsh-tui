@@ -1,6 +1,6 @@
 {
   "name": "@crazyhappyone/dsh-tui",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "description": "Source-runtime launcher for the DeepSeek Harness terminal interface",
   "type": "module",
   "license": "MIT",
@@ -11,6 +11,9 @@
     "assets/screenshots/*.png",
     "bin/dsh-tui.js",
     "src/**/*.js",
+    "dist/**/*.js",
+    "cordis.patch.yml",
+    "tui/cordis.patch.yml",
     "README.md",
     "README.zh.md",
     "LICENSE"
