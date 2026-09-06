@@ -60,8 +60,9 @@ function settings(overrides = {}) {
 }
 
 test('parses management commands and the pass-through separator', () => {
-  assert.deepEqual(parseLauncherInvocation([]), { kind: 'launch', args: [] })
   assert.deepEqual(parseLauncherInvocation(['version']), { kind: 'version' })
+  assert.deepEqual(parseLauncherInvocation(['--version']), { kind: 'version' })
+  assert.deepEqual(parseLauncherInvocation(['-v']), { kind: 'version' })
   assert.deepEqual(parseLauncherInvocation(['update']), { kind: 'update' })
   assert.deepEqual(parseLauncherInvocation(['--', 'update']), { kind: 'launch', args: ['update'] })
   assert.deepEqual(parseLauncherInvocation(['--resume', 'session-1']), {

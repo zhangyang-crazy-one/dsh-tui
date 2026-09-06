@@ -49,8 +49,8 @@ const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
  */
 export function parseLauncherInvocation(argv) {
   if (argv[0] === '--') return { kind: 'launch', args: [...argv.slice(1)] }
-  if (argv[0] === 'version') {
-    if (argv.length !== 1) throw new Error('version takes no arguments; use `dsh-tui -- version ...` to send it as a task')
+  if (argv[0] === 'version' || argv[0] === '--version' || argv[0] === '-v' || argv[0] === '-V') {
+    if (argv.length !== 1) throw new Error(`${argv[0]} takes no arguments; use \`dsh-tui -- ${argv[0]} ...\` to send it as a task`)
     return { kind: 'version' }
   }
   if (argv[0] === 'update') {
@@ -189,7 +189,7 @@ export function runLauncher({ invocation, settings, packageVersion, adapters, en
     case 'update':
       return updateRuntime({ settings, adapters })
     case 'probe':
-      return showProbe({ settings, adapters, env })
+      return showProbe({ settings, packageVersion, adapters, env })
     case 'launch':
       return launchTui({ args: invocation.args, mode: invocation.mode, settings, adapters, env })
     default:
@@ -280,12 +280,15 @@ function launchSourceTui({ args, settings, adapters }) {
   return result.status
 }
 
-function showProbe({ settings, adapters, env = {} }) {
+function showProbe({ settings, packageVersion, adapters, env = {} }) {
+  if (packageVersion) {
+    adapters.writeOut(`dsh-tui: ${packageVersion}\n`)
+  }
   const probe = probeInstalledDsh({ env, settings, adapters })
   if (probe.ok) {
     adapters.writeOut(`dsh: installed\n`)
     adapters.writeOut(`executable: ${probe.binPath}\n`)
-    adapters.writeOut(`version: ${probe.version}\n`)
+    adapters.writeOut(`dsh engine version: ${probe.version}\n`)
     const patchPath = findBundledPatch(settings.packageRoot, adapters)
     adapters.writeOut(`bundled patch: ${patchPath ?? 'missing'}\n`)
     return 0
