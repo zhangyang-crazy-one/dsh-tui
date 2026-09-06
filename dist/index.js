@@ -71655,14 +71655,17 @@ function transcriptOverlay(tier, synchronizedFrameEnded) {
     }
     return cells === "" ? "" : `\x1B7${cells}\x1B8`;
   }
+  const railCol = next.geometry.rail?.col ?? next.geometry.columns;
+  const guardCol = railCol > 1 ? railCol - 1 : railCol;
   for (const change of diff2.changes) {
     const nextWidth = change.line === void 0 ? 0 : change.line.backgroundColumns ?? change.line.displayWidth;
-    const staleColumns = change.clearColumns - nextWidth;
+    const targetColumns = Math.max(change.clearColumns, guardCol - change.col);
+    const padColumns = targetColumns - nextWidth;
     if (change.line !== void 0) {
       cells += `\x1B[${String(change.row)};${String(change.col)}H` + paintPhysicalLine(change.line, tier);
     }
-    if (staleColumns > 0) {
-      cells += `\x1B[${String(change.row)};${String(change.col + nextWidth)}H` + styled(" ".repeat(staleColumns), "bg", tier);
+    if (padColumns > 0) {
+      cells += `\x1B[${String(change.row)};${String(change.col + nextWidth)}H` + styled(" ".repeat(padColumns), "bg", tier);
     }
   }
   return cells === "" ? "" : `\x1B7${cells}\x1B8`;

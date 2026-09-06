@@ -268,18 +268,21 @@ function transcriptOverlay(
     }
     return cells === '' ? '' : `\x1b7${cells}\x1b8`
   }
+  const railCol = next.geometry.rail?.col ?? next.geometry.columns
+  const guardCol = railCol > 1 ? railCol - 1 : railCol
   for (const change of diff.changes) {
     const nextWidth = change.line === undefined
       ? 0
       : change.line.backgroundColumns ?? change.line.displayWidth
-    const staleColumns = change.clearColumns - nextWidth
+    const targetColumns = Math.max(change.clearColumns, guardCol - change.col)
+    const padColumns = targetColumns - nextWidth
     if (change.line !== undefined) {
       cells += `\x1b[${String(change.row)};${String(change.col)}H`
         + paintPhysicalLine(change.line, tier)
     }
-    if (staleColumns > 0) {
+    if (padColumns > 0) {
       cells += `\x1b[${String(change.row)};${String(change.col + nextWidth)}H`
-        + styled(' '.repeat(staleColumns), 'bg', tier)
+        + styled(' '.repeat(padColumns), 'bg', tier)
     }
   }
   return cells === '' ? '' : `\x1b7${cells}\x1b8`

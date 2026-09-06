@@ -17,6 +17,7 @@ import {
   releaseFrameRail,
   transformFrameChunk,
   writePublishedFrameRail,
+  writePublishedFrameSnapshot,
   wrapStdoutForFrameBg,
 } from '../src/frame-fill.ts'
 import { createFrameMetrics, markDeltaIngress } from '../src/frame-metrics.ts'
@@ -226,7 +227,13 @@ describe('wrapStdoutForFrameBg', () => {
       })
     })
     expect(metrics.snapshot().writtenCells.total).toBe(3)
-    expect(metrics.snapshot().deltaIngressToStdoutDrainMs.count).toBe(1)
+    await new Promise<void>((resolve) => {
+      wrapped.write('\x1b[?2026l', () => resolve())
+    })
+    await new Promise<void>((resolve) => {
+      wrapped.write('\x1b[?2026l', () => resolve())
+    })
+    expect(metrics.snapshot().frameIntervalMs.count).toBe(1)
   })
 })
 
@@ -446,6 +453,100 @@ describe('fixed-column transcript rail', () => {
     expect(atlas.cellAt(18, 2)?.ch).toBe('█')
     setFrameRail(undefined)
   })
+
+  it('clears vacated rows when the track shifts within the same column', () => {
+    const atlas = new ScreenAtlas(20, 6)
+    setFrameRail({ col: 20, topRow: 2, rows: 4, thumbStart: 0, thumbRows: 2 })
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+    expect(atlas.cellAt(20, 2)?.ch).toBe('█')
+    expect(atlas.cellAt(20, 5)?.ch).toBe('·')
+    setFrameRail({ col: 20, topRow: 4, rows: 2, thumbStart: 0, thumbRows: 1 })
+    atlas.feed(transformFrameChunk('\x1b[?2026l', 'none'))
+    expect(atlas.cellAt(20, 2)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 3)?.ch).toBe(' ')
+    expect(atlas.cellAt(20, 4)?.ch).toBe('█')
+    setFrameRail(undefined)
+  })
+
+  it('writes to direct stream when overlay writer is undefined', () => {
+    const sink: string[] = []
+    const directStream = new Writable({
+      write(chunk, _encoding, callback) {
+        sink.push(String(chunk))
+        callback()
+      },
+    }) as unknown as NodeJS.WriteStream
+    releaseFrameRail()
+    setVisibleFrameSnapshot(undefined)
+    writePublishedFrameRail(directStream, 'none')
+    writePublishedFrameSnapshot(directStream, 'none')
+    expect(sink).toEqual([])
+
+    setFrameRail({ col: 20, topRow: 2, rows: 2, thumbStart: 0, thumbRows: 1 })
+    writePublishedFrameRail(directStream, 'none')
+    expect(sink.join('')).toContain('\x1b[2;20H█')
+    sink.length = 0
+    setVisibleFrameSnapshot({
+      revision: 'direct',
+      geometry: {
+        columns: 20,
+        rows: 6,
+        transcriptTop: 2,
+        transcriptLeft: 2,
+        transcriptWidth: 18,
+        transcriptRows: 3,
+      },
+      rows: [createFrameSnapshotRow({
+        id: 'd1',
+        row: 2,
+        col: 2,
+        line: createPhysicalLine({
+          blockId: 'd1',
+          spans: [{ text: 'DIRECT', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 6,
+          blockRow: 0,
+        }),
+      })],
+    })
+    writePublishedFrameSnapshot(directStream, 'none')
+    expect(sink.join('')).toContain('DIRECT')
+
+    sink.length = 0
+    const metrics = createFrameMetrics()
+    const wrapped = wrapStdoutForFrameBg(directStream, () => 'none', metrics)
+    writePublishedFrameRail(wrapped, 'none')
+    expect(sink.join('')).toContain('\x1b[2;20H█')
+    sink.length = 0
+    setVisibleFrameSnapshot({
+      revision: 'wrapped-diff',
+      geometry: {
+        columns: 20,
+        rows: 6,
+        transcriptTop: 2,
+        transcriptLeft: 2,
+        transcriptWidth: 18,
+        transcriptRows: 3,
+      },
+      rows: [createFrameSnapshotRow({
+        id: 'w1',
+        row: 2,
+        col: 2,
+        line: createPhysicalLine({
+          blockId: 'w1',
+          spans: [{ text: 'WRAPPED', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 7,
+          blockRow: 0,
+        }),
+      })],
+    })
+    writePublishedFrameSnapshot(wrapped, 'none')
+    expect(sink.join('')).toContain('WRAPPED')
+
+    setFrameRail(undefined)
+    setVisibleFrameSnapshot(undefined)
+  })
 })
 
 describe('transcript differential clearing', () => {
@@ -663,6 +764,125 @@ describe('transcript differential clearing', () => {
     const out = transformFrameChunk('\x1b[?2026l', 'truecolor')
     expect(out).toContain('\x1b[48;2;37;40;44m')
     expect(out).toContain('     \x1b[0m')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('pads row with theme background up to guard column during incremental updates', () => {
+    const geo = {
+      columns: 20,
+      rows: 6,
+      transcriptTop: 2,
+      transcriptLeft: 2,
+      transcriptWidth: 17,
+      transcriptRows: 3,
+      rail: { col: 20, topRow: 2, rows: 3, thumbStart: 0, thumbRows: 1 },
+    }
+    setVisibleFrameSnapshot({
+      revision: 'init',
+      geometry: geo,
+      rows: [createFrameSnapshotRow({
+        id: 'r1',
+        row: 2,
+        col: 2,
+        line: createPhysicalLine({
+          blockId: 'r1',
+          spans: [{ text: 'SHORT', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 5,
+          blockRow: 0,
+        }),
+      })],
+    })
+    transformFrameChunk('\x1b[?2026l', 'truecolor')
+
+    setVisibleFrameSnapshot({
+      revision: 'next',
+      geometry: geo,
+      rows: [createFrameSnapshotRow({
+        id: 'r1',
+        row: 2,
+        col: 2,
+        line: createPhysicalLine({
+          blockId: 'r1',
+          spans: [{ text: 'CHANGED', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 7,
+          blockRow: 0,
+        }),
+      })],
+    })
+    const out = transformFrameChunk('\x1b[?2026l', 'truecolor')
+    expect(out).toContain('\x1b[2;9H\x1b[48;2;21;22;24m          ')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('pads to guard cell on a one-column terminal without left guard', () => {
+    const geometry1 = {
+      columns: 1,
+      rows: 2,
+      transcriptTop: 1,
+      transcriptLeft: 1,
+      transcriptWidth: 1,
+      transcriptRows: 1,
+    }
+    setVisibleFrameSnapshot({
+      revision: 'col-1-a',
+      geometry: geometry1,
+      rows: [createFrameSnapshotRow({
+        id: 'c1',
+        row: 1,
+        col: 1,
+        line: createPhysicalLine({
+          blockId: 'c1',
+          spans: [{ text: 'x', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 1,
+          blockRow: 0,
+        }),
+      })],
+    })
+    transformFrameChunk('\x1b[?2026l', 'none')
+    setVisibleFrameSnapshot({
+      revision: 'col-1-b',
+      geometry: geometry1,
+      rows: [createFrameSnapshotRow({
+        id: 'c1',
+        row: 1,
+        col: 1,
+        line: createPhysicalLine({
+          blockId: 'c1',
+          spans: [{ text: 'y', token: 'fg' as const }],
+          sourceStart: 0,
+          sourceEnd: 1,
+          blockRow: 0,
+        }),
+      })],
+    })
+    const out = transformFrameChunk('\x1b[?2026l', 'none')
+    expect(out).toContain('\x1b[1;1Hy')
+    setVisibleFrameSnapshot({
+      revision: 'col-1-c',
+      geometry: geometry1,
+      rows: [],
+    })
+    const cleared = transformFrameChunk('\x1b[?2026l', 'none')
+    expect(cleared).toContain('\x1b[1;1H')
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  })
+
+  it('defers forced repaint until synchronized frame ends', () => {
+    setVisibleFrameSnapshot({
+      revision: 'forced-sync',
+      geometry,
+      rows: [positionedRow('forced-sync', 2, 'SYNC')],
+    })
+    const out = transformFrameChunk('\x1b[?25h', 'none')
+    expect(out).not.toContain('SYNC')
+    const flushed = transformFrameChunk('\x1b[?2026l', 'none')
+    expect(flushed).toContain('SYNC')
     setVisibleFrameSnapshot(undefined)
     transformFrameChunk('\x1b[?2026l', 'none')
   })
