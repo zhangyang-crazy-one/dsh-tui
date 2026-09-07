@@ -18,6 +18,7 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { MessageId } from '@deepseek-ai/dsh-llm'
+import { logPath } from '../../../../session/session-persistence-jsonl/src/format.ts'
 
 /** One thousand completed turns, each with one user and one assistant message. */
 export const LONG_SESSION_TURNS = 1000
@@ -123,6 +124,7 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
             model: 'test-model',
           },
         },
+        stream: [],
       },
       surfaceOp: 'append',
     })
@@ -152,22 +154,15 @@ export async function writeLongSession(
   const events = longSessionEvents(options.seed ?? 0)
   const writer = new Context()
   await writer.plugin(SessionStore)
-  await writer.plugin(JsonlSessionPersistence, { root })
-  try {
-    await writer.sessionPersistence.delete(SessionId(id))
-  } catch {
-    // Absent fixture session: nothing to replace.
-  }
-  const session = writer.sessions.create(SessionId(id), { seed: events })
-  await writer.sessions.flush(session)
-  const location = writer.sessionPersistence.locate(session.header)
+  await writer.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+  const sessionId = SessionId(id)
+  const detached = writer.sessions.prepare(sessionId)
+  const handle = await writer.sessionPersistence.create(detached.header)
+  await handle.append(events)
+  await handle.close()
   await writer.fiber.dispose()
-  if (location === undefined) {
-    throw new Error(
-      `long-session fixture: ${id} has no durable artifact under ${root}`,
-    )
-  }
-  return { root, id, jsonlPath: location.path, events }
+  const jsonlPath = logPath(root, undefined, sessionId, 'none')
+  return { root, id, jsonlPath, events }
 }
 
 /**

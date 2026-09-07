@@ -1,6 +1,6 @@
 /** Pure width- and height-adaptive footer formatting for authoritative TUI status data. */
 
-import { formatCacheHitPercent } from '@deepseek-ai/dsh-token-meter/client'
+import { formatCacheHitPercent } from './token-format.ts'
 import { displayWidth, escapeContent } from './content.ts'
 import { truncateDisplay } from './tool-cards.ts'
 import type { StyleToken } from './theme.ts'

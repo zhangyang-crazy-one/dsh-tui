@@ -33,7 +33,7 @@ import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SessionTitleService, { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
 import { escapeContent } from '@deepseek-ai/dsh-tui-render'
-import { logPath } from '../../../session/session-persistence-jsonl/src/format.ts'
+import { logPath, sessionDir } from '../../../session/session-persistence-jsonl/src/format.ts'
 import { FEEDBACK_MS, RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
@@ -52,35 +52,48 @@ afterEach(async () => {
   }
 })
 
-type ColdCommit = (
-  meta: SessionHeader,
-  marker: unknown,
-  closers: readonly SessionEvent[],
-  events: readonly SessionEvent[],
-) => Promise<void>
-
 interface ColdCommitGate {
   readonly entered: Promise<void>
   release(): void
   restore(): void
 }
 
-/** Delay one genuine provider cold commit after it owns the same-id reservation. */
+/** Delay one genuine provider cold commit after write open resolves. */
 function gateColdCommit(persistence: SessionPersistence): ColdCommitGate {
-  const backend = persistence as unknown as { appendColdBatch?: ColdCommit }
-  const original = backend.appendColdBatch
-  if (original === undefined) throw new Error('backend has no cold commit hook')
+  const originalOpen = persistence.open.bind(persistence)
   const entered = Promise.withResolvers<undefined>()
   const release = Promise.withResolvers<undefined>()
-  backend.appendColdBatch = async (meta, marker, closers, events) => {
-    entered.resolve(undefined)
-    await release.promise
-    return original.call(backend, meta, marker, closers, events)
+  let pendingWrite: Promise<void> | undefined
+  persistence.open = async (id, access, options) => {
+    if (access === 'read' && pendingWrite !== undefined) {
+      await pendingWrite
+    }
+    const handle = await originalOpen(id, access, options)
+    if (access === 'write') {
+      const originalAppend = handle.append.bind(handle)
+      const originalClose = handle.close.bind(handle)
+      const writeDone = Promise.withResolvers<undefined>()
+      pendingWrite = writeDone.promise
+      handle.append = async (events, opt) => {
+        entered.resolve(undefined)
+        await release.promise
+        return originalAppend(events, opt)
+      }
+      handle.close = async () => {
+        try {
+          await originalClose()
+        } finally {
+          writeDone.resolve(undefined)
+          pendingWrite = undefined
+        }
+      }
+    }
+    return handle
   }
   return {
     entered: entered.promise,
     release: () => { release.resolve(undefined) },
-    restore: () => { backend.appendColdBatch = original },
+    restore: () => { persistence.open = originalOpen },
   }
 }
 
@@ -120,16 +133,26 @@ function seedLog(title: string, base: number): SessionEvent[] {
   ]
 }
 
+async function loadStoredEvents(persistence: SessionPersistence, id: SessionId): Promise<readonly SessionEvent[]> {
+  const handle = await persistence.open(id, 'read')
+  try {
+    return await handle.read()
+  } finally {
+    await handle.close()
+  }
+}
+
 /** Persist three sessions through a throwaway context, leaving live-store space. */
 async function preCreateSessions(root: string): Promise<void> {
   const writer = new Context()
   await writer.plugin(SessionStore)
   await writer.plugin(JsonlSessionPersistence, { root, compression: 'none' })
   for (const [index, title] of ['alpha', 'beta', 'gamma'].entries()) {
-    const session = writer.sessions.create(SessionId(`session-${index}`), {
-      seed: seedLog(title, index),
-    })
-    await writer.sessions.flush(session)
+    const sessionId = SessionId(`session-${index}`)
+    const detached = writer.sessions.prepare(sessionId)
+    const handle = await writer.sessionPersistence.create(detached.header)
+    await handle.append(seedLog(title, index))
+    await handle.close()
   }
   await writer.fiber.dispose()
 }
@@ -174,12 +197,17 @@ interface BenchOptions {
   failCreateOn?: number
 }
 
-/** A scripted persistence stub: list/inspect only, delete optional (K6). */
+/** A scripted persistence stub: list/open, delete optional (K6). */
 function persistenceStub(
   deleteImpl?: () => Promise<void>,
-): { list: () => Promise<unknown[]>; inspect: () => Promise<unknown>; delete?: () => Promise<void> } {
+) {
   return {
-    list: async () => [{ id: 'session-stub' }],
+    list: async () => [{ header: { id: SessionId('session-stub'), version: 2, createdAt: 0, isSeeded: false, delegationDepth: 0 } }],
+    open: async (id: SessionId) => ({
+      header: { id, version: 2, createdAt: 0, isSeeded: false, delegationDepth: 0 },
+      read: async () => [],
+      close: async () => {},
+    }),
     inspect: async () => ({ events: [], meta: { createdAt: 0 } }),
     ...(deleteImpl === undefined ? {} : { delete: deleteImpl }),
   }
@@ -197,6 +225,10 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
   })
   if (options.stubPersistence === undefined) {
     await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+    ;(ctx.sessionPersistence as unknown as { delete: (id: SessionId) => Promise<void> }).delete = async (id: SessionId) => {
+      const dir = sessionDir(root, undefined, id)
+      await rm(dir, { recursive: true, force: true })
+    }
   } else {
     ctx.provide(
       'sessionPersistence',
@@ -231,9 +263,9 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
       options: ResumeAgentOptions,
     ): Promise<AgentHandle> {
       resumeCalls(options.resumeSessionId)
-      const loaded = await ctx.sessionPersistence.load(options.resumeSessionId)
+      const events = await loadStoredEvents(ctx.sessionPersistence, options.resumeSessionId)
       const session = ctx.sessions.create(options.resumeSessionId, {
-        seed: loaded.events.map(event => structuredClone(event)),
+        seed: events.map(event => structuredClone(event)),
       })
       const agent = scriptedAgent(ownerCtx, session)
       await options.setup?.(agent.ctx)
@@ -352,11 +384,11 @@ describe('session directory controller', () => {
       expect(controller.getSessionPane().rows).toHaveLength(2)
     })
     expect(
-      (await ctx.sessionPersistence.list()).map(header => header.id),
+      (await ctx.sessionPersistence.list()).map(item => item.header.id),
     ).not.toContain('session-0')
     await expect(
-      ctx.sessionPersistence.load(SessionId('session-0')),
-    ).rejects.toThrow('not found')
+      loadStoredEvents(ctx.sessionPersistence, SessionId('session-0')),
+    ).rejects.toThrow()
 
     await ctx.fiber.dispose()
   })
@@ -374,17 +406,9 @@ describe('session directory controller', () => {
     highlightRow(controller, 'session-1')
     const bound = controller.session
     const beforeRows = controller.getSessionPane().rows.map(row => ({ ...row }))
-    const renamePersisted = vi.spyOn(ctx.sessionTitle, 'renamePersisted')
     const gate = gateColdCommit(ctx.sessionPersistence)
     try {
       controller.dispatch({ kind: 'rename-session', title: 'cold durable title' })
-      await vi.waitFor(() => {
-        expect(renamePersisted).toHaveBeenCalledWith(
-          SessionId('session-1'),
-          'cold durable title',
-          expect.any(AbortSignal),
-        )
-      })
       await gate.entered
 
       expect(controller.getSessionPane().rows).toEqual(beforeRows)
@@ -404,7 +428,7 @@ describe('session directory controller', () => {
       expect(controller.session).toBe(bound)
       expect(createCalls).toHaveBeenCalledTimes(1)
       expect(resumeCalls).not.toHaveBeenCalled()
-      expect(foldSessionTitle((await ctx.sessionPersistence.inspect(SessionId('session-1'))).events))
+      expect(foldSessionTitle(await loadStoredEvents(ctx.sessionPersistence, SessionId('session-1'))))
         .toMatchObject({ title: 'cold durable title', source: { kind: 'user' } })
     } finally {
       gate.release()
@@ -426,13 +450,9 @@ describe('session directory controller', () => {
     controller.dispatch({ kind: 'session-pane' })
     highlightRow(controller, 'session-1')
     const originalSession = controller.session
-    const renamePersisted = vi.spyOn(ctx.sessionTitle, 'renamePersisted')
     const gate = gateColdCommit(ctx.sessionPersistence)
     try {
       controller.dispatch({ kind: 'rename-session', title: 'rename wins race' })
-      await vi.waitFor(() => {
-        expect(renamePersisted).toHaveBeenCalledTimes(1)
-      })
       await gate.entered
 
       controller.dispatch({ kind: 'select-session', id: 'session-1' })
@@ -451,7 +471,7 @@ describe('session directory controller', () => {
         expect(controller.getSessionPane().rows.find(row => row.id === 'session-1')?.title)
           .toBe('rename wins race')
       })
-      expect(foldSessionTitle(controller.session?.events ?? [])?.title).toBe('rename wins race')
+      expect(foldSessionTitle(controller.session?.snapshotEvents() ?? [])?.title).toBe('rename wins race')
       expect(createCalls).toHaveBeenCalledTimes(1)
       expect(resumeCalls).toHaveBeenCalledTimes(1)
     } finally {

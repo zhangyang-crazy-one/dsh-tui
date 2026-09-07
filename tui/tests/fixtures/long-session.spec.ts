@@ -78,21 +78,25 @@ describe('long-session fixture (SC4 prep)', () => {
 
     const reader = new Context()
     await reader.plugin(SessionStore)
-    await reader.plugin(JsonlSessionPersistence, { root })
-    const loaded = await reader.sessionPersistence.load(SessionId(fixture.id))
-    // create() seals the seed with one session/end-seed boundary, so the
-    // durable log holds the 4000 fixture events plus that marker.
-    expect(loaded.events).toHaveLength(LONG_SESSION_TURNS * 4 + 1)
-    const loadedMessages = loaded.events.filter(
+    await reader.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+    const handle = await reader.sessionPersistence.open(SessionId(fixture.id), 'read')
+    let loadedEvents: readonly SessionEvent[]
+    try {
+      loadedEvents = await handle.read()
+    } finally {
+      await handle.close()
+    }
+    expect(loadedEvents).toHaveLength(LONG_SESSION_TURNS * 4)
+    const loadedMessages = loadedEvents.filter(
       event =>
         event.type === 'user/message' || event.type === 'assistant/message',
     )
     expect(loadedMessages).toHaveLength(LONG_SESSION_MESSAGES)
     // Seed-rebuild: a fresh session replayed from the durable log.
     const rebuilt = reader.sessions.create(SessionId(fixture.id), {
-      seed: loaded.events.map(event => structuredClone(event)),
+      seed: loadedEvents.map(event => structuredClone(event)),
     })
-    const messages = rebuilt.events.filter(
+    const messages = rebuilt.snapshotEvents().filter(
       event => event.type === 'user/message' || event.type === 'assistant/message',
     )
     expect(messages).toHaveLength(LONG_SESSION_MESSAGES)

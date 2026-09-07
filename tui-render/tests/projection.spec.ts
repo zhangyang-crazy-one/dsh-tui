@@ -379,6 +379,7 @@ describe('createProjector', () => {
             },
           ],
         },
+        stream: [],
       }),
       event(8, 'tool/call', {
         turn: 1,
@@ -425,6 +426,7 @@ describe('createProjector', () => {
           source: { kind: 'model', provider: 'test', model: 'test' },
           content: [{ type: 'text', text: 'final answer' }],
         },
+        stream: [],
       }),
       event(15, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
     ]

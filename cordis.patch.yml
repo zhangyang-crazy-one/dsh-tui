@@ -35,12 +35,30 @@
     openAt: first-search
 
 - insert:
+    # Code Mode is a core execution capability, not a Web component.
+    - id: code-runtime
+      name: "@deepseek-ai/dsh-code-runtime-worker-thread"
+
+    # Per-round token/duration stats for the terminal status line.
+    - id: session-stats
+      name: "@deepseek-ai/dsh-session-stats"
+
+    # Base owns the shared storage/domain/projection-cache stack. This layer
+    # contributes only the TUI-facing feedback consumer over that stack.
+    - id: message-feedback
+      name: "@deepseek-ai/dsh-message-feedback"
+      config:
+        maxNoteBytes: 8192
+
+    - id: tool-ask-user
+      name: "@deepseek-ai/dsh-tool-ask-user"
+
     - id: tui-startup
-      name: "./dist/startup.js"
+      name: "@deepseek-ai/dsh-tui/startup"
 
     # Reads its task from the ordinary tuiStartup provider.
     - id: tui-runtime
-      name: "./dist/index.js"
+      name: "@deepseek-ai/dsh-tui"
       inject: [tuiStartup]
       config:
         task: !!js ctx.tuiStartup.task

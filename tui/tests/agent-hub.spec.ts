@@ -16,7 +16,7 @@ import type {
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore from '@deepseek-ai/dsh-session'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, SessionHeader, UserMessage } from '@deepseek-ai/dsh-session'
 import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent'
@@ -219,7 +219,7 @@ describe('Agent Hub controller', () => {
         ])
       })
       expect(liveSnapshot).toHaveBeenCalledWith(ctx.sessions.get(liveId))
-      expect(cachedSnapshot).toHaveBeenCalledExactlyOnceWith(coldHeader, [
+      expect(cachedSnapshot).toHaveBeenCalledExactlyOnceWith(coldHeader, SessionLogOffset(0), [
         'tokenUsage',
         'contextPressure',
         'subagentTiming',
@@ -280,7 +280,7 @@ describe('Agent Hub controller', () => {
         expect(pane.rows?.at(0)?.tokens).toBe(10)
       })
       expect(borrowSession).toHaveBeenCalledOnce()
-      expect(coldSnapshot).toHaveBeenCalledExactlyOnceWith(childHeader, events)
+      expect(coldSnapshot).toHaveBeenCalledExactlyOnceWith(childHeader, SessionLogOffset(0), events)
       expect(dispose).toHaveBeenCalledOnce()
       await ctx.fiber.dispose()
     },
@@ -465,6 +465,7 @@ describe('Agent Hub controller', () => {
             content: [{ type: 'text', text: 'world' }, { type: 'reasoning', text: 'secret' }],
             source: { provider: 'test', model: 'test' },
           }),
+          stream: [],
         },
       },
       {
@@ -475,6 +476,7 @@ describe('Agent Hub controller', () => {
             content: [{ type: 'text', text: '' }],
             source: { provider: 'test', model: 'test' },
           }),
+          stream: [],
         },
       },
       { type: 'turn/end', seq: 5, time: 5, data: { turn: 1, reason: { kind: 'completed' } } },

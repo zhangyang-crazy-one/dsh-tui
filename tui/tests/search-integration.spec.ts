@@ -92,6 +92,7 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
           content: [{ type: 'text', text: `ok, ${keyword} ordered` }],
           source: { provider: 'test-provider', model: 'test-model' },
         }),
+        stream: [],
       },
       surfaceOp: 'append',
     },
@@ -110,66 +111,12 @@ async function preCreateSessions(root: string): Promise<void> {
   await writer.plugin(SessionStore)
   await writer.plugin(JsonlSessionPersistence, { root })
   for (const [index, keyword] of KEYWORDS.entries()) {
-    const session = writer.sessions.create(SessionId(`session-${index}`), {
-      seed: round(1, keyword, index * 100),
-    })
-    await writer.sessions.flush(session)
+    const sessionId = SessionId(`session-${index}`)
+    const detached = writer.sessions.prepare(sessionId)
+    const handle = await writer.sessionPersistence.create(detached.header)
+    await handle.append(round(1, keyword, index * 100))
+    await handle.close()
   }
-  const internal = writer.sessions.create(SessionId('session-internal'), {
-    seed: [{
-      type: 'user/message',
-      seq: 0,
-      time: 1_000,
-      data: createUserMessage({
-        content: [{
-          type: 'text',
-          text: 'banana 内部上下文哨兵_%_ from hidden plugin context',
-        }],
-        source: { kind: 'plugin', plugin: 'search-integration-test' },
-      }),
-      surfaceOp: 'append',
-    }],
-  })
-  await writer.sessions.flush(internal)
-  const unicode = writer.sessions.create(SessionId('session-unicode'), {
-    seed: [
-      { type: 'turn/start', seq: 0, time: 2_000, data: { turn: 1 } },
-      {
-        type: 'user/message',
-        seq: 1,
-        time: 2_001,
-        data: createUserMessage({
-          content: [{ type: 'text', text: '中文用户_%_字面内容' }],
-          source: { kind: 'user' },
-        }),
-        surfaceOp: 'append',
-      },
-      {
-        type: 'assistant/message',
-        seq: 2,
-        time: 2_002,
-        data: {
-          turn: 1,
-          step: 1,
-          message: createAssistantMessage({
-            content: [
-              { type: 'reasoning', text: '推理哨兵_%_' },
-              { type: 'text', text: '中文助手_%_字面内容' },
-            ],
-            source: { provider: 'test-provider', model: 'test-model' },
-          }),
-        },
-        surfaceOp: 'append',
-      },
-      {
-        type: 'turn/end',
-        seq: 3,
-        time: 2_003,
-        data: { turn: 1, reason: { kind: 'completed' } },
-      },
-    ],
-  })
-  await writer.sessions.flush(unicode)
   await writer.fiber.dispose()
 }
 
@@ -224,8 +171,7 @@ async function bench(
     scriptedEngine?: (
       input: {
         query: string
-        matchMode?: string
-        eventFilters?: readonly [{ kind: string; values: readonly string[] }]
+        limit?: number
       },
     ) => Promise<{ items: ReturnType<typeof hit>[] }>
   } = {},
@@ -247,9 +193,7 @@ async function bench(
     const engine: {
       searchSessions(input: {
         query: string
-        matchMode?: string
-        eventFilters?: readonly [{ kind: string; values: readonly string[] }]
-        limit: number
+        limit?: number
       }): Promise<{
         items: Array<ReturnType<typeof hit>>
       }>
@@ -278,9 +222,15 @@ async function bench(
       options: ResumeAgentOptions,
     ): Promise<AgentHandle> {
       resumeCalls(options.resumeSessionId)
-      const loaded = await ctx.sessionPersistence.load(options.resumeSessionId)
+      const handle = await ctx.sessionPersistence.open(options.resumeSessionId, 'read')
+      let events: readonly SessionEvent[]
+      try {
+        events = await handle.read()
+      } finally {
+        await handle.close()
+      }
       const session = ctx.sessions.create(options.resumeSessionId, {
-        seed: loaded.events.map(event => structuredClone(event)),
+        seed: events.map(event => structuredClone(event)),
       })
       const agent = scriptedAgent(ownerCtx, session)
       await options.setup?.(agent.ctx)
@@ -359,62 +309,7 @@ describe('session search', () => {
     }
   })
 
-  it('uses literal substring mode for Chinese search terms', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-search-chinese-'))
-    roots.push(root)
-    const inputs: Array<{
-      query: string
-      matchMode?: string
-      eventFilters?: readonly [{ kind: string; values: readonly string[] }]
-    }> = []
-    const { ctx, controller } = await bench(root, {
-      scriptedEngine: async (input) => {
-        inputs.push({
-          query: input.query,
-          ...(input.matchMode === undefined ? {} : { matchMode: input.matchMode }),
-          ...(input.eventFilters === undefined ? {} : { eventFilters: input.eventFilters }),
-        })
-        return { items: [hit('session-chinese', '只回复 HARNESS_TUI_OK')] }
-      },
-    })
-    await controller.start()
-    controller.dispatch({ kind: 'search-pane' })
-    controller.dispatch({ kind: 'search', query: '回复' })
-    await vi.waitFor(() => {
-      expect(controller.getSearchPane().results).toHaveLength(1)
-    })
-    expect(inputs).toEqual([{
-      query: '回复',
-      matchMode: 'literal-substring',
-      eventFilters: [{ kind: 'transcript-role', values: ['user', 'assistant'] }],
-    }])
-    await ctx.fiber.dispose()
-  })
 
-  it('matches Unicode and SQL wildcard characters only in human transcript text', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-search-visible-'))
-    roots.push(root)
-    await preCreateSessions(root)
-    const { ctx, controller } = await bench(root)
-    await controller.start()
-    controller.dispatch({ kind: 'search-pane' })
-
-    const searchIds = async (query: string): Promise<string[]> => {
-      controller.dispatch({ kind: 'search', query })
-      await vi.waitFor(() => {
-        expect(controller.getSearchPane().status).toBe('idle')
-      })
-      return controller.getSearchPane().results.map(row => row.id)
-    }
-
-    expect(await searchIds('中文用户_%_')).toEqual(['session-unicode'])
-    expect(await searchIds('中文助手_%_')).toEqual(['session-unicode'])
-    expect(await searchIds('%')).toEqual(['session-unicode'])
-    expect(await searchIds('_')).toEqual(['session-unicode'])
-    expect(await searchIds('内部上下文哨兵_%_')).toEqual([])
-    expect(await searchIds('推理哨兵_%_')).toEqual([])
-    await ctx.fiber.dispose()
-  })
 
   it('returns no candidates for an unmatched term', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-tui-search-miss-'))

@@ -18,7 +18,7 @@ import type {
   ResumeAgentOptions,
 } from '@deepseek-ai/dsh-agent'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
-import SessionStore, { type Session, SessionId } from '@deepseek-ai/dsh-session'
+import SessionStore, { type Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type {
   SessionEvent,
   UserMessage,
@@ -70,6 +70,7 @@ function round(
           content: [{ type: 'text', text: assistantText }],
           source: { provider: 'test-provider', model: 'test-model' },
         }),
+        stream: [],
       },
       surfaceOp: 'append',
     },
@@ -107,6 +108,7 @@ function appendSentinelTurn(
         content: [{ type: 'text', text: assistantText }],
         source: { provider: 'test-provider', model: 'test-model' },
       }),
+      stream: [],
     },
     { surfaceOp: 'append' },
   )
@@ -118,13 +120,13 @@ async function preCreateSession(root: string): Promise<void> {
   const writer = new Context()
   await writer.plugin(SessionStore)
   await writer.plugin(JsonlSessionPersistence, { root })
-  const seeded = writer.sessions.create(SessionId('session-1'), {
-    seed: [
-      ...round(1, '第一轮问题', '第一轮回答', 100),
-      ...round(2, '第二轮问题', '第二轮回答', 200),
-    ],
-  })
-  await writer.sessions.flush(seeded)
+  const detached = writer.sessions.prepare(SessionId('session-1'))
+  const handle = await writer.sessionPersistence.create(detached.header)
+  await handle.append([
+    ...round(1, '第一轮问题', '第一轮回答', 100),
+    ...round(2, '第二轮问题', '第二轮回答', 200),
+  ])
+  await handle.close()
   await writer.fiber.dispose()
 }
 
@@ -334,14 +336,24 @@ async function bench(root: string, resume: string): Promise<Bench> {
       options: ResumeAgentOptions,
     ): Promise<AgentHandle> {
       resumeCalls(options.resumeSessionId)
-      const loaded = await ctx.sessionPersistence.load(options.resumeSessionId)
+      const handle = await ctx.sessionPersistence.open(options.resumeSessionId, 'write')
+      const events = await handle.read()
       const session = ctx.sessions.create(options.resumeSessionId, {
-        seed: loaded.events.map(event => structuredClone(event)),
+        seed: events.map(event => structuredClone(event)),
       })
+      const suffix = session.snapshotEvents(SessionLogOffset(events.length))
+      if (suffix.length > 0) {
+        await handle.append(suffix)
+      }
       const agent = scriptedAgent(ownerCtx, session, followupTexts)
       await options.setup?.(agent.ctx)
       ctx.agents.register(agent)
-      return { agent, dispose: () => Promise.resolve() }
+      return {
+        agent,
+        dispose: async () => {
+          await handle.close()
+        },
+      }
     },
   })
   const out: { text: string } = { text: '' }
@@ -589,8 +601,8 @@ describe('session resume', () => {
     const listMock = vi.fn(() => Promise.reject(new Error('disk gone')))
     ctx.provide('sessionPersistence', {
       list: listMock,
-      load: () => Promise.reject(new Error('unused')),
-      delete: () => Promise.reject(new Error('unused')),
+      open: () => Promise.reject(new Error('unused')),
+      create: () => Promise.reject(new Error('unused')),
     } as never)
     const controller = new RuntimeController(
       ctx,
@@ -742,9 +754,15 @@ describe('session resume', () => {
       const reader = new Context()
       await reader.plugin(SessionStore)
       await reader.plugin(JsonlSessionPersistence, { root })
-      const loaded = await reader.sessionPersistence.load(SessionId('session-1'))
-      await reader.fiber.dispose()
-      expect(loaded.events.filter(event => event.type === 'user/message')).toHaveLength(3)
+      const handle = await reader.sessionPersistence.open(SessionId('session-1'), 'read')
+      let events: readonly SessionEvent[]
+      try {
+        events = await handle.read()
+      } finally {
+        await handle.close()
+        await reader.fiber.dispose()
+      }
+      expect(events.filter(event => event.type === 'user/message')).toHaveLength(3)
     })
     await ctx.fiber.dispose()
   })

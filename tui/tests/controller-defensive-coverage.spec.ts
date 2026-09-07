@@ -630,7 +630,6 @@ describe('RuntimeController defensive lifecycle paths', () => {
       ctx.provide('appExit', (code: number) => { exits.push(code) })
       ctx.provide('loader', {
         await: () => new Promise<never>((_resolve, reject) => {
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Exercise the non-Error startup failure path.
           reject(failure)
         }),
       } as never)

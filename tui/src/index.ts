@@ -72,7 +72,7 @@ import {
   type AskUserQuestionItem,
   type AskUserQuestionRequest,
 } from '@deepseek-ai/dsh-user-questions'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { Session, SessionId, SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session'
 
 interface LegacySessionTarget {
@@ -147,6 +147,7 @@ export function getSessionEvents(session: unknown): readonly SessionEvent[] {
 import {
   fallbackSessionTitle,
   foldSessionTitle,
+  normalizeSessionTitle,
 } from '@deepseek-ai/dsh-session-title'
 // Type-only imports carry the Context merges for ctx.get('sessionPersistence')
 // and ctx.get('sessionTitle') — the services are composed by the base patch.
@@ -2368,7 +2369,7 @@ export class RuntimeController implements TuiController {
 
   /** Whether the backend exposes the delete primitive (K6/S3 capability probe). */
   private deleteCapable(): boolean {
-    const persistence = this.ctx.get('sessionPersistence')
+    const persistence = this.ctx.get('sessionPersistence') as unknown as { delete?: (id: SessionId) => Promise<void> } | undefined
     return persistence !== undefined && typeof persistence.delete === 'function'
   }
 
@@ -2561,9 +2562,9 @@ export class RuntimeController implements TuiController {
     if (persistence !== undefined && cache !== undefined
       && rows.some(row => this.ctx.sessions.get(row.id) === undefined)) {
       try {
-        const items = await persistence.list(signal)
+        const items = await persistence.list({ signal })
         for (const item of items) {
-          const header = (item as { header?: SessionHeader }).header ?? item
+          const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
           coldHeaders.set(header.id, header)
         }
       } catch {
@@ -2579,7 +2580,7 @@ export class RuntimeController implements TuiController {
         const header = coldHeaders.get(row.id)
         if (cache === undefined || persistence === undefined || header === undefined) return row
         try {
-          snapshot = cache.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS)
+          snapshot = cache.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS)
           if (snapshot === undefined) {
             if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
               const handle = await (persistence as unknown as {
@@ -2592,14 +2593,14 @@ export class RuntimeController implements TuiController {
               try {
                 signal.throwIfAborted()
                 const events = await handle.read(0, undefined, { signal })
-                snapshot = cache.coldSnapshot(handle.header, events)
+                snapshot = cache.coldSnapshot(handle.header, SessionLogOffset(0), events)
               } finally {
                 await handle.close()
               }
             } else if (typeof (persistence as unknown as { borrowSession?: unknown }).borrowSession === 'function') {
               const borrowed = await (persistence as unknown as {
                 borrowSession(id: SessionId, signal?: AbortSignal): Promise<{
-                  inspection: { meta: SessionHeader; events: readonly SessionEvent[] }
+                  inspection: { meta: SessionHeader; inheritedEventCount?: number; events: readonly SessionEvent[] }
                   [Symbol.dispose](): void
                 }>
               }).borrowSession(row.id, signal)
@@ -2607,6 +2608,7 @@ export class RuntimeController implements TuiController {
                 signal.throwIfAborted()
                 snapshot = cache.coldSnapshot(
                   borrowed.inspection.meta,
+                  SessionLogOffset(borrowed.inspection.inheritedEventCount ?? 0),
                   borrowed.inspection.events,
                 )
               } finally {
@@ -4091,7 +4093,36 @@ export class RuntimeController implements TuiController {
       : undefined
     try {
       if (live === undefined) {
-        await titles.renamePersisted(id, title, this.lifecycleAbort.signal)
+        const persistTitle = (titles as unknown as {
+          renamePersisted?: (id: SessionId, title: string, signal?: AbortSignal) => Promise<void>
+        }).renamePersisted
+        if (typeof persistTitle === 'function') {
+          await persistTitle(id, title, this.lifecycleAbort.signal)
+        } else {
+          const maxBytes = (titles as unknown as { config?: { maxTitleBytes?: number } }).config?.maxTitleBytes ?? 80
+          const normalized = normalizeSessionTitle(title, maxBytes)
+          if (normalized.length === 0) {
+            throw new Error('session title must contain visible characters')
+          }
+          const persistence = this.ctx.get('sessionPersistence')
+          if (persistence !== undefined) {
+            const handle = await persistence.open(id, 'write', { signal: this.lifecycleAbort.signal })
+            try {
+              const events = await handle.read(0, undefined, { signal: this.lifecycleAbort.signal })
+              const lastSeq = events.at(-1)?.seq
+              const nextSeq = lastSeq !== undefined ? lastSeq + 1 : 0
+              await handle.append([{
+                type: 'session/title',
+                seq: SessionSeq(nextSeq),
+                time: Date.now(),
+                data: { title: normalized, messageSeqs: [], source: { kind: 'user' } },
+              }])
+              await handle.flush({ signal: this.lifecycleAbort.signal })
+            } finally {
+              await handle.close()
+            }
+          }
+        }
       } else {
         titles.rename(live, title)
         await this.flushSession(live)
@@ -4129,7 +4160,7 @@ export class RuntimeController implements TuiController {
     const persistence = this.ctx.get('sessionPersistence')
     try {
       // deleteCapable() above guarantees both the service and the primitive.
-      await persistence?.delete(SessionId(row.id))
+      await (persistence as unknown as { delete: (id: SessionId) => Promise<void> }).delete(SessionId(row.id))
       await this.refreshList()
     } catch (error: unknown) {
       this.ctx.logger.warn(
@@ -4979,11 +5010,12 @@ export class RuntimeController implements TuiController {
     try {
       const items = await persistence.list()
       const rows: SessionRow[] = []
+      const liveSession = this.session
       for (const item of items) {
-        const header = (item as { header?: SessionHeader }).header ?? item
+        const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
         rows.push(
-          this.session?.id === header.id
-            ? this.rowForLiveSession(this.session)
+          liveSession !== undefined && liveSession.id === header.id
+            ? this.rowForLiveSession(liveSession)
             : await this.rowFor(header.id),
         )
       }
@@ -5108,8 +5140,6 @@ export class RuntimeController implements TuiController {
     try {
       const page = await engine.searchSessions({
         query,
-        matchMode: 'literal-substring',
-        eventFilters: [{ kind: 'transcript-role', values: ['user', 'assistant'] }],
         limit: SEARCH_LIMIT + 1,
       })
       if (!this.isCurrentSearch(query, seq)) return

@@ -8,7 +8,7 @@
  * @module @deepseek-ai/dsh-tui-render/turn-tail
  */
 
-import { formatCacheHitPercent } from '@deepseek-ai/dsh-token-meter/client'
+import { formatCacheHitPercent } from './token-format.ts'
 import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import type { ToolCardModel } from './tool-cards.ts'
 

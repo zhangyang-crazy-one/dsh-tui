@@ -14,11 +14,17 @@
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
-import type { ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm'
+import type { ToolCallId, ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
+
+declare module '@deepseek-ai/dsh-session' {
+  interface SessionEventMap {
+    'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
+  }
+}
 
 /** One tool call observed inside the active turn. */
 export interface ProjectedToolCall {
@@ -557,7 +563,12 @@ export function createProjector(): Projector {
           commitStep()
           activeTurn.reason = event.data.reason
           updateActiveTurn()
-          const turnUsage = deriveTurnTokenUsage(turnEvents)
+          let turnUsage: TurnTokenUsage | undefined
+          try {
+            turnUsage = deriveTurnTokenUsage(turnEvents)
+          } catch {
+            turnUsage = undefined
+          }
           const reason = event.data.reason
           if (turnContent.length > 0 || reason.kind === 'error') {
             assistantTurnCount += 1
