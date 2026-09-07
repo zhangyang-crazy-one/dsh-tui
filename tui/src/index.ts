@@ -1025,6 +1025,10 @@ export class RuntimeController implements TuiController {
   private selectedIndex = 0
   private listOpen = false
   private confirmDelete = false
+  /** Cold session row cache keyed by session id, guarded by persistence snapshot revision. */
+  private readonly sessionRowCache = new Map<SessionId, { row: SessionRow; revision?: unknown }>()
+  /** In-flight list refresh promise to deduplicate concurrent refresh runs. */
+  private refreshListInFlight: Promise<void> | undefined
   /** Full-text search panel state, driven by the session-query service. */
   private searchOpen = false
   private searchQuery = ''
@@ -1348,6 +1352,7 @@ export class RuntimeController implements TuiController {
     this.expandedCompactionId = undefined
     this.clearRetryFooter()
     this.clearFeedback()
+    this.sessionRowCache.clear()
     this.modelSeq++
     this.commandSeq++
     try {
@@ -3789,7 +3794,6 @@ export class RuntimeController implements TuiController {
     this.installTuiSettings()
     if (this.config.task === '') await this.maybeOpenOnboarding()
     this.emit()
-    this.ownWork(this.refreshList(), 'session list refresh')
     const parked = this.pending
     this.pending = []
     for (const action of parked) this.dispatch(action)
@@ -3918,14 +3922,32 @@ export class RuntimeController implements TuiController {
           )
         }
       }
+      if (previous.session !== undefined) {
+        this.sessionRowCache.delete(previous.session.id)
+      }
+      if (this.session !== undefined) {
+        const liveRow = this.rowForLiveSession(this.session)
+        const idx = this.sessionList.findIndex(row => row.id === liveRow.id)
+        if (idx >= 0) {
+          this.sessionList[idx] = liveRow
+        } else {
+          this.sessionList = [liveRow, ...this.sessionList]
+        }
+        this.selectedIndex = 0
+      }
+      this.setTransition(IDLE_TRANSITION)
       if (!startup) {
         this.setFeedback(
           request.intent === 'create' ? '✓ 已新建会话' : '✓ 已切换会话',
         )
+        await this.refreshList(this.session?.id)
+      } else {
+        this.ownWork(this.refreshList(this.session?.id), 'session list refresh')
       }
-      await this.refreshList(this.session?.id)
     } finally {
-      this.setTransition(IDLE_TRANSITION)
+      if (this.transitionState.phase !== 'idle') {
+        this.setTransition(IDLE_TRANSITION)
+      }
     }
   }
 
@@ -4127,6 +4149,7 @@ export class RuntimeController implements TuiController {
         titles.rename(live, title)
         await this.flushSession(live)
       }
+      this.sessionRowCache.delete(id)
       await this.refreshList(id)
     } catch (error: unknown) {
       const reason = errorReason(error)
@@ -4161,6 +4184,7 @@ export class RuntimeController implements TuiController {
     try {
       // deleteCapable() above guarantees both the service and the primitive.
       await (persistence as unknown as { delete: (id: SessionId) => Promise<void> }).delete(SessionId(row.id))
+      this.sessionRowCache.delete(SessionId(row.id))
       await this.refreshList()
     } catch (error: unknown) {
       this.ctx.logger.warn(
@@ -5005,20 +5029,92 @@ export class RuntimeController implements TuiController {
 
   /** Re-read the directory and optionally keep one persisted identity selected. */
   private async refreshList(preferredId?: SessionId): Promise<void> {
+    if (this.refreshListInFlight !== undefined) {
+      await this.refreshListInFlight
+      if (preferredId !== undefined && !this.closed) {
+        const idx = this.sessionList.findIndex(row => row.id === preferredId)
+        if (idx >= 0) {
+          this.selectedIndex = idx
+          this.emit()
+        }
+      }
+      return
+    }
+    const run = this.doRefreshList(preferredId)
+    this.refreshListInFlight = run
+    try {
+      await run
+    } finally {
+      this.refreshListInFlight = undefined
+    }
+  }
+
+  private async doRefreshList(preferredId?: SessionId): Promise<void> {
     const persistence = this.ctx.get('sessionPersistence')
     if (persistence === undefined) return
     try {
       const items = await persistence.list()
-      const rows: SessionRow[] = []
       const liveSession = this.session
+
+      const listedIds = new Set<string>()
+      const uncached: Array<{ id: SessionId; revision?: unknown }> = []
+
       for (const item of items) {
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
-        rows.push(
-          liveSession !== undefined && liveSession.id === header.id
-            ? this.rowForLiveSession(liveSession)
-            : await this.rowFor(header.id),
-        )
+        const id = header.id
+        listedIds.add(id)
+        if (liveSession !== undefined && liveSession.id === id) {
+          continue
+        }
+        const revision = (item as unknown as { revision?: unknown }).revision
+        const cached = this.sessionRowCache.get(id)
+        if (cached !== undefined && (revision === undefined || cached.revision === revision)) {
+          continue
+        }
+        uncached.push({ id, revision })
       }
+
+      for (const id of this.sessionRowCache.keys()) {
+        if (!listedIds.has(id)) {
+          this.sessionRowCache.delete(id)
+        }
+      }
+
+      if (uncached.length > 0) {
+        const BATCH_SIZE = 16
+        for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
+          if (this.closed) return
+          const batch = uncached.slice(i, i + BATCH_SIZE)
+          const fetched = await Promise.all(
+            batch.map(async ({ id, revision }) => {
+              const row = await this.rowFor(id)
+              return { id, row, revision }
+            }),
+          )
+          for (const entry of fetched) {
+            this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision })
+          }
+        }
+      }
+
+      if (this.closed) return
+
+      const rows: SessionRow[] = []
+      for (const item of items) {
+        const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+        const id = header.id
+        if (liveSession !== undefined && liveSession.id === id) {
+          rows.push(this.rowForLiveSession(liveSession))
+        } else {
+          const cached = this.sessionRowCache.get(id)
+          if (cached !== undefined) {
+            rows.push(cached.row)
+          } else {
+            rows.push(await this.rowFor(id))
+          }
+        }
+      }
+
       if (
         this.session !== undefined
         && !rows.some(row => row.id === this.session?.id)
