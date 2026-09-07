@@ -4171,6 +4171,7 @@ export class RuntimeController implements TuiController {
     if (!this.deleteCapable()) {
       // K6/S3: missing backend capability is a visible state, never silent.
       this.deleteUnavailable = true
+      this.setFeedback('ℹ 当前会话存储为只追加日志，不支持物理删除')
       this.emit()
       return
     }
@@ -5056,10 +5057,18 @@ export class RuntimeController implements TuiController {
       const items = await persistence.list()
       const liveSession = this.session
 
+      // Exclude delegated subagent child sessions: they belong to the agent hub,
+      // not the interactive session manager directory.
+      const interactiveItems = items.filter(item => {
+        const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+        return (header as unknown as { origin?: string }).origin !== 'subagent'
+          && (header as unknown as { parentSession?: unknown }).parentSession === undefined
+      })
+
       const listedIds = new Set<string>()
       const uncached: Array<{ id: SessionId; revision?: unknown }> = []
 
-      for (const item of items) {
+      for (const item of interactiveItems) {
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
         const id = header.id
         listedIds.add(id)
@@ -5080,6 +5089,47 @@ export class RuntimeController implements TuiController {
         }
       }
 
+      // Stage 1: populate immediately with cached rows or header-level records
+      // so the session pane opens instantly without waiting for log parsing.
+      const initialRows: SessionRow[] = []
+      for (const item of interactiveItems) {
+        const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+        const id = header.id
+        if (liveSession !== undefined && liveSession.id === id) {
+          initialRows.push(this.rowForLiveSession(liveSession))
+        } else {
+          const cached = this.sessionRowCache.get(id)
+          if (cached !== undefined) {
+            initialRows.push(cached.row)
+          } else {
+            initialRows.push({
+              id,
+              title: id,
+              updatedAt: header.createdAt ?? 0,
+            })
+          }
+        }
+      }
+      if (
+        this.session !== undefined
+        && !initialRows.some(row => row.id === this.session?.id)
+      ) {
+        initialRows.push(this.rowForLiveSession(this.session))
+      }
+      initialRows.sort((a, b) => b.updatedAt - a.updatedAt)
+      if (this.closed) return
+      this.sessionList = initialRows
+      if (preferredId !== undefined) {
+        const preferredIndex = initialRows.findIndex(row => row.id === preferredId)
+        if (preferredIndex >= 0) {
+          this.selectedIndex = preferredIndex
+        }
+      } else if (this.selectedIndex >= initialRows.length) {
+        this.selectedIndex = Math.max(0, initialRows.length - 1)
+      }
+      this.emit()
+
+      // Stage 2: enrich uncached rows in batches of 16 in the background.
       if (uncached.length > 0) {
         const BATCH_SIZE = 16
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
@@ -5094,43 +5144,56 @@ export class RuntimeController implements TuiController {
           for (const entry of fetched) {
             this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision })
           }
-        }
-      }
 
-      if (this.closed) return
-
-      const rows: SessionRow[] = []
-      for (const item of items) {
-        const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
-        const id = header.id
-        if (liveSession !== undefined && liveSession.id === id) {
-          rows.push(this.rowForLiveSession(liveSession))
-        } else {
-          const cached = this.sessionRowCache.get(id)
-          if (cached !== undefined) {
-            rows.push(cached.row)
-          } else {
-            rows.push(await this.rowFor(id))
+          // Progressively update the session list after each batch settles.
+          if (!this.closed) {
+            const updatedRows: SessionRow[] = []
+            for (const item of interactiveItems) {
+              const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+              const id = header.id
+              if (liveSession !== undefined && liveSession.id === id) {
+                updatedRows.push(this.rowForLiveSession(liveSession))
+              } else {
+                const cached = this.sessionRowCache.get(id)
+                if (cached !== undefined) {
+                  updatedRows.push(cached.row)
+                } else {
+                  updatedRows.push({
+                    id,
+                    title: id,
+                    updatedAt: header.createdAt ?? 0,
+                  })
+                }
+              }
+            }
+            if (
+              this.session !== undefined
+              && !updatedRows.some(row => row.id === this.session?.id)
+            ) {
+              updatedRows.push(this.rowForLiveSession(this.session))
+            }
+            updatedRows.sort((a, b) => b.updatedAt - a.updatedAt)
+            this.sessionList = updatedRows
+            if (preferredId !== undefined) {
+              const preferredIndex = updatedRows.findIndex(row => row.id === preferredId)
+              if (preferredIndex >= 0) {
+                this.selectedIndex = preferredIndex
+              }
+            } else if (this.selectedIndex >= updatedRows.length) {
+              this.selectedIndex = Math.max(0, updatedRows.length - 1)
+            }
+            this.emit()
           }
         }
       }
 
-      if (
-        this.session !== undefined
-        && !rows.some(row => row.id === this.session?.id)
-      ) {
-        rows.push(this.rowForLiveSession(this.session))
-      }
-      rows.sort((a, b) => b.updatedAt - a.updatedAt)
-      if (this.closed) return
-      this.sessionList = rows
       const preferredIndex = preferredId === undefined
         ? -1
-        : rows.findIndex(row => row.id === preferredId)
+        : this.sessionList.findIndex(row => row.id === preferredId)
       if (preferredIndex >= 0) {
         this.selectedIndex = preferredIndex
-      } else if (this.selectedIndex >= rows.length) {
-        this.selectedIndex = Math.max(0, rows.length - 1)
+      } else if (this.selectedIndex >= this.sessionList.length) {
+        this.selectedIndex = Math.max(0, this.sessionList.length - 1)
       }
       this.confirmDelete = false
       this.emit()
@@ -5187,7 +5250,7 @@ export class RuntimeController implements TuiController {
         updatedAt: events.at(-1)?.time ?? createdAt,
       }
     } catch {
-      return { id, title: id, updatedAt: Date.now() }
+      return { id, title: id, updatedAt: 0 }
     }
   }
 

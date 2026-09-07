@@ -202,7 +202,10 @@ export function SessionPane({
           )}
         </Text>
       ) : deleteUnavailable ? (
-        <Text wrap="truncate">{styled(escapeContent('删除不可用（后端能力缺失）'), 'error')}</Text>
+        <Text wrap="truncate">
+          {styled(escapeContent('↑↓/jk 选择 · Enter 切换 · r 重命名 · g s 关闭 · '), 'fgDim')}
+          {styled(escapeContent('删除不可用（后端能力缺失）'), 'error')}
+        </Text>
       ) : (
         <Text wrap="truncate">{styled(escapeContent('↑↓/jk 选择 · Enter 切换 · r 重命名 · d 删除 · g s 关闭'), 'fgDim')}</Text>
       )}

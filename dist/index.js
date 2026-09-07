@@ -63406,6 +63406,7 @@ var RuntimeController = class _RuntimeController {
     }
     if (!this.deleteCapable()) {
       this.deleteUnavailable = true;
+      this.setFeedback("\u2139 \u5F53\u524D\u4F1A\u8BDD\u5B58\u50A8\u4E3A\u53EA\u8FFD\u52A0\u65E5\u5FD7\uFF0C\u4E0D\u652F\u6301\u7269\u7406\u5220\u9664");
       this.emit();
       return;
     }
@@ -64207,9 +64208,13 @@ var RuntimeController = class _RuntimeController {
     try {
       const items = await persistence.list();
       const liveSession = this.session;
+      const interactiveItems = items.filter((item) => {
+        const header = item.header ?? item;
+        return header.origin !== "subagent" && header.parentSession === void 0;
+      });
       const listedIds = /* @__PURE__ */ new Set();
       const uncached = [];
-      for (const item of items) {
+      for (const item of interactiveItems) {
         const header = item.header ?? item;
         const id = header.id;
         listedIds.add(id);
@@ -64228,6 +64233,40 @@ var RuntimeController = class _RuntimeController {
           this.sessionRowCache.delete(id);
         }
       }
+      const initialRows = [];
+      for (const item of interactiveItems) {
+        const header = item.header ?? item;
+        const id = header.id;
+        if (liveSession !== void 0 && liveSession.id === id) {
+          initialRows.push(this.rowForLiveSession(liveSession));
+        } else {
+          const cached = this.sessionRowCache.get(id);
+          if (cached !== void 0) {
+            initialRows.push(cached.row);
+          } else {
+            initialRows.push({
+              id,
+              title: id,
+              updatedAt: header.createdAt ?? 0
+            });
+          }
+        }
+      }
+      if (this.session !== void 0 && !initialRows.some((row) => row.id === this.session?.id)) {
+        initialRows.push(this.rowForLiveSession(this.session));
+      }
+      initialRows.sort((a, b) => b.updatedAt - a.updatedAt);
+      if (this.closed) return;
+      this.sessionList = initialRows;
+      if (preferredId !== void 0) {
+        const preferredIndex2 = initialRows.findIndex((row) => row.id === preferredId);
+        if (preferredIndex2 >= 0) {
+          this.selectedIndex = preferredIndex2;
+        }
+      } else if (this.selectedIndex >= initialRows.length) {
+        this.selectedIndex = Math.max(0, initialRows.length - 1);
+      }
+      this.emit();
       if (uncached.length > 0) {
         const BATCH_SIZE = 16;
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
@@ -64242,35 +64281,48 @@ var RuntimeController = class _RuntimeController {
           for (const entry of fetched) {
             this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision });
           }
-        }
-      }
-      if (this.closed) return;
-      const rows = [];
-      for (const item of items) {
-        const header = item.header ?? item;
-        const id = header.id;
-        if (liveSession !== void 0 && liveSession.id === id) {
-          rows.push(this.rowForLiveSession(liveSession));
-        } else {
-          const cached = this.sessionRowCache.get(id);
-          if (cached !== void 0) {
-            rows.push(cached.row);
-          } else {
-            rows.push(await this.rowFor(id));
+          if (!this.closed) {
+            const updatedRows = [];
+            for (const item of interactiveItems) {
+              const header = item.header ?? item;
+              const id = header.id;
+              if (liveSession !== void 0 && liveSession.id === id) {
+                updatedRows.push(this.rowForLiveSession(liveSession));
+              } else {
+                const cached = this.sessionRowCache.get(id);
+                if (cached !== void 0) {
+                  updatedRows.push(cached.row);
+                } else {
+                  updatedRows.push({
+                    id,
+                    title: id,
+                    updatedAt: header.createdAt ?? 0
+                  });
+                }
+              }
+            }
+            if (this.session !== void 0 && !updatedRows.some((row) => row.id === this.session?.id)) {
+              updatedRows.push(this.rowForLiveSession(this.session));
+            }
+            updatedRows.sort((a, b) => b.updatedAt - a.updatedAt);
+            this.sessionList = updatedRows;
+            if (preferredId !== void 0) {
+              const preferredIndex2 = updatedRows.findIndex((row) => row.id === preferredId);
+              if (preferredIndex2 >= 0) {
+                this.selectedIndex = preferredIndex2;
+              }
+            } else if (this.selectedIndex >= updatedRows.length) {
+              this.selectedIndex = Math.max(0, updatedRows.length - 1);
+            }
+            this.emit();
           }
         }
       }
-      if (this.session !== void 0 && !rows.some((row) => row.id === this.session?.id)) {
-        rows.push(this.rowForLiveSession(this.session));
-      }
-      rows.sort((a, b) => b.updatedAt - a.updatedAt);
-      if (this.closed) return;
-      this.sessionList = rows;
-      const preferredIndex = preferredId === void 0 ? -1 : rows.findIndex((row) => row.id === preferredId);
+      const preferredIndex = preferredId === void 0 ? -1 : this.sessionList.findIndex((row) => row.id === preferredId);
       if (preferredIndex >= 0) {
         this.selectedIndex = preferredIndex;
-      } else if (this.selectedIndex >= rows.length) {
-        this.selectedIndex = Math.max(0, rows.length - 1);
+      } else if (this.selectedIndex >= this.sessionList.length) {
+        this.selectedIndex = Math.max(0, this.sessionList.length - 1);
       }
       this.confirmDelete = false;
       this.emit();
@@ -64316,7 +64368,7 @@ var RuntimeController = class _RuntimeController {
         updatedAt: events.at(-1)?.time ?? createdAt
       };
     } catch {
-      return { id, title: id, updatedAt: Date.now() };
+      return { id, title: id, updatedAt: 0 };
     }
   }
   /** Queue the newest query and enter loading before its debounce delay. */
