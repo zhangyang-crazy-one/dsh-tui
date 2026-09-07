@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
-import { stripVTControlCharacters } from 'node:util'
+import { stripTerminalControls } from './helpers.ts'
 import { ApprovalPane } from '../src/approval-pane.tsx'
 import { applyTheme } from '../src/theme.ts'
 import { TuiLoop } from '../src/loop.tsx'
@@ -84,7 +84,7 @@ describe('ApprovalPane', () => {
     expect(out).toContain('[n]')
     expect(out).toContain('[a]')
     expect(out).toContain('[i]')
-    const plain = stripVTControlCharacters(out)
+    const plain = stripTerminalControls(out)
     expect(plain).toContain('[Y] 允许')
     expect(plain).toContain('[n] 拒绝')
     expect(plain).toContain('[a] 本会话总是')
@@ -201,7 +201,7 @@ describe('TuiLoop approval slot', () => {
       createElement(TuiLoop, { title: 't', controller }),
     )
     expect(out).toContain('允许执行')
-    const plain = stripVTControlCharacters(out)
+    const plain = stripTerminalControls(out)
     expect(plain).toContain('[Y] 允许')
     expect(plain).toContain('[n] 拒绝')
     expect(plain).toContain('[a] 本会话总是')

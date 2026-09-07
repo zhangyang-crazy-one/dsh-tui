@@ -166,6 +166,16 @@ export interface ToolCardFileDiff {
   readonly oldText: string | null
   /** Content after the change. */
   readonly newText: string
+  /** 1-based start line of the change in the original file, when known. */
+  readonly oldStart?: number
+  /** Number of lines in the original hunk, when known. */
+  readonly oldLines?: number
+  /** 1-based start line of the change in the modified file, when known. */
+  readonly newStart?: number
+  /** Number of lines in the modified hunk, when known. */
+  readonly newLines?: number
+  /** Individual unified-diff lines (' ' context, '-' removal, '+' addition), when available. */
+  readonly lines?: readonly string[]
 }
 
 /** Structural projection of the dsh-tools result views the cards read. */

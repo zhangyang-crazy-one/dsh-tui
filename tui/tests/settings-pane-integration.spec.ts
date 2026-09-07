@@ -748,4 +748,65 @@ describe('SettingsPane intercept', () => {
     expect(setCredential).not.toHaveBeenCalled()
     await ctx.fiber.dispose()
   })
+
+  it('opens API key pane with /key and saves the key', async () => {
+    const { ctx, controller, setCredential } = await bench({
+      credentials: { configured: true },
+    })
+    controller.dispatch({ kind: 'command', query: 'key' })
+    expect(controller.getSettingsPane()).toMatchObject({
+      open: true,
+      onboarding: true,
+      editing: true,
+      rows: [{ namespace: 'credentials', field: 'DEEPSEEK_API_KEY', value: '' }],
+    })
+    controller.dispatch({ kind: 'settings-apply', value: 'sk-direct-key' })
+    await vi.waitFor(() => {
+      expect(controller.getSettingsPane().open).toBe(false)
+    })
+    expect(setCredential).toHaveBeenCalled()
+    expect(controller.getFeedback()).toBe('✓ 已保存 API key')
+    await ctx.fiber.dispose()
+  })
+
+  it('sets API key directly via /key <token> and auto-heals polluted apiKeyEnv', async () => {
+    const { ctx, controller, setCredential, update, stored } = await bench({
+      credentials: { configured: true },
+    })
+    const settings = ctx.get('settings') as { get: (ns: unknown) => unknown }
+    settings.get = ns => ns === NS ? { ...stored, apiKeyEnv: 'sk-polluted-in-settings' } : undefined
+    controller.dispatch({ kind: 'command', query: 'key sk-new-token' })
+    await vi.waitFor(() => {
+      expect(controller.getFeedback()).toBe('✓ 已保存 API key')
+    })
+    expect(setCredential).toHaveBeenCalled()
+    expect(update).toHaveBeenCalledWith(NS, { apiKeyEnv: 'DEEPSEEK_API_KEY' })
+    await ctx.fiber.dispose()
+  })
+
+  it('sets arbitrary credential key via /key <KEY_NAME> <token>', async () => {
+    const { ctx, controller, setCredential } = await bench({
+      credentials: { configured: true },
+    })
+    controller.dispatch({ kind: 'command', query: 'key OPENAI_API_KEY sk-openai-test' })
+    await vi.waitFor(() => {
+      expect(controller.getFeedback()).toBe('✓ 已保存 OPENAI_API_KEY')
+    })
+    expect(setCredential).toHaveBeenCalled()
+    await ctx.fiber.dispose()
+  })
+
+  it('opens API key pane for specific key via /key <KEY_NAME>', async () => {
+    const { ctx, controller } = await bench({
+      credentials: { configured: true },
+    })
+    controller.dispatch({ kind: 'command', query: 'key OPENAI_API_KEY' })
+    expect(controller.getSettingsPane()).toMatchObject({
+      open: true,
+      onboarding: true,
+      editing: true,
+      rows: [{ namespace: 'credentials', field: 'OPENAI_API_KEY', value: '' }],
+    })
+    await ctx.fiber.dispose()
+  })
 })

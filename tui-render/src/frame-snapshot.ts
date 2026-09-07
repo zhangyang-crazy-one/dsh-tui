@@ -81,8 +81,12 @@ export function visibleFrameSnapshot(): VisibleFrameSnapshot | undefined {
  * @param line - physical line to identify.
  * @returns deterministic comparison identity.
  */
+const lineIdentityCache = new WeakMap<PhysicalLine, string>()
+
 export function physicalLineIdentity(line: PhysicalLine): string {
-  return JSON.stringify([
+  let cached = lineIdentityCache.get(line)
+  if (cached !== undefined) return cached
+  cached = JSON.stringify([
     line.text,
     line.displayWidth,
     line.background ?? 'bg',
@@ -94,6 +98,8 @@ export function physicalLineIdentity(line: PhysicalLine): string {
       span.href ?? '',
     ]),
   ])
+  lineIdentityCache.set(line, cached)
+  return cached
 }
 
 /**
@@ -113,12 +119,25 @@ export function createFrameSnapshotRow(input: {
   })
 }
 
-function geometryIdentity(geometry: FrameGeometry): string {
-  return JSON.stringify(geometry)
+function sameGeometry(a: FrameGeometry, b: FrameGeometry): boolean {
+  if (a === b) return true
+  if (
+    a.columns !== b.columns
+    || a.rows !== b.rows
+    || a.transcriptTop !== b.transcriptTop
+    || a.transcriptLeft !== b.transcriptLeft
+    || a.transcriptWidth !== b.transcriptWidth
+    || a.transcriptRows !== b.transcriptRows
+  ) return false
+  const rA = a.rail
+  const rB = b.rail
+  if (rA === rB) return true
+  if (rA === undefined || rB === undefined) return false
+  return rA.col === rB.col && rA.topRow === rB.topRow && rA.rows === rB.rows
 }
 
-function screenRowKey(row: Pick<FrameSnapshotRow, 'row' | 'col'>): string {
-  return `${String(row.row)}:${String(row.col)}`
+function screenRowKey(row: Pick<FrameSnapshotRow, 'row' | 'col'>): number {
+  return (row.row << 16) | row.col
 }
 
 /** Number of terminal cells one physical row paints, including surface fill. */
@@ -140,8 +159,13 @@ export function diffVisibleFrameSnapshots(
   next: VisibleFrameSnapshot,
 ): FrameSnapshotDiff {
   const forced = previous === undefined
-    || geometryIdentity(previous.geometry) !== geometryIdentity(next.geometry)
-  const oldRows = new Map(previous?.rows.map(row => [screenRowKey(row), row]) ?? [])
+    || !sameGeometry(previous.geometry, next.geometry)
+  const oldRows = new Map<number, FrameSnapshotRow>()
+  if (previous !== undefined) {
+    for (const row of previous.rows) {
+      oldRows.set(screenRowKey(row), row)
+    }
+  }
   const changes: FrameRowChange[] = []
   let unchangedRows = 0
   for (const row of next.rows) {

@@ -38172,10 +38172,6 @@ var import_react40 = __toESM(require_react(), 1);
 
 // ../deepseek-harness/packages/tui/tui-render/src/content.ts
 var GRAPHEME = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-function firstGrapheme(text4) {
-  for (const part of GRAPHEME.segment(text4)) return part.segment;
-  return text4.slice(0, 1);
-}
 function escapeContent(text4) {
   return text4.replace(
     /[\u0000-\u0008\u000B-\u001F\u007F]/g,
@@ -38185,7 +38181,20 @@ function escapeContent(text4) {
 var WIDE_SYMBOLS_OR_EMOJIS = /[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/gu;
 function displayWidth(text4) {
   if (text4 === "") return 0;
-  if (/^[\x20-\x7e]*$/u.test(text4)) return text4.length;
+  let cols = 0;
+  let simple = true;
+  for (let i = 0; i < text4.length; i += 1) {
+    const code2 = text4.charCodeAt(i);
+    if (code2 >= 32 && code2 <= 126) {
+      cols += 1;
+    } else if (code2 >= 19968 && code2 <= 40959 || code2 >= 13312 && code2 <= 19903 || code2 >= 12288 && code2 <= 12351 || code2 >= 65281 && code2 <= 65376) {
+      cols += 2;
+    } else {
+      simple = false;
+      break;
+    }
+  }
+  if (simple) return cols;
   const base = stringWidth(text4);
   if (!/[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text4)) {
     return base;
@@ -38267,17 +38276,27 @@ function wrapDisplayLines(text4, maxCols) {
       out.push(line8);
       continue;
     }
-    let rest = line8;
-    while (rest !== "") {
-      const chunk = wcwidthSafeSlice(rest, maxCols);
-      if (chunk === "") {
-        const first = firstGrapheme(rest);
-        out.push(first);
-        rest = rest.slice(first.length);
-        continue;
+    if (/^[\x20-\x7e]*$/u.test(line8)) {
+      for (let i = 0; i < line8.length; i += maxCols) {
+        out.push(line8.slice(i, i + maxCols));
       }
-      out.push(chunk);
-      rest = rest.slice(chunk.length);
+      continue;
+    }
+    let curLine = "";
+    let curCols = 0;
+    for (const { segment: segment2 } of GRAPHEME.segment(line8)) {
+      const width = displayWidth(segment2);
+      if (curCols + width > maxCols && curLine !== "") {
+        out.push(curLine);
+        curLine = segment2;
+        curCols = width;
+      } else {
+        curLine += segment2;
+        curCols += width;
+      }
+    }
+    if (curLine !== "") {
+      out.push(curLine);
     }
   }
   return out;
@@ -50186,6 +50205,84 @@ function textLines(text4, prefix = "") {
     return { text: prefix + text4.slice(lastStart, end < 0 ? text4.length : end), token: "codeBg" };
   });
 }
+function splitDiffLines(text4) {
+  if (text4.length === 0) return [];
+  const normalized = text4.endsWith("\n") ? text4.slice(0, -1) : text4;
+  return normalized.split(/\r?\n/u);
+}
+function diffLines(oldLines, newLines) {
+  if (oldLines.length === 0) return newLines.map((line8) => `+${line8}`);
+  if (newLines.length === 0) return oldLines.map((line8) => `-${line8}`);
+  const m = oldLines.length;
+  const n = newLines.length;
+  if (m * n > 5e5) {
+    return [...oldLines.map((l) => `-${l}`), ...newLines.map((l) => `+${l}`)];
+  }
+  let prefixCount = 0;
+  while (prefixCount < m && prefixCount < n && oldLines[prefixCount] === newLines[prefixCount]) {
+    prefixCount++;
+  }
+  let suffixCount = 0;
+  while (suffixCount < m - prefixCount && suffixCount < n - prefixCount && oldLines[m - 1 - suffixCount] === newLines[n - 1 - suffixCount]) {
+    suffixCount++;
+  }
+  const trimmedOld = oldLines.slice(prefixCount, m - suffixCount);
+  const trimmedNew = newLines.slice(prefixCount, n - suffixCount);
+  const midM = trimmedOld.length;
+  const midN = trimmedNew.length;
+  const middle = [];
+  if (midM === 0) {
+    for (const line8 of trimmedNew) middle.push(`+${line8}`);
+  } else if (midN === 0) {
+    for (const line8 of trimmedOld) middle.push(`-${line8}`);
+  } else {
+    const stride = midN + 1;
+    const dp = new Int32Array((midM + 1) * stride);
+    for (let i2 = 0; i2 < midM; i2++) {
+      for (let j2 = 0; j2 < midN; j2++) {
+        const dest = (i2 + 1) * stride + (j2 + 1);
+        if (trimmedOld[i2] === trimmedNew[j2]) {
+          dp[dest] = (dp[i2 * stride + j2] ?? 0) + 1;
+        } else {
+          const up = dp[i2 * stride + (j2 + 1)] ?? 0;
+          const left = dp[(i2 + 1) * stride + j2] ?? 0;
+          dp[dest] = up > left ? up : left;
+        }
+      }
+    }
+    const rev = [];
+    let i = midM;
+    let j = midN;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && trimmedOld[i - 1] === trimmedNew[j - 1]) {
+        rev.push(` ${trimmedOld[i - 1]}`);
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || (dp[i * stride + (j - 1)] ?? 0) >= (dp[(i - 1) * stride + j] ?? 0))) {
+        rev.push(`+${trimmedNew[j - 1]}`);
+        j--;
+      } else if (i > 0) {
+        rev.push(`-${trimmedOld[i - 1]}`);
+        i--;
+      }
+    }
+    for (let k = rev.length - 1; k >= 0; k--) {
+      const item = rev[k];
+      if (item !== void 0) middle.push(item);
+    }
+  }
+  const result = [];
+  for (let k = 0; k < prefixCount; k++) {
+    result.push(` ${oldLines[k]}`);
+  }
+  for (const line8 of middle) {
+    result.push(line8);
+  }
+  for (let k = m - suffixCount; k < m; k++) {
+    result.push(` ${oldLines[k]}`);
+  }
+  return result;
+}
 function createToolBodyDocument(card, options) {
   const rows = new RowSequence();
   const section = (label, source) => {
@@ -50211,10 +50308,62 @@ function createToolBodyDocument(card, options) {
       const diffs = result?.card === "diff" ? result.diffs : card.callView?.card === "diff" ? card.callView.diffs : [];
       if (diffs.length === 0) break;
       const source = new RowSequence();
+      let lastPath;
       for (const diff2 of diffs) {
-        source.push({ text: `--- ${diff2.path}`, token: "codeBg" });
-        if (diff2.oldText !== null) source.append(textLines(diff2.oldText, "- "));
-        source.append(textLines(diff2.newText, "+ "));
+        if (diff2.path !== lastPath) {
+          source.push({ text: `--- ${diff2.path}`, token: "codeBg" });
+          lastPath = diff2.path;
+        }
+        const oldStart = diff2.oldStart ?? (diff2.oldText === null ? 0 : 1);
+        const newStart = diff2.newStart ?? 1;
+        let lines;
+        let oldLinesCount = diff2.oldLines;
+        let newLinesCount = diff2.newLines;
+        if (diff2.lines !== void 0 && diff2.lines.length > 0) {
+          lines = diff2.lines;
+          oldLinesCount ??= diff2.oldText === null ? 0 : splitDiffLines(diff2.oldText).length;
+          newLinesCount ??= splitDiffLines(diff2.newText).length;
+        } else if (diff2.oldText === null) {
+          const split = splitDiffLines(diff2.newText);
+          lines = split.map((line8) => `+${line8}`);
+          oldLinesCount = 0;
+          newLinesCount = split.length;
+        } else {
+          const oldSplit = splitDiffLines(diff2.oldText);
+          const newSplit = splitDiffLines(diff2.newText);
+          lines = diffLines(oldSplit, newSplit);
+          oldLinesCount ??= oldSplit.length;
+          newLinesCount ??= newSplit.length;
+        }
+        const oldHunk = `${oldStart}${oldLinesCount !== 1 ? `,${oldLinesCount}` : ""}`;
+        const newHunk = `${newStart}${newLinesCount !== 1 ? `,${newLinesCount}` : ""}`;
+        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: "codeBg" });
+        const maxLine = Math.max(oldStart + oldLinesCount, newStart + newLinesCount, 1);
+        const gutterWidth = Math.max(3, String(maxLine).length);
+        let curOld = oldStart === 0 ? 1 : oldStart;
+        let curNew = newStart === 0 ? 1 : newStart;
+        for (const raw of lines) {
+          if (raw.startsWith("\\")) continue;
+          if (raw.startsWith("-")) {
+            const num = String(curOld).padStart(gutterWidth, " ");
+            source.push({ text: `${num} \u2502 - ${raw.slice(1)}`, token: "codeBg" });
+            curOld++;
+          } else if (raw.startsWith("+")) {
+            const num = String(curNew).padStart(gutterWidth, " ");
+            source.push({ text: `${num} \u2502 + ${raw.slice(1)}`, token: "codeBg" });
+            curNew++;
+          } else if (raw.startsWith(" ")) {
+            const num = String(curNew).padStart(gutterWidth, " ");
+            source.push({ text: `${num} \u2502   ${raw.slice(1)}`, token: "codeBg" });
+            curOld++;
+            curNew++;
+          } else {
+            const num = String(curNew).padStart(gutterWidth, " ");
+            source.push({ text: `${num} \u2502   ${raw}`, token: "codeBg" });
+            curOld++;
+            curNew++;
+          }
+        }
       }
       section("diff", source.build());
       break;
@@ -50586,7 +50735,9 @@ var ToolRowCache = class {
       }
       if (cached !== void 0) this.remove(key, cached);
       const document4 = expanded ? createToolBodyDocument(card, { diagnostics: false, includeArguments: false, locale }) : void 0;
-      const window2 = document4 === void 0 ? void 0 : planToolBodyWindow(document4, { line: 0, offset: 0 }, Math.max(1, width - 2), this.policy.previewRows);
+      const isDiff = card.callView?.card === "diff" || card.resultView?.card === "diff";
+      const rowBudget = isDiff ? this.policy.diffPreviewRows : this.policy.previewRows;
+      const window2 = document4 === void 0 ? void 0 : planToolBodyWindow(document4, { line: 0, offset: 0 }, Math.max(1, width - 2), rowBudget);
       const entry = {
         card,
         document: document4,
@@ -50651,14 +50802,14 @@ var RENDER_POLICY_DEFAULT_SCROLL_STEP_PER_FRAME = 1;
 var RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS = 3;
 var RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD = 10;
 var RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP = 8;
-var RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS = 4096;
-var RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES = 4 * 1024 * 1024;
+var RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS = 65536;
+var RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES = 32 * 1024 * 1024;
 var RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN = 16;
 var RENDER_POLICY_MAX_OVERSCAN = 50;
 var RENDER_POLICY_MAX_CACHE_ROWS = 1e6;
-var RENDER_POLICY_MAX_CACHE_BYTES = 32 * 1024 * 1024;
+var RENDER_POLICY_MAX_CACHE_BYTES = 64 * 1024 * 1024;
 function toolPolicyDefaults() {
-  return { previewRows: 6, detailPageRows: 40, cacheEntries: 128, cacheRows: 2048 };
+  return { previewRows: 6, diffPreviewRows: 200, detailPageRows: 40, cacheEntries: 512, cacheRows: 16384 };
 }
 function renderPolicyDefaults() {
   return {
@@ -51167,6 +51318,9 @@ function reduceTranscriptViewport(state, action) {
         state.viewportRows
       );
       const follow = offsetFromBottom === 0 ? true : action.delta > 0 ? false : state.follow;
+      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
+        return state;
+      }
       const nextTop = topRow({ ...state, offsetFromBottom });
       return {
         ...state,
@@ -51183,6 +51337,9 @@ function reduceTranscriptViewport(state, action) {
         state.viewportRows
       );
       const follow = offsetFromBottom === 0;
+      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
+        return state;
+      }
       const nextTop = topRow({ ...state, offsetFromBottom });
       return {
         ...state,
@@ -51197,6 +51354,9 @@ function reduceTranscriptViewport(state, action) {
       const fraction = Math.max(0, Math.min(action.fraction, 1));
       const offsetFromBottom = Math.round(available * (1 - fraction));
       const follow = offsetFromBottom === 0;
+      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
+        return state;
+      }
       const nextTop = topRow({ ...state, offsetFromBottom });
       return {
         ...state,
@@ -51208,6 +51368,9 @@ function reduceTranscriptViewport(state, action) {
     }
     case "edge": {
       if (action.edge === "latest") {
+        if (state.follow && state.offsetFromBottom === 0 && state.unseenRows === 0 && state.anchor === void 0) {
+          return state;
+        }
         return {
           ...state,
           follow: true,
@@ -51217,6 +51380,9 @@ function reduceTranscriptViewport(state, action) {
         };
       }
       const offsetFromBottom = maxOffset(state.contentRows, state.viewportRows);
+      if (!state.follow && state.offsetFromBottom === offsetFromBottom) {
+        return state;
+      }
       return {
         ...state,
         follow: false,
@@ -51224,8 +51390,12 @@ function reduceTranscriptViewport(state, action) {
         anchor: anchorForRow(0, state.blocks)
       };
     }
-    case "reset":
+    case "reset": {
+      if (state.follow && state.offsetFromBottom === 0 && state.unseenRows === 0 && state.contentRows === 0 && state.viewportRows === 0 && state.blocks.length === 0 && state.anchor === void 0) {
+        return state;
+      }
       return EMPTY_TRANSCRIPT_VIEWPORT;
+    }
   }
 }
 function physicalScrollRailGeometry(contentRows, viewportRows, offsetFromBottom) {
@@ -51452,8 +51622,11 @@ function setVisibleFrameSnapshot(snapshot) {
 function visibleFrameSnapshot() {
   return publishedSnapshot;
 }
+var lineIdentityCache = /* @__PURE__ */ new WeakMap();
 function physicalLineIdentity(line8) {
-  return JSON.stringify([
+  let cached = lineIdentityCache.get(line8);
+  if (cached !== void 0) return cached;
+  cached = JSON.stringify([
     line8.text,
     line8.displayWidth,
     line8.background ?? "bg",
@@ -51465,6 +51638,8 @@ function physicalLineIdentity(line8) {
       span.href ?? ""
     ])
   ]);
+  lineIdentityCache.set(line8, cached);
+  return cached;
 }
 function createFrameSnapshotRow(input) {
   return Object.freeze({
@@ -51472,18 +51647,29 @@ function createFrameSnapshotRow(input) {
     identity: physicalLineIdentity(input.line)
   });
 }
-function geometryIdentity(geometry) {
-  return JSON.stringify(geometry);
+function sameGeometry(a, b) {
+  if (a === b) return true;
+  if (a.columns !== b.columns || a.rows !== b.rows || a.transcriptTop !== b.transcriptTop || a.transcriptLeft !== b.transcriptLeft || a.transcriptWidth !== b.transcriptWidth || a.transcriptRows !== b.transcriptRows) return false;
+  const rA = a.rail;
+  const rB = b.rail;
+  if (rA === rB) return true;
+  if (rA === void 0 || rB === void 0) return false;
+  return rA.col === rB.col && rA.topRow === rB.topRow && rA.rows === rB.rows;
 }
 function screenRowKey(row) {
-  return `${String(row.row)}:${String(row.col)}`;
+  return row.row << 16 | row.col;
 }
 function paintedColumns(line8) {
   return line8.backgroundColumns ?? line8.displayWidth;
 }
 function diffVisibleFrameSnapshots(previous3, next) {
-  const forced = previous3 === void 0 || geometryIdentity(previous3.geometry) !== geometryIdentity(next.geometry);
-  const oldRows = new Map(previous3?.rows.map((row) => [screenRowKey(row), row]) ?? []);
+  const forced = previous3 === void 0 || !sameGeometry(previous3.geometry, next.geometry);
+  const oldRows = /* @__PURE__ */ new Map();
+  if (previous3 !== void 0) {
+    for (const row of previous3.rows) {
+      oldRows.set(screenRowKey(row), row);
+    }
+  }
   const changes = [];
   let unchangedRows = 0;
   for (const row of next.rows) {
@@ -51551,10 +51737,16 @@ function railRow(row, col, text4, tier) {
   const guard = col > 1 ? railCell(row, col - 1, " ", tier) : "";
   return guard + railCell(row, col, text4, tier);
 }
-function railOverlay(tier) {
-  let cells = "";
+function sameRail(a, b) {
+  if (a === b) return true;
+  if (a === void 0 || b === void 0) return false;
+  return a.col === b.col && a.topRow === b.topRow && a.rows === b.rows && a.thumbStart === b.thumbStart && a.thumbRows === b.thumbRows;
+}
+function railOverlay(tier, force = false) {
   const next = frameRail;
   const previous3 = paintedFrameRail;
+  if (!force && sameRail(previous3, next)) return "";
+  let cells = "";
   const geometry = visibleFrameSnapshot()?.geometry;
   const clearPreviousRow = (row, col) => {
     if (geometry !== void 0 && (col > geometry.columns || row < geometry.transcriptTop || row >= geometry.transcriptTop + geometry.transcriptRows || row > geometry.rows)) return "";
@@ -51583,23 +51775,49 @@ function railOverlay(tier) {
   paintedFrameRail = next;
   return cells === "" ? "" : `\x1B7${cells}\x1B8`;
 }
+var paintedPhysicalLineCache = /* @__PURE__ */ new WeakMap();
 function paintPhysicalLine(line8, tier) {
+  const hyperlinks2 = hyperlinksEnabled();
+  const cacheKey = `${tier}:${hyperlinks2 ? 1 : 0}`;
+  let byTier = paintedPhysicalLineCache.get(line8);
+  if (byTier === void 0) {
+    byTier = /* @__PURE__ */ new Map();
+    paintedPhysicalLineCache.set(line8, byTier);
+  }
+  const cached = byTier.get(cacheKey);
+  if (cached !== void 0) return cached;
   const parts = line8.spans.map((span) => {
     const text4 = styled(span.text, span.token, tier, span.bold);
-    return span.href !== void 0 && hyperlinksEnabled() && isOsc8Href(span.href) ? wrapOsc8(text4, span.href) : text4;
+    return span.href !== void 0 && hyperlinks2 && isOsc8Href(span.href) ? wrapOsc8(text4, span.href) : text4;
   });
-  return line8.background !== void 0 && line8.background !== "bg" ? paintBackgroundRow(
+  const painted = line8.background !== void 0 && line8.background !== "bg" ? paintBackgroundRow(
     parts,
     line8.background,
     line8.backgroundColumns ?? Math.max(1, line8.displayWidth),
     tier
   ) : paintRow(parts, tier);
+  byTier.set(cacheKey, painted);
+  return painted;
+}
+var blankPadCache = /* @__PURE__ */ new Map();
+function blankPad(count, tier) {
+  if (count <= 0) return "";
+  const key = `${tier}:${String(count)}`;
+  let cached = blankPadCache.get(key);
+  if (cached === void 0) {
+    cached = styled(" ".repeat(count), "bg", tier);
+    blankPadCache.set(key, cached);
+  }
+  return cached;
 }
 function transcriptOverlay(tier, synchronizedFrameEnded) {
   const next = visibleFrameSnapshot();
   if (next === void 0) {
     paintedVisibleFrame = void 0;
     paintedTranscriptRepaintKey = void 0;
+    return "";
+  }
+  if (paintedVisibleFrame === next && (next.repaintKey === void 0 || next.repaintKey === paintedTranscriptRepaintKey)) {
     return "";
   }
   const diff2 = diffVisibleFrameSnapshots(paintedVisibleFrame, next);
@@ -51610,7 +51828,7 @@ function transcriptOverlay(tier, synchronizedFrameEnded) {
   let cells = "";
   if (repaintAll) {
     const { columns, transcriptRows, transcriptTop } = next.geometry;
-    const blank = styled(" ".repeat(columns), "bg", tier);
+    const blank = blankPad(columns, tier);
     for (let index2 = 0; index2 < transcriptRows; index2 += 1) {
       cells += `\x1B[${String(transcriptTop + index2)};1H${blank}`;
     }
@@ -51629,7 +51847,7 @@ function transcriptOverlay(tier, synchronizedFrameEnded) {
       cells += `\x1B[${String(change.row)};${String(change.col)}H` + paintPhysicalLine(change.line, tier);
     }
     if (padColumns > 0) {
-      cells += `\x1B[${String(change.row)};${String(change.col + nextWidth)}H` + styled(" ".repeat(padColumns), "bg", tier);
+      cells += `\x1B[${String(change.row)};${String(change.col + nextWidth)}H` + blankPad(padColumns, tier);
     }
   }
   return cells === "" ? "" : `\x1B7${cells}\x1B8`;
@@ -51644,7 +51862,7 @@ function publishedCaretBytes() {
 }
 function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
   const transcript = transcriptOverlay(tier, true);
-  const rail = railOverlay(tier);
+  const rail = railOverlay(tier, false);
   const overlay = transcript + rail;
   if (overlay === "") return;
   const bytes = START_SYNC + overlay + caretSuffix() + END_SYNC;
@@ -51675,7 +51893,7 @@ function transformFrameChunk(chunk, tier = currentTier(), publishFrame = true) {
   }
   const isFrame = out.includes(END_SYNC) || out.includes(SHOW_CURSOR) || out.includes(HIDE_CURSOR);
   if (isFrame && publishFrame) {
-    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier) + caretSuffix();
+    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier, true) + caretSuffix();
     const syncIndex = out.lastIndexOf(END_SYNC);
     out = syncIndex < 0 ? out + overlay : out.slice(0, syncIndex) + overlay + out.slice(syncIndex);
   }
@@ -54186,7 +54404,15 @@ function latestAssistantId(history, activeTurn) {
   }
   return void 0;
 }
+var baseMarkdownLineCache = /* @__PURE__ */ new WeakMap();
 function markdownLineToPhysicalLine(blockId, line8) {
+  let byBlock = baseMarkdownLineCache.get(line8);
+  if (byBlock === void 0) {
+    byBlock = /* @__PURE__ */ new Map();
+    baseMarkdownLineCache.set(line8, byBlock);
+  }
+  const cached = byBlock.get(blockId);
+  if (cached !== void 0) return cached;
   const segments = [];
   for (const span of line8.spans) {
     const text4 = displayColumnSlice(line8.text, span.start, span.end);
@@ -54200,7 +54426,7 @@ function markdownLineToPhysicalLine(blockId, line8) {
   }
   const sourceStart = Math.max(0, line8.sourceStart);
   const sourceEnd = Math.max(sourceStart, line8.sourceEnd < 0 ? sourceStart : line8.sourceEnd);
-  return createPhysicalLine({
+  const created = createPhysicalLine({
     blockId,
     spans: segments.length === 0 ? [{ text: "", token: "fg", bold: false }] : segments,
     sourceStart,
@@ -54209,6 +54435,8 @@ function markdownLineToPhysicalLine(blockId, line8) {
     ...line8.background === void 0 ? {} : { background: line8.background },
     ...line8.backgroundColumns === void 0 ? {} : { backgroundColumns: line8.backgroundColumns }
   });
+  byBlock.set(blockId, created);
+  return created;
 }
 function overlayPromptOnSpans(spans, prompt) {
   const result = [];
@@ -54244,7 +54472,38 @@ function overlayPromptOnSpans(spans, prompt) {
   });
   return result;
 }
+var frameLineCache = /* @__PURE__ */ new WeakMap();
 function framePhysicalLine(blockId, line8, lead, active, prompt) {
+  if (prompt === void 0) {
+    let byLine = frameLineCache.get(line8);
+    if (byLine === void 0) {
+      byLine = /* @__PURE__ */ new Map();
+      frameLineCache.set(line8, byLine);
+    }
+    const key = `${blockId}:${lead}:${active ? "1" : "0"}`;
+    const cached = byLine.get(key);
+    if (cached !== void 0) return cached;
+    const base2 = markdownLineToPhysicalLine(blockId, line8);
+    const spans2 = lead === "" ? base2.spans : [
+      {
+        text: lead,
+        token: lead.trim() === "" ? "bg" : "accentText",
+        bold: active && lead.trim() !== ""
+      },
+      ...base2.spans
+    ];
+    const created = lead === "" ? base2 : createPhysicalLine({
+      blockId,
+      spans: spans2,
+      sourceStart: base2.sourceStart,
+      sourceEnd: base2.sourceEnd,
+      blockRow: base2.blockRow,
+      ...base2.background === void 0 ? {} : { background: base2.background },
+      ...base2.backgroundColumns === void 0 ? {} : { backgroundColumns: base2.backgroundColumns }
+    });
+    byLine.set(key, created);
+    return created;
+  }
   const base = markdownLineToPhysicalLine(blockId, line8);
   const initialSpans = [
     ...lead === "" ? [] : [{
@@ -54254,7 +54513,7 @@ function framePhysicalLine(blockId, line8, lead, active, prompt) {
     }],
     ...base.spans
   ];
-  const spans = prompt !== void 0 ? overlayPromptOnSpans(initialSpans, prompt) : initialSpans;
+  const spans = overlayPromptOnSpans(initialSpans, prompt);
   return createPhysicalLine({
     blockId,
     spans,
@@ -54355,6 +54614,9 @@ function cachedPaintedRenderLine(line8, cacheKey, hyperlinks2) {
   variants.set(cacheKey, painted);
   return painted;
 }
+function areSlicedLinesBlockPropsEqual(prev, next) {
+  return prev.lines === next.lines && prev.sliceStart === next.sliceStart && prev.sliceEnd === next.sliceEnd && prev.textRanges === next.textRanges && prev.tailRow === next.tailRow && prev.tail === next.tail && prev.prefix.first === next.prefix.first && prev.prefix.rest === next.prefix.rest;
+}
 var SlicedLinesBlock = (0, import_react37.memo)(function SlicedLinesBlock2(props) {
   const { lines, sliceStart, sliceEnd, prefix, textRanges, tailRow, tail } = props;
   const end = Math.min(lines.length, Math.max(0, sliceEnd));
@@ -54383,7 +54645,28 @@ var SlicedLinesBlock = (0, import_react37.memo)(function SlicedLinesBlock2(props
     return null;
   }
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { flexDirection: "column", width: "100%", children: out });
-});
+}, areSlicedLinesBlockPropsEqual);
+function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
+  if (entry.kind === "tool-card" && entry.meta?.toolCard !== void 0) {
+    return { lines: deps.toolRows.rows(entry.id, entry.meta.toolCard, scope.width, scope.fold.tools, deps.locale) };
+  }
+  if (entry.kind === "reasoning" && entry.meta?.reasoningExpanded === true && entry.source !== "") {
+    const rows = new RowSequence();
+    const header = `${entry.meta.reasoningLive === true ? "" : "\u25BE "}\u273B ${tuiCopy("reasoning", deps.locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1e3).toFixed(1)}s)`;
+    rows.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: "fgDim", bold: false }] });
+    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)));
+    return { lines: rows.build() };
+  }
+  const projection = projectBlockRows(entry, scope, state);
+  deps.storeBlocks.set(entry.id, {
+    ownerId,
+    entry,
+    scope,
+    lines: projection.lines,
+    active
+  });
+  return projection;
+}
 function StreamView({
   model,
   presenters,
@@ -54402,6 +54685,7 @@ function StreamView({
   const policy = renderPolicy ?? renderPolicyDefaults();
   const toolRows = (0, import_react37.useMemo)(() => new ToolRowCache(policy.tools), [
     policy.tools.previewRows,
+    policy.tools.diffPreviewRows,
     policy.tools.cacheEntries,
     policy.tools.cacheRows
   ]);
@@ -54454,6 +54738,7 @@ function StreamView({
   const presentationQueue = (0, import_react37.useRef)(void 0);
   const frameArbiter = (0, import_react37.useRef)(void 0);
   const pendingScrollInputAt = (0, import_react37.useRef)(void 0);
+  const lastDispatchedOffset = (0, import_react37.useRef)(viewport.offsetFromBottom);
   (0, import_react37.useLayoutEffect)(() => {
     const scroll = createScrollScheduler({
       frameIntervalMs: policy.scroll.frameIntervalMs,
@@ -54485,12 +54770,11 @@ function StreamView({
       now: () => performance.now(),
       demandDriven: true
     });
-    let lastDispatchedOffset = -1;
     const unsubscribe = arbiter.onPublish((snapshot) => {
       const presented = snapshot.stream.at(-1);
       if (presented !== void 0) setPresentedEntryRows(presented);
-      if (snapshot.scroll.presented !== lastDispatchedOffset) {
-        lastDispatchedOffset = snapshot.scroll.presented;
+      if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
+        lastDispatchedOffset.current = snapshot.scroll.presented;
         dispatchViewport({
           kind: "offset",
           offsetFromBottom: snapshot.scroll.presented
@@ -54607,7 +54891,8 @@ function StreamView({
     () => assistantProseScope(settledBlockRowsScope),
     [settledBlockRowsScope]
   );
-  const entryRows = (0, import_react37.useMemo)(() => {
+  const hasActiveTurn = activeTurn !== void 0;
+  const settledEntryRows = (0, import_react37.useMemo)(() => {
     const definitions = /* @__PURE__ */ new Map();
     const batchPresenters = presenters === void 0 ? void 0 : { get(name2) {
       if (!definitions.has(name2)) definitions.set(name2, presenters.get(name2));
@@ -54617,27 +54902,8 @@ function StreamView({
     const textRanges = /* @__PURE__ */ new Map();
     const storeBlocks = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
-    const project = (ownerId, entry, scope, state, active) => {
-      if (entry.kind === "tool-card" && entry.meta?.toolCard !== void 0) {
-        return { lines: toolRows.rows(entry.id, entry.meta.toolCard, scope.width, scope.fold.tools, locale) };
-      }
-      if (entry.kind === "reasoning" && entry.meta?.reasoningExpanded === true && entry.source !== "") {
-        const rows2 = new RowSequence();
-        const header = `${entry.meta.reasoningLive === true ? "" : "\u25BE "}\u273B ${tuiCopy("reasoning", locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1e3).toFixed(1)}s)`;
-        rows2.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: "fgDim", bold: false }] });
-        rows2.append(plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)));
-        return { lines: rows2.build() };
-      }
-      const projection = projectBlockRows(entry, scope, state);
-      storeBlocks.set(entry.id, {
-        ownerId,
-        entry,
-        scope,
-        lines: projection.lines,
-        active
-      });
-      return projection;
-    };
+    const project = (ownerId, entry, scope, state, active) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active);
+    const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
     for (const [index2, row] of transcript.entries()) {
       const id = transcriptBlockId(row);
       if (row.kind === "compaction") {
@@ -54656,7 +54922,7 @@ function StreamView({
         continue;
       }
       if (row.message.kind === "user") {
-        const hasSubsequent = index2 < transcript.length - 1 || activeTurn !== void 0;
+        const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
         const projection = project(id, {
           id,
           kind: "user",
@@ -54734,7 +55000,7 @@ function StreamView({
         ranges.push({ start, end: rows2.length });
       }
       const tailMeta = {
-        ...latestAssistantId(history, activeTurn) === row.message.id ? { turnTailCompletionBoundary: true } : {},
+        ...latestAssistant === row.message.id ? { turnTailCompletionBoundary: true } : {},
         ...(() => {
           const stats = formatTurnTailStats({
             turnOrdinal: row.message.turnOrdinal,
@@ -54764,123 +55030,154 @@ function StreamView({
       map.set(id, rows2.build());
       if (ranges.length > 0) textRanges.set(id, ranges);
     }
-    if (activeTurn !== void 0) {
-      const id = `assistant-turn-${String(activeTurn.turn)}`;
-      const rawParts = partsFromTurn(activeTurn);
-      const visibleParts = displayedParts(rawParts, reasoningExpanded);
-      if (status === "generating" && visibleParts.length === 0) {
-        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
-        const fish = getSwimmingFishFrame(liveMs);
-        map.set(id, project(id, {
-          id,
-          kind: "active-placeholder",
-          source: "",
-          meta: {
-            activePlaceholder: `${fish} \u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(
-              liveMs
-            )}s)`
-          }
-        }, blockRowsScope, void 0, true).lines);
-      } else {
-        const parts = displayedParts(
-          compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache),
-          reasoningExpanded
-        );
-        const rows2 = new RowSequence();
-        const ranges = [];
-        let textIndex = 0;
-        let lastVisiblePart = -1;
-        for (const [partIndex, part] of parts.entries()) {
-          if (isVisiblePart(part)) lastVisiblePart = partIndex;
-        }
-        for (const [partIndex, part] of parts.entries()) {
-          if (turnPartGap(parts, partIndex) > 0) rows2.push(GAP_LINE);
-          if (part.kind === "reasoning") {
-            const live = status === "generating" && partIndex === lastVisiblePart;
-            rows2.append(project(id, {
-              id: `${id}-r-${String(partIndex)}`,
-              kind: "reasoning",
-              source: part.text,
-              meta: {
-                reasoningDurationMs: live ? liveDurationMs ?? part.durationMs : part.durationMs,
-                reasoningExpanded,
-                reasoningLive: live
-              }
-            }, blockRowsScope, void 0, status === "generating").lines);
-            continue;
-          }
-          if (part.kind === "tool-summary") {
-            rows2.append(project(id, {
-              id: `${id}-tool-summary`,
-              kind: "tool-summary",
-              source: toolSummaryText(part.summary, contentWidth),
-              meta: { toolSummaryStatus: toolSummaryStatus(part.summary) }
-            }, blockRowsScope, void 0, status === "generating").lines);
-            continue;
-          }
-          if (part.kind === "card") {
-            const card = part.card;
-            rows2.append(project(id, {
-              id: `${id}-c-${card.callId}`,
-              kind: "tool-card",
-              source: "",
-              meta: {
-                toolCard: {
-                  name: card.name,
-                  arguments: card.arguments,
-                  status: card.status,
-                  ...card.resultText === void 0 ? {} : { resultText: card.resultText },
-                  ...card.meta === void 0 ? {} : { meta: card.meta },
-                  ...card.error === void 0 ? {} : { error: card.error },
-                  ...card.callView === void 0 ? {} : { callView: card.callView },
-                  ...card.resultView === void 0 ? {} : { resultView: card.resultView }
-                }
-              }
-            }, blockRowsScope, void 0, status === "generating").lines);
-            continue;
-          }
-          const start = rows2.length;
-          const partId = `${id}-t-${String(textIndex++)}`;
-          rows2.append(project(id, {
-            id: partId,
-            kind: "assistant-prose",
-            source: part.text
-          }, assistantBlockRowsScope, projectorStateFor(
-            projectorStates.current,
-            partId,
-            assistantBlockRowsScope
-          ), status === "generating").lines);
-          ranges.push({ start, end: rows2.length });
-        }
-        map.set(id, rows2.build());
-        if (ranges.length > 0) {
-          textRanges.set(id, ranges);
-        }
-      }
-    }
     return { rows: map, textRanges, storeBlocks };
   }, [
-    activeVersion,
-    activeTurn,
-    assistantBlockRowsScope,
-    blockRowsScope,
     contentWidth,
     expandedCompactionId,
+    hasActiveTurn,
     history,
-    liveDurationMs,
+    locale,
+    mode,
+    plainRows,
+    presenterCache,
     presenters,
     reasoningExpanded,
-    status,
     settledAssistantBlockRowsScope,
     settledBlockRowsScope,
     toolCardsExpanded,
     toolRows,
+    transcript
+  ]);
+  const activeTurnRows = (0, import_react37.useMemo)(() => {
+    if (activeTurn === void 0) return void 0;
+    const definitions = /* @__PURE__ */ new Map();
+    const batchPresenters = presenters === void 0 ? void 0 : { get(name2) {
+      if (!definitions.has(name2)) definitions.set(name2, presenters.get(name2));
+      return definitions.get(name2);
+    } };
+    const storeBlocks = /* @__PURE__ */ new Map();
+    const projectorCache = projectorStates.current;
+    const project = (ownerId, entry, scope, state, active) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active);
+    const id = `assistant-turn-${String(activeTurn.turn)}`;
+    const rawParts = partsFromTurn(activeTurn);
+    const visibleParts = displayedParts(rawParts, reasoningExpanded);
+    if (status === "generating" && visibleParts.length === 0) {
+      const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
+      const fish = getSwimmingFishFrame(liveMs);
+      const lines = project(id, {
+        id,
+        kind: "active-placeholder",
+        source: "",
+        meta: {
+          activePlaceholder: `${fish} \u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(
+            liveMs
+          )}s)`
+        }
+      }, blockRowsScope, void 0, true).lines;
+      return { id, lines, ranges: [], storeBlocks };
+    }
+    const parts = displayedParts(
+      compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache),
+      reasoningExpanded
+    );
+    const rows2 = new RowSequence();
+    const ranges = [];
+    let textIndex = 0;
+    let lastVisiblePart = -1;
+    for (const [partIndex, part] of parts.entries()) {
+      if (isVisiblePart(part)) lastVisiblePart = partIndex;
+    }
+    for (const [partIndex, part] of parts.entries()) {
+      if (turnPartGap(parts, partIndex) > 0) rows2.push(GAP_LINE);
+      if (part.kind === "reasoning") {
+        const live = status === "generating" && partIndex === lastVisiblePart;
+        rows2.append(project(id, {
+          id: `${id}-r-${String(partIndex)}`,
+          kind: "reasoning",
+          source: part.text,
+          meta: {
+            reasoningDurationMs: live ? liveDurationMs ?? part.durationMs : part.durationMs,
+            reasoningExpanded,
+            reasoningLive: live
+          }
+        }, blockRowsScope, void 0, status === "generating").lines);
+        continue;
+      }
+      if (part.kind === "tool-summary") {
+        rows2.append(project(id, {
+          id: `${id}-tool-summary`,
+          kind: "tool-summary",
+          source: toolSummaryText(part.summary, contentWidth),
+          meta: { toolSummaryStatus: toolSummaryStatus(part.summary) }
+        }, blockRowsScope, void 0, status === "generating").lines);
+        continue;
+      }
+      if (part.kind === "card") {
+        const card = part.card;
+        rows2.append(project(id, {
+          id: `${id}-c-${card.callId}`,
+          kind: "tool-card",
+          source: "",
+          meta: {
+            toolCard: {
+              name: card.name,
+              arguments: card.arguments,
+              status: card.status,
+              ...card.resultText === void 0 ? {} : { resultText: card.resultText },
+              ...card.meta === void 0 ? {} : { meta: card.meta },
+              ...card.error === void 0 ? {} : { error: card.error },
+              ...card.callView === void 0 ? {} : { callView: card.callView },
+              ...card.resultView === void 0 ? {} : { resultView: card.resultView }
+            }
+          }
+        }, blockRowsScope, void 0, status === "generating").lines);
+        continue;
+      }
+      const start = rows2.length;
+      const partId = `${id}-t-${String(textIndex++)}`;
+      rows2.append(project(id, {
+        id: partId,
+        kind: "assistant-prose",
+        source: part.text
+      }, assistantBlockRowsScope, projectorStateFor(
+        projectorCache,
+        partId,
+        assistantBlockRowsScope
+      ), status === "generating").lines);
+      ranges.push({ start, end: rows2.length });
+    }
+    return { id, lines: rows2.build(), ranges, storeBlocks };
+  }, [
+    activeTurn,
+    activeVersion,
+    assistantBlockRowsScope,
+    blockRowsScope,
+    contentWidth,
+    liveDurationMs,
+    locale,
+    mode,
     plainRows,
     presenterCache,
-    locale,
-    transcript,
-    mode
+    presenters,
+    reasoningExpanded,
+    status,
+    toolCardsExpanded,
+    toolRows
   ]);
+  const entryRows = (0, import_react37.useMemo)(() => {
+    if (activeTurnRows === void 0) return settledEntryRows;
+    const map = new Map(settledEntryRows.rows);
+    map.set(activeTurnRows.id, activeTurnRows.lines);
+    const textRanges = new Map(settledEntryRows.textRanges);
+    if (activeTurnRows.ranges.length > 0) {
+      textRanges.set(activeTurnRows.id, activeTurnRows.ranges);
+    }
+    const storeBlocks = new Map(settledEntryRows.storeBlocks);
+    for (const [key, val] of activeTurnRows.storeBlocks) {
+      storeBlocks.set(key, val);
+    }
+    return { rows: map, textRanges, storeBlocks };
+  }, [settledEntryRows, activeTurnRows]);
   const [presentedEntryRows, setPresentedEntryRows] = (0, import_react37.useState)(entryRows);
   const activeEntryRows = status === "generating" ? presentedEntryRows : entryRows;
   (0, import_react37.useLayoutEffect)(() => {
@@ -55050,26 +55347,24 @@ function StreamView({
     ));
     lastProjectorMetrics.current = totals;
   }, [entryRows, frameMetrics]);
+  const settledRenderEntries = (0, import_react37.useMemo)(() => transcript.flatMap((row, index2) => {
+    const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
+    const isUserWithGap = row.kind === "message" && row.message.kind === "user" && hasSubsequent;
+    const gapRows = isUserWithGap ? 0 : hasSubsequent ? 2 : 0;
+    const id = transcriptBlockId(row);
+    const lines = settledEntryRows.rows.get(id) ?? [];
+    return [{
+      kind: "row",
+      id,
+      version: `${transcriptBlockVersion(row, revisions)}\0${hasSubsequent ? "gap" : "tail"}`,
+      gapRows,
+      estimatedRows: lines.length + gapRows,
+      lines,
+      row
+    }];
+  }), [hasActiveTurn, revisions, settledEntryRows, transcript]);
   const renderEntries = (0, import_react37.useMemo)(() => [
-    ...transcript.flatMap((row, index2) => {
-      const hasSubsequent = index2 < transcript.length - 1 || activeTurn !== void 0;
-      const isUserWithGap = row.kind === "message" && row.message.kind === "user" && hasSubsequent;
-      const gapRows = isUserWithGap ? 0 : hasSubsequent ? 2 : 0;
-      const id = transcriptBlockId(row);
-      if (activeTurn !== void 0 && id === `assistant-turn-${String(activeTurn.turn)}`) {
-        return [];
-      }
-      const lines = activeEntryRows.rows.get(id) ?? [];
-      return [{
-        kind: "row",
-        id,
-        version: `${transcriptBlockVersion(row, revisions)}\0${hasSubsequent ? "gap" : "tail"}`,
-        gapRows,
-        estimatedRows: lines.length + gapRows,
-        lines,
-        row
-      }];
-    }),
+    ...settledRenderEntries.filter((entry) => activeTurn === void 0 || entry.id !== `assistant-turn-${String(activeTurn.turn)}`),
     ...activeTurn === void 0 ? [] : [{
       kind: "active",
       id: `assistant-turn-${String(activeTurn.turn)}`,
@@ -55083,7 +55378,7 @@ function StreamView({
     activeTurn,
     activeVersion,
     activeEntryRows,
-    transcript
+    settledRenderEntries
   ]);
   const layoutScope = [
     contentWidth,
@@ -55181,16 +55476,22 @@ function StreamView({
   const idleHome = transcript.length === 0 && activeTurn === void 0;
   const generating = status === "generating";
   const latestSettledAssistantId = activeTurn === void 0 ? history.findLast((message) => message.kind === "assistant")?.id : void 0;
-  (0, import_react37.useLayoutEffect)(() => {
-    if (viewportCommand === void 0) return;
-    if (viewportCommand.sequence === lastCommandSequence.current) return;
-    if (viewportCommand.kind !== "reset" && (viewport.viewportRows === 0 || viewport.contentRows === 0)) return;
-    lastCommandSequence.current = viewportCommand.sequence;
+  const viewportStateRef = (0, import_react37.useRef)(viewport);
+  viewportStateRef.current = viewport;
+  const virtualContentRowsRef = (0, import_react37.useRef)(virtualContentRows);
+  virtualContentRowsRef.current = virtualContentRows;
+  const effectiveViewportRowsRef = (0, import_react37.useRef)(effectiveViewportRows);
+  effectiveViewportRowsRef.current = effectiveViewportRows;
+  const executeViewportCommand = (0, import_react37.useCallback)((command) => {
+    if (command.sequence === lastCommandSequence.current) return;
+    const vp = viewportStateRef.current;
+    if (command.kind !== "reset" && (vp.viewportRows === 0 || vp.contentRows === 0)) return;
+    lastCommandSequence.current = command.sequence;
     const scheduler = scrollScheduler.current;
     const arbiter = frameArbiter.current;
     if (scheduler === void 0 || arbiter === void 0) return;
-    const effectiveContentRows = Math.max(viewport.contentRows, virtualContentRows);
-    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRows);
+    const effectiveContentRows = Math.max(vp.contentRows, virtualContentRowsRef.current);
+    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRowsRef.current);
     const clamp = (value) => Math.max(0, Math.min(maximum, value));
     const advance = (delta) => {
       const presented = scheduler.getPresented();
@@ -55201,43 +55502,53 @@ function StreamView({
     };
     if (pendingScrollInputAt.current !== void 0) frameMetrics?.recordCoalescedInput();
     pendingScrollInputAt.current ??= performance.now();
-    switch (viewportCommand.kind) {
+    switch (command.kind) {
       case "scroll":
-        advance(viewportCommand.delta);
+        advance(command.delta);
         break;
       case "page":
-        advance(viewportCommand.delta * Math.max(1, viewport.viewportRows - 1));
+        advance(command.delta * Math.max(1, vp.viewportRows - 1));
         break;
       case "position":
         scheduler.snapTo(clamp(Math.round(
-          maximum * (1 - Math.max(0, Math.min(1, viewportCommand.fraction)))
+          maximum * (1 - Math.max(0, Math.min(1, command.fraction)))
         )));
         break;
       case "edge":
-        scheduler.snapTo(viewportCommand.edge === "latest" ? 0 : maximum);
+        scheduler.snapTo(command.edge === "latest" ? 0 : maximum);
         break;
       case "reset":
         scheduler.snapTo(0);
+        lastDispatchedOffset.current = 0;
         pendingScrollInputAt.current = void 0;
         dispatchViewport({ kind: "reset" });
         return;
     }
+    const presentedOffset = scheduler.getPresented();
+    lastDispatchedOffset.current = presentedOffset;
     dispatchViewport({
       kind: "offset",
-      offsetFromBottom: scheduler.getPresented()
+      offsetFromBottom: presentedOffset
     });
     arbiter.requestScroll();
+  }, [frameMetrics]);
+  (0, import_react37.useLayoutEffect)(() => {
+    if (viewportCommand === void 0) return;
+    if (viewportCommand.sequence === lastCommandSequence.current) return;
+    executeViewportCommand(viewportCommand);
   }, [
+    viewportCommand,
+    executeViewportCommand,
     viewport.contentRows,
     viewport.viewportRows,
     effectiveViewportRows,
-    virtualContentRows,
-    viewportCommand
+    virtualContentRows
   ]);
   (0, import_react37.useLayoutEffect)(() => {
     const scheduler = scrollScheduler.current;
     if (scheduler === void 0) return;
-    const maximum = Math.max(0, viewport.contentRows - viewport.viewportRows);
+    const effectiveContentRows = Math.max(viewport.contentRows, virtualContentRows);
+    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRows);
     const presented = scheduler.getPresented();
     if (presented === viewport.offsetFromBottom) return;
     if (scheduler.isAnimating()) {
@@ -55245,19 +55556,23 @@ function StreamView({
     } else {
       scheduler.snapTo(Math.max(0, Math.min(maximum, viewport.offsetFromBottom)));
     }
+    lastDispatchedOffset.current = viewport.offsetFromBottom;
   }, [
+    effectiveViewportRows,
     viewport.contentRows,
     viewport.offsetFromBottom,
-    viewport.viewportRows
+    virtualContentRows
   ]);
   (0, import_react37.useLayoutEffect)(() => {
     scrollScheduler.current?.snapTo(viewport.offsetFromBottom);
+    lastDispatchedOffset.current = viewport.offsetFromBottom;
   }, [columns, rows]);
   (0, import_react37.useLayoutEffect)(() => {
     if (!motionPaused) return;
     const scheduler = scrollScheduler.current;
     if (scheduler === void 0) return;
     scheduler.snapTo(viewport.offsetFromBottom);
+    lastDispatchedOffset.current = viewport.offsetFromBottom;
   }, [motionPaused, viewport.offsetFromBottom]);
   (0, import_react37.useLayoutEffect)(() => {
     const viewportElement = viewportRef.current;
@@ -55268,50 +55583,55 @@ function StreamView({
     const contentRows = layouts.at(-1) === void 0 ? 0 : layouts.at(-1).top + layouts.at(-1).rows;
     const contentChanged = contentRevision !== lastContentRevision.current;
     lastContentRevision.current = contentRevision;
-    dispatchViewport({
-      kind: "layout",
-      contentRows,
-      viewportRows: viewportBox.height,
-      blocks: layouts,
-      unseenRowsAdded: contentChanged ? Math.max(0, contentRows - viewport.contentRows) : 0
-    });
-    if (frameMetrics !== void 0) {
-      let mounted = 0;
-      for (const layoutIndex of visibleIndexes) {
-        const entry = renderEntries[layoutIndex];
-        if (entry === void 0) continue;
-        const layout = virtualLayouts[layoutIndex];
-        if (layout === void 0) {
-          continue;
-        }
-        let window2;
-        if (physicalViewport) {
-          window2 = sliceWindow(
-            entry.lines.length,
-            layout.top,
-            overscanTop,
-            overscanBottom
-          );
-        }
-        mounted += window2 === void 0 ? entry.lines.length : Math.max(0, window2.end - window2.start);
-      }
-      frameMetrics.addMountedRows(mounted);
+    if (contentChanged || viewport.viewportRows !== viewportBox.height || viewport.contentRows !== contentRows) {
+      dispatchViewport({
+        kind: "layout",
+        contentRows,
+        viewportRows: viewportBox.height,
+        blocks: layouts,
+        unseenRowsAdded: contentChanged ? Math.max(0, contentRows - viewport.contentRows) : 0
+      });
     }
   }, [
     columns,
-    rows,
-    layoutKey,
-    effectiveViewportRows,
-    frameMetrics,
+    contentRevision,
     layoutInputs,
+    layoutKey,
     layoutScope,
+    rows,
+    viewport.contentRows,
+    viewport.viewportRows
+  ]);
+  (0, import_react37.useLayoutEffect)(() => {
+    if (frameMetrics === void 0) return;
+    let mounted = 0;
+    for (const layoutIndex of visibleIndexes) {
+      const entry = renderEntries[layoutIndex];
+      if (entry === void 0) continue;
+      const layout = virtualLayouts[layoutIndex];
+      if (layout === void 0) {
+        continue;
+      }
+      let window2;
+      if (physicalViewport) {
+        window2 = sliceWindow(
+          entry.lines.length,
+          layout.top,
+          overscanTop,
+          overscanBottom
+        );
+      }
+      mounted += window2 === void 0 ? entry.lines.length : Math.max(0, window2.end - window2.start);
+    }
+    frameMetrics.addMountedRows(mounted);
+  }, [
+    frameMetrics,
     overscanBottom,
-    overscanRows,
     overscanTop,
     physicalViewport,
     renderEntries,
     virtualLayouts,
-    visibleEntries
+    visibleIndexes
   ]);
   const rail = scrollbar ? physicalScrollRailGeometry(
     viewport.contentRows,
@@ -60317,6 +60637,7 @@ var Config = z.object({
       }),
       tools: z.object({
         previewRows: z.number().min(1).step(1).max(50).default(toolPolicyDefaults().previewRows),
+        diffPreviewRows: z.number().min(1).step(1).max(2e3).default(toolPolicyDefaults().diffPreviewRows),
         detailPageRows: z.number().min(1).step(1).max(200).default(toolPolicyDefaults().detailPageRows),
         cacheEntries: z.number().min(1).step(1).max(4096).default(toolPolicyDefaults().cacheEntries),
         cacheRows: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_ROWS).default(toolPolicyDefaults().cacheRows)

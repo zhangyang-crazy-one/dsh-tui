@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { ToolCardModel } from '../src/tool-cards.ts'
-import { createToolBodyDocument, planToolBodyWindow, materializeToolBodyRow, toolCardOriginalText } from '../src/tool-body.ts'
+import { createToolBodyDocument, planToolBodyWindow, materializeToolBodyRow, toolCardOriginalText, type ToolBodyCard } from '../src/tool-body.ts'
 import { displayWidth } from '../src/content.ts'
 
 const options = { locale: 'zh-CN' as const, diagnostics: false, includeArguments: false }
@@ -72,5 +72,108 @@ describe('tool body windows', () => {
     expect(out).toContain('👩‍💻中')
     expect(out).toContain('\\x1b[2J\\tEND')
     expect(out).not.toContain('\x1b')
+  })
+
+  it('renders vim-style diff with exact line numbers, gutter separator, and hunk headers', () => {
+    const card: ToolBodyCard = {
+      ...base,
+      name: 'edit',
+      resultView: {
+        card: 'diff',
+        title: 'Edit app.ts',
+        diffs: [{
+          path: 'src/app.ts',
+          oldText: 'line1\nold2\nline3\n',
+          newText: 'line1\nnew2\nline3\n',
+          oldStart: 10,
+          oldLines: 3,
+          newStart: 10,
+          newLines: 3,
+          lines: [' line1', '-old2', '+new2', ' line3'],
+        }],
+      },
+    }
+    const document = createToolBodyDocument(card, options)
+    const lines = document.slice().map(row => row.text)
+    expect(lines).toEqual([
+      'diff',
+      '--- src/app.ts',
+      '@@ -10,3 +10,3 @@',
+      ' 10 │   line1',
+      ' 11 │ - old2',
+      ' 11 │ + new2',
+      ' 12 │   line3',
+    ])
+  })
+
+  it('computes fallback LCS diff with gutter line numbers when lines is omitted', () => {
+    const card: ToolBodyCard = {
+      ...base,
+      name: 'edit',
+      resultView: {
+        card: 'diff',
+        title: 'Edit simple.txt',
+        diffs: [{
+          path: 'simple.txt',
+          oldText: 'alpha\nbeta\n',
+          newText: 'alpha\ngamma\n',
+        }],
+      },
+    }
+    const document = createToolBodyDocument(card, options)
+    const lines = document.slice().map(row => row.text)
+    expect(lines).toEqual([
+      'diff',
+      '--- simple.txt',
+      '@@ -1,2 +1,2 @@',
+      '  1 │   alpha',
+      '  2 │ - beta',
+      '  2 │ + gamma',
+    ])
+  })
+
+  it('does not duplicate file header across multiple hunks for the same file', () => {
+    const card: ToolBodyCard = {
+      ...base,
+      name: 'edit',
+      resultView: {
+        card: 'diff',
+        title: 'Edit multi.txt',
+        diffs: [
+          {
+            path: 'multi.txt',
+            oldText: 'a\n',
+            newText: 'b\n',
+            oldStart: 5,
+            oldLines: 1,
+            newStart: 5,
+            newLines: 1,
+            lines: ['-a', '+b'],
+          },
+          {
+            path: 'multi.txt',
+            oldText: 'x\n',
+            newText: 'y\n',
+            oldStart: 50,
+            oldLines: 1,
+            newStart: 50,
+            newLines: 1,
+            lines: ['-x', '+y'],
+          },
+        ],
+      },
+    }
+    const document = createToolBodyDocument(card, options)
+    const lines = document.slice().map(row => row.text)
+    expect(lines).toEqual([
+      'diff',
+      '--- multi.txt',
+      '@@ -5 +5 @@',
+      '  5 │ - a',
+      '  5 │ + b',
+      '@@ -50 +50 @@',
+      ' 50 │ - x',
+      ' 50 │ + y',
+    ])
   })
 })

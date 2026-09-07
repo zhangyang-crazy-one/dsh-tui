@@ -61,6 +61,102 @@ function textLines(text: string, prefix = ''): RowSource<ToolBodyLine> {
   })
 }
 
+/** Split text into lines, handling CRLF and trailing newline without phantom blank lines. */
+function splitDiffLines(text: string): string[] {
+  if (text.length === 0) return []
+  const normalized = text.endsWith('\n') ? text.slice(0, -1) : text
+  return normalized.split(/\r?\n/u)
+}
+
+/**
+ * Compute unified diff lines (' ' context, '-' removal, '+' addition)
+ * between oldLines and newLines using longest common subsequence.
+ */
+function diffLines(oldLines: readonly string[], newLines: readonly string[]): string[] {
+  if (oldLines.length === 0) return newLines.map(line => `+${line}`)
+  if (newLines.length === 0) return oldLines.map(line => `-${line}`)
+
+  const m = oldLines.length
+  const n = newLines.length
+  if (m * n > 500_000) {
+    return [...oldLines.map(l => `-${l}`), ...newLines.map(l => `+${l}`)]
+  }
+
+  let prefixCount = 0
+  while (prefixCount < m && prefixCount < n && oldLines[prefixCount] === newLines[prefixCount]) {
+    prefixCount++
+  }
+
+  let suffixCount = 0
+  while (
+    suffixCount < (m - prefixCount)
+    && suffixCount < (n - prefixCount)
+    && oldLines[m - 1 - suffixCount] === newLines[n - 1 - suffixCount]
+  ) {
+    suffixCount++
+  }
+
+  const trimmedOld = oldLines.slice(prefixCount, m - suffixCount)
+  const trimmedNew = newLines.slice(prefixCount, n - suffixCount)
+  const midM = trimmedOld.length
+  const midN = trimmedNew.length
+
+  const middle: string[] = []
+  if (midM === 0) {
+    for (const line of trimmedNew) middle.push(`+${line}`)
+  } else if (midN === 0) {
+    for (const line of trimmedOld) middle.push(`-${line}`)
+  } else {
+    const stride = midN + 1
+    const dp = new Int32Array((midM + 1) * stride)
+    for (let i = 0; i < midM; i++) {
+      for (let j = 0; j < midN; j++) {
+        const dest = (i + 1) * stride + (j + 1)
+        if (trimmedOld[i] === trimmedNew[j]) {
+          dp[dest] = (dp[i * stride + j] ?? 0) + 1
+        } else {
+          const up = dp[i * stride + (j + 1)] ?? 0
+          const left = dp[(i + 1) * stride + j] ?? 0
+          dp[dest] = up > left ? up : left
+        }
+      }
+    }
+
+    const rev: string[] = []
+    let i = midM
+    let j = midN
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && trimmedOld[i - 1] === trimmedNew[j - 1]) {
+        rev.push(` ${trimmedOld[i - 1]}`)
+        i--
+        j--
+      } else if (j > 0 && (i === 0 || (dp[i * stride + (j - 1)] ?? 0) >= (dp[(i - 1) * stride + j] ?? 0))) {
+        rev.push(`+${trimmedNew[j - 1]}`)
+        j--
+      } else if (i > 0) {
+        rev.push(`-${trimmedOld[i - 1]}`)
+        i--
+      }
+    }
+    for (let k = rev.length - 1; k >= 0; k--) {
+      const item = rev[k]
+      if (item !== undefined) middle.push(item)
+    }
+  }
+
+  const result: string[] = []
+  for (let k = 0; k < prefixCount; k++) {
+    result.push(` ${oldLines[k]}`)
+  }
+  for (const line of middle) {
+    result.push(line)
+  }
+  for (let k = m - suffixCount; k < m; k++) {
+    result.push(` ${oldLines[k]}`)
+  }
+  return result
+}
+
 /**
  * Build an indexed logical document without formatting the body.
  * @param card - canonical arguments/results with optional real presenter views.
@@ -90,10 +186,67 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
       const diffs = result?.card === 'diff' ? result.diffs : card.callView?.card === 'diff' ? card.callView.diffs : []
       if (diffs.length === 0) break
       const source = new RowSequence<ToolBodyLine>()
+      let lastPath: string | undefined
       for (const diff of diffs) {
-        source.push({ text: `--- ${diff.path}`, token: 'codeBg' })
-        if (diff.oldText !== null) source.append(textLines(diff.oldText, '- '))
-        source.append(textLines(diff.newText, '+ '))
+        if (diff.path !== lastPath) {
+          source.push({ text: `--- ${diff.path}`, token: 'codeBg' })
+          lastPath = diff.path
+        }
+        const oldStart = diff.oldStart ?? (diff.oldText === null ? 0 : 1)
+        const newStart = diff.newStart ?? 1
+        let lines: readonly string[]
+        let oldLinesCount = diff.oldLines
+        let newLinesCount = diff.newLines
+
+        if (diff.lines !== undefined && diff.lines.length > 0) {
+          lines = diff.lines
+          oldLinesCount ??= diff.oldText === null ? 0 : splitDiffLines(diff.oldText).length
+          newLinesCount ??= splitDiffLines(diff.newText).length
+        } else if (diff.oldText === null) {
+          const split = splitDiffLines(diff.newText)
+          lines = split.map(line => `+${line}`)
+          oldLinesCount = 0
+          newLinesCount = split.length
+        } else {
+          const oldSplit = splitDiffLines(diff.oldText)
+          const newSplit = splitDiffLines(diff.newText)
+          lines = diffLines(oldSplit, newSplit)
+          oldLinesCount ??= oldSplit.length
+          newLinesCount ??= newSplit.length
+        }
+
+        const oldHunk = `${oldStart}${oldLinesCount !== 1 ? `,${oldLinesCount}` : ''}`
+        const newHunk = `${newStart}${newLinesCount !== 1 ? `,${newLinesCount}` : ''}`
+        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: 'codeBg' })
+
+        const maxLine = Math.max(oldStart + oldLinesCount, newStart + newLinesCount, 1)
+        const gutterWidth = Math.max(3, String(maxLine).length)
+
+        let curOld = oldStart === 0 ? 1 : oldStart
+        let curNew = newStart === 0 ? 1 : newStart
+
+        for (const raw of lines) {
+          if (raw.startsWith('\\')) continue
+          if (raw.startsWith('-')) {
+            const num = String(curOld).padStart(gutterWidth, ' ')
+            source.push({ text: `${num} │ - ${raw.slice(1)}`, token: 'codeBg' })
+            curOld++
+          } else if (raw.startsWith('+')) {
+            const num = String(curNew).padStart(gutterWidth, ' ')
+            source.push({ text: `${num} │ + ${raw.slice(1)}`, token: 'codeBg' })
+            curNew++
+          } else if (raw.startsWith(' ')) {
+            const num = String(curNew).padStart(gutterWidth, ' ')
+            source.push({ text: `${num} │   ${raw.slice(1)}`, token: 'codeBg' })
+            curOld++
+            curNew++
+          } else {
+            const num = String(curNew).padStart(gutterWidth, ' ')
+            source.push({ text: `${num} │   ${raw}`, token: 'codeBg' })
+            curOld++
+            curNew++
+          }
+        }
       }
       section('diff', source.build())
       break

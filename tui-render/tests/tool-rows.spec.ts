@@ -38,4 +38,66 @@ describe('ToolRowCache', () => {
     expect(cache.stats()).toMatchObject({ entries: 0, rows: 0 })
     expect(card.resultText).toContain('line-5000')
   })
+
+  it('does not compress diff cards to previewRows budget and renders all diff rows without remaining hint', () => {
+    const cache = new ToolRowCache(toolPolicyDefaults())
+    const diffCard: ToolBodyCard = {
+      name: 'edit',
+      arguments: '{"file_path":"test.ts"}',
+      status: 'ok',
+      resultView: {
+        card: 'diff',
+        title: 'Edit test.ts',
+        diffs: [{
+          path: 'test.ts',
+          oldText: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n',
+          newText: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10-mod\n',
+          oldStart: 1,
+          oldLines: 10,
+          newStart: 1,
+          newLines: 10,
+          lines: [
+            ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '-10', '+10-mod',
+          ],
+        }],
+      },
+    }
+    const rows = cache.rows('diff-1', diffCard, 80, true, 'zh-CN')
+    const textRows = rows.slice().map(r => r.text)
+    expect(textRows).not.toContain(expect.stringContaining('/tools'))
+    expect(textRows).toHaveLength(15)
+    expect(textRows[1]).toContain('diff')
+    expect(textRows[2]).toContain('--- test.ts')
+    expect(textRows[3]).toContain('@@ -1,10 +1,10 @@')
+    expect(textRows.at(-1)).toContain('10-mod')
+  })
+
+  it('bounds diff cards to diffPreviewRows when diff exceeds the configured budget', () => {
+    const cache = new ToolRowCache({ ...toolPolicyDefaults(), diffPreviewRows: 5 })
+    const diffCard: ToolBodyCard = {
+      name: 'edit',
+      arguments: '{"file_path":"test.ts"}',
+      status: 'ok',
+      resultView: {
+        card: 'diff',
+        title: 'Edit test.ts',
+        diffs: [{
+          path: 'test.ts',
+          oldText: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n',
+          newText: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10-mod\n',
+          oldStart: 1,
+          oldLines: 10,
+          newStart: 1,
+          newLines: 10,
+          lines: [
+            ' 1', ' 2', ' 3', ' 4', ' 5', ' 6', ' 7', ' 8', ' 9', '-10', '+10-mod',
+          ],
+        }],
+      },
+    }
+    const rows = cache.rows('diff-2', diffCard, 80, true, 'zh-CN')
+    const textRows = rows.slice().map(r => r.text)
+    expect(textRows).toHaveLength(7)
+    expect(textRows.at(-1)).toContain('/tools')
+  })
 })

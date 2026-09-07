@@ -47,10 +47,10 @@ export const RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD = 10
 /** Default maximum rows-per-frame in catch-up mode. */
 export const RENDER_POLICY_DEFAULT_SCROLL_MAX_CATCH_UP_STEP = 8
 
-/** Default settled-row cache budget; one full viewport plus neighborhood headroom. */
-export const RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS = 4096
-/** Default settled-byte cache budget; one full pre-rendered transcript. */
-export const RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES = 4 * 1024 * 1024
+/** Default settled-row cache budget; headroom for long 200k+ token sessions. */
+export const RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS = 65536
+/** Default settled-byte cache budget; full pre-rendered transcript headroom. */
+export const RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES = 32 * 1024 * 1024
 
 /** Default transcript overscan; one viewport's worth of pre-rendered rows. */
 export const RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN = 16
@@ -58,8 +58,8 @@ export const RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN = 16
 export const RENDER_POLICY_MAX_OVERSCAN = 50
 /** Hard upper bound on settled-row cache budget. */
 export const RENDER_POLICY_MAX_CACHE_ROWS = 1_000_000
-/** Hard upper bound on settled-byte cache budget (32 MiB). */
-export const RENDER_POLICY_MAX_CACHE_BYTES = 32 * 1024 * 1024
+/** Hard upper bound on settled-byte cache budget (64 MiB). */
+export const RENDER_POLICY_MAX_CACHE_BYTES = 64 * 1024 * 1024
 
 /** Stream-pacing knobs validated together (entry thresholds > exit thresholds). */
 export interface RenderPolicyStream {
@@ -107,6 +107,8 @@ export interface RenderPolicyCache {
 export interface RenderPolicyTools {
   /** Maximum physical body rows in an expanded transcript preview. */
   readonly previewRows: number
+  /** Maximum physical body rows in an expanded diff preview before truncating to detail. */
+  readonly diffPreviewRows: number
   /** Maximum physical body rows loaded by one detail-page action. */
   readonly detailPageRows: number
   /** Maximum tool documents retained by the preview cache. */
@@ -120,7 +122,7 @@ export interface RenderPolicyTools {
  * @returns fresh bounded preview, page, and cache settings.
  */
 export function toolPolicyDefaults(): RenderPolicyTools {
-  return { previewRows: 6, detailPageRows: 40, cacheEntries: 128, cacheRows: 2048 }
+  return { previewRows: 6, diffPreviewRows: 200, detailPageRows: 40, cacheEntries: 512, cacheRows: 16384 }
 }
 
 /** Resolved render policy the TUI plugin passes to the renderer at mount. */

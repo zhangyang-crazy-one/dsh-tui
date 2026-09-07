@@ -145,8 +145,10 @@ export class ToolRowCache {
       }
       if (cached !== undefined) this.remove(key, cached)
       const document = expanded ? createToolBodyDocument(card, { diagnostics: false, includeArguments: false, locale }) : undefined
+      const isDiff = card.callView?.card === 'diff' || card.resultView?.card === 'diff'
+      const rowBudget = isDiff ? this.policy.diffPreviewRows : this.policy.previewRows
       const window = document === undefined ? undefined
-        : planToolBodyWindow(document, { line: 0, offset: 0 }, Math.max(1, width - 2), this.policy.previewRows)
+        : planToolBodyWindow(document, { line: 0, offset: 0 }, Math.max(1, width - 2), rowBudget)
       const entry: CachedPreview = {
         card, document, window, rows: new Map(),
         length: 1 + (window?.fragments.length ?? 0) + (window?.next === undefined ? 0 : 1),

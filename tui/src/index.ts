@@ -416,6 +416,7 @@ export const Config: z<Config> = z.object({
       }),
       tools: z.object({
         previewRows: z.number().min(1).step(1).max(50).default(toolPolicyDefaults().previewRows),
+        diffPreviewRows: z.number().min(1).step(1).max(2000).default(toolPolicyDefaults().diffPreviewRows),
         detailPageRows: z.number().min(1).step(1).max(200).default(toolPolicyDefaults().detailPageRows),
         cacheEntries: z.number().min(1).step(1).max(4096).default(toolPolicyDefaults().cacheEntries),
         cacheRows: z.number().min(1).step(1).max(RENDER_POLICY_MAX_CACHE_ROWS).default(toolPolicyDefaults().cacheRows),

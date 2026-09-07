@@ -690,4 +690,95 @@ describe('createProjector', () => {
     const projector = createProjector()
     expect(projector.snapshot()).toEqual(EMPTY_VIEW)
   })
+
+  it('renders an assistant error message when a turn ends with an error and empty text', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'MissingCredentialError',
+          message: 'DEEPSEEK_API_KEY is required',
+          code: 'MISSING_CREDENTIAL',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    expect(model.activeTurn).toBeUndefined()
+    expect(model.history).toHaveLength(1)
+    const row = model.history[0]
+    expect(row?.kind).toBe('assistant')
+    expect(row?.text).toContain('API 密钥缺失')
+    expect(row?.text).toContain('DEEPSEEK_API_KEY')
+  })
+
+  it('appends formatted error message when a turn ends with an error and partial text', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'assistant/chunk', {
+      turn: 1,
+      step: 1,
+      chunk: { type: 'text-delta', index: 0, text: 'Partial output' },
+    }))
+    projector.push(event(3, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'NetworkError',
+          message: 'Connection reset by peer',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    expect(model.activeTurn).toBeUndefined()
+    expect(model.history).toHaveLength(1)
+    const row = model.history[0]
+    expect(row?.kind).toBe('assistant')
+    expect(row?.text).toContain('Partial output')
+    expect(row?.text).toContain('⚠️ **模型请求失败**：Connection reset by peer')
+  })
+
+  it('formats HTTP 401 authentication failure with specific guidance', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'AUTH: Authentication Fails',
+          code: 'AUTH',
+          status: 401,
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('API 认证失败（HTTP 401）')
+    expect(row?.text).toContain('/key')
+  })
+
+  it('detects apiKeyEnv misconfigured with literal secret', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'llm-deepseek: store sk-abc... through credentials, or export sk-abc...',
+          code: 'MISSING_CREDENTIAL',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('配置错误')
+    expect(row?.text).toContain('apiKeyEnv')
+  })
 })

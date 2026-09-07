@@ -228,10 +228,10 @@ describe('wrapStdoutForFrameBg', () => {
     })
     expect(metrics.snapshot().writtenCells.total).toBe(3)
     await new Promise<void>((resolve) => {
-      wrapped.write('\x1b[?2026l', () => resolve())
+      wrapped.write('\x1b[?2026l', () => { resolve() })
     })
     await new Promise<void>((resolve) => {
-      wrapped.write('\x1b[?2026l', () => resolve())
+      wrapped.write('\x1b[?2026l', () => { resolve() })
     })
     expect(metrics.snapshot().frameIntervalMs.count).toBe(1)
   })

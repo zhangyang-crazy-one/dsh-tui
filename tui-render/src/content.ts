@@ -16,12 +16,6 @@ import stringWidth from 'string-width'
 /** Grapheme splitter so a glyph wider than the wrap budget still advances. */
 const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
-/** First grapheme; a one-unit slice if the iterator is empty. */
-function firstGrapheme(text: string): string {
-  for (const part of GRAPHEME.segment(text)) return part.segment
-  // v8 ignore next -- Intl.Segmenter yields a grapheme for every non-empty string.
-  return text.slice(0, 1)
-}
 
 /**
  * Escape every control byte in untrusted content so it cannot be interpreted
@@ -59,7 +53,26 @@ const WIDE_SYMBOLS_OR_EMOJIS =
  */
 export function displayWidth(text: string): number {
   if (text === '') return 0
-  if (/^[\x20-\x7e]*$/u.test(text)) return text.length
+  let cols = 0
+  let simple = true
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i)
+    if (code >= 0x20 && code <= 0x7e) {
+      cols += 1
+    } else if (
+      (code >= 0x4e00 && code <= 0x9fff)
+      || (code >= 0x3400 && code <= 0x4dbf)
+      || (code >= 0x3000 && code <= 0x303f)
+      || (code >= 0xff01 && code <= 0xff60)
+    ) {
+      cols += 2
+    } else {
+      simple = false
+      break
+    }
+  }
+  if (simple) return cols
+
   const base = stringWidth(text)
   if (!/[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text)) {
     return base
@@ -195,17 +208,27 @@ export function wrapDisplayLines(text: string, maxCols: number): string[] {
       out.push(line)
       continue
     }
-    let rest = line
-    while (rest !== '') {
-      const chunk = wcwidthSafeSlice(rest, maxCols)
-      if (chunk === '') {
-        const first = firstGrapheme(rest)
-        out.push(first)
-        rest = rest.slice(first.length)
-        continue
+    if (/^[\x20-\x7e]*$/u.test(line)) {
+      for (let i = 0; i < line.length; i += maxCols) {
+        out.push(line.slice(i, i + maxCols))
       }
-      out.push(chunk)
-      rest = rest.slice(chunk.length)
+      continue
+    }
+    let curLine = ''
+    let curCols = 0
+    for (const { segment } of GRAPHEME.segment(line)) {
+      const width = displayWidth(segment)
+      if (curCols + width > maxCols && curLine !== '') {
+        out.push(curLine)
+        curLine = segment
+        curCols = width
+      } else {
+        curLine += segment
+        curCols += width
+      }
+    }
+    if (curLine !== '') {
+      out.push(curLine)
     }
   }
   return out

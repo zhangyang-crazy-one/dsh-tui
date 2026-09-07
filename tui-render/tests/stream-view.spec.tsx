@@ -2300,4 +2300,37 @@ describe('StreamView physical-row virtualization', () => {
     expect(focus).toContain('BEFORE_TOOL')
     expect(focus).toContain('AFTER_TOOL')
   })
+
+  it('renders large conversation history with reasoning expanded efficiently without lag', () => {
+    const longReasoning = '这是长推理文本，测试大上下文下展开性能。'.repeat(100)
+    const history: Array<NonNullable<ViewModel['history']>[number]> = []
+    for (let i = 0; i < 20; i += 1) {
+      history.push({
+        id: i * 2 + 1,
+        kind: 'user',
+        text: `用户提问 ${String(i)}`,
+        timestamp: i * 1000,
+      })
+      history.push({
+        id: i * 2 + 2,
+        kind: 'assistant',
+        text: `助手回答 ${String(i)}`,
+        reasoningText: `${longReasoning} [turn ${String(i)}]`,
+        reasoningDurationMs: 1500,
+        timestamp: i * 1000 + 500,
+      })
+    }
+    const start = performance.now()
+    const output = stripAnsi(renderToString(createElement(StreamView, {
+      model: model({
+        history,
+        reasoningExpanded: true,
+      }),
+    })))
+    const elapsed = performance.now() - start
+    // 20 turns with ~50k chars of reasoning should render in well under 500ms
+    expect(elapsed).toBeLessThan(500)
+    expect(output).toContain('用户提问 19')
+    expect(output).toContain('助手回答 19')
+  })
 })

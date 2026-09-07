@@ -145,6 +145,8 @@ describe('command directory', () => {
       'export',
       'feedback',
       'help',
+      'key',
+      'login',
       'model',
       'permission',
       'reasoning',

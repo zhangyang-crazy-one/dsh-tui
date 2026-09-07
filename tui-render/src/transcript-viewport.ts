@@ -253,6 +253,13 @@ export function reduceTranscriptViewport(
         : action.delta > 0
           ? false
           : state.follow
+      if (
+        offsetFromBottom === state.offsetFromBottom
+        && follow === state.follow
+        && (follow ? 0 : state.unseenRows) === state.unseenRows
+      ) {
+        return state
+      }
       const nextTop = topRow({ ...state, offsetFromBottom })
       return {
         ...state,
@@ -269,6 +276,13 @@ export function reduceTranscriptViewport(
         state.viewportRows,
       )
       const follow = offsetFromBottom === 0
+      if (
+        offsetFromBottom === state.offsetFromBottom
+        && follow === state.follow
+        && (follow ? 0 : state.unseenRows) === state.unseenRows
+      ) {
+        return state
+      }
       const nextTop = topRow({ ...state, offsetFromBottom })
       return {
         ...state,
@@ -283,6 +297,13 @@ export function reduceTranscriptViewport(
       const fraction = Math.max(0, Math.min(action.fraction, 1))
       const offsetFromBottom = Math.round(available * (1 - fraction))
       const follow = offsetFromBottom === 0
+      if (
+        offsetFromBottom === state.offsetFromBottom
+        && follow === state.follow
+        && (follow ? 0 : state.unseenRows) === state.unseenRows
+      ) {
+        return state
+      }
       const nextTop = topRow({ ...state, offsetFromBottom })
       return {
         ...state,
@@ -294,6 +315,9 @@ export function reduceTranscriptViewport(
     }
     case 'edge': {
       if (action.edge === 'latest') {
+        if (state.follow && state.offsetFromBottom === 0 && state.unseenRows === 0 && state.anchor === undefined) {
+          return state
+        }
         return {
           ...state,
           follow: true,
@@ -303,6 +327,9 @@ export function reduceTranscriptViewport(
         }
       }
       const offsetFromBottom = maxOffset(state.contentRows, state.viewportRows)
+      if (!state.follow && state.offsetFromBottom === offsetFromBottom) {
+        return state
+      }
       return {
         ...state,
         follow: false,
@@ -310,8 +337,20 @@ export function reduceTranscriptViewport(
         anchor: anchorForRow(0, state.blocks),
       }
     }
-    case 'reset':
+    case 'reset': {
+      if (
+        state.follow
+        && state.offsetFromBottom === 0
+        && state.unseenRows === 0
+        && state.contentRows === 0
+        && state.viewportRows === 0
+        && state.blocks.length === 0
+        && state.anchor === undefined
+      ) {
+        return state
+      }
       return EMPTY_TRANSCRIPT_VIEWPORT
+    }
   }
 }
 

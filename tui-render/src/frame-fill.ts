@@ -166,11 +166,22 @@ function railRow(
   return guard + railCell(row, col, text, tier)
 }
 
+function sameRail(a: FrameRail | undefined, b: FrameRail | undefined): boolean {
+  if (a === b) return true
+  if (a === undefined || b === undefined) return false
+  return a.col === b.col
+    && a.topRow === b.topRow
+    && a.rows === b.rows
+    && a.thumbStart === b.thumbStart
+    && a.thumbRows === b.thumbRows
+}
+
 /** Absolute rail bytes for this frame, including stale-position clearing. */
-function railOverlay(tier: ColorTier): string {
-  let cells = ''
+function railOverlay(tier: ColorTier, force = false): string {
   const next = frameRail
   const previous = paintedFrameRail
+  if (!force && sameRail(previous, next)) return ''
+  let cells = ''
   const geometry = visibleFrameSnapshot()?.geometry
   const clearPreviousRow = (row: number, col: number): string => {
     // After resize, the terminal clamps old coordinates into the new footer.
@@ -215,16 +226,28 @@ function railOverlay(tier: ColorTier): string {
   return cells === '' ? '' : `\x1b7${cells}\x1b8`
 }
 
+const paintedPhysicalLineCache = new WeakMap<PhysicalLine, Map<string, string>>()
+
 function paintPhysicalLine(line: PhysicalLine, tier: ColorTier): string {
+  const hyperlinks = hyperlinksEnabled()
+  const cacheKey = `${tier}:${hyperlinks ? 1 : 0}`
+  let byTier = paintedPhysicalLineCache.get(line)
+  if (byTier === undefined) {
+    byTier = new Map<string, string>()
+    paintedPhysicalLineCache.set(line, byTier)
+  }
+  const cached = byTier.get(cacheKey)
+  if (cached !== undefined) return cached
+
   const parts = line.spans.map((span) => {
     const text = styled(span.text, span.token, tier, span.bold)
     return span.href !== undefined
-      && hyperlinksEnabled()
+      && hyperlinks
       && isOsc8Href(span.href)
       ? wrapOsc8(text, span.href)
       : text
   })
-  return line.background !== undefined && line.background !== 'bg'
+  const painted = line.background !== undefined && line.background !== 'bg'
     ? paintBackgroundRow(
       parts,
       line.background,
@@ -232,6 +255,21 @@ function paintPhysicalLine(line: PhysicalLine, tier: ColorTier): string {
       tier,
     )
     : paintRow(parts, tier)
+  byTier.set(cacheKey, painted)
+  return painted
+}
+
+const blankPadCache = new Map<string, string>()
+
+function blankPad(count: number, tier: ColorTier): string {
+  if (count <= 0) return ''
+  const key = `${tier}:${String(count)}`
+  let cached = blankPadCache.get(key)
+  if (cached === undefined) {
+    cached = styled(' '.repeat(count), 'bg', tier)
+    blankPadCache.set(key, cached)
+  }
+  return cached
 }
 
 /** Repaint changed rows; a new repaint key also scrubs the owned region once. */
@@ -243,6 +281,9 @@ function transcriptOverlay(
   if (next === undefined) {
     paintedVisibleFrame = undefined
     paintedTranscriptRepaintKey = undefined
+    return ''
+  }
+  if (paintedVisibleFrame === next && (next.repaintKey === undefined || next.repaintKey === paintedTranscriptRepaintKey)) {
     return ''
   }
   const diff = diffVisibleFrameSnapshots(paintedVisibleFrame, next)
@@ -258,7 +299,7 @@ function transcriptOverlay(
   let cells = ''
   if (repaintAll) {
     const { columns, transcriptRows, transcriptTop } = next.geometry
-    const blank = styled(' '.repeat(columns), 'bg', tier)
+    const blank = blankPad(columns, tier)
     for (let index = 0; index < transcriptRows; index += 1) {
       cells += `\x1b[${String(transcriptTop + index)};1H${blank}`
     }
@@ -282,7 +323,7 @@ function transcriptOverlay(
     }
     if (padColumns > 0) {
       cells += `\x1b[${String(change.row)};${String(change.col + nextWidth)}H`
-        + styled(' '.repeat(padColumns), 'bg', tier)
+        + blankPad(padColumns, tier)
     }
   }
   return cells === '' ? '' : `\x1b7${cells}\x1b8`
@@ -317,7 +358,7 @@ export function writePublishedFrameRail(
   stdout: NodeJS.WriteStream,
   tier: ColorTier = currentTier(),
 ): void {
-  const overlay = railOverlay(tier)
+  const overlay = railOverlay(tier, true)
   if (overlay === '') return
   const bytes = START_SYNC + overlay + caretSuffix() + END_SYNC
   const writer = (stdout as FrameOverlayStream)[WRITE_FRAME_OVERLAY]
@@ -340,7 +381,7 @@ export function writePublishedFrameSnapshot(
   tier: ColorTier = currentTier(),
 ): void {
   const transcript = transcriptOverlay(tier, true)
-  const rail = railOverlay(tier)
+  const rail = railOverlay(tier, false)
   const overlay = transcript + rail
   if (overlay === '') return
   const bytes = START_SYNC + overlay + caretSuffix() + END_SYNC
@@ -396,7 +437,7 @@ export function transformFrameChunk(
     out.includes(SHOW_CURSOR) ||
     out.includes(HIDE_CURSOR)
   if (isFrame && publishFrame) {
-    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier) + caretSuffix()
+    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier, true) + caretSuffix()
     const syncIndex = out.lastIndexOf(END_SYNC)
     out = syncIndex < 0 ? out + overlay : out.slice(0, syncIndex) + overlay + out.slice(syncIndex)
   }

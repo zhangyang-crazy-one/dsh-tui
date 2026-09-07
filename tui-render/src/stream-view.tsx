@@ -25,7 +25,7 @@
 
 import { Box, Text, measureElement, useStdout, useWindowSize } from 'ink'
 import type { DOMElement } from 'ink'
-import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ToolCallId } from '@deepseek-ai/dsh-llm'
 import type {
@@ -695,10 +695,20 @@ function latestAssistantId(
  * @param line - the projected row.
  * @returns the converted physical line.
  */
+const baseMarkdownLineCache = new WeakMap<MarkdownRenderLine, Map<string, PhysicalLine>>()
+
 function markdownLineToPhysicalLine(
   blockId: string,
   line: MarkdownRenderLine,
 ): PhysicalLine {
+  let byBlock = baseMarkdownLineCache.get(line)
+  if (byBlock === undefined) {
+    byBlock = new Map()
+    baseMarkdownLineCache.set(line, byBlock)
+  }
+  const cached = byBlock.get(blockId)
+  if (cached !== undefined) return cached
+
   const segments: { text: string; token: StyleToken; bold: boolean; href?: string }[] = []
   for (const span of line.spans) {
     const text = displayColumnSlice(line.text, span.start, span.end)
@@ -712,7 +722,7 @@ function markdownLineToPhysicalLine(
   }
   const sourceStart = Math.max(0, line.sourceStart)
   const sourceEnd = Math.max(sourceStart, line.sourceEnd < 0 ? sourceStart : line.sourceEnd)
-  return createPhysicalLine({
+  const created = createPhysicalLine({
     blockId,
     spans: segments.length === 0 ? [{ text: '', token: 'fg', bold: false }] : segments,
     sourceStart,
@@ -723,6 +733,8 @@ function markdownLineToPhysicalLine(
       ? {}
       : { backgroundColumns: line.backgroundColumns }),
   })
+  byBlock.set(blockId, created)
+  return created
 }
 
 interface PromptOverlay {
@@ -768,6 +780,8 @@ function overlayPromptOnSpans(
   return result
 }
 
+const frameLineCache = new WeakMap<MarkdownRenderLine, Map<string, PhysicalLine>>()
+
 /** Add transcript marker or indent cells to a snapshot-owned row. */
 function framePhysicalLine(
   blockId: string,
@@ -776,6 +790,43 @@ function framePhysicalLine(
   active: boolean,
   prompt?: PromptOverlay,
 ): PhysicalLine {
+  if (prompt === undefined) {
+    let byLine = frameLineCache.get(line)
+    if (byLine === undefined) {
+      byLine = new Map()
+      frameLineCache.set(line, byLine)
+    }
+    const key = `${blockId}:${lead}:${active ? '1' : '0'}`
+    const cached = byLine.get(key)
+    if (cached !== undefined) return cached
+
+    const base = markdownLineToPhysicalLine(blockId, line)
+    const spans = lead === ''
+      ? base.spans
+      : [
+        {
+          text: lead,
+          token: lead.trim() === '' ? 'bg' as const : 'accentText' as const,
+          bold: active && lead.trim() !== '',
+        },
+        ...base.spans,
+      ]
+    const created = lead === ''
+      ? base
+      : createPhysicalLine({
+        blockId,
+        spans,
+        sourceStart: base.sourceStart,
+        sourceEnd: base.sourceEnd,
+        blockRow: base.blockRow,
+        ...(base.background === undefined ? {} : { background: base.background }),
+        ...(base.backgroundColumns === undefined
+          ? {}
+          : { backgroundColumns: base.backgroundColumns }),
+      })
+    byLine.set(key, created)
+    return created
+  }
   const base = markdownLineToPhysicalLine(blockId, line)
   const initialSpans: PhysicalLineSpan[] = [
     ...(lead === ''
@@ -787,9 +838,7 @@ function framePhysicalLine(
       }]),
     ...base.spans,
   ]
-  const spans = prompt !== undefined
-    ? overlayPromptOnSpans(initialSpans, prompt)
-    : initialSpans
+  const spans = overlayPromptOnSpans(initialSpans, prompt)
   return createPhysicalLine({
     blockId,
     spans,
@@ -1000,6 +1049,20 @@ interface SlicedLinesBlockProps {
   readonly tail?: string | undefined
 }
 
+function areSlicedLinesBlockPropsEqual(
+  prev: SlicedLinesBlockProps,
+  next: SlicedLinesBlockProps,
+): boolean {
+  return prev.lines === next.lines
+    && prev.sliceStart === next.sliceStart
+    && prev.sliceEnd === next.sliceEnd
+    && prev.textRanges === next.textRanges
+    && prev.tailRow === next.tailRow
+    && prev.tail === next.tail
+    && prev.prefix.first === next.prefix.first
+    && prev.prefix.rest === next.prefix.rest
+}
+
 const SlicedLinesBlock = memo(function SlicedLinesBlock(props: SlicedLinesBlockProps): ReactNode {
   const { lines, sliceStart, sliceEnd, prefix, textRanges, tailRow, tail } = props
   const end = Math.min(lines.length, Math.max(0, sliceEnd))
@@ -1032,8 +1095,53 @@ const SlicedLinesBlock = memo(function SlicedLinesBlock(props: SlicedLinesBlockP
       {out}
     </Box>
   )
-})
+}, areSlicedLinesBlockPropsEqual)
 
+
+/**
+ * Project a single block row entry into terminal lines, capturing stored
+ * blocks for line-store rebuilds when necessary.
+ * @param deps - row cache instances, locale, and destination stored blocks map.
+ * @param ownerId - owning turn or transcript row id.
+ * @param entry - row descriptor.
+ * @param scope - formatting and fold scope.
+ * @param state - persistent markdown projector state.
+ * @param active - whether the block is live/generating.
+ * @returns projected lines source.
+ */
+function projectBlockEntry(
+  deps: {
+    toolRows: ToolRowCache
+    plainRows: PlainTextRowCache
+    locale: TuiLocale
+    storeBlocks: Map<string, StoredBlockRows>
+  },
+  ownerId: string,
+  entry: Parameters<typeof projectBlockRows>[0],
+  scope: BlockRowsScope,
+  state: MarkdownProjectorState | undefined,
+  active: boolean,
+): { lines: RowSource<MarkdownRenderLine> } {
+  if (entry.kind === 'tool-card' && entry.meta?.toolCard !== undefined) {
+    return { lines: deps.toolRows.rows(entry.id, entry.meta.toolCard, scope.width, scope.fold.tools, deps.locale) }
+  }
+  if (entry.kind === 'reasoning' && entry.meta?.reasoningExpanded === true && entry.source !== '') {
+    const rows = new RowSequence<MarkdownRenderLine>()
+    const header = `${entry.meta.reasoningLive === true ? '' : '▾ '}✻ ${tuiCopy('reasoning', deps.locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1000).toFixed(1)}s)`
+    rows.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: 'fgDim', bold: false }] })
+    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)))
+    return { lines: rows.build() }
+  }
+  const projection = projectBlockRows(entry, scope, state)
+  deps.storeBlocks.set(entry.id, {
+    ownerId,
+    entry,
+    scope,
+    lines: projection.lines,
+    active,
+  })
+  return projection
+}
 
 /**
  * Render the measured transcript inside one fixed physical-row viewport.
@@ -1060,7 +1168,7 @@ export function StreamView({
 }: StreamViewProps): ReactNode {
   const policy = renderPolicy ?? renderPolicyDefaults()
   const toolRows = useMemo(() => new ToolRowCache(policy.tools), [
-    policy.tools.previewRows, policy.tools.cacheEntries, policy.tools.cacheRows,
+    policy.tools.previewRows, policy.tools.diffPreviewRows, policy.tools.cacheEntries, policy.tools.cacheRows,
   ])
   const presenterCache = useMemo(() => new ToolPresenterCache(policy.tools.cacheEntries), [policy.tools.cacheEntries])
   const plainRows = useMemo(() => new PlainTextRowCache(policy.cache), [policy.cache.maxRows, policy.cache.maxBytes])
@@ -1126,6 +1234,7 @@ export function StreamView({
   const presentationQueue = useRef<StreamQueue<ProjectedEntryRows> | undefined>(undefined)
   const frameArbiter = useRef<FrameArbiter<ProjectedEntryRows> | undefined>(undefined)
   const pendingScrollInputAt = useRef<number | undefined>(undefined)
+  const lastDispatchedOffset = useRef(viewport.offsetFromBottom)
   useLayoutEffect(() => {
     const scroll = createScrollScheduler({
       frameIntervalMs: policy.scroll.frameIntervalMs,
@@ -1157,12 +1266,11 @@ export function StreamView({
       now: () => performance.now(),
       demandDriven: true,
     })
-    let lastDispatchedOffset = -1
     const unsubscribe = arbiter.onPublish((snapshot) => {
       const presented = snapshot.stream.at(-1)
       if (presented !== undefined) setPresentedEntryRows(presented)
-      if (snapshot.scroll.presented !== lastDispatchedOffset) {
-        lastDispatchedOffset = snapshot.scroll.presented
+      if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
+        lastDispatchedOffset.current = snapshot.scroll.presented
         dispatchViewport({
           kind: 'offset',
           offsetFromBottom: snapshot.scroll.presented,
@@ -1290,7 +1398,13 @@ export function StreamView({
    * row count to match exactly what the projector emits; `lines.length`
    * below is therefore the authoritative height for the layout cache.
    */
-  const entryRows = useMemo<ProjectedEntryRows>(() => {
+  const hasActiveTurn = activeTurn !== undefined
+  /**
+   * Compute per-entry rows for settled history via the row projector.
+   * Settled history depends only on committed messages and fold state,
+   * completely decoupled from active streaming deltas and duration timers.
+   */
+  const settledEntryRows = useMemo<ProjectedEntryRows>(() => {
     const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
     const batchPresenters: ToolPresenterLookup | undefined = presenters === undefined ? undefined : { get(name) {
       if (!definitions.has(name)) definitions.set(name, presenters.get(name))
@@ -1306,27 +1420,8 @@ export function StreamView({
       scope: BlockRowsScope,
       state: MarkdownProjectorState | undefined,
       active: boolean,
-    ) => {
-      if (entry.kind === 'tool-card' && entry.meta?.toolCard !== undefined) {
-        return { lines: toolRows.rows(entry.id, entry.meta.toolCard, scope.width, scope.fold.tools, locale) }
-      }
-      if (entry.kind === 'reasoning' && entry.meta?.reasoningExpanded === true && entry.source !== '') {
-        const rows = new RowSequence<MarkdownRenderLine>()
-        const header = `${entry.meta.reasoningLive === true ? '' : '▾ '}✻ ${tuiCopy('reasoning', locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1000).toFixed(1)}s)`
-        rows.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: 'fgDim', bold: false }] })
-        rows.append(plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)))
-        return { lines: rows.build() }
-      }
-      const projection = projectBlockRows(entry, scope, state)
-      storeBlocks.set(entry.id, {
-        ownerId,
-        entry,
-        scope,
-        lines: projection.lines,
-        active,
-      })
-      return projection
-    }
+    ) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active)
+    const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
     for (const [index, row] of transcript.entries()) {
       const id = transcriptBlockId(row)
       if (row.kind === 'compaction') {
@@ -1347,7 +1442,7 @@ export function StreamView({
         continue
       }
       if (row.message.kind === 'user') {
-        const hasSubsequent = index < transcript.length - 1 || activeTurn !== undefined
+        const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
         const projection = project(id, {
           id,
           kind: 'user',
@@ -1429,7 +1524,7 @@ export function StreamView({
         ranges.push({ start, end: rows.length })
       }
       const tailMeta: BlockRowsMeta = {
-        ...(latestAssistantId(history, activeTurn) === row.message.id
+        ...(latestAssistant === row.message.id
           ? { turnTailCompletionBoundary: true }
           : {}),
         ...((() => {
@@ -1461,126 +1556,176 @@ export function StreamView({
       map.set(id, rows.build())
       if (ranges.length > 0) textRanges.set(id, ranges)
     }
-    if (activeTurn !== undefined) {
-      const id = `assistant-turn-${String(activeTurn.turn)}`
-      const rawParts = partsFromTurn(activeTurn)
-      const visibleParts = displayedParts(rawParts, reasoningExpanded)
-      if (status === 'generating' && visibleParts.length === 0) {
-        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
-        const fish = getSwimmingFishFrame(liveMs)
-        map.set(id, project(id, {
-          id,
-          kind: 'active-placeholder',
-          source: '',
-          meta: {
-            activePlaceholder: `${fish} ● 正在处理… (${formatSeconds(
-              liveMs,
-            )}s)`,
-          },
-        }, blockRowsScope, undefined, true).lines)
-      } else {
-        const parts = displayedParts(
-          compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache), reasoningExpanded,
-        )
-        const rows = new RowSequence<MarkdownRenderLine>()
-        const ranges: BlockTextRange[] = []
-        let textIndex = 0
-        let lastVisiblePart = -1
-        for (const [partIndex, part] of parts.entries()) {
-          if (isVisiblePart(part)) lastVisiblePart = partIndex
-        }
-        for (const [partIndex, part] of parts.entries()) {
-          if (turnPartGap(parts, partIndex) > 0) rows.push(GAP_LINE)
-          if (part.kind === 'reasoning') {
-            const live = status === 'generating' && partIndex === lastVisiblePart
-            rows.append(project(id, {
-              id: `${id}-r-${String(partIndex)}`,
-              kind: 'reasoning',
-              source: part.text,
-              meta: {
-                reasoningDurationMs: live
-                  ? liveDurationMs ?? part.durationMs
-                  : part.durationMs,
-                reasoningExpanded,
-                reasoningLive: live,
-              },
-            }, blockRowsScope, undefined, status === 'generating').lines)
-            continue
-          }
-          if (part.kind === 'tool-summary') {
-            rows.append(project(id, {
-              id: `${id}-tool-summary`,
-              kind: 'tool-summary',
-              source: toolSummaryText(part.summary, contentWidth),
-              meta: { toolSummaryStatus: toolSummaryStatus(part.summary) },
-            }, blockRowsScope, undefined, status === 'generating').lines)
-            continue
-          }
-          if (part.kind === 'card') {
-            const card = part.card
-            rows.append(project(id, {
-              id: `${id}-c-${card.callId}`,
-              kind: 'tool-card',
-              source: '',
-              meta: {
-                toolCard: {
-                  name: card.name,
-                  arguments: card.arguments,
-                  status: card.status,
-                  ...(card.resultText === undefined
-                    ? {}
-                    : { resultText: card.resultText }),
-                  ...(card.meta === undefined ? {} : { meta: card.meta }),
-                  ...(card.error === undefined ? {} : { error: card.error }),
-                  ...(card.callView === undefined ? {} : { callView: card.callView }),
-                  ...(card.resultView === undefined ? {} : { resultView: card.resultView }),
-                },
-              },
-            }, blockRowsScope, undefined, status === 'generating').lines)
-            continue
-          }
-          const start = rows.length
-          const partId = `${id}-t-${String(textIndex++)}`
-          rows.append(project(id, {
-            id: partId,
-            kind: 'assistant-prose',
-            source: part.text,
-          }, assistantBlockRowsScope, projectorStateFor(
-            projectorStates.current,
-            partId,
-            assistantBlockRowsScope,
-          ), status === 'generating').lines)
-          ranges.push({ start, end: rows.length })
-        }
-        map.set(id, rows.build())
-        if (ranges.length > 0) {
-          textRanges.set(id, ranges)
-        }
-      }
-    }
     return { rows: map, textRanges, storeBlocks }
   }, [
-    activeVersion,
-    activeTurn,
-    assistantBlockRowsScope,
-    blockRowsScope,
     contentWidth,
     expandedCompactionId,
+    hasActiveTurn,
     history,
-    liveDurationMs,
+    locale,
+    mode,
+    plainRows,
+    presenterCache,
     presenters,
     reasoningExpanded,
-    status,
     settledAssistantBlockRowsScope,
     settledBlockRowsScope,
     toolCardsExpanded,
     toolRows,
+    transcript,
+  ])
+
+  /**
+   * Compute per-entry rows for only the active live turn during generation.
+   */
+  const activeTurnRows = useMemo<{
+    id: string
+    lines: RowSource<MarkdownRenderLine>
+    ranges: readonly BlockTextRange[]
+    storeBlocks: Map<string, StoredBlockRows>
+  } | undefined>(() => {
+    if (activeTurn === undefined) return undefined
+    const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
+    const batchPresenters: ToolPresenterLookup | undefined = presenters === undefined ? undefined : { get(name) {
+      if (!definitions.has(name)) definitions.set(name, presenters.get(name))
+      return definitions.get(name)
+    } }
+    const storeBlocks = new Map<string, StoredBlockRows>()
+    const projectorCache = projectorStates.current
+    const project = (
+      ownerId: string,
+      entry: Parameters<typeof projectBlockRows>[0],
+      scope: BlockRowsScope,
+      state: MarkdownProjectorState | undefined,
+      active: boolean,
+    ) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active)
+    const id = `assistant-turn-${String(activeTurn.turn)}`
+    const rawParts = partsFromTurn(activeTurn)
+    const visibleParts = displayedParts(rawParts, reasoningExpanded)
+    if (status === 'generating' && visibleParts.length === 0) {
+      const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
+      const fish = getSwimmingFishFrame(liveMs)
+      const lines = project(id, {
+        id,
+        kind: 'active-placeholder',
+        source: '',
+        meta: {
+          activePlaceholder: `${fish} ● 正在处理… (${formatSeconds(
+            liveMs,
+          )}s)`,
+        },
+      }, blockRowsScope, undefined, true).lines
+      return { id, lines, ranges: [], storeBlocks }
+    }
+    const parts = displayedParts(
+      compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache), reasoningExpanded,
+    )
+    const rows = new RowSequence<MarkdownRenderLine>()
+    const ranges: BlockTextRange[] = []
+    let textIndex = 0
+    let lastVisiblePart = -1
+    for (const [partIndex, part] of parts.entries()) {
+      if (isVisiblePart(part)) lastVisiblePart = partIndex
+    }
+    for (const [partIndex, part] of parts.entries()) {
+      if (turnPartGap(parts, partIndex) > 0) rows.push(GAP_LINE)
+      if (part.kind === 'reasoning') {
+        const live = status === 'generating' && partIndex === lastVisiblePart
+        rows.append(project(id, {
+          id: `${id}-r-${String(partIndex)}`,
+          kind: 'reasoning',
+          source: part.text,
+          meta: {
+            reasoningDurationMs: live
+              ? liveDurationMs ?? part.durationMs
+              : part.durationMs,
+            reasoningExpanded,
+            reasoningLive: live,
+          },
+        }, blockRowsScope, undefined, status === 'generating').lines)
+        continue
+      }
+      if (part.kind === 'tool-summary') {
+        rows.append(project(id, {
+          id: `${id}-tool-summary`,
+          kind: 'tool-summary',
+          source: toolSummaryText(part.summary, contentWidth),
+          meta: { toolSummaryStatus: toolSummaryStatus(part.summary) },
+        }, blockRowsScope, undefined, status === 'generating').lines)
+        continue
+      }
+      if (part.kind === 'card') {
+        const card = part.card
+        rows.append(project(id, {
+          id: `${id}-c-${card.callId}`,
+          kind: 'tool-card',
+          source: '',
+          meta: {
+            toolCard: {
+              name: card.name,
+              arguments: card.arguments,
+              status: card.status,
+              ...(card.resultText === undefined
+                ? {}
+                : { resultText: card.resultText }),
+              ...(card.meta === undefined ? {} : { meta: card.meta }),
+              ...(card.error === undefined ? {} : { error: card.error }),
+              ...(card.callView === undefined ? {} : { callView: card.callView }),
+              ...(card.resultView === undefined ? {} : { resultView: card.resultView }),
+            },
+          },
+        }, blockRowsScope, undefined, status === 'generating').lines)
+        continue
+      }
+      const start = rows.length
+      const partId = `${id}-t-${String(textIndex++)}`
+      rows.append(project(id, {
+        id: partId,
+        kind: 'assistant-prose',
+        source: part.text,
+      }, assistantBlockRowsScope, projectorStateFor(
+        projectorCache,
+        partId,
+        assistantBlockRowsScope,
+      ), status === 'generating').lines)
+      ranges.push({ start, end: rows.length })
+    }
+    return { id, lines: rows.build(), ranges, storeBlocks }
+  }, [
+    activeTurn,
+    activeVersion,
+    assistantBlockRowsScope,
+    blockRowsScope,
+    contentWidth,
+    liveDurationMs,
+    locale,
+    mode,
     plainRows,
     presenterCache,
-    locale,
-    transcript,
-    mode,
+    presenters,
+    reasoningExpanded,
+    status,
+    toolCardsExpanded,
+    toolRows,
   ])
+
+  /**
+   * Fast combination of settled transcript rows with active turn rows.
+   */
+  const entryRows = useMemo<ProjectedEntryRows>(() => {
+    if (activeTurnRows === undefined) return settledEntryRows
+    const map = new Map(settledEntryRows.rows)
+    map.set(activeTurnRows.id, activeTurnRows.lines)
+    const textRanges = new Map(settledEntryRows.textRanges)
+    if (activeTurnRows.ranges.length > 0) {
+      textRanges.set(activeTurnRows.id, activeTurnRows.ranges)
+    }
+    const storeBlocks = new Map(settledEntryRows.storeBlocks)
+    for (const [key, val] of activeTurnRows.storeBlocks) {
+      storeBlocks.set(key, val)
+    }
+    return { rows: map, textRanges, storeBlocks }
+  }, [settledEntryRows, activeTurnRows])
   const [presentedEntryRows, setPresentedEntryRows] = useState(entryRows)
   const activeEntryRows = status === 'generating' ? presentedEntryRows : entryRows
   useLayoutEffect(() => {
@@ -1756,26 +1901,26 @@ export function StreamView({
     ))
     lastProjectorMetrics.current = totals
   }, [entryRows, frameMetrics])
+  const settledRenderEntries = useMemo(() => transcript.flatMap((row, index) => {
+    const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
+    const isUserWithGap = row.kind === 'message' && row.message.kind === 'user' && hasSubsequent
+    const gapRows = isUserWithGap ? 0 : (hasSubsequent ? 2 : 0)
+    const id = transcriptBlockId(row)
+    const lines = settledEntryRows.rows.get(id) ?? []
+    return [{
+      kind: 'row' as const,
+      id,
+      version: `${transcriptBlockVersion(row, revisions)}\u0000${hasSubsequent ? 'gap' : 'tail'}`,
+      gapRows,
+      estimatedRows: lines.length + gapRows,
+      lines,
+      row,
+    }]
+  }), [hasActiveTurn, revisions, settledEntryRows, transcript])
   const renderEntries = useMemo(() => [
-    ...transcript.flatMap((row, index) => {
-      const hasSubsequent = index < transcript.length - 1 || activeTurn !== undefined
-      const isUserWithGap = row.kind === 'message' && row.message.kind === 'user' && hasSubsequent
-      const gapRows = isUserWithGap ? 0 : (hasSubsequent ? 2 : 0)
-      const id = transcriptBlockId(row)
-      if (activeTurn !== undefined && id === `assistant-turn-${String(activeTurn.turn)}`) {
-        return []
-      }
-      const lines = activeEntryRows.rows.get(id) ?? []
-      return [{
-        kind: 'row' as const,
-        id,
-        version: `${transcriptBlockVersion(row, revisions)}\u0000${hasSubsequent ? 'gap' : 'tail'}`,
-        gapRows,
-        estimatedRows: lines.length + gapRows,
-        lines,
-        row,
-      }]
-    }),
+    ...settledRenderEntries.filter(entry => (
+      activeTurn === undefined || entry.id !== `assistant-turn-${String(activeTurn.turn)}`
+    )),
     ...(activeTurn === undefined
       ? []
       : [{
@@ -1791,7 +1936,7 @@ export function StreamView({
     activeTurn,
     activeVersion,
     activeEntryRows,
-    transcript,
+    settledRenderEntries,
   ])
   const layoutScope = [
     contentWidth,
@@ -1913,16 +2058,23 @@ export function StreamView({
     ? history.findLast(message => message.kind === 'assistant')?.id
     : undefined
 
-  useLayoutEffect(() => {
-    if (viewportCommand === undefined) return
-    if (viewportCommand.sequence === lastCommandSequence.current) return
-    if (viewportCommand.kind !== 'reset' && (viewport.viewportRows === 0 || viewport.contentRows === 0)) return
-    lastCommandSequence.current = viewportCommand.sequence
+  const viewportStateRef = useRef(viewport)
+  viewportStateRef.current = viewport
+  const virtualContentRowsRef = useRef(virtualContentRows)
+  virtualContentRowsRef.current = virtualContentRows
+  const effectiveViewportRowsRef = useRef(effectiveViewportRows)
+  effectiveViewportRowsRef.current = effectiveViewportRows
+
+  const executeViewportCommand = useCallback((command: TranscriptViewportCommand): void => {
+    if (command.sequence === lastCommandSequence.current) return
+    const vp = viewportStateRef.current
+    if (command.kind !== 'reset' && (vp.viewportRows === 0 || vp.contentRows === 0)) return
+    lastCommandSequence.current = command.sequence
     const scheduler = scrollScheduler.current
     const arbiter = frameArbiter.current
     if (scheduler === undefined || arbiter === undefined) return
-    const effectiveContentRows = Math.max(viewport.contentRows, virtualContentRows)
-    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRows)
+    const effectiveContentRows = Math.max(vp.contentRows, virtualContentRowsRef.current)
+    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRowsRef.current)
     const clamp = (value: number): number => Math.max(0, Math.min(maximum, value))
     const advance = (delta: number): void => {
       const presented = scheduler.getPresented()
@@ -1933,44 +2085,55 @@ export function StreamView({
     }
     if (pendingScrollInputAt.current !== undefined) frameMetrics?.recordCoalescedInput()
     pendingScrollInputAt.current ??= performance.now()
-    switch (viewportCommand.kind) {
+    switch (command.kind) {
       case 'scroll':
-        advance(viewportCommand.delta)
+        advance(command.delta)
         break
       case 'page':
-        advance(viewportCommand.delta * Math.max(1, viewport.viewportRows - 1))
+        advance(command.delta * Math.max(1, vp.viewportRows - 1))
         break
       case 'position':
         scheduler.snapTo(clamp(Math.round(
-          maximum * (1 - Math.max(0, Math.min(1, viewportCommand.fraction))),
+          maximum * (1 - Math.max(0, Math.min(1, command.fraction))),
         )))
         break
       case 'edge':
-        scheduler.snapTo(viewportCommand.edge === 'latest' ? 0 : maximum)
+        scheduler.snapTo(command.edge === 'latest' ? 0 : maximum)
         break
       case 'reset':
         scheduler.snapTo(0)
+        lastDispatchedOffset.current = 0
         pendingScrollInputAt.current = undefined
         dispatchViewport({ kind: 'reset' })
         return
     }
+    const presentedOffset = scheduler.getPresented()
+    lastDispatchedOffset.current = presentedOffset
     dispatchViewport({
       kind: 'offset',
-      offsetFromBottom: scheduler.getPresented(),
+      offsetFromBottom: presentedOffset,
     })
     arbiter.requestScroll()
+  }, [frameMetrics])
+
+  useLayoutEffect(() => {
+    if (viewportCommand === undefined) return
+    if (viewportCommand.sequence === lastCommandSequence.current) return
+    executeViewportCommand(viewportCommand)
   }, [
+    viewportCommand,
+    executeViewportCommand,
     viewport.contentRows,
     viewport.viewportRows,
     effectiveViewportRows,
     virtualContentRows,
-    viewportCommand,
   ])
 
   useLayoutEffect(() => {
     const scheduler = scrollScheduler.current
     if (scheduler === undefined) return
-    const maximum = Math.max(0, viewport.contentRows - viewport.viewportRows)
+    const effectiveContentRows = Math.max(viewport.contentRows, virtualContentRows)
+    const maximum = Math.max(0, effectiveContentRows - effectiveViewportRows)
     const presented = scheduler.getPresented()
     if (presented === viewport.offsetFromBottom) return
     if (scheduler.isAnimating()) {
@@ -1978,14 +2141,17 @@ export function StreamView({
     } else {
       scheduler.snapTo(Math.max(0, Math.min(maximum, viewport.offsetFromBottom)))
     }
+    lastDispatchedOffset.current = viewport.offsetFromBottom
   }, [
+    effectiveViewportRows,
     viewport.contentRows,
     viewport.offsetFromBottom,
-    viewport.viewportRows,
+    virtualContentRows,
   ])
 
   useLayoutEffect(() => {
     scrollScheduler.current?.snapTo(viewport.offsetFromBottom)
+    lastDispatchedOffset.current = viewport.offsetFromBottom
   }, [columns, rows])
 
   useLayoutEffect(() => {
@@ -1993,6 +2159,7 @@ export function StreamView({
     const scheduler = scrollScheduler.current
     if (scheduler === undefined) return
     scheduler.snapTo(viewport.offsetFromBottom)
+    lastDispatchedOffset.current = viewport.offsetFromBottom
   }, [motionPaused, viewport.offsetFromBottom])
 
   useLayoutEffect(() => {
@@ -2015,54 +2182,64 @@ export function StreamView({
         + (layouts.at(-1) as TranscriptBlockLayout).rows
     const contentChanged = contentRevision !== lastContentRevision.current
     lastContentRevision.current = contentRevision
-    dispatchViewport({
-      kind: 'layout',
-      contentRows,
-      viewportRows: viewportBox.height,
-      blocks: layouts,
-      unseenRowsAdded: contentChanged
-        ? Math.max(0, contentRows - viewport.contentRows)
-        : 0,
-    })
-    if (frameMetrics !== undefined) {
-      let mounted = 0
-      for (const layoutIndex of visibleIndexes) {
-        const entry = renderEntries[layoutIndex]
-        if (entry === undefined) continue
-        const layout = virtualLayouts[layoutIndex]
-        if (layout === undefined) {
-          continue
-        }
-        let window: { start: number; end: number } | undefined
-        if (physicalViewport) {
-          window = sliceWindow(
-            entry.lines.length,
-            layout.top,
-            overscanTop,
-            overscanBottom,
-          )
-        }
-        mounted += window === undefined
-          ? entry.lines.length
-          : Math.max(0, window.end - window.start)
-      }
-      frameMetrics.addMountedRows(mounted)
+    if (
+      contentChanged
+      || viewport.viewportRows !== viewportBox.height
+      || viewport.contentRows !== contentRows
+    ) {
+      dispatchViewport({
+        kind: 'layout',
+        contentRows,
+        viewportRows: viewportBox.height,
+        blocks: layouts,
+        unseenRowsAdded: contentChanged
+          ? Math.max(0, contentRows - viewport.contentRows)
+          : 0,
+      })
     }
   }, [
     columns,
-    rows,
-    layoutKey,
-    effectiveViewportRows,
-    frameMetrics,
+    contentRevision,
     layoutInputs,
+    layoutKey,
     layoutScope,
+    rows,
+    viewport.contentRows,
+    viewport.viewportRows,
+  ])
+
+  useLayoutEffect(() => {
+    if (frameMetrics === undefined) return
+    let mounted = 0
+    for (const layoutIndex of visibleIndexes) {
+      const entry = renderEntries[layoutIndex]
+      if (entry === undefined) continue
+      const layout = virtualLayouts[layoutIndex]
+      if (layout === undefined) {
+        continue
+      }
+      let window: { start: number; end: number } | undefined
+      if (physicalViewport) {
+        window = sliceWindow(
+          entry.lines.length,
+          layout.top,
+          overscanTop,
+          overscanBottom,
+        )
+      }
+      mounted += window === undefined
+        ? entry.lines.length
+        : Math.max(0, window.end - window.start)
+    }
+    frameMetrics.addMountedRows(mounted)
+  }, [
+    frameMetrics,
     overscanBottom,
-    overscanRows,
     overscanTop,
     physicalViewport,
     renderEntries,
     virtualLayouts,
-    visibleEntries,
+    visibleIndexes,
   ])
 
   const rail = scrollbar ? physicalScrollRailGeometry(

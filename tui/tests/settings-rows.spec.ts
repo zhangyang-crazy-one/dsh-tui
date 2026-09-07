@@ -62,6 +62,23 @@ describe('brandAnimation setting vocabulary', () => {
   })
 })
 
+describe('credential-ref field defense', () => {
+  it('rejects literal API keys in apiKeyEnv', () => {
+    expect(() => parseSettingsFieldValue('llm-deepseek', 'apiKeyEnv', 'DEEPSEEK_API_KEY', 'sk-abcdef123456'))
+      .toThrow('apiKeyEnv 是环境变量名（如 DEEPSEEK_API_KEY），请勿输入真实密钥。请使用 /key 配置密钥')
+  })
+
+  it('rejects invalid environment variable identifiers in apiKeyEnv', () => {
+    expect(() => parseSettingsFieldValue('llm-deepseek', 'apiKeyEnv', 'DEEPSEEK_API_KEY', 'not an env!'))
+      .toThrow('apiKeyEnv 需要合法的环境变量名（例如 DEEPSEEK_API_KEY）')
+  })
+
+  it('accepts valid environment variable names in apiKeyEnv', () => {
+    expect(parseSettingsFieldValue('llm-deepseek', 'apiKeyEnv', 'DEEPSEEK_API_KEY', 'CUSTOM_API_KEY'))
+      .toBe('CUSTOM_API_KEY')
+  })
+})
+
 describe('settingsRowsFromDescribe', () => {
   it('orders leading namespaces and stringifies nested catalogs', () => {
     const deepseek = 'llm-deepseek'
