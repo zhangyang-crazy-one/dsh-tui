@@ -97,3 +97,62 @@ const dictionaries: Readonly<Record<TuiLocale, Readonly<Record<TuiCopyKey, strin
 export function tuiCopy(key: TuiCopyKey, locale: TuiLocale = 'zh-CN'): string {
   return dictionaries[locale][key]
 }
+
+/**
+ * 2-character swimming fish frames moving forward, disappearing into water, leaving a bubble, and re-emerging.
+ * Each frame is padded to exactly 5 columns so total width never jitters.
+ */
+export const SWIMMING_FISH_FRAMES = [
+  '>o   ',
+  ' >o  ',
+  '  >o ',
+  '   >o',
+  '    >',
+  '     ',
+  '  ·  ',
+  'o    ',
+] as const
+
+/**
+ * Returns the active frame for the 2-character swimming fish animation.
+ * 150ms per frame, 1200ms per full cycle.
+ * @param liveMs - elapsed time in milliseconds.
+ * @returns 5-column wide string containing the swimming fish frame.
+ */
+export function getSwimmingFishFrame(liveMs: number | undefined): string {
+  const index = Math.floor(Math.max(0, liveMs ?? 0) / 150) % SWIMMING_FISH_FRAMES.length
+  return SWIMMING_FISH_FRAMES[index] ?? SWIMMING_FISH_FRAMES[0]
+}
+
+/**
+ * Rotating tips during generation / tool execution.
+ * Guides users on shortcuts (Ctrl+E tool preview, Ctrl+O reasoning toggle, /tools full output, etc.).
+ */
+export const GENERATION_TIPS_ZH = [
+  '提示：Ctrl+E 展开工具卡 · /tools 查看完整输出',
+  '提示：Ctrl+O 展开/收起思考过程 · 随时跟进推理',
+  '提示：Shift+Tab 切换多行输入 · ↑/↓ 浏览历史消息',
+  '提示：输入 / 打开快捷命令 · 输入 @ 提及文件与上下文',
+  '提示：Ctrl+C 中断当前生成 · 随时安全停止',
+] as const
+
+export const GENERATION_TIPS_EN = [
+  'Tip: Ctrl+E to expand tool cards · /tools for full output',
+  'Tip: Ctrl+O to toggle thinking process · follow reasoning',
+  'Tip: Shift+Tab for multiline input · ↑/↓ browse history',
+  'Tip: Type / for slash commands · type @ to mention context',
+  'Tip: Ctrl+C to stop generation safely at any time',
+] as const
+
+/**
+ * Returns a rotating tip based on elapsed time and locale.
+ * Rotates every 4 seconds.
+ * @param liveMs - elapsed time in milliseconds.
+ * @param locale - active UI locale.
+ * @returns the formatted tip string.
+ */
+export function getBilingualTip(liveMs: number | undefined, locale: TuiLocale = 'zh-CN'): string {
+  const tips = locale === 'en-US' ? GENERATION_TIPS_EN : GENERATION_TIPS_ZH
+  const index = Math.floor(Math.max(0, liveMs ?? 0) / 4000) % tips.length
+  return tips[index] ?? tips[0]
+}

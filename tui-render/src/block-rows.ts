@@ -858,10 +858,12 @@ function projectActivePlaceholderEntry(
   entry: BlockRowsEntry,
 ): BlockRowsProjection {
   const text = entry.meta?.activePlaceholder ?? '● 正在思考…'
-  const segments = text.startsWith('● ')
+  const dotIndex = text.indexOf('● ')
+  const segments = dotIndex >= 0
     ? [
+      ...(dotIndex > 0 ? [{ text: text.slice(0, dotIndex), token: 'accentText' as const, bold: true }] : []),
       { text: '● ', token: 'accentText' as const, bold: true },
-      { text: text.slice(2), token: 'fg' as const, bold: false },
+      { text: text.slice(dotIndex + 2), token: 'fg' as const, bold: false },
     ]
     : [
       { text, token: 'fg' as const, bold: false },

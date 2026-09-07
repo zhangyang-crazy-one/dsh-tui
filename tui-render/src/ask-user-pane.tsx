@@ -89,23 +89,27 @@ export function AskUserPane({
   return (
     <Box flexDirection="column" width="100%">
       {header !== '' ? line(header, 'fg', true) : null}
-      {options.map((label, index) => {
-        const selected = index === selectedIndex
-        const numbered = `${index + 1} ${label}`
-        return (
-          <Box key={`${index}:${label}`} width="100%">
-            <Text>
-              {selected
-                ? styled(escapeContent('› '), 'accent', undefined, true)
-                : '  '}
-            </Text>
-            <Text>
-              {paintRow([styled(escapeContent(numbered), selected ? 'fg' : 'fgDim')])}
-            </Text>
-          </Box>
-        )
-      })}
-      {line(footnote, 'fgDim')}
+      <Box flexDirection="column" marginTop={header !== '' ? 1 : 0} width="100%">
+        {options.map((label, index) => {
+          const selected = index === selectedIndex
+          const numbered = `${index + 1} ${label}`
+          return (
+            <Box key={`${index}:${label}`} width="100%">
+              <Text>
+                {selected
+                  ? paintRow([styled('› ', 'accent', undefined, true)])
+                  : '  '}
+              </Text>
+              <Text>
+                {paintRow([styled(escapeContent(numbered), selected ? 'fg' : 'fgDim', undefined, selected)])}
+              </Text>
+            </Box>
+          )
+        })}
+      </Box>
+      <Box marginTop={1} width="100%">
+        {line(footnote, 'fgDim')}
+      </Box>
     </Box>
   )
 }

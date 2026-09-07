@@ -50,7 +50,7 @@ import { ToolPresenterCache } from './tool-presenter-cache.ts'
 import { DisplayRevisionIndex } from './display-revision.ts'
 import { PlainTextRowCache } from './plain-rows.ts'
 import { RowSequence, type RowSource } from './row-source.ts'
-import { tuiCopy, type TuiLocale } from './ui-copy.ts'
+import { getBilingualTip, getSwimmingFishFrame, tuiCopy, type TuiLocale } from './ui-copy.ts'
 import {
   attachPresenterViews,
   cardsFrom,
@@ -1466,13 +1466,15 @@ export function StreamView({
       const rawParts = partsFromTurn(activeTurn)
       const visibleParts = displayedParts(rawParts, reasoningExpanded)
       if (status === 'generating' && visibleParts.length === 0) {
+        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
+        const fish = getSwimmingFishFrame(liveMs)
         map.set(id, project(id, {
           id,
           kind: 'active-placeholder',
           source: '',
           meta: {
-            activePlaceholder: `● 正在处理… (${formatSeconds(
-              liveDurationMs ?? activeTurn.reasoningDurationMs,
+            activePlaceholder: `${fish} ● 正在处理… (${formatSeconds(
+              liveMs,
             )}s)`,
           },
         }, blockRowsScope, undefined, true).lines)
@@ -2366,17 +2368,24 @@ export function StreamView({
     const rawParts = partsFromTurn(turn)
     const visibleParts = displayedParts(rawParts, reasoningExpanded)
     if (generating && visibleParts.length === 0) {
+      const liveMs = liveDurationMs ?? turn.reasoningDurationMs
+      const fish = getSwimmingFishFrame(liveMs)
+      const tip = getBilingualTip(liveMs, locale)
       return (
         <Box flexDirection="column" width="100%" flexShrink={0}>
           <Text>
             {paintRow([
-              styled('● ', 'accentText', undefined, true),
+              styled(fish, 'accentText', undefined, true),
+              styled(' ● ', 'accentText', undefined, true),
               styled(
-                `正在处理… (${formatSeconds(
-                  liveDurationMs ?? turn.reasoningDurationMs,
-                )}s)`,
+                `正在处理… (${formatSeconds(liveMs)}s)`,
                 'fg',
               ),
+            ])}
+          </Text>
+          <Text>
+            {paintRow([
+              styled(`  └ ${tip}`, 'fgDim'),
             ])}
           </Text>
         </Box>

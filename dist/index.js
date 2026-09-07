@@ -70202,6 +70202,39 @@ var dictionaries = { "zh-CN": zh, "en-US": en };
 function tuiCopy(key, locale = "zh-CN") {
   return dictionaries[locale][key];
 }
+var SWIMMING_FISH_FRAMES = [
+  ">o   ",
+  " >o  ",
+  "  >o ",
+  "   >o",
+  "    >",
+  "     ",
+  "  \xB7  ",
+  "o    "
+];
+function getSwimmingFishFrame(liveMs) {
+  const index2 = Math.floor(Math.max(0, liveMs ?? 0) / 150) % SWIMMING_FISH_FRAMES.length;
+  return SWIMMING_FISH_FRAMES[index2] ?? SWIMMING_FISH_FRAMES[0];
+}
+var GENERATION_TIPS_ZH = [
+  "\u63D0\u793A\uFF1ACtrl+E \u5C55\u5F00\u5DE5\u5177\u5361 \xB7 /tools \u67E5\u770B\u5B8C\u6574\u8F93\u51FA",
+  "\u63D0\u793A\uFF1ACtrl+O \u5C55\u5F00/\u6536\u8D77\u601D\u8003\u8FC7\u7A0B \xB7 \u968F\u65F6\u8DDF\u8FDB\u63A8\u7406",
+  "\u63D0\u793A\uFF1AShift+Tab \u5207\u6362\u591A\u884C\u8F93\u5165 \xB7 \u2191/\u2193 \u6D4F\u89C8\u5386\u53F2\u6D88\u606F",
+  "\u63D0\u793A\uFF1A\u8F93\u5165 / \u6253\u5F00\u5FEB\u6377\u547D\u4EE4 \xB7 \u8F93\u5165 @ \u63D0\u53CA\u6587\u4EF6\u4E0E\u4E0A\u4E0B\u6587",
+  "\u63D0\u793A\uFF1ACtrl+C \u4E2D\u65AD\u5F53\u524D\u751F\u6210 \xB7 \u968F\u65F6\u5B89\u5168\u505C\u6B62"
+];
+var GENERATION_TIPS_EN = [
+  "Tip: Ctrl+E to expand tool cards \xB7 /tools for full output",
+  "Tip: Ctrl+O to toggle thinking process \xB7 follow reasoning",
+  "Tip: Shift+Tab for multiline input \xB7 \u2191/\u2193 browse history",
+  "Tip: Type / for slash commands \xB7 type @ to mention context",
+  "Tip: Ctrl+C to stop generation safely at any time"
+];
+function getBilingualTip(liveMs, locale = "zh-CN") {
+  const tips = locale === "en-US" ? GENERATION_TIPS_EN : GENERATION_TIPS_ZH;
+  const index2 = Math.floor(Math.max(0, liveMs ?? 0) / 4e3) % tips.length;
+  return tips[index2] ?? tips[0];
+}
 
 // ../deepseek-harness/packages/tui/tui-render/src/tool-body.ts
 var graphemes = new Intl.Segmenter(void 0, { granularity: "grapheme" });
@@ -73092,9 +73125,11 @@ function projectToolSummaryEntry(entry, scope) {
 }
 function projectActivePlaceholderEntry(entry) {
   const text4 = entry.meta?.activePlaceholder ?? "\u25CF \u6B63\u5728\u601D\u8003\u2026";
-  const segments = text4.startsWith("\u25CF ") ? [
+  const dotIndex = text4.indexOf("\u25CF ");
+  const segments = dotIndex >= 0 ? [
+    ...dotIndex > 0 ? [{ text: text4.slice(0, dotIndex), token: "accentText", bold: true }] : [],
     { text: "\u25CF ", token: "accentText", bold: true },
-    { text: text4.slice(2), token: "fg", bold: false }
+    { text: text4.slice(dotIndex + 2), token: "fg", bold: false }
   ] : [
     { text: text4, token: "fg", bold: false }
   ];
@@ -74803,13 +74838,15 @@ function StreamView({
       const rawParts = partsFromTurn(activeTurn);
       const visibleParts = displayedParts(rawParts, reasoningExpanded);
       if (status === "generating" && visibleParts.length === 0) {
+        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
+        const fish = getSwimmingFishFrame(liveMs);
         map2.set(id, project(id, {
           id,
           kind: "active-placeholder",
           source: "",
           meta: {
-            activePlaceholder: `\u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(
-              liveDurationMs ?? activeTurn.reasoningDurationMs
+            activePlaceholder: `${fish} \u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(
+              liveMs
             )}s)`
           }
         }, blockRowsScope, void 0, true).lines);
@@ -75591,15 +75628,22 @@ function StreamView({
     const rawParts = partsFromTurn(turn);
     const visibleParts = displayedParts(rawParts, reasoningExpanded);
     if (generating && visibleParts.length === 0) {
-      return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
-        styled("\u25CF ", "accentText", void 0, true),
-        styled(
-          `\u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(
-            liveDurationMs ?? turn.reasoningDurationMs
-          )}s)`,
-          "fg"
-        )
-      ]) }) });
+      const liveMs = liveDurationMs ?? turn.reasoningDurationMs;
+      const fish = getSwimmingFishFrame(liveMs);
+      const tip = getBilingualTip(liveMs, locale);
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
+          styled(fish, "accentText", void 0, true),
+          styled(" \u25CF ", "accentText", void 0, true),
+          styled(
+            `\u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(liveMs)}s)`,
+            "fg"
+          )
+        ]) }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
+          styled(`  \u2514 ${tip}`, "fgDim")
+        ]) })
+      ] });
     }
     const parts = displayedParts(compactToolParts(rawParts, toolCardsExpanded, presenters, mode, presenterCache), reasoningExpanded);
     let lastVisiblePart = -1;
@@ -75997,7 +76041,6 @@ function HelpPane({ lines, offset }) {
 
 // ../deepseek-harness/packages/tui/tui-render/src/approval-pane.tsx
 var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
-var PROMPT_OPTIONS = "[Y] \u5141\u8BB8 \xB7 [n] \u62D2\u7EDD \xB7 [a] \u672C\u4F1A\u8BDD\u603B\u662F";
 var DELIVERY_NEXT = "\u5F53\u524D\u5DE5\u5177\u672A\u6267\u884C \xB7 \u53EF\u91CD\u8BD5\u8BE5\u8F6E";
 var EMPTY_APPROVAL_PANE = {
   open: false,
@@ -76037,11 +76080,30 @@ function ApprovalPane({
     line(DELIVERY_NEXT, "fgDim")
   ] }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
     /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: paintRow([
-      styled(`\u5141\u8BB8\u6267\u884C ${target} \u5417\uFF1F `, "fg", void 0, true),
-      styled(PROMPT_OPTIONS, "fgDim"),
-      ...detailsOpen ? [styled(" \xB7 [i] \u6536\u8D77", "fgDim")] : [styled(" \xB7 [i] \u8BE6\u60C5", "fgDim")]
+      styled(`\u5141\u8BB8\u6267\u884C ${target} \u5417\uFF1F`, "fg", void 0, true)
     ]) }),
-    detailsOpen ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Box_default, { flexDirection: "column", marginTop: 1, width: "100%", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: paintRow([
+        styled("  [Y] ", "success", void 0, true),
+        styled("\u5141\u8BB8", "fg", void 0, true),
+        styled(" (\u6267\u884C\u4E00\u6B21)", "fgDim")
+      ]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: paintRow([
+        styled("  [n] ", "error", void 0, true),
+        styled("\u62D2\u7EDD", "fg", void 0, true),
+        styled(" (\u53D6\u6D88\u6267\u884C)", "fgDim")
+      ]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: paintRow([
+        styled("  [a] ", "warning", void 0, true),
+        styled("\u672C\u4F1A\u8BDD\u603B\u662F", "fg", void 0, true),
+        styled(" (\u4E0D\u518D\u8BE2\u95EE)", "fgDim")
+      ]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: paintRow([
+        styled("  [i] ", "accent", void 0, true),
+        styled(detailsOpen ? "\u6536\u8D77\u8BE6\u60C5" : "\u8BE6\u60C5 (\u67E5\u770B\u5B8C\u6574\u53C2\u6570)", "fgDim")
+      ]) })
+    ] }),
+    detailsOpen ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Box_default, { flexDirection: "column", marginTop: 1, width: "100%", children: [
       reason !== "" ? line(reason, "fg") : null,
       extra2 !== void 0 ? line(extra2, "fg") : null
     ] }) : null
@@ -76444,15 +76506,15 @@ function AskUserPane({
   const footnote = FOOTNOTE5;
   return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
     header !== "" ? line7(header, "fg", true) : null,
-    options.map((label, index2) => {
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Box_default, { flexDirection: "column", marginTop: header !== "" ? 1 : 0, width: "100%", children: options.map((label, index2) => {
       const selected = index2 === selectedIndex;
       const numbered = `${index2 + 1} ${label}`;
       return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
-        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(numbered), selected ? "fg" : "fgDim")]) })
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: selected ? paintRow([styled("\u203A ", "accent", void 0, true)]) : "  " }),
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(numbered), selected ? "fg" : "fgDim", void 0, selected)]) })
       ] }, `${index2}:${label}`);
-    }),
-    line7(footnote, "fgDim")
+    }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Box_default, { marginTop: 1, width: "100%", children: line7(footnote, "fgDim") })
   ] });
 }
 

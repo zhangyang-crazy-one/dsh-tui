@@ -10,8 +10,6 @@ import type { ReactNode } from 'react'
 import { escapeContent } from './content.ts'
 import { paintRow, styled } from './theme.ts'
 
-/** Exact key footnote; also carries the CTA words 允许 / 拒绝 / 本会话总是. */
-const PROMPT_OPTIONS = '[Y] 允许 · [n] 拒绝 · [a] 本会话总是'
 /** Next-step copy after a delivery failure (S5: ✗ with Chinese). */
 const DELIVERY_NEXT = '当前工具未执行 · 可重试该轮'
 
@@ -128,13 +126,40 @@ export function ApprovalPane({
         <Box flexDirection="column" width="100%">
           <Text>
             {paintRow([
-              styled(`允许执行 ${target} 吗？ `, 'fg', undefined, true),
-              styled(PROMPT_OPTIONS, 'fgDim'),
-              ...(detailsOpen ? [styled(' · [i] 收起', 'fgDim')] : [styled(' · [i] 详情', 'fgDim')]),
+              styled(`允许执行 ${target} 吗？`, 'fg', undefined, true),
             ])}
           </Text>
+          <Box flexDirection="column" marginTop={1} width="100%">
+            <Text>
+              {paintRow([
+                styled('  [Y] ', 'success', undefined, true),
+                styled('允许', 'fg', undefined, true),
+                styled(' (执行一次)', 'fgDim'),
+              ])}
+            </Text>
+            <Text>
+              {paintRow([
+                styled('  [n] ', 'error', undefined, true),
+                styled('拒绝', 'fg', undefined, true),
+                styled(' (取消执行)', 'fgDim'),
+              ])}
+            </Text>
+            <Text>
+              {paintRow([
+                styled('  [a] ', 'warning', undefined, true),
+                styled('本会话总是', 'fg', undefined, true),
+                styled(' (不再询问)', 'fgDim'),
+              ])}
+            </Text>
+            <Text>
+              {paintRow([
+                styled('  [i] ', 'accent', undefined, true),
+                styled(detailsOpen ? '收起详情' : '详情 (查看完整参数)', 'fgDim'),
+              ])}
+            </Text>
+          </Box>
           {detailsOpen ? (
-            <Box flexDirection="column" width="100%">
+            <Box flexDirection="column" marginTop={1} width="100%">
               {reason !== '' ? line(reason, 'fg') : null}
               {extra !== undefined ? line(extra, 'fg') : null}
             </Box>
