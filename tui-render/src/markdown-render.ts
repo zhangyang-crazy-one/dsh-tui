@@ -437,7 +437,7 @@ export function renderTableCells(
   rowOffset: number,
   sourceStart: number,
 ): MarkdownRenderLine[] {
-  const safeCells = cells.map(row => row.map(cell => escapeContent(cell)))
+  const safeCells = cells.map(row => row.map(cell => escapeContent(formatSymbolSpacing(cell))))
   const layout = layoutTableCells(safeCells, { maxCols: Math.max(1, width) })
   const lines: MarkdownRenderLine[] = []
   let row = rowOffset
@@ -503,7 +503,7 @@ export function renderStreamingTableCells(
       ...committedCells.slice(previous.committedRows),
       ...(tailCells === undefined ? [] : [tailCells]),
     ]
-  const escapedAppended = appendedCells.map(row => row.map(cell => escapeContent(cell)))
+  const escapedAppended = appendedCells.map(row => row.map(cell => escapeContent(formatSymbolSpacing(cell))))
   const plan = previous !== undefined
     && previous.width === safeWidth
     && previous.committedRows <= committedCells.length
@@ -515,7 +515,7 @@ export function renderStreamingTableCells(
       maxCols: safeWidth,
     }
     : measureTableCells(
-      plannedCells.map(row => row.map(cell => escapeContent(cell))),
+      plannedCells.map(row => row.map(cell => escapeContent(formatSymbolSpacing(cell)))),
       { maxCols: safeWidth },
     )
   if (plan.kind !== 'grid') {
@@ -633,8 +633,8 @@ function appendGridBodyRow(
   sourceStart: number,
 ): void {
   if (previous !== undefined && (
-    isMultilineTableRow(previous.map(escapeContent), widths)
-    || isMultilineTableRow(cells.map(escapeContent), widths)
+    isMultilineTableRow(previous.map(cell => escapeContent(formatSymbolSpacing(cell))), widths)
+    || isMultilineTableRow(cells.map(cell => escapeContent(formatSymbolSpacing(cell))), widths)
   )) {
     out.push(ruleRenderLine(gridRule(widths, 'mid'), rowOffset + out.length, sourceStart))
   }
@@ -649,7 +649,7 @@ function renderGridRow(
   sourceStart: number,
 ): MarkdownRenderLine[] {
   const wrapped = widths.map((columnWidth, column) => {
-    const text = escapeContent(row[column] ?? '')
+    const text = escapeContent(formatSymbolSpacing(row[column] ?? ''))
     return displayWidth(text) <= columnWidth && !text.includes('\n')
       ? [text]
       : wrapTableCell(text, columnWidth)

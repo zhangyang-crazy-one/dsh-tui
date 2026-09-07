@@ -3,6 +3,7 @@ import {
   displayWidth,
   displayColumnSlice,
   escapeContent,
+  formatSymbolSpacing,
   padDisplayEnd,
   wcwidthSafeSlice,
   wrapDisplayLines,
@@ -14,6 +15,7 @@ describe('displayColumnSlice', () => {
     expect(displayColumnSlice('a中b', 0, 1)).toBe('a')
     expect(displayColumnSlice('a中b', 3, 4)).toBe('b')
     expect(displayColumnSlice('x👨‍👩‍👧‍👦y', 1, 3)).toBe('👨‍👩‍👧‍👦')
+    expect(displayColumnSlice('hello world', 2, 7)).toBe('llo w')
   })
 })
 
@@ -39,6 +41,10 @@ describe('escapeContent', () => {
 })
 
 describe('displayWidth', () => {
+  it('returns zero for empty string', () => {
+    expect(displayWidth('')).toBe(0)
+  })
+
   it('counts CJK glyphs as two columns and ASCII as one', () => {
     expect(displayWidth('中文ab')).toBe(6)
     expect(displayWidth('ab')).toBe(2)
@@ -52,12 +58,59 @@ describe('displayWidth', () => {
     expect(displayWidth('👨‍👩‍👧‍👦')).toBe(2)
   })
 
+  it('measures circled and enclosed numbers as single-column glyphs', () => {
+    expect(displayWidth('①')).toBe(1)
+    expect(displayWidth('②')).toBe(1)
+    expect(displayWidth('⑩')).toBe(1)
+    expect(displayWidth('⑴')).toBe(1)
+    expect(displayWidth('⒈')).toBe(1)
+    expect(displayWidth('❶')).toBe(1)
+  })
+
+  it('measures BMP single-codepoint emojis as two columns', () => {
+    expect(displayWidth('⚠')).toBe(2)
+    expect(displayWidth('⚠️')).toBe(2)
+    expect(displayWidth('⚙')).toBe(2)
+    expect(displayWidth('⚙️')).toBe(2)
+    expect(displayWidth('ℹ')).toBe(2)
+    expect(displayWidth('⏱')).toBe(2)
+  })
+
+  it('preserves single-column width for UI chrome symbols', () => {
+    expect(displayWidth('·')).toBe(1)
+    expect(displayWidth('…')).toBe(1)
+    expect(displayWidth('—')).toBe(1)
+    expect(displayWidth('✓')).toBe(1)
+    expect(displayWidth('✗')).toBe(1)
+  })
+
   it('pads CJK to a display-column budget without using string length', () => {
     expect(padDisplayEnd('中', 4)).toBe('中  ')
     expect(displayWidth(padDisplayEnd('中', 4))).toBe(4)
     expect(padDisplayEnd('ab', 4)).toBe('ab  ')
     expect(padDisplayEnd('abcd', 3)).toBe('abcd')
     expect(padDisplayEnd('x', 0)).toBe('x')
+  })
+})
+
+describe('formatSymbolSpacing', () => {
+  it('adds padding between circled numbers and adjacent CJK characters', () => {
+    expect(formatSymbolSpacing('- ①在 ~/.dsh/settings.yaml 里加 provider 路由')).toBe(
+      '- ① 在 ~/.dsh/settings.yaml 里加 provider 路由',
+    )
+    expect(formatSymbolSpacing('把 ①和 ②直接写进')).toBe('把 ① 和 ② 直接写进')
+    expect(formatSymbolSpacing('把①写进')).toBe('把 ① 写进')
+  })
+
+  it('normalizes BMP emojis without VS16 and pads adjacent CJK characters', () => {
+    expect(formatSymbolSpacing('⚠️注意：商汤网关 schema 较严格')).toBe('⚠️ 注意：商汤网关 schema 较严格')
+    expect(formatSymbolSpacing('⚙设置')).toBe('⚙️ 设置')
+    expect(formatSymbolSpacing('提示💡内容')).toBe('提示 💡 内容')
+  })
+
+  it('leaves pure ASCII untouched', () => {
+    expect(formatSymbolSpacing('plain text 123')).toBe('plain text 123')
+    expect(formatSymbolSpacing('')).toBe('')
   })
 })
 

@@ -645,6 +645,27 @@ describe('layoutTableCells edge cases', () => {
       expect(divider.text.startsWith('    ')).toBe(true)
     }
   })
+
+  it('aligns all vertical border columns when cells contain circled numbers', () => {
+    const cells = [
+      ['阶段', '目标', '状态'],
+      ['① 需求分析', '梳理所有功能需求与接口定义', '已完成'],
+      ['普通阶段', '无特殊符号的普通文本目标描述', '进行中'],
+      ['② 架构设计', '确定各模块职责与时序图绘制', '待处理'],
+      ['③ 编码实现', '完成核心算法与单元测试编写', '未开始'],
+    ]
+    const lines = renderTableCells(cells, 80, 0, 0)
+    const texts = lines.map(line => line.text)
+    const firstWidth = displayWidth(texts[0]!)
+    expect(firstWidth).toBeGreaterThan(0)
+    for (const text of texts) {
+      expect(displayWidth(text)).toBe(firstWidth)
+    }
+    const stream = renderStreamingTableCells(cells, undefined, 80, 0, 0, undefined)
+    for (const line of stream.lines) {
+      expect(displayWidth(line.text)).toBe(firstWidth)
+    }
+  })
 })
 
 function lineText(line: TableLayout['lines'][number]): string {

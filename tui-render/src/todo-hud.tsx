@@ -33,24 +33,31 @@ const STATUS_PRESENTATION: Record<
 }
 
 /**
- * The sticky todo HUD above the composer: no title bar, no plate. Content is
- * escaped and truncated to the row budget.
- * @param props - todo rows and the display-column budget per row.
+ * The sticky todo HUD above the composer: no title bar, no plate.
+ * Completed items are hidden, showing at most the tail 5 incomplete items.
+ * Content is escaped and truncated to the row budget.
+ * @param props - todo rows, the display-column budget per row, and optional item limit.
  * @returns the row elements, or null when hidden.
  */
 export function TodoHud({
   todos,
   maxCols,
+  limit = 5,
 }: {
-  /** The current todo rows; an empty list paints nothing. */
+  /** The current todo rows; an empty or all-completed list paints nothing. */
   todos: readonly TodoHudItem[]
   /** Display-column budget per row. */
   maxCols: number
+  /** Maximum number of incomplete items to display (tail). Defaults to 5. */
+  limit?: number
 }): ReactNode {
-  if (todos.length === 0) return null
+  const safeLimit = Math.max(0, limit)
+  const incomplete = todos.filter(todo => todo.status !== 'completed')
+  const visible = safeLimit === 0 ? [] : incomplete.slice(-safeLimit)
+  if (visible.length === 0) return null
   return (
     <>
-      {todos.map((todo, index) => {
+      {visible.map((todo, index) => {
         const presentation = STATUS_PRESENTATION[todo.status]
         const head = `${presentation.glyph} ${presentation.word} `
         const contentToken: StyleToken = todo.status === 'in_progress' ? 'fgSoft' : 'fgDim'

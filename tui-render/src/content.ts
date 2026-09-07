@@ -40,19 +40,19 @@ export function escapeContent(text: string): string {
 }
 
 /**
- * Pattern matching enclosed / circled digits and BMP symbols/emojis that
- * `string-width` treats as 1 column, but render as 2 columns in terminal fonts
- * or require a 2-cell placeholder.
+ * Pattern matching BMP symbols/emojis that `string-width` treats as 1 column,
+ * but render as 2 columns in terminal fonts or require a 2-cell placeholder.
  */
 const WIDE_SYMBOLS_OR_EMOJIS =
-  /[\u2460-\u24F4\u2776-\u2793\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/gu
+  /[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/gu
 
 /**
  * The number of terminal columns a string occupies.
  *
  * Counts printable ASCII as 1 column, CJK glyphs as 2 columns, standard emojis
- * and ZWJ sequences as 2 columns, and enclosed/circled digits (U+2460–U+24F4,
- * U+2776–U+2793) and single-codepoint emojis (⚠️, ⚙, ℹ, ⏱, etc.) as 2 columns.
+ * and ZWJ sequences as 2 columns, and single-codepoint emojis (⚠️, ⚙, ℹ, ⏱, etc.)
+ * as 2 columns. Circled digits (U+2460–U+24F4, U+2776–U+2793) occupy 1 column
+ * in monospace terminal grids.
  *
  * @param text - the string to measure.
  * @returns its display width in columns.
@@ -61,13 +61,12 @@ export function displayWidth(text: string): number {
   if (text === '') return 0
   if (/^[\x20-\x7e]*$/u.test(text)) return text.length
   const base = stringWidth(text)
-  if (!/[\u2460-\u24F4\u2776-\u2793\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text)) {
+  if (!/[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text)) {
     return base
   }
   let extra = 0
   for (const match of text.matchAll(WIDE_SYMBOLS_OR_EMOJIS)) {
-    const idx = match.index
-    if (idx !== undefined && text.charCodeAt(idx + 1) === 0xFE0F) {
+    if (text.charCodeAt(match.index + 1) === 0xFE0F) {
       continue
     }
     extra += 1
