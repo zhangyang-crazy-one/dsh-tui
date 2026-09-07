@@ -38748,8 +38748,9 @@ function AppShell({ title, badge, children, status, input }) {
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow(titleParts) }) }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]) }) }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "column", flexGrow: 1, width: "100%", overflow: "hidden", children }),
-    input !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: input }) : null,
-    status !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: status }) : null
+    input !== void 0 && input !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: input }) : null,
+    status !== void 0 && status !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]) }) }) : null,
+    status !== void 0 && status !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: status }) : null
   ] });
 }
 
@@ -50942,6 +50943,7 @@ function profilerOnRender(probe) {
 var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
 var BRAND_FRAME_MS = 320;
 var BRAND_ART_ROWS = BRAND_HALF_BLOCK.length;
+var BRAND_MIN_HOME_ROWS = BRAND_ART_ROWS + 2;
 var BRAND_HOME_ROWS = BRAND_ART_ROWS + 3;
 var activeRevealTimers = 0;
 function activeBrandRevealTimerCount() {
@@ -50950,8 +50952,7 @@ function activeBrandRevealTimerCount() {
 var TIER_ORDER = [
   "half-block",
   "full-block",
-  "ascii",
-  "plain"
+  "ascii"
 ];
 function rowsForTier(tier) {
   switch (tier) {
@@ -50964,12 +50965,13 @@ function rowsForTier(tier) {
   }
 }
 function rowsFit(rows, maxColumns, maxRows) {
-  return maxRows >= BRAND_HOME_ROWS && rows.length === BRAND_ART_ROWS && rows.every((row) => displayWidth(row) <= maxColumns);
+  return maxRows >= BRAND_MIN_HOME_ROWS && rows.length === BRAND_ART_ROWS && rows.every((row) => displayWidth(row) <= maxColumns);
 }
 function selectBrandRenderTier(preferred, maxColumns, maxRows) {
+  if (preferred === "plain") return "plain";
   const start = TIER_ORDER.indexOf(preferred);
   for (const tier of TIER_ORDER.slice(start)) {
-    if (tier === "plain" || rowsFit(rowsForTier(tier), maxColumns, maxRows)) return tier;
+    if (rowsFit(rowsForTier(tier), maxColumns, maxRows)) return tier;
   }
   return "plain";
 }
@@ -51024,7 +51026,7 @@ function PixelFishHome({
   const home = /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: [
     rows === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Box_default, { flexDirection: "column", width: artWidth, children: rows.map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(row, "accent")]) }, `fish-${String(index2)}`)) }),
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(BRAND_PLAIN_WORDMARK, "accent", void 0, true)]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(" ", "bg")]) }),
+    maxRows >= BRAND_HOME_ROWS ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(" ", "bg")]) }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(BRAND_HOME_LINE, "fg")]) })
   ] });
   return frameProbe === void 0 ? home : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(FrameProbe, { probe: frameProbe, children: home });
@@ -59097,12 +59099,12 @@ function TuiLoop({
       {
         flexDirection: "column",
         width: "100%",
-        backgroundColor: inkColor("inputBg")
+        backgroundColor: inkColor("bg")
       },
       (0, import_react39.createElement)(
         Text,
         null,
-        paintBackgroundRow([feedbackLine(feedback)], "inputBg", columns)
+        paintBackgroundRow([feedbackLine(feedback)], "bg", columns)
       )
     );
   } else if (adaptiveRows.length > 0) {
@@ -59142,14 +59144,14 @@ function TuiLoop({
       {
         flexDirection: "column",
         width: "100%",
-        backgroundColor: inkColor("inputBg")
+        backgroundColor: inkColor("bg")
       },
       ...visibleRows.map((row, index2) => (0, import_react39.createElement)(
         Text,
         { key: `adaptive-footer-${String(index2)}` },
         paintBackgroundRow(
           row.runs.map((run2) => styled(run2.text, run2.token)),
-          "inputBg",
+          "bg",
           columns
         )
       ))
@@ -59176,12 +59178,12 @@ function TuiLoop({
       {
         flexDirection: "column",
         width: "100%",
-        backgroundColor: inkColor("inputBg")
+        backgroundColor: inkColor("bg")
       },
       ...visibleLines.map((line8, index2) => (0, import_react39.createElement)(
         Text,
         { key: `fallback-footer-${String(index2)}` },
-        paintBackgroundRow([styled(line8, "fgDim")], "inputBg", columns)
+        paintBackgroundRow([styled(line8, "fgDim")], "bg", columns)
       ))
     );
   }
@@ -59212,7 +59214,7 @@ function TuiLoop({
     composerHud,
     queuedDraftCount
   ]);
-  const toolPaneRows = Math.max(4, rows - 2 - statusRowCount);
+  const toolPaneRows = Math.max(4, rows - 3 - statusRowCount);
   const toolPageRows = Math.min((renderPolicy?.tools ?? toolPolicyDefaults()).detailPageRows, toolPaneRows - 3);
   toolDetailsSizeRef.current = { width: columns, pageRows: toolPageRows };
   const streamView = (0, import_react39.createElement)(StreamView, {
@@ -59306,7 +59308,7 @@ function TuiLoop({
       confirmDelete: pane.confirmDelete,
       deleteUnavailable: pane.deleteUnavailable,
       columns,
-      maxRows: rows - 2 - statusRowCount - (state.renaming ? state.text.split("\n").length + 1 : 0)
+      maxRows: rows - 3 - statusRowCount - (state.renaming ? state.text.split("\n").length + 1 : 0)
     });
   } else if (search2.open) {
     content3 = (0, import_react39.createElement)(SearchPane, {
@@ -59349,7 +59351,7 @@ function TuiLoop({
     modelChip: adaptiveInfoFooter?.model,
     modeChip: currentMode,
     ...props,
-    rowsBelow: (props.rowsBelow ?? 0) + statusRowCount
+    rowsBelow: (props.rowsBelow ?? 0) + statusRowCount + 1
   });
   let inputSlot;
   if (approvalPane.open) {

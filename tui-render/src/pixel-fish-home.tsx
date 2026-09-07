@@ -28,6 +28,9 @@ export const BRAND_FRAME_MS = 320
 /** Generated contour height shared by the three visual tiers. */
 export const BRAND_ART_ROWS = BRAND_HALF_BLOCK.length
 
+/** Minimum contour height to display art plus wordmark and prompt (compact, no spacer). */
+export const BRAND_MIN_HOME_ROWS = BRAND_ART_ROWS + 2
+
 /** Art plus wordmark, one spacer, and prompt. */
 export const BRAND_HOME_ROWS = BRAND_ART_ROWS + 3
 
@@ -45,8 +48,7 @@ const TIER_ORDER = [
   'half-block',
   'full-block',
   'ascii',
-  'plain',
-] as const satisfies readonly BrandRenderTier[]
+] as const satisfies readonly Exclude<BrandRenderTier, 'plain'>[]
 
 function rowsForTier(tier: Exclude<BrandRenderTier, 'plain'>): readonly string[] {
   switch (tier) {
@@ -60,7 +62,7 @@ function rowsForTier(tier: Exclude<BrandRenderTier, 'plain'>): readonly string[]
 }
 
 function rowsFit(rows: readonly string[], maxColumns: number, maxRows: number): boolean {
-  return maxRows >= BRAND_HOME_ROWS
+  return maxRows >= BRAND_MIN_HOME_ROWS
     && rows.length === BRAND_ART_ROWS
     && rows.every(row => displayWidth(row) <= maxColumns)
 }
@@ -79,9 +81,10 @@ export function selectBrandRenderTier(
   maxColumns: number,
   maxRows: number,
 ): BrandRenderTier {
+  if (preferred === 'plain') return 'plain'
   const start = TIER_ORDER.indexOf(preferred)
   for (const tier of TIER_ORDER.slice(start)) {
-    if (tier === 'plain' || rowsFit(rowsForTier(tier), maxColumns, maxRows)) return tier
+    if (rowsFit(rowsForTier(tier), maxColumns, maxRows)) return tier
   }
   return 'plain'
 }
@@ -179,7 +182,7 @@ export function PixelFishHome({
         </Box>
       )}
       <Text>{paintRow([styled(BRAND_PLAIN_WORDMARK, 'accent', undefined, true)])}</Text>
-      <Text>{paintRow([styled(' ', 'bg')])}</Text>
+      {maxRows >= BRAND_HOME_ROWS ? <Text>{paintRow([styled(' ', 'bg')])}</Text> : null}
       <Text>{paintRow([styled(BRAND_HOME_LINE, 'fg')])}</Text>
     </Box>
   )

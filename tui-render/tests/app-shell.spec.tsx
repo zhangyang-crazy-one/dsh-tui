@@ -182,4 +182,41 @@ describe('AppShell', () => {
     vi.mocked(useWindowSize).mockReturnValueOnce({ columns: 0, rows: 2 })
     expect(stripAnsi(shell('title', 'badge')).split('\n')[0]).toBe('')
   })
+
+  it('draws a thin separator above the status slot when status is provided', () => {
+    const out = renderToString(
+      createElement(
+        AppShell,
+        {
+          title: 'title',
+          badge: 'badge',
+          input: createElement(Text, null, 'INPUT_BAR'),
+          status: createElement(Text, null, 'STATUS_BAR'),
+        },
+        createElement(Text, null, 'body'),
+      ),
+    )
+    const lines = stripAnsi(out).split('\n')
+    const separatorCount = lines.filter(line => line.includes('─'.repeat(80))).length
+    expect(separatorCount).toBe(2)
+    expect(out.indexOf('INPUT_BAR')).toBeLessThan(out.lastIndexOf('─'.repeat(80)))
+    expect(out.indexOf('STATUS_BAR')).toBeGreaterThan(out.lastIndexOf('─'.repeat(80)))
+  })
+
+  it('omits the status separator when status is undefined', () => {
+    const out = renderToString(
+      createElement(
+        AppShell,
+        {
+          title: 'title',
+          badge: 'badge',
+          input: createElement(Text, null, 'INPUT_BAR'),
+        },
+        createElement(Text, null, 'body'),
+      ),
+    )
+    const lines = stripAnsi(out).split('\n')
+    const separatorCount = lines.filter(line => line.includes('─'.repeat(80))).length
+    expect(separatorCount).toBe(1)
+  })
 })

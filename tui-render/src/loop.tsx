@@ -2494,12 +2494,12 @@ export function TuiLoop({
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('inputBg'),
+        backgroundColor: inkColor('bg'),
       },
       createElement(
         Text,
         null,
-        paintBackgroundRow([feedbackLine(feedback) as string], 'inputBg', columns),
+        paintBackgroundRow([feedbackLine(feedback) as string], 'bg', columns),
       ),
     )
   } else if (adaptiveRows.length > 0) {
@@ -2541,14 +2541,14 @@ export function TuiLoop({
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('inputBg'),
+        backgroundColor: inkColor('bg'),
       },
       ...visibleRows.map((row, index) => createElement(
         Text,
         { key: `adaptive-footer-${String(index)}` },
         paintBackgroundRow(
           row.runs.map(run => styled(run.text, run.token)),
-          'inputBg',
+          'bg',
           columns,
         ),
       )),
@@ -2577,12 +2577,12 @@ export function TuiLoop({
       {
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: inkColor('inputBg'),
+        backgroundColor: inkColor('bg'),
       },
       ...visibleLines.map((line, index) => createElement(
         Text,
         { key: `fallback-footer-${String(index)}` },
-        paintBackgroundRow([styled(line, 'fgDim')], 'inputBg', columns),
+        paintBackgroundRow([styled(line, 'fgDim')], 'bg', columns),
       )),
     )
   }
@@ -2654,7 +2654,7 @@ export function TuiLoop({
     composerHud,
     queuedDraftCount,
   ])
-  const toolPaneRows = Math.max(4, rows - 2 - statusRowCount)
+  const toolPaneRows = Math.max(4, rows - 3 - statusRowCount)
   const toolPageRows = Math.min((renderPolicy?.tools ?? toolPolicyDefaults()).detailPageRows, toolPaneRows - 3)
   toolDetailsSizeRef.current = { width: columns, pageRows: toolPageRows }
   const streamView = createElement(StreamView, {
@@ -2762,7 +2762,7 @@ export function TuiLoop({
       confirmDelete: pane.confirmDelete,
       deleteUnavailable: pane.deleteUnavailable,
       columns,
-      maxRows: rows - 2 - statusRowCount - (state.renaming ? state.text.split('\n').length + 1 : 0),
+      maxRows: rows - 3 - statusRowCount - (state.renaming ? state.text.split('\n').length + 1 : 0),
     })
   } else if (search.open) {
     content = createElement(SearchPane, {
@@ -2805,7 +2805,7 @@ export function TuiLoop({
     modelChip: adaptiveInfoFooter?.model,
     modeChip: currentMode,
     ...props,
-    rowsBelow: (props.rowsBelow ?? 0) + statusRowCount,
+    rowsBelow: (props.rowsBelow ?? 0) + statusRowCount + 1,
   })
   let inputSlot: ReactNode
   if (approvalPane.open) {

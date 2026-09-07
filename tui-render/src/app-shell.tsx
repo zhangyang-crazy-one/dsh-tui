@@ -165,8 +165,13 @@ export function AppShell({ title, badge, children, status, input }: AppShellProp
       <Box flexDirection="column" flexGrow={1} width="100%" overflow="hidden">
         {children}
       </Box>
-      {input !== undefined ? <Box flexDirection="row" width="100%" flexShrink={0}>{input}</Box> : null}
-      {status !== undefined ? (
+      {input !== undefined && input !== null ? <Box flexDirection="row" width="100%" flexShrink={0}>{input}</Box> : null}
+      {status !== undefined && status !== null ? (
+        <Box width="100%" flexShrink={0}>
+          <Text>{paintRow([styled(escapeContent('─'.repeat(columns)), 'line')])}</Text>
+        </Box>
+      ) : null}
+      {status !== undefined && status !== null ? (
         <Box flexDirection="row" width="100%" flexShrink={0}>
           {status}
         </Box>

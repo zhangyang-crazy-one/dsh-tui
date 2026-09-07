@@ -8,11 +8,13 @@ import {
   BRAND_ART_ROWS,
   BRAND_FRAME_MS,
   BRAND_HOME_ROWS,
+  BRAND_MIN_HOME_ROWS,
   PixelFishHome,
   selectBrandRenderTier,
 } from '../src/pixel-fish-home.tsx'
 import type { PixelFishHomeProps } from '../src/pixel-fish-home.tsx'
 import { applyTheme } from '../src/theme.ts'
+import { createFrameProbe } from '../src/frame-stats.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 
 function stripAnsi(text: string): string {
@@ -40,13 +42,15 @@ describe('selectBrandRenderTier', () => {
   it('keeps the closed capability order and falls back to the wordmark on size failure', () => {
     expect(BRAND_ART_ROWS).toBe(16)
     expect(BRAND_HOME_ROWS).toBe(19)
+    expect(BRAND_MIN_HOME_ROWS).toBe(18)
     expect(selectBrandRenderTier('half-block', 88, 38)).toBe('half-block')
     expect(selectBrandRenderTier('full-block', 88, 38)).toBe('full-block')
     expect(selectBrandRenderTier('ascii', 88, 38)).toBe('ascii')
     expect(selectBrandRenderTier('plain', 88, 38)).toBe('plain')
     expect(selectBrandRenderTier('half-block', 43, 38)).toBe('plain')
     expect(selectBrandRenderTier('half-block', 88, 19)).toBe('half-block')
-    expect(selectBrandRenderTier('half-block', 88, 18)).toBe('plain')
+    expect(selectBrandRenderTier('half-block', 88, 18)).toBe('half-block')
+    expect(selectBrandRenderTier('half-block', 88, 17)).toBe('plain')
   })
 })
 
@@ -76,6 +80,20 @@ describe('PixelFishHome', () => {
     expect(out).not.toContain('\x1b')
     expect(out).toContain('###@@@@@@@@@@@@@')
     expect(out).toContain('DeepSeek')
+  })
+
+  it('renders the compact home without spacer when maxRows equals BRAND_MIN_HOME_ROWS', () => {
+    const out = renderToString(createElement(PixelFishHome, props({ tier: 'half-block', maxRows: 18 })))
+    const plain = stripAnsi(out)
+    expect(plain).toContain('▄')
+    expect(plain).toContain('DeepSeek')
+    expect(plain).toContain('有什么可以帮忙的')
+  })
+
+  it('wraps the home inside a FrameProbe when probe is supplied', () => {
+    const probe = createFrameProbe()
+    const out = renderToString(createElement(PixelFishHome, props({ frameProbe: probe })))
+    expect(stripAnsi(out)).toContain('DeepSeek')
   })
 
   it('advances exactly four 320ms frames and clears the completion timer', async () => {
@@ -111,7 +129,7 @@ describe('PixelFishHome', () => {
     for (const stopped of [
       props({ animate: true, visible: false }),
       props({ animate: false }),
-      props({ animate: true, maxRows: 18 }),
+      props({ animate: true, maxRows: BRAND_MIN_HOME_ROWS - 1 }),
     ]) {
       const instance = render(createElement(PixelFishHome, props({ animate: true })), {
         stdout: fakeTtyStdout(),

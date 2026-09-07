@@ -51,6 +51,7 @@ export {
   BRAND_ART_ROWS,
   BRAND_FRAME_MS,
   BRAND_HOME_ROWS,
+  BRAND_MIN_HOME_ROWS,
   PixelFishHome,
   selectBrandRenderTier,
 } from './pixel-fish-home.tsx'
