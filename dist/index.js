@@ -47391,7 +47391,7 @@ var GRAPHEME$2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function escapeContent(text4) {
   return text4.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, (char) => `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`).replace(/\u001B/g, "\\x1b");
 }
-var WIDE_SYMBOLS_OR_EMOJIS = /[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/gu;
+var WIDE_SYMBOLS_OR_EMOJIS = /[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/gu;
 function displayWidth(text4) {
   if (text4 === "") return 0;
   let cols = 0;
@@ -47407,10 +47407,11 @@ function displayWidth(text4) {
   }
   if (simple) return cols;
   const base = stringWidth(text4);
-  if (!/[\u26A0\u26A1\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764\u2B50]/u.test(text4)) return base;
+  if (!/[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/u.test(text4)) return base;
   let extra = 0;
   for (const match of text4.matchAll(WIDE_SYMBOLS_OR_EMOJIS)) {
-    if (text4.charCodeAt(match.index + 1) === 65039) continue;
+    const nextCode = text4.charCodeAt(match.index + 1);
+    if (nextCode === 65039 || nextCode === 65038) continue;
     extra += 1;
   }
   return base + extra;
@@ -47433,7 +47434,7 @@ var NARROW_TO_WIDE_EMOJIS = {
   "\u26A0": "\u{1F6A8}",
   "\u2139": "\u{1F4A1}",
   "\u2699": "\u{1F527}",
-  "\u23F1": "\u{23F0}",
+  "\u23F1": "\u23F0",
   "\u2709": "\u{1F4E7}",
   "\u270F": "\u{1F4DD}"
 };
@@ -50022,8 +50023,88 @@ function blockPositionRange(node2) {
     end: position2.end.offset ?? -1
   };
 }
-function formatSeconds(ms) {
-  return (ms / 1e3).toFixed(1);
+var dictionaries = {
+  "zh-CN": {
+    on: "\u5F00",
+    off: "\u5173",
+    reasoning: "\u601D\u8003",
+    scrollbar: "\u8F68\u9053",
+    statusDetails: "\u6307\u6807\u8BE6\u60C5",
+    locale: "\u754C\u9762\u8BED\u8A00",
+    metrics: "\u6307\u6807",
+    mode: "\u6A21\u5F0F",
+    tools: "\u5DE5\u5177",
+    context: "\u4E0A\u4E0B\u6587",
+    status: "\u72B6\u6001",
+    effort: "\u5F3A\u5EA6",
+    cacheHit: "\u7F13\u5B58\u547D\u4E2D",
+    retry: "\u91CD\u8BD5",
+    commandStatus: "\u663E\u793A/\u9690\u85CF\u5B8C\u6574\u72B6\u6001\u6307\u6807",
+    commandReasoning: "\u663E\u793A/\u9690\u85CF\u5168\u6587\u601D\u8003 \xB7 Ctrl+O",
+    commandScrollbar: "\u663E\u793A/\u9690\u85CF\u6EDA\u52A8\u8F68\u9053",
+    settingsSaveFailed: "\u2717 \u663E\u793A\u8BBE\u7F6E\u672A\u4FDD\u5B58 \xB7 \u8BF7\u91CD\u8BD5",
+    inputHint: "\u8F93\u5165\u6D88\u606F",
+    sendHint: "Enter \u53D1\u9001",
+    arguments: "\u53C2\u6570",
+    result: "\u7ED3\u679C",
+    diagnostics: "\u8BCA\u65AD\u5143\u6570\u636E",
+    processStatus: "\u8FDB\u7A0B\u72B6\u6001",
+    running: "\u8FD0\u884C\u4E2D",
+    failed: "\u5931\u8D25",
+    remaining: "\u5269\u4F59\u6E90\u884C",
+    toolDetails: "/tools \u8BE6\u60C5",
+    commandTools: "\u9010\u9879\u67E5\u770B\u5DE5\u5177\u53C2\u6570\u3001\u5B8C\u6574\u7ED3\u679C\u4E0E\u8BCA\u65AD",
+    noTools: "\u5F53\u524D\u4F1A\u8BDD\u6CA1\u6709\u5DE5\u5177\u8C03\u7528",
+    toolListHint: "\u2191\u2193 \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 Esc \u5173\u95ED",
+    toolPageHint: "\u2190\u2192 \u7FFB\u9875 \xB7 d \u8BCA\u65AD \xB7 y \u590D\u5236 \xB7 e \u5BFC\u51FA \xB7 Esc \u8FD4\u56DE",
+    toolCopied: "\u2713 \u5DF2\u590D\u5236\u5B8C\u6574\u5DE5\u5177\u539F\u6587",
+    toolExported: "\u2713 \u5DE5\u5177\u539F\u6587\u5DF2\u5BFC\u51FA",
+    toolCopyFailed: "\u2717 \u5DE5\u5177\u539F\u6587\u590D\u5236\u5931\u8D25",
+    toolExportFailed: "\u2717 \u5DE5\u5177\u539F\u6587\u5BFC\u51FA\u5931\u8D25",
+    toolExportAction: "\u5BFC\u51FA\u5B8C\u6574\u539F\u6587"
+  },
+  "en-US": {
+    on: "on",
+    off: "off",
+    reasoning: "Thinking",
+    scrollbar: "Rail",
+    statusDetails: "Status details",
+    locale: "UI language",
+    metrics: "Metrics",
+    mode: "Mode",
+    tools: "Tools",
+    context: "Context",
+    status: "Status",
+    effort: "Effort",
+    cacheHit: "Cache hit",
+    retry: "Retry",
+    commandStatus: "Show/hide full status metrics",
+    commandReasoning: "Show/hide full thinking text \xB7 Ctrl+O",
+    commandScrollbar: "Show/hide the scroll rail",
+    settingsSaveFailed: "\u2717 Display setting was not saved \xB7 Retry",
+    inputHint: "Type a message",
+    sendHint: "Enter to send",
+    arguments: "Arguments",
+    result: "Result",
+    diagnostics: "Diagnostic metadata",
+    processStatus: "Process status",
+    running: "Running",
+    failed: "Failed",
+    remaining: "source lines remaining",
+    toolDetails: "/tools details",
+    commandTools: "Inspect individual tool arguments, full results, and diagnostics",
+    noTools: "No tool calls in this session",
+    toolListHint: "\u2191\u2193 Select \xB7 Enter Details \xB7 Esc Close",
+    toolPageHint: "\u2190\u2192 Pages \xB7 d Diagnostics \xB7 y Copy \xB7 e Export \xB7 Esc Back",
+    toolCopied: "\u2713 Full tool source copied",
+    toolExported: "\u2713 Tool source exported",
+    toolCopyFailed: "\u2717 Tool source copy failed",
+    toolExportFailed: "\u2717 Tool source export failed",
+    toolExportAction: "Export full source"
+  }
+};
+function tuiCopy(key, locale = "zh-CN") {
+  return dictionaries[locale][key];
 }
 var BRAILLE_SPINNER_FRAMES = [
   "\u280B",
@@ -50038,13 +50119,31 @@ var BRAILLE_SPINNER_FRAMES = [
   "\u280F"
 ];
 function getBrailleSpinnerFrame(liveMs) {
-  const index = Math.floor(Math.max(0, liveMs ?? 0) / 100) % BRAILLE_SPINNER_FRAMES.length;
-  return BRAILLE_SPINNER_FRAMES[index] ?? BRAILLE_SPINNER_FRAMES[0];
+  return BRAILLE_SPINNER_FRAMES[Math.floor(Math.max(0, liveMs ?? 0) / 100) % BRAILLE_SPINNER_FRAMES.length] ?? BRAILLE_SPINNER_FRAMES[0];
+}
+var GENERATION_TIPS_ZH = [
+  "\u63D0\u793A\uFF1ACtrl+E \u5C55\u5F00\u5DE5\u5177\u5361 \xB7 /tools \u67E5\u770B\u5B8C\u6574\u8F93\u51FA",
+  "\u63D0\u793A\uFF1ACtrl+O \u5C55\u5F00/\u6536\u8D77\u601D\u8003\u8FC7\u7A0B \xB7 \u968F\u65F6\u8DDF\u8FDB\u63A8\u7406",
+  "\u63D0\u793A\uFF1AShift+Tab \u5207\u6362\u591A\u884C\u8F93\u5165 \xB7 \u2191/\u2193 \u6D4F\u89C8\u5386\u53F2\u6D88\u606F",
+  "\u63D0\u793A\uFF1A\u8F93\u5165 / \u6253\u5F00\u5FEB\u6377\u547D\u4EE4 \xB7 \u8F93\u5165 @ \u63D0\u53CA\u6587\u4EF6\u4E0E\u4E0A\u4E0B\u6587",
+  "\u63D0\u793A\uFF1ACtrl+C \u4E2D\u65AD\u5F53\u524D\u751F\u6210 \xB7 \u968F\u65F6\u5B89\u5168\u505C\u6B62"
+];
+var GENERATION_TIPS_EN = [
+  "Tip: Ctrl+E to expand tool cards \xB7 /tools for full output",
+  "Tip: Ctrl+O to toggle thinking process \xB7 follow reasoning",
+  "Tip: Shift+Tab for multiline input \xB7 \u2191/\u2193 browse history",
+  "Tip: Type / for slash commands \xB7 type @ to mention context",
+  "Tip: Ctrl+C to stop generation safely at any time"
+];
+function getBilingualTip(liveMs, locale = "zh-CN") {
+  const tips = locale === "en-US" ? GENERATION_TIPS_EN : GENERATION_TIPS_ZH;
+  return tips[Math.floor(Math.max(0, liveMs ?? 0) / 4e3) % tips.length] ?? tips[0];
+}
+function formatSeconds(ms) {
+  return (ms / 1e3).toFixed(1);
 }
 function thinkingHeader(durationMs, expanded, live = false) {
-  const mark = expanded ? "\u25BE " : "";
-  const icon = live ? getBrailleSpinnerFrame(durationMs) : "\u273B";
-  return paintRow([styled(`${mark}${icon} \u601D\u8003 (${formatSeconds(durationMs)}s)`, "fgDim")]);
+  return paintRow([styled(`${expanded ? "\u25BE " : ""}${live ? getBrailleSpinnerFrame(durationMs) : "\u273B"} \u601D\u8003 (${formatSeconds(durationMs)}s)`, "fgDim")]);
 }
 function bodyRow(line2, key) {
   return (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(`  ${escapeContent(line2)}`, "fgDim")]) }, key);
@@ -50144,111 +50243,6 @@ var RowSequence = class {
     });
   }
 };
-var dictionaries = {
-  "zh-CN": {
-    on: "\u5F00",
-    off: "\u5173",
-    reasoning: "\u601D\u8003",
-    scrollbar: "\u8F68\u9053",
-    statusDetails: "\u6307\u6807\u8BE6\u60C5",
-    locale: "\u754C\u9762\u8BED\u8A00",
-    metrics: "\u6307\u6807",
-    mode: "\u6A21\u5F0F",
-    tools: "\u5DE5\u5177",
-    context: "\u4E0A\u4E0B\u6587",
-    status: "\u72B6\u6001",
-    effort: "\u5F3A\u5EA6",
-    cacheHit: "\u7F13\u5B58\u547D\u4E2D",
-    retry: "\u91CD\u8BD5",
-    commandStatus: "\u663E\u793A/\u9690\u85CF\u5B8C\u6574\u72B6\u6001\u6307\u6807",
-    commandReasoning: "\u663E\u793A/\u9690\u85CF\u5168\u6587\u601D\u8003 \xB7 Ctrl+O",
-    commandScrollbar: "\u663E\u793A/\u9690\u85CF\u6EDA\u52A8\u8F68\u9053",
-    settingsSaveFailed: "\u2717 \u663E\u793A\u8BBE\u7F6E\u672A\u4FDD\u5B58 \xB7 \u8BF7\u91CD\u8BD5",
-    inputHint: "\u8F93\u5165\u6D88\u606F",
-    sendHint: "Enter \u53D1\u9001",
-    arguments: "\u53C2\u6570",
-    result: "\u7ED3\u679C",
-    diagnostics: "\u8BCA\u65AD\u5143\u6570\u636E",
-    processStatus: "\u8FDB\u7A0B\u72B6\u6001",
-    running: "\u8FD0\u884C\u4E2D",
-    failed: "\u5931\u8D25",
-    remaining: "\u5269\u4F59\u6E90\u884C",
-    toolDetails: "/tools \u8BE6\u60C5",
-    commandTools: "\u9010\u9879\u67E5\u770B\u5DE5\u5177\u53C2\u6570\u3001\u5B8C\u6574\u7ED3\u679C\u4E0E\u8BCA\u65AD",
-    noTools: "\u5F53\u524D\u4F1A\u8BDD\u6CA1\u6709\u5DE5\u5177\u8C03\u7528",
-    toolListHint: "\u2191\u2193 \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 Esc \u5173\u95ED",
-    toolPageHint: "\u2190\u2192 \u7FFB\u9875 \xB7 d \u8BCA\u65AD \xB7 y \u590D\u5236 \xB7 e \u5BFC\u51FA \xB7 Esc \u8FD4\u56DE",
-    toolCopied: "\u2713 \u5DF2\u590D\u5236\u5B8C\u6574\u5DE5\u5177\u539F\u6587",
-    toolExported: "\u2713 \u5DE5\u5177\u539F\u6587\u5DF2\u5BFC\u51FA",
-    toolCopyFailed: "\u2717 \u5DE5\u5177\u539F\u6587\u590D\u5236\u5931\u8D25",
-    toolExportFailed: "\u2717 \u5DE5\u5177\u539F\u6587\u5BFC\u51FA\u5931\u8D25",
-    toolExportAction: "\u5BFC\u51FA\u5B8C\u6574\u539F\u6587"
-  },
-  "en-US": {
-    on: "on",
-    off: "off",
-    reasoning: "Thinking",
-    scrollbar: "Rail",
-    statusDetails: "Status details",
-    locale: "UI language",
-    metrics: "Metrics",
-    mode: "Mode",
-    tools: "Tools",
-    context: "Context",
-    status: "Status",
-    effort: "Effort",
-    cacheHit: "Cache hit",
-    retry: "Retry",
-    commandStatus: "Show/hide full status metrics",
-    commandReasoning: "Show/hide full thinking text \xB7 Ctrl+O",
-    commandScrollbar: "Show/hide the scroll rail",
-    settingsSaveFailed: "\u2717 Display setting was not saved \xB7 Retry",
-    inputHint: "Type a message",
-    sendHint: "Enter to send",
-    arguments: "Arguments",
-    result: "Result",
-    diagnostics: "Diagnostic metadata",
-    processStatus: "Process status",
-    running: "Running",
-    failed: "Failed",
-    remaining: "source lines remaining",
-    toolDetails: "/tools details",
-    commandTools: "Inspect individual tool arguments, full results, and diagnostics",
-    noTools: "No tool calls in this session",
-    toolListHint: "\u2191\u2193 Select \xB7 Enter Details \xB7 Esc Close",
-    toolPageHint: "\u2190\u2192 Pages \xB7 d Diagnostics \xB7 y Copy \xB7 e Export \xB7 Esc Back",
-    toolCopied: "\u2713 Full tool source copied",
-    toolExported: "\u2713 Tool source exported",
-    toolCopyFailed: "\u2717 Tool source copy failed",
-    toolExportFailed: "\u2717 Tool source export failed",
-    toolExportAction: "Export full source"
-  }
-};
-function tuiCopy(key, locale = "zh-CN") {
-  return dictionaries[locale][key];
-}
-var SWIMMING_FISH_FRAMES = BRAILLE_SPINNER_FRAMES;
-function getSwimmingFishFrame(liveMs) {
-  return getBrailleSpinnerFrame(liveMs);
-}
-var GENERATION_TIPS_ZH = [
-  "\u63D0\u793A\uFF1ACtrl+E \u5C55\u5F00\u5DE5\u5177\u5361 \xB7 /tools \u67E5\u770B\u5B8C\u6574\u8F93\u51FA",
-  "\u63D0\u793A\uFF1ACtrl+O \u5C55\u5F00/\u6536\u8D77\u601D\u8003\u8FC7\u7A0B \xB7 \u968F\u65F6\u8DDF\u8FDB\u63A8\u7406",
-  "\u63D0\u793A\uFF1AShift+Tab \u5207\u6362\u591A\u884C\u8F93\u5165 \xB7 \u2191/\u2193 \u6D4F\u89C8\u5386\u53F2\u6D88\u606F",
-  "\u63D0\u793A\uFF1A\u8F93\u5165 / \u6253\u5F00\u5FEB\u6377\u547D\u4EE4 \xB7 \u8F93\u5165 @ \u63D0\u53CA\u6587\u4EF6\u4E0E\u4E0A\u4E0B\u6587",
-  "\u63D0\u793A\uFF1ACtrl+C \u4E2D\u65AD\u5F53\u524D\u751F\u6210 \xB7 \u968F\u65F6\u5B89\u5168\u505C\u6B62"
-];
-var GENERATION_TIPS_EN = [
-  "Tip: Ctrl+E to expand tool cards \xB7 /tools for full output",
-  "Tip: Ctrl+O to toggle thinking process \xB7 follow reasoning",
-  "Tip: Shift+Tab for multiline input \xB7 \u2191/\u2193 browse history",
-  "Tip: Type / for slash commands \xB7 type @ to mention context",
-  "Tip: Ctrl+C to stop generation safely at any time"
-];
-function getBilingualTip(liveMs, locale = "zh-CN") {
-  const tips = locale === "en-US" ? GENERATION_TIPS_EN : GENERATION_TIPS_ZH;
-  return tips[Math.floor(Math.max(0, liveMs ?? 0) / 4e3) % tips.length] ?? tips[0];
-}
 var graphemes$1 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function textLines(text4, prefix = "") {
   let length = 1;
@@ -55809,14 +55803,14 @@ function StreamView({ model, presenters, brandTier = "plain", brandAnimation = f
     const visibleParts = displayedParts(rawParts, reasoningExpanded);
     if (generating && visibleParts.length === 0) {
       const liveMs = liveDurationMs ?? turn.reasoningDurationMs;
-      const fish = getBrailleSpinnerFrame(liveMs);
+      const spinner = getBrailleSpinnerFrame(liveMs);
       const tip = getBilingualTip(liveMs, locale);
       return (0, import_jsx_runtime.jsxs)(Box_default, {
         flexDirection: "column",
         width: "100%",
         flexShrink: 0,
         children: [(0, import_jsx_runtime.jsx)(Text, { children: paintRow([
-          styled(fish, "accentText", void 0, true),
+          styled(spinner, "accentText", void 0, true),
           styled(" \u25CF ", "accentText", void 0, true),
           styled(`\u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(liveMs)}s)`, "fg")
         ]) }), (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(`  \u2514 ${tip}`, "fgDim")]) })]
@@ -56100,9 +56094,9 @@ function SessionPane({ rows, selectedIndex, currentId, confirmDelete, deleteUnav
       !showControls ? null : confirmDelete ? (0, import_jsx_runtime.jsx)(Text, {
         wrap: "truncate",
         children: styled(`\u518D\u6309 d \u786E\u8BA4\u5220\u9664\u300C${escapeContent(selected?.title ?? "")}\u300D`, "error")
-      }) : deleteUnavailable ? (0, import_jsx_runtime.jsx)(Text, {
+      }) : deleteUnavailable ? (0, import_jsx_runtime.jsxs)(Text, {
         wrap: "truncate",
-        children: styled(escapeContent("\u5220\u9664\u4E0D\u53EF\u7528\uFF08\u540E\u7AEF\u80FD\u529B\u7F3A\u5931\uFF09"), "error")
+        children: [styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 g s \u5173\u95ED \xB7 "), "fgDim"), styled(escapeContent("\u5220\u9664\u4E0D\u53EF\u7528\uFF08\u540E\u7AEF\u80FD\u529B\u7F3A\u5931\uFF09"), "error")]
       }) : (0, import_jsx_runtime.jsx)(Text, {
         wrap: "truncate",
         children: styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 d \u5220\u9664 \xB7 g s \u5173\u95ED"), "fgDim")
@@ -56714,54 +56708,23 @@ function moveCaretByGrapheme(text4, caretIndex, direction) {
   return text4.length;
 }
 function moveCaretUpLine(text4, caretIndex) {
-  const lines = text4.split("\n");
-  if (lines.length <= 1) return void 0;
   const caret = clampCaretIndex(text4, caretIndex);
-  let accumulated = 0;
-  let currentRow = 0;
-  let col = 0;
-  for (let r = 0; r < lines.length; r++) {
-    const lineLen = lines[r].length;
-    if (caret <= accumulated + lineLen) {
-      currentRow = r;
-      col = caret - accumulated;
-      break;
-    }
-    accumulated += lineLen + 1;
-  }
-  if (currentRow === 0) return void 0;
-  let targetAcc = 0;
-  for (let r = 0; r < currentRow - 1; r++) {
-    targetAcc += lines[r].length + 1;
-  }
-  const prevLineLen = lines[currentRow - 1].length;
-  const targetCol = Math.min(col, prevLineLen);
-  return targetAcc + targetCol;
+  const prevNewline = text4.lastIndexOf("\n", caret - 1);
+  if (prevNewline === -1) return void 0;
+  const col = caret - (prevNewline + 1);
+  const lineBeforeStart = text4.lastIndexOf("\n", prevNewline - 1) + 1;
+  const lineBeforeLength = prevNewline - lineBeforeStart;
+  return lineBeforeStart + Math.min(col, lineBeforeLength);
 }
 function moveCaretDownLine(text4, caretIndex) {
-  const lines = text4.split("\n");
-  if (lines.length <= 1) return void 0;
   const caret = clampCaretIndex(text4, caretIndex);
-  let accumulated = 0;
-  let currentRow = lines.length - 1;
-  let col = 0;
-  for (let r = 0; r < lines.length; r++) {
-    const lineLen = lines[r].length;
-    if (caret <= accumulated + lineLen) {
-      currentRow = r;
-      col = caret - accumulated;
-      break;
-    }
-    accumulated += lineLen + 1;
-  }
-  if (currentRow >= lines.length - 1) return void 0;
-  let targetAcc = 0;
-  for (let r = 0; r <= currentRow; r++) {
-    targetAcc += lines[r].length + 1;
-  }
-  const nextLineLen = lines[currentRow + 1].length;
-  const targetCol = Math.min(col, nextLineLen);
-  return targetAcc + targetCol;
+  const nextNewline = text4.indexOf("\n", caret);
+  if (nextNewline === -1) return void 0;
+  const col = caret - (text4.lastIndexOf("\n", caret - 1) + 1);
+  let nextLineEnd = text4.indexOf("\n", nextNewline + 1);
+  if (nextLineEnd === -1) nextLineEnd = text4.length;
+  const nextLineLength = nextLineEnd - (nextNewline + 1);
+  return nextNewline + 1 + Math.min(col, nextLineLength);
 }
 function composerFrameAnchor(text4, caretIndex, options) {
   const caret = composerCursorPosition(text4, caretIndex);
@@ -58954,15 +58917,11 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
   historyLengthRef.current = model.history.length;
   const sentHistoryRef = (0, import_react34.useRef)([]);
   const inputHistory = (0, import_react34.useMemo)(() => {
-    const fromModel = model.history
-      .filter((m) => m.kind === "user" && typeof m.text === "string" && m.text.trim().length > 0)
-      .map((m) => m.text);
+    const fromModel = model.history.filter((m) => m.kind === "user" && typeof m.text === "string" && m.text.trim().length > 0).map((m) => m.text);
     const combined = [];
     for (const item of [...fromModel, ...sentHistoryRef.current]) {
       const trimmed = item.trim();
-      if (trimmed.length > 0 && combined.at(-1) !== trimmed) {
-        combined.push(trimmed);
-      }
+      if (trimmed.length > 0 && combined.at(-1) !== trimmed) combined.push(trimmed);
     }
     return combined;
   }, [model.history]);
@@ -59108,16 +59067,12 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
       });
       else if (action.kind === "send") {
         const trimmed = action.text.trim();
-        if (trimmed.length > 0 && sentHistoryRef.current.at(-1) !== trimmed) {
-          sentHistoryRef.current.push(trimmed);
-        }
+        if (trimmed.length > 0 && sentHistoryRef.current.at(-1) !== trimmed) sentHistoryRef.current.push(trimmed);
         issueViewportCommand({ kind: "reset" });
         controller.dispatch(action);
       } else if (action.kind === "command") {
         const queryText = action.query.trim().startsWith("/") ? action.query.trim() : `/${action.query.trim()}`;
-        if (queryText.length > 0 && sentHistoryRef.current.at(-1) !== queryText) {
-          sentHistoryRef.current.push(queryText);
-        }
+        if (queryText.length > 0 && sentHistoryRef.current.at(-1) !== queryText) sentHistoryRef.current.push(queryText);
         controller.dispatch(action);
       } else if (action.kind === "new-session" || action.kind === "select-session") {
         sentHistoryRef.current = [];

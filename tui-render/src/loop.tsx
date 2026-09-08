@@ -91,7 +91,7 @@ import type { ToolDetailsPaneState, ToolDetailsInput } from './tool-details-pane
 import { toolPolicyDefaults } from './render-policy.ts'
 import { QueueChip } from './queue-chip.tsx'
 import { conversationWidth } from './conversation-layout.ts'
-import { tuiCopy, type TuiLocale } from './ui-copy.ts'
+import { getBrailleSpinnerFrame, tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type TranscriptViewportCommandInput = WithoutSequence<TranscriptViewportCommand>
@@ -2023,6 +2023,17 @@ export function TuiLoop({
   useEffect(() => {
     if (model.status === 'generating') frameProbe?.beginMeasurement()
   }, [frameProbe, model.status])
+  const [, setGeneratingTick] = useState(0)
+  useEffect(() => {
+    if (model.status !== 'generating') return
+    const timer = setInterval(() => {
+      setGeneratingTick(t => (t + 1) % 10000)
+    }, 100)
+    return () => clearInterval(timer)
+  }, [model.status])
+  const footerSpinner = model.status === 'generating'
+    ? getBrailleSpinnerFrame(Date.now())
+    : undefined
   const interaction = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getInteraction(),
@@ -2612,12 +2623,14 @@ export function TuiLoop({
       ? [formatQuietStatusRow({
         ...adaptiveInfoFooter,
         locale,
+        spinner: footerSpinner,
         reasoningVisible: model.reasoningExpanded,
         tip: statusLabel === '' ? undefined : scrollHint,
       }, columns)]
       : formatAdaptiveInfoFooterRows({
         ...adaptiveInfoFooter,
         locale,
+        spinner: footerSpinner,
         environment: shortenHomePath(controller.getCwd(), homedir()),
         tip: statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
       }, columns, footerRowBudget)
@@ -2645,7 +2658,7 @@ export function TuiLoop({
     const visibleRows = adaptiveRows.map((row, index) => {
       if (index !== 0 || goalLine === undefined) return row
       if (footerRowBudget === 1 && adaptiveInfoFooter !== undefined) {
-        return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, tip: goalLine }, columns)
+        return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, spinner: footerSpinner, tip: goalLine }, columns)
       }
       const baseText = row.runs.map(run => run.text).join('')
       if (displayWidth(`${goalLine} · ${baseText}`) > columns) {

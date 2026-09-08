@@ -845,6 +845,59 @@ describe('StreamView', () => {
     expect(plain).not.toContain('▌')
   })
 
+  it('renders tail placeholder after completed tool calls while generating', () => {
+    const plain = stripAnsi(
+      renderToString(
+        createElement(StreamView, {
+          model: model({
+            activeTurn: {
+              turn: 1,
+              assistantText: 'Let me check',
+              reasoningText: '',
+              toolCalls: [{ callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' }],
+              content: [
+                { kind: 'text', text: 'Let me check' },
+                { kind: 'tool-call', callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' },
+                { kind: 'tool-result', callId: ToolCallId('c1'), result: 'file.txt', isError: false },
+              ],
+              reasoningDurationMs: 1200,
+            },
+            status: 'generating',
+          }),
+        }),
+      ),
+    )
+    expect(plain).toContain('Let me check')
+    expect(plain).toContain('bash')
+    expect(plain).toContain('✓')
+    expect(plain).toContain('● 正在处理… (1.2s)')
+  })
+
+  it('renders tail thinking placeholder when reasoning is active but collapsed', () => {
+    const plain = stripAnsi(
+      renderToString(
+        createElement(StreamView, {
+          model: model({
+            reasoningExpanded: false,
+            activeTurn: {
+              turn: 1,
+              assistantText: '',
+              reasoningText: 'investigating problem',
+              toolCalls: [],
+              content: [
+                { kind: 'reasoning', text: 'investigating problem', durationMs: 2500 },
+              ],
+              reasoningDurationMs: 2500,
+            },
+            status: 'generating',
+          }),
+        }),
+      ),
+    )
+    expect(plain).toContain('● 思考中… (2.5s)')
+    expect(plain).not.toContain('investigating problem')
+  })
+
   it('renders a table live once its delimiter row completes', () => {
     const streamed = (assistantText: string): string =>
       stripAnsi(

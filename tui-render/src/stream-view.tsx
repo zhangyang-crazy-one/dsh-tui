@@ -543,11 +543,22 @@ function liveDurationTarget(
   }
   const index = parts.findLastIndex(isVisiblePart)
   const part = parts[index]
-  if (part?.kind !== 'reasoning') return undefined
-  return {
-    identity: `turn-${String(turn.turn)}-reasoning-${String(index)}`,
-    durationMs: part.durationMs,
+  if (part?.kind === 'reasoning') {
+    return {
+      identity: `turn-${String(turn.turn)}-reasoning-${String(index)}`,
+      durationMs: part.durationMs,
+    }
   }
+  if (
+    (part?.kind === 'card' && part.card.status !== 'running')
+    || (part?.kind === 'tool-summary' && part.summary.runningCount === 0)
+  ) {
+    return {
+      identity: `turn-${String(turn.turn)}-pending-after-tool-${String(index)}`,
+      durationMs: turn.reasoningDurationMs ?? 0,
+    }
+  }
+  return undefined
 }
 
 /** Advance one live duration without allowing a newer event sample to move it backwards. */
@@ -1605,12 +1616,15 @@ export function StreamView({
     if (status === 'generating' && visibleParts.length === 0) {
       const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
       const spinner = getBrailleSpinnerFrame(liveMs)
+      const label = rawParts.some(p => p.kind === 'reasoning')
+        ? tuiCopy('thinking', locale)
+        : tuiCopy('processing', locale)
       const lines = project(id, {
         id,
         kind: 'active-placeholder',
         source: '',
         meta: {
-          activePlaceholder: `${spinner} ● 正在处理… (${formatSeconds(
+          activePlaceholder: `${spinner} ● ${label} (${formatSeconds(
             liveMs,
           )}s)`,
         },
@@ -1689,6 +1703,29 @@ export function StreamView({
         assistantBlockRowsScope,
       ), status === 'generating').lines)
       ranges.push({ start, end: rows.length })
+    }
+    if (status === 'generating') {
+      const lastRaw = rawParts[rawParts.length - 1]
+      const lastVisible = parts[parts.length - 1]
+      const isReasoningActive = lastRaw?.kind === 'reasoning'
+      const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
+        || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
+      if ((isReasoningActive && !reasoningExpanded) || isToolCompleted) {
+        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
+        const spinner = getBrailleSpinnerFrame(liveMs)
+        const label = isReasoningActive
+          ? tuiCopy('thinking', locale)
+          : tuiCopy('processing', locale)
+        rows.push(GAP_LINE)
+        rows.append(project(id, {
+          id: `${id}-tail-placeholder`,
+          kind: 'active-placeholder',
+          source: '',
+          meta: {
+            activePlaceholder: `${spinner} ● ${label} (${formatSeconds(liveMs)}s)`,
+          },
+        }, blockRowsScope, undefined, true).lines)
+      }
     }
     return { id, lines: rows.build(), ranges, storeBlocks }
   }, [
@@ -2548,6 +2585,9 @@ export function StreamView({
       const liveMs = liveDurationMs ?? turn.reasoningDurationMs
       const spinner = getBrailleSpinnerFrame(liveMs)
       const tip = getBilingualTip(liveMs, locale)
+      const label = rawParts.some(p => p.kind === 'reasoning')
+        ? tuiCopy('thinking', locale)
+        : tuiCopy('processing', locale)
       return (
         <Box flexDirection="column" width="100%" flexShrink={0}>
           <Text>
@@ -2555,7 +2595,7 @@ export function StreamView({
               styled(spinner, 'accentText', undefined, true),
               styled(' ● ', 'accentText', undefined, true),
               styled(
-                `正在处理… (${formatSeconds(liveMs)}s)`,
+                `${label} (${formatSeconds(liveMs)}s)`,
                 'fg',
               ),
             ])}
@@ -2573,6 +2613,17 @@ export function StreamView({
     parts.forEach((part, index) => {
       if (isVisiblePart(part)) lastVisiblePart = index
     })
+    const lastRaw = rawParts[rawParts.length - 1]
+    const lastVisible = parts[parts.length - 1]
+    const isReasoningActive = lastRaw?.kind === 'reasoning'
+    const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
+      || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
+    const showTail = generating && ((isReasoningActive && !reasoningExpanded) || isToolCompleted)
+    const tailLiveMs = liveDurationMs ?? turn.reasoningDurationMs
+    const tailSpinner = getBrailleSpinnerFrame(tailLiveMs)
+    const tailLabel = isReasoningActive
+      ? tuiCopy('thinking', locale)
+      : tuiCopy('processing', locale)
     return (
       <Box flexDirection="column" width="100%" flexShrink={0}>
         {parts.map((part, index) => {
@@ -2593,6 +2644,20 @@ export function StreamView({
             </Box>
           )
         })}
+        {showTail && (
+          <Box marginTop={1}>
+            <Text>
+              {paintRow([
+                styled(tailSpinner, 'accentText', undefined, true),
+                styled(' ● ', 'accentText', undefined, true),
+                styled(
+                  `${tailLabel} (${formatSeconds(tailLiveMs)}s)`,
+                  'fg',
+                ),
+              ])}
+            </Text>
+          </Box>
+        )}
       </Box>
     )
   }

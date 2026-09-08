@@ -214,4 +214,20 @@ describe('formatAdaptiveInfoFooter', () => {
     expect(narrow.runs).toContainEqual({ text: '请求失败', token: 'error' })
     expect(narrow.runs.map(run => run.text).join('')).not.toMatch(/缓存命|上下…/u)
   })
+
+  it('formats status with animated braille spinner when provided', () => {
+    const wide = formatAdaptiveInfoFooterRows({
+      ...view,
+      status: '生成中',
+      spinner: '⠋',
+    }, 120, 2)
+    expect(wide[0]?.runs.map(r => r.text).join('')).toContain('状态 ⠋ 生成中')
+
+    const quiet = formatQuietStatusRow({
+      ...view,
+      status: '生成中',
+      spinner: '⠋',
+    }, 120)
+    expect(quiet.runs.map(r => r.text).join('')).toContain('⠋ 生成中')
+  })
 })

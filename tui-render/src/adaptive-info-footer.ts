@@ -36,6 +36,7 @@ export interface AdaptiveInfoFooterView {
   readonly provider: string
   readonly model: string
   readonly status: string
+  readonly spinner?: string | undefined
   readonly effort?: string | undefined
   readonly environment?: string | undefined
   readonly tip?: string | undefined
@@ -120,7 +121,8 @@ function retryText(retry: AdaptiveRetryView, locale?: TuiLocale): string {
 
 function workspaceSegments(view: AdaptiveInfoFooterView, columns: number): Segment[] {
   const status = escapeContent(view.status)
-  const statusSegment = segment(`${tuiCopy('status', view.locale)} ${status}`, statusToken(status))
+  const statusDisplay = view.spinner !== undefined && view.spinner !== '' ? `${view.spinner} ${status}` : status
+  const statusSegment = segment(`${tuiCopy('status', view.locale)} ${statusDisplay}`, statusToken(status))
   let selected = [statusSegment]
   if (view.environment !== undefined) {
     const environment = segment(escapeContent(view.environment), 'fgSoft')
@@ -304,7 +306,8 @@ export function formatQuietStatusRow(
   const leftText = view.tip && view.tip !== '' ? escapeContent(view.tip) : leftDefault
   const critical: Segment[] = []
   const status = escapeContent(view.status)
-  if (status !== '') critical.push(segment(status, statusToken(status)))
+  const statusDisplay = view.spinner !== undefined && view.spinner !== '' ? `${view.spinner} ${status}` : status
+  if (status !== '') critical.push(segment(statusDisplay, statusToken(status)))
   if (view.retry !== undefined) critical.push(segment(retryText(view.retry, view.locale), 'warning'))
   const contexts = [...contextSegments(view.contextPressure, view.locale)]
   const pressure = view.contextPressure

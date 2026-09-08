@@ -41,6 +41,8 @@ const zh = {
   toolCopyFailed: '✗ 工具原文复制失败',
   toolExportFailed: '✗ 工具原文导出失败',
   toolExportAction: '导出完整原文',
+  processing: '正在处理…',
+  thinking: '思考中…',
 } as const
 
 /** Typed presentation-copy keys shared by the runtime and renderer. */
@@ -84,6 +86,8 @@ const en: Readonly<Record<TuiCopyKey, string>> = {
   toolCopyFailed: '✗ Tool source copy failed',
   toolExportFailed: '✗ Tool source export failed',
   toolExportAction: 'Export full source',
+  processing: 'Processing…',
+  thinking: 'Thinking…',
 }
 
 const dictionaries: Readonly<Record<TuiLocale, Readonly<Record<TuiCopyKey, string>>>> = { 'zh-CN': zh, 'en-US': en }
