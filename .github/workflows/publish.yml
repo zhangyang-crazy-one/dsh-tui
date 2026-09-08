@@ -16,7 +16,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 concurrency:
@@ -78,4 +78,12 @@ jobs:
             npm_dist_tag="next"
           fi
           npm publish --access public --tag "${npm_dist_tag}"
+      - name: Upload release asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          tarball="$(npm pack)"
+          gh release upload "${RELEASE_TAG}" "${tarball}" --clobber
+
 
