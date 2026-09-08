@@ -105,11 +105,12 @@ describe('formatSymbolSpacing', () => {
     expect(formatSymbolSpacing('把①写进')).toBe('把 ① 写进')
   })
 
-  it('normalizes BMP emojis without VS16 and pads adjacent CJK characters and punctuation', () => {
-    expect(formatSymbolSpacing('⚠️注意：商汤网关 schema 较严格')).toBe('⚠️ 注意：商汤网关 schema 较严格')
-    expect(formatSymbolSpacing('⚙设置')).toBe('⚙️ 设置')
+  it('normalizes narrow BMP emojis to true wide emojis and pads adjacent CJK characters and punctuation', () => {
+    expect(formatSymbolSpacing('⚠️注意：商汤网关 schema 较严格')).toBe('🚨 注意：商汤网关 schema 较严格')
+    expect(formatSymbolSpacing('⚙设置')).toBe('🔧 设置')
     expect(formatSymbolSpacing('提示💡内容')).toBe('提示 💡 内容')
-    expect(formatSymbolSpacing('⚠️【注意】')).toBe('⚠️ 【注意】')
+    expect(formatSymbolSpacing('⚠️【注意】')).toBe('🚨 【注意】')
+    expect(formatSymbolSpacing('ℹ️ 说明')).toBe('💡 说明')
   })
 
   it('leaves pure ASCII untouched', () => {

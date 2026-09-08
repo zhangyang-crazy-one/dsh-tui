@@ -56,7 +56,13 @@ export {
   selectBrandRenderTier,
 } from './pixel-fish-home.tsx'
 export type { PixelFishHomeProps } from './pixel-fish-home.tsx'
-export { escapeContent, displayWidth, formatSymbolSpacing, wcwidthSafeSlice } from './content.ts'
+export {
+  escapeContent,
+  displayWidth,
+  formatSymbolSpacing,
+  NARROW_TO_WIDE_EMOJIS,
+  wcwidthSafeSlice,
+} from './content.ts'
 export { isHumanUserMessage } from './message-visibility.ts'
 export { StreamView } from './stream-view.tsx'
 export type { StreamViewProps } from './stream-view.tsx'
@@ -91,8 +97,13 @@ export type {
 export { TranscriptLayoutCache } from './transcript-layout-cache.ts'
 export type { TranscriptLayoutCacheInput } from './transcript-layout-cache.ts'
 export { SessionPane, relativeTime } from './session-pane.tsx'
-export { tuiCopy } from './ui-copy.ts'
-export type { TuiCopyKey, TuiLocale } from './ui-copy.ts'
+export {
+  BRAILLE_SPINNER_FRAMES,
+  getBrailleSpinnerFrame,
+  getSwimmingFishFrame,
+  SWIMMING_FISH_FRAMES,
+  tuiCopy,
+} from './ui-copy.ts'
 export type {
   SessionRow,
   SessionPaneProps,

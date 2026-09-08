@@ -115,6 +115,41 @@ export function moveCaretByGrapheme(
   return text.length
 }
 
+/**
+ * Move the caret vertically up one line in multiline text, preserving the horizontal column.
+ * @param text - the buffered text.
+ * @param caretIndex - current caret offset.
+ * @returns new caret offset, or undefined if already on the first line.
+ */
+export function moveCaretUpLine(text: string, caretIndex: number): number | undefined {
+  const caret = clampCaretIndex(text, caretIndex)
+  const prevNewline = text.lastIndexOf('\n', caret - 1)
+  if (prevNewline === -1) return undefined
+  const currentLineStart = prevNewline + 1
+  const col = caret - currentLineStart
+  const lineBeforeStart = text.lastIndexOf('\n', prevNewline - 1) + 1
+  const lineBeforeLength = prevNewline - lineBeforeStart
+  return lineBeforeStart + Math.min(col, lineBeforeLength)
+}
+
+/**
+ * Move the caret vertically down one line in multiline text, preserving the horizontal column.
+ * @param text - the buffered text.
+ * @param caretIndex - current caret offset.
+ * @returns new caret offset, or undefined if already on the last line.
+ */
+export function moveCaretDownLine(text: string, caretIndex: number): number | undefined {
+  const caret = clampCaretIndex(text, caretIndex)
+  const nextNewline = text.indexOf('\n', caret)
+  if (nextNewline === -1) return undefined
+  const currentLineStart = text.lastIndexOf('\n', caret - 1) + 1
+  const col = caret - currentLineStart
+  let nextLineEnd = text.indexOf('\n', nextNewline + 1)
+  if (nextLineEnd === -1) nextLineEnd = text.length
+  const nextLineLength = nextLineEnd - (nextNewline + 1)
+  return (nextNewline + 1) + Math.min(col, nextLineLength)
+}
+
 /** Viewport used to turn composer caret geometry into a frame-suffix CSI anchor. */
 export interface ComposerFrameAnchorOptions {
   /** Display columns of the prompt marker before the buffer (`> ` is 2). */

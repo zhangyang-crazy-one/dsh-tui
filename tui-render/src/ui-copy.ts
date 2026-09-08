@@ -99,29 +99,39 @@ export function tuiCopy(key: TuiCopyKey, locale: TuiLocale = 'zh-CN'): string {
 }
 
 /**
- * 2-character swimming fish frames moving forward, disappearing into water, leaving a bubble, and re-emerging.
- * Each frame is padded to exactly 5 columns so total width never jitters.
+ * Standard 10-frame braille spinner animation.
+ * Each frame is exactly 1 column wide with zero jitter.
  */
-export const SWIMMING_FISH_FRAMES = [
-  '>o   ',
-  ' >o  ',
-  '  >o ',
-  '   >o',
-  '    >',
-  '     ',
-  '  ·  ',
-  'o    ',
+export const BRAILLE_SPINNER_FRAMES = [
+  '⠋',
+  '⠙',
+  '⠹',
+  '⠸',
+  '⠼',
+  '⠴',
+  '⠦',
+  '⠧',
+  '⠇',
+  '⠏',
 ] as const
 
 /**
- * Returns the active frame for the 2-character swimming fish animation.
- * 150ms per frame, 1200ms per full cycle.
+ * Returns the active frame for the braille spinner animation.
+ * 100ms per frame, 1000ms per full cycle.
  * @param liveMs - elapsed time in milliseconds.
- * @returns 5-column wide string containing the swimming fish frame.
+ * @returns 1-column wide string containing the braille spinner frame.
  */
+export function getBrailleSpinnerFrame(liveMs: number | undefined): string {
+  const index = Math.floor(Math.max(0, liveMs ?? 0) / 100) % BRAILLE_SPINNER_FRAMES.length
+  return BRAILLE_SPINNER_FRAMES[index] ?? BRAILLE_SPINNER_FRAMES[0]
+}
+
+/** Backward-compatible alias for BRAILLE_SPINNER_FRAMES. */
+export const SWIMMING_FISH_FRAMES = BRAILLE_SPINNER_FRAMES
+
+/** Backward-compatible alias for getBrailleSpinnerFrame. */
 export function getSwimmingFishFrame(liveMs: number | undefined): string {
-  const index = Math.floor(Math.max(0, liveMs ?? 0) / 150) % SWIMMING_FISH_FRAMES.length
-  return SWIMMING_FISH_FRAMES[index] ?? SWIMMING_FISH_FRAMES[0]
+  return getBrailleSpinnerFrame(liveMs)
 }
 
 /**

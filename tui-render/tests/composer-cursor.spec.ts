@@ -7,6 +7,8 @@ import {
   composerLineWindow,
   clampCaretIndex,
   moveCaretByGrapheme,
+  moveCaretUpLine,
+  moveCaretDownLine,
 } from '../src/composer-cursor.ts'
 
 describe('composerCursorPosition', () => {
@@ -180,5 +182,25 @@ describe('composerFrameAnchor', () => {
         rowsBelow: 3,
       }),
     ).toEqual({ up: 4, col: 5 })
+  })
+})
+
+describe('moveCaretUpLine and moveCaretDownLine', () => {
+  it('navigates vertically across lines in multiline text', () => {
+    const text = 'first\nsecond\nthird'
+    // 'first' is 0..4, '\n' is 5, 'second' is 6..11, '\n' is 12, 'third' is 13..17
+    // Caret at 'e' in 'second' is index 7 (col 1)
+    expect(moveCaretUpLine(text, 7)).toBe(1) // 'i' in 'first' (col 1)
+    expect(moveCaretUpLine(text, 1)).toBeUndefined() // first line returns undefined
+
+    expect(moveCaretDownLine(text, 1)).toBe(7) // from 'i' in 'first' to 'e' in 'second'
+    expect(moveCaretDownLine(text, 7)).toBe(14) // from 'e' in 'second' to 'h' in 'third'
+    expect(moveCaretDownLine(text, 14)).toBeUndefined() // last line returns undefined
+  })
+
+  it('clamps column when target line is shorter', () => {
+    const text = 'short\nlonger line'
+    // Caret at index 14 ('e' in 'longer line', col 8)
+    expect(moveCaretUpLine(text, 14)).toBe(5) // clamped to end of 'short' (col 5)
   })
 })

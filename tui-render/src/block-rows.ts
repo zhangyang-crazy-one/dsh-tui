@@ -67,7 +67,7 @@ import type {
 } from './tool-cards.ts'
 import { ToolRowCache, truncateMiddleDisplay } from './tool-rows.ts'
 import { toolPolicyDefaults } from './render-policy.ts'
-import type { TuiLocale } from './ui-copy.ts'
+import { getBrailleSpinnerFrame, type TuiLocale } from './ui-copy.ts'
 import type { BackgroundToken } from './theme.ts'
 
 /**
@@ -725,7 +725,8 @@ function projectReasoningEntry(
   if (!expanded || entry.source === '') {
     return { revision: 0, sourceLength: entry.source.length, lines: [] }
   }
-  const headerText = `${live ? '' : '▾ '}✻ 思考 (${secondsLabel}s)`
+  const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : '✻'
+  const headerText = `${live ? '' : '▾ '}${icon} 思考 (${secondsLabel}s)`
   const lines: MarkdownRenderLine[] = [
     lineForText(headerText, 'fgDim', false, 0),
   ]

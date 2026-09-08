@@ -47429,13 +47429,22 @@ function wcwidthSafeSlice(text4, maxCols) {
   }
   return text4.slice(0, end);
 }
+var NARROW_TO_WIDE_EMOJIS = {
+  "\u26A0": "\u{1F6A8}",
+  "\u2139": "\u{1F4A1}",
+  "\u2699": "\u{1F527}",
+  "\u23F1": "\u{23F0}",
+  "\u2709": "\u{1F4E7}",
+  "\u270F": "\u{1F4DD}"
+};
 function formatSymbolSpacing(text4) {
   if (text4 === "" || /^[\x20-\x7e]*$/u.test(text4)) return text4;
-  let res = text4.replace(/([\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764])(?!\uFE0F)/gu, "$1\uFE0F");
-  res = res.replace(/([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])([\u4E00-\u9FFF\u3400-\u4DBF])/gu, "$1 $2");
-  res = res.replace(/([\u4E00-\u9FFF\u3400-\u4DBF])([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])/gu, "$1 $2");
-  res = res.replace(/([\u{1F300}-\u{1FAFF}\u2600-\u27BF]\uFE0F?)([\u4E00-\u9FFF\u3400-\u4DBF])/gu, "$1 $2");
-  res = res.replace(/([\u4E00-\u9FFF\u3400-\u4DBF])([\u{1F300}-\u{1FAFF}\u2600-\u27BF])/gu, "$1 $2");
+  let res = text4.replace(/([\u26A0\u2699\u2139\u23F1\u2709\u270F])[\uFE0E\uFE0F]?/gu, (_, ch) => NARROW_TO_WIDE_EMOJIS[ch] ?? ch);
+  res = res.replace(/([\u2328\u2712\u2702\u26C8\u2764])(?!\uFE0F|\uFE0E)/gu, "$1\uFE0F");
+  res = res.replace(/([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])/gu, "$1 $2");
+  res = res.replace(/([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u2460-\u24F4\u2776-\u2793\u3251-\u325F\u32B1-\u32BF])/gu, "$1 $2");
+  res = res.replace(/([\u{1F300}-\u{1FAFF}\u2600-\u27BF][\uFE0E\uFE0F]?)([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])/gu, "$1 $2");
+  res = res.replace(/([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u{1F300}-\u{1FAFF}\u2600-\u27BF])/gu, "$1 $2");
   return res;
 }
 function displayColumnSlice(text4, startCol, endCol) {
@@ -50016,8 +50025,26 @@ function blockPositionRange(node2) {
 function formatSeconds(ms) {
   return (ms / 1e3).toFixed(1);
 }
-function thinkingHeader(durationMs, expanded) {
-  return paintRow([styled(`${expanded ? "\u25BE " : ""}\u273B \u601D\u8003 (${formatSeconds(durationMs)}s)`, "fgDim")]);
+var BRAILLE_SPINNER_FRAMES = [
+  "\u280B",
+  "\u2819",
+  "\u2839",
+  "\u2838",
+  "\u283C",
+  "\u2834",
+  "\u2826",
+  "\u2827",
+  "\u2807",
+  "\u280F"
+];
+function getBrailleSpinnerFrame(liveMs) {
+  const index = Math.floor(Math.max(0, liveMs ?? 0) / 100) % BRAILLE_SPINNER_FRAMES.length;
+  return BRAILLE_SPINNER_FRAMES[index] ?? BRAILLE_SPINNER_FRAMES[0];
+}
+function thinkingHeader(durationMs, expanded, live = false) {
+  const mark = expanded ? "\u25BE " : "";
+  const icon = live ? getBrailleSpinnerFrame(durationMs) : "\u273B";
+  return paintRow([styled(`${mark}${icon} \u601D\u8003 (${formatSeconds(durationMs)}s)`, "fgDim")]);
 }
 function bodyRow(line2, key) {
   return (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(`  ${escapeContent(line2)}`, "fgDim")]) }, key);
@@ -50029,7 +50056,7 @@ function ReasoningBlock({ text: text4, collapsed, durationMs, live = false, maxC
   return (0, import_jsx_runtime.jsxs)(Box_default, {
     flexDirection: "column",
     width: "100%",
-    children: [(0, import_jsx_runtime.jsx)(Text, { children: thinkingHeader(durationMs, !live) }), body.map((line2, index2) => bodyRow(line2, index2))]
+    children: [(0, import_jsx_runtime.jsx)(Text, { children: thinkingHeader(durationMs, !live, live) }), body.map((line2, index2) => bodyRow(line2, index2))]
   });
 }
 function indexedRows(length, read) {
@@ -50200,18 +50227,9 @@ var dictionaries = {
 function tuiCopy(key, locale = "zh-CN") {
   return dictionaries[locale][key];
 }
-var SWIMMING_FISH_FRAMES = [
-  ">o   ",
-  " >o  ",
-  "  >o ",
-  "   >o",
-  "    >",
-  "     ",
-  "  \xB7  ",
-  "o    "
-];
+var SWIMMING_FISH_FRAMES = BRAILLE_SPINNER_FRAMES;
 function getSwimmingFishFrame(liveMs) {
-  return SWIMMING_FISH_FRAMES[Math.floor(Math.max(0, liveMs ?? 0) / 150) % SWIMMING_FISH_FRAMES.length] ?? SWIMMING_FISH_FRAMES[0];
+  return getBrailleSpinnerFrame(liveMs);
 }
 var GENERATION_TIPS_ZH = [
   "\u63D0\u793A\uFF1ACtrl+E \u5C55\u5F00\u5DE5\u5177\u5361 \xB7 /tools \u67E5\u770B\u5B8C\u6574\u8F93\u51FA",
@@ -53239,7 +53257,8 @@ function projectReasoningEntry(entry, scope) {
     sourceLength: entry.source.length,
     lines: []
   };
-  const lines = [lineForText(`${live ? "" : "\u25BE "}\u273B \u601D\u8003 (${secondsLabel}s)`, "fgDim", false, 0)];
+  const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : "\u273B";
+  const lines = [lineForText(`${live ? "" : "\u25BE "}${icon} \u601D\u8003 (${secondsLabel}s)`, "fgDim", false, 0)];
   const body = wrapDisplayLines(escapeContent(entry.source), Math.max(1, scope.width - 4));
   for (const row of body) lines.push(lineForText(`  ${row}`, "fgDim", false, lines.length));
   return {
@@ -55016,7 +55035,7 @@ function StreamView({ model, presenters, brandTier = "plain", brandAnimation = f
           id,
           kind: "active-placeholder",
           source: "",
-          meta: { activePlaceholder: `${getSwimmingFishFrame(liveMs)} \u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(liveMs)}s)` }
+          meta: { activePlaceholder: `${getBrailleSpinnerFrame(liveMs)} \u25CF \u6B63\u5728\u5904\u7406\u2026 (${formatSeconds(liveMs)}s)` }
         }, blockRowsScope, void 0, true).lines,
         ranges: [],
         storeBlocks
@@ -55790,7 +55809,7 @@ function StreamView({ model, presenters, brandTier = "plain", brandAnimation = f
     const visibleParts = displayedParts(rawParts, reasoningExpanded);
     if (generating && visibleParts.length === 0) {
       const liveMs = liveDurationMs ?? turn.reasoningDurationMs;
-      const fish = getSwimmingFishFrame(liveMs);
+      const fish = getBrailleSpinnerFrame(liveMs);
       const tip = getBilingualTip(liveMs, locale);
       return (0, import_jsx_runtime.jsxs)(Box_default, {
         flexDirection: "column",
@@ -56694,6 +56713,56 @@ function moveCaretByGrapheme(text4, caretIndex, direction) {
   for (const part of GRAPHEME.segment(text4.slice(caret))) return caret + part.segment.length;
   return text4.length;
 }
+function moveCaretUpLine(text4, caretIndex) {
+  const lines = text4.split("\n");
+  if (lines.length <= 1) return void 0;
+  const caret = clampCaretIndex(text4, caretIndex);
+  let accumulated = 0;
+  let currentRow = 0;
+  let col = 0;
+  for (let r = 0; r < lines.length; r++) {
+    const lineLen = lines[r].length;
+    if (caret <= accumulated + lineLen) {
+      currentRow = r;
+      col = caret - accumulated;
+      break;
+    }
+    accumulated += lineLen + 1;
+  }
+  if (currentRow === 0) return void 0;
+  let targetAcc = 0;
+  for (let r = 0; r < currentRow - 1; r++) {
+    targetAcc += lines[r].length + 1;
+  }
+  const prevLineLen = lines[currentRow - 1].length;
+  const targetCol = Math.min(col, prevLineLen);
+  return targetAcc + targetCol;
+}
+function moveCaretDownLine(text4, caretIndex) {
+  const lines = text4.split("\n");
+  if (lines.length <= 1) return void 0;
+  const caret = clampCaretIndex(text4, caretIndex);
+  let accumulated = 0;
+  let currentRow = lines.length - 1;
+  let col = 0;
+  for (let r = 0; r < lines.length; r++) {
+    const lineLen = lines[r].length;
+    if (caret <= accumulated + lineLen) {
+      currentRow = r;
+      col = caret - accumulated;
+      break;
+    }
+    accumulated += lineLen + 1;
+  }
+  if (currentRow >= lines.length - 1) return void 0;
+  let targetAcc = 0;
+  for (let r = 0; r <= currentRow; r++) {
+    targetAcc += lines[r].length + 1;
+  }
+  const nextLineLen = lines[currentRow + 1].length;
+  const targetCol = Math.min(col, nextLineLen);
+  return targetAcc + targetCol;
+}
 function composerFrameAnchor(text4, caretIndex, options) {
   const caret = composerCursorPosition(text4, caretIndex);
   const lineCount = Math.max(1, text4.split("\n").length);
@@ -57582,7 +57651,9 @@ function holdComposer(state, action) {
     mentionDismissed: state.mentionDismissed,
     commandSelectedIndex: state.commandSelectedIndex,
     commandDismissed: state.commandDismissed,
-    caretIndex: state.caretIndex
+    caretIndex: state.caretIndex,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft
   };
 }
 function draftKeyEffect(state, key, keyInfo, actions) {
@@ -57666,7 +57737,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
   candidateCount: 0,
   selectedIndex: 0,
   selectedCandidate: void 0
-}, queuedDraft = {}, compaction = { available: false }) {
+}, queuedDraft = {}, compaction = { available: false }, inputHistory = []) {
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
   activeMentionQuery(state.text);
   const agentHubOpen = overlays.agentHub?.open === true;
@@ -57920,6 +57991,20 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       prefixG: false,
       renaming: state.renaming
     };
+    if (state.historyIndex !== void 0) {
+      const restored = state.historyDraft ?? "";
+      return {
+        kind: "dispatch",
+        action: { kind: "none" },
+        text: restored,
+        commandQuery: void 0,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: restored.length,
+        historyIndex: void 0,
+        historyDraft: void 0
+      };
+    }
     return {
       kind: "dispatch",
       action: { kind: "none" },
@@ -58102,7 +58187,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: previous3
+      caretIndex: previous3,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
     };
   }
   if ((key === "	" || keyInfo.tab) && keyInfo.shift) {
@@ -58504,7 +58591,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       commandQuery: state.commandQuery,
       prefixG: false,
       renaming: state.renaming,
-      caretIndex: moveCaretByGrapheme(state.text, caret, keyInfo.leftArrow ? -1 : 1)
+      caretIndex: moveCaretByGrapheme(state.text, caret, keyInfo.leftArrow ? -1 : 1),
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
     };
   }
   if (keyInfo.pageUp) return holdComposer(state, {
@@ -58524,6 +58613,21 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     edge: "latest"
   });
   if (keyInfo.upArrow) {
+    if (state.text.includes("\n")) {
+      const caret = clampCaretIndex(state.text, state.caretIndex);
+      const targetCaret = moveCaretUpLine(state.text, caret);
+      if (targetCaret !== void 0) return {
+        kind: "dispatch",
+        action: { kind: "none" },
+        text: state.text,
+        commandQuery: state.commandQuery,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: targetCaret,
+        historyIndex: state.historyIndex,
+        historyDraft: state.historyDraft
+      };
+    }
     if (state.text === "" && queuedDraft.headText !== void 0) return {
       kind: "dispatch",
       action: { kind: "take-queued-draft" },
@@ -58531,33 +58635,77 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       commandQuery: void 0,
       prefixG: false,
       renaming: state.renaming,
-      caretIndex: queuedDraft.headText.length
+      caretIndex: queuedDraft.headText.length,
+      historyIndex: void 0,
+      historyDraft: void 0
     };
-    return {
-      kind: "dispatch",
-      action: {
-        kind: "scroll",
-        delta: 1
-      },
-      text: state.text,
-      commandQuery: state.commandQuery,
-      prefixG: false,
-      renaming: state.renaming,
-      caretIndex: state.caretIndex
-    };
+    if (inputHistory.length > 0) {
+      const isBrowsing = state.historyIndex !== void 0;
+      const currentIndex = state.historyIndex ?? inputHistory.length;
+      const nextIndex = Math.max(0, currentIndex - 1);
+      const nextText = inputHistory[nextIndex] ?? "";
+      const savedDraft = isBrowsing ? state.historyDraft : state.text;
+      return {
+        kind: "dispatch",
+        action: { kind: "none" },
+        text: nextText,
+        commandQuery: void 0,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: nextText.length,
+        historyIndex: nextIndex,
+        historyDraft: savedDraft
+      };
+    }
+    return { kind: "none" };
   }
-  if (keyInfo.downArrow) return {
-    kind: "dispatch",
-    action: {
-      kind: "scroll",
-      delta: -1
-    },
-    text: state.text,
-    commandQuery: state.commandQuery,
-    prefixG: false,
-    renaming: state.renaming,
-    caretIndex: state.caretIndex
-  };
+  if (keyInfo.downArrow) {
+    if (state.text.includes("\n")) {
+      const caret = clampCaretIndex(state.text, state.caretIndex);
+      const targetCaret = moveCaretDownLine(state.text, caret);
+      if (targetCaret !== void 0) return {
+        kind: "dispatch",
+        action: { kind: "none" },
+        text: state.text,
+        commandQuery: state.commandQuery,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: targetCaret,
+        historyIndex: state.historyIndex,
+        historyDraft: state.historyDraft
+      };
+    }
+    if (state.historyIndex !== void 0) {
+      const nextIndex = state.historyIndex + 1;
+      if (nextIndex < inputHistory.length) {
+        const nextText = inputHistory[nextIndex] ?? "";
+        return {
+          kind: "dispatch",
+          action: { kind: "none" },
+          text: nextText,
+          commandQuery: void 0,
+          prefixG: false,
+          renaming: state.renaming,
+          caretIndex: nextText.length,
+          historyIndex: nextIndex,
+          historyDraft: state.historyDraft
+        };
+      }
+      const restored = state.historyDraft ?? "";
+      return {
+        kind: "dispatch",
+        action: { kind: "none" },
+        text: restored,
+        commandQuery: void 0,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: restored.length,
+        historyIndex: void 0,
+        historyDraft: void 0
+      };
+    }
+    return { kind: "none" };
+  }
   if (/^[jk]+$/u.test(key) && !keyInfo.ctrl && !keyInfo.meta && state.text === "") {
     let delta = 0;
     for (const char of key) if (char === "k") delta += 1;
@@ -58591,7 +58739,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       renaming: state.renaming,
       caretIndex: caret + 1,
       commandSelectedIndex: 0,
-      commandDismissed: false
+      commandDismissed: false,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
     };
   }
   if (key === "@") {
@@ -58607,7 +58757,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: caret + 1
+      caretIndex: caret + 1,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
     };
   }
   if (isTextInput(key, keyInfo)) {
@@ -58624,7 +58776,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: caret + key.length
+      caretIndex: caret + key.length,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
     };
   }
   return {
@@ -58633,7 +58787,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     text: state.text,
     commandQuery: state.commandQuery,
     prefixG: false,
-    renaming: state.renaming
+    renaming: state.renaming,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft
   };
 }
 function feedbackLabel(feedback) {
@@ -58796,6 +58952,20 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
   helpLinesRef.current = helpPane.lines;
   const historyLengthRef = (0, import_react34.useRef)(model.history.length);
   historyLengthRef.current = model.history.length;
+  const sentHistoryRef = (0, import_react34.useRef)([]);
+  const inputHistory = (0, import_react34.useMemo)(() => {
+    const fromModel = model.history
+      .filter((m) => m.kind === "user" && typeof m.text === "string" && m.text.trim().length > 0)
+      .map((m) => m.text);
+    const combined = [];
+    for (const item of [...fromModel, ...sentHistoryRef.current]) {
+      const trimmed = item.trim();
+      if (trimmed.length > 0 && combined.at(-1) !== trimmed) {
+        combined.push(trimmed);
+      }
+    }
+    return combined;
+  }, [model.history]);
   const chordTimerRef = (0, import_react34.useRef)(void 0);
   const clearChord = () => {
     if (chordTimerRef.current !== void 0) {
@@ -58910,7 +59080,7 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
       candidateCount: mentionCandidates.length,
       selectedIndex: current.mentionSelectedIndex,
       selectedCandidate: mentionCandidates[current.mentionSelectedIndex]
-    }, { headText: queuedDraftText }, { available: (model.compactionDividers?.length ?? 0) > 0 });
+    }, { headText: queuedDraftText }, { available: (model.compactionDividers?.length ?? 0) > 0 }, inputHistory);
     if (effect.kind === "dispatch") {
       const action = effect.action;
       if (isSessionTransitionAction(action) && isSessionTransitionStatus(feedbackRef.current)) {
@@ -58936,7 +59106,21 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
         kind: "edge",
         edge: action.edge
       });
-      else if (action.kind === "send" || action.kind === "new-session" || action.kind === "select-session") {
+      else if (action.kind === "send") {
+        const trimmed = action.text.trim();
+        if (trimmed.length > 0 && sentHistoryRef.current.at(-1) !== trimmed) {
+          sentHistoryRef.current.push(trimmed);
+        }
+        issueViewportCommand({ kind: "reset" });
+        controller.dispatch(action);
+      } else if (action.kind === "command") {
+        const queryText = action.query.trim().startsWith("/") ? action.query.trim() : `/${action.query.trim()}`;
+        if (queryText.length > 0 && sentHistoryRef.current.at(-1) !== queryText) {
+          sentHistoryRef.current.push(queryText);
+        }
+        controller.dispatch(action);
+      } else if (action.kind === "new-session" || action.kind === "select-session") {
+        sentHistoryRef.current = [];
         issueViewportCommand({ kind: "reset" });
         controller.dispatch(action);
       } else if (action.kind === "intake-clipboard-image") controller.intakeClipboardImage().then((result) => {
@@ -58966,7 +59150,9 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
       mentionDismissed: effect.mentionDismissed ?? current.mentionDismissed,
       commandSelectedIndex: effect.commandSelectedIndex ?? current.commandSelectedIndex,
       commandDismissed: effect.commandDismissed ?? current.commandDismissed,
-      caretIndex: effect.caretIndex ?? (effect.text === current.text ? current.caretIndex : void 0)
+      caretIndex: effect.caretIndex ?? (effect.text === current.text ? current.caretIndex : void 0),
+      historyIndex: effect.historyIndex,
+      historyDraft: effect.historyDraft
     } : current;
     stateRef.current = next;
     setState(next);
@@ -58982,7 +59168,9 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: caret + token.length
+      caretIndex: caret + token.length,
+      historyIndex: void 0,
+      historyDraft: void 0
     };
     stateRef.current = next;
     setState(next);
@@ -59023,7 +59211,9 @@ function TuiLoop({ title, controller, brandTier = "plain", brandAutoEligible = f
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: caret + pasted.length
+      caretIndex: caret + pasted.length,
+      historyIndex: void 0,
+      historyDraft: void 0
     };
     stateRef.current = next;
     setState(next);

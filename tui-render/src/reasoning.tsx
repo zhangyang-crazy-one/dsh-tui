@@ -8,6 +8,7 @@ import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { escapeContent, wrapDisplayLines } from './content.ts'
 import { paintRow, styled } from './theme.ts'
+import { getBrailleSpinnerFrame } from './ui-copy.ts'
 
 /** Display state for one reasoning block. */
 export interface ReasoningBlockProps {
@@ -29,11 +30,12 @@ export function formatSeconds(ms: number): string {
 }
 
 /** Dim header for the live or expanded thinking block. */
-function thinkingHeader(durationMs: number, expanded: boolean): string {
+function thinkingHeader(durationMs: number, expanded: boolean, live = false): string {
   const mark = expanded ? '▾ ' : ''
+  const icon = live ? getBrailleSpinnerFrame(durationMs) : '✻'
   return paintRow([
     styled(
-      `${mark}✻ 思考 (${formatSeconds(durationMs)}s)`,
+      `${mark}${icon} 思考 (${formatSeconds(durationMs)}s)`,
       'fgDim',
     ),
   ])
@@ -67,7 +69,7 @@ export function ReasoningBlock({
   const body = wrapDisplayLines(escaped, Math.max(1, (maxCols ?? columns) - 4))
   return (
     <Box flexDirection="column" width="100%">
-      <Text>{thinkingHeader(durationMs, !live)}</Text>
+      <Text>{thinkingHeader(durationMs, !live, live)}</Text>
       {body.map((line, index) => bodyRow(line, index))}
     </Box>
   )

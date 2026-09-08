@@ -199,7 +199,7 @@ describe('text input delivery', () => {
     }
   })
 
-  it('scrolls on arrow keys while the composer is empty', () => {
+  it('navigates input history on arrow keys instead of scrolling the conversation', () => {
     const down = mapKeyEvent(
       EMPTY,
       '',
@@ -208,10 +208,7 @@ describe('text input delivery', () => {
       CHAT_PANE,
       CHAT_SEARCH,
     )
-    expect(down.kind === 'dispatch' ? down.action : down).toEqual({
-      kind: 'scroll',
-      delta: -1,
-    })
+    expect(down).toEqual({ kind: 'none' })
     const up = mapKeyEvent(
       EMPTY,
       '',
@@ -220,9 +217,101 @@ describe('text input delivery', () => {
       CHAT_PANE,
       CHAT_SEARCH,
     )
-    expect(up.kind === 'dispatch' ? up.action : up).toEqual({
-      kind: 'scroll',
-      delta: 1,
+    expect(up).toEqual({ kind: 'none' })
+
+    const history = ['first prompt', 'second prompt']
+    const historyArgs = [
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      history,
+    ] as const
+    const up1 = mapKeyEvent(
+      { ...EMPTY, text: 'my draft' },
+      '',
+      keyInfo({ upArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+      ...historyArgs,
+    )
+    expect(up1).toMatchObject({
+      kind: 'dispatch',
+      text: 'second prompt',
+      historyIndex: 1,
+      historyDraft: 'my draft',
+    })
+
+    const up2 = mapKeyEvent(
+      { ...EMPTY, text: 'second prompt', historyIndex: 1, historyDraft: 'my draft' },
+      '',
+      keyInfo({ upArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+      ...historyArgs,
+    )
+    expect(up2).toMatchObject({
+      kind: 'dispatch',
+      text: 'first prompt',
+      historyIndex: 0,
+      historyDraft: 'my draft',
+    })
+
+    const down1 = mapKeyEvent(
+      { ...EMPTY, text: 'first prompt', historyIndex: 0, historyDraft: 'my draft' },
+      '',
+      keyInfo({ downArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+      ...historyArgs,
+    )
+    expect(down1).toMatchObject({
+      kind: 'dispatch',
+      text: 'second prompt',
+      historyIndex: 1,
+      historyDraft: 'my draft',
+    })
+
+    const down2 = mapKeyEvent(
+      { ...EMPTY, text: 'second prompt', historyIndex: 1, historyDraft: 'my draft' },
+      '',
+      keyInfo({ downArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+      ...historyArgs,
+    )
+    expect(down2).toMatchObject({
+      kind: 'dispatch',
+      text: 'my draft',
+      historyIndex: undefined,
+      historyDraft: undefined,
+    })
+
+    const esc = mapKeyEvent(
+      { ...EMPTY, text: 'second prompt', historyIndex: 1, historyDraft: 'my draft' },
+      '',
+      keyInfo({ escape: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+    )
+    expect(esc).toMatchObject({
+      kind: 'dispatch',
+      text: 'my draft',
+      historyIndex: undefined,
+      historyDraft: undefined,
     })
   })
 
@@ -961,7 +1050,7 @@ describe('mapKeyEvent (Ink contract)', () => {
     }
   })
 
-  it('scrolls on arrow keys while the composer has text; j still inserts', () => {
+  it('navigates multiline caret or history on arrow keys; j still inserts', () => {
     const up = mapKeyEvent(
       { ...EMPTY, text: 'draft' },
       '',
@@ -970,10 +1059,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       CHAT_PANE,
       CHAT_SEARCH,
     )
-    expect(up.kind === 'dispatch' ? up.action : up).toEqual({
-      kind: 'scroll',
-      delta: 1,
-    })
+    expect(up).toEqual({ kind: 'none' })
     const down = mapKeyEvent(
       { ...EMPTY, text: 'draft' },
       '',
@@ -982,10 +1068,34 @@ describe('mapKeyEvent (Ink contract)', () => {
       CHAT_PANE,
       CHAT_SEARCH,
     )
-    expect(down.kind === 'dispatch' ? down.action : down).toEqual({
-      kind: 'scroll',
-      delta: -1,
+    expect(down).toEqual({ kind: 'none' })
+
+    const multilineDown = mapKeyEvent(
+      { ...EMPTY, text: 'line 1\nline 2', caretIndex: 2 },
+      '',
+      keyInfo({ downArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+    )
+    expect(multilineDown).toMatchObject({
+      kind: 'dispatch',
+      caretIndex: 9,
     })
+
+    const multilineUp = mapKeyEvent(
+      { ...EMPTY, text: 'line 1\nline 2', caretIndex: 9 },
+      '',
+      keyInfo({ upArrow: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+    )
+    expect(multilineUp).toMatchObject({
+      kind: 'dispatch',
+      caretIndex: 2,
+    })
+
     const letter = mapKeyEvent(
       { ...EMPTY, text: 'draft' },
       'j',
@@ -1657,7 +1767,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       CHAT_PANE,
       CHAT_SEARCH,
       ...args.slice(6),
-    )).toMatchObject({ action: { kind: 'scroll', delta: 1 }, text: 'busy' })
+    )).toEqual({ kind: 'none' })
     expect(mapKeyEvent(
       EMPTY,
       'k',

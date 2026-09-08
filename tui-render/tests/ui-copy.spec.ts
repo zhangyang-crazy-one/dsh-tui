@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { displayWidth } from '../src/content.ts'
 import {
+  BRAILLE_SPINNER_FRAMES,
   GENERATION_TIPS_EN,
   GENERATION_TIPS_ZH,
   getBilingualTip,
+  getBrailleSpinnerFrame,
   getSwimmingFishFrame,
   SWIMMING_FISH_FRAMES,
   tuiCopy,
@@ -16,24 +18,31 @@ describe('ui-copy', () => {
     expect(tuiCopy('on')).toBe('开')
   })
 
-  it('keeps all swimming fish frames at exactly 5 columns with zero jitter', () => {
-    expect(SWIMMING_FISH_FRAMES.length).toBe(8)
-    for (const frame of SWIMMING_FISH_FRAMES) {
-      expect(displayWidth(frame)).toBe(5)
+  it('keeps all braille spinner frames at exactly 1 column with zero jitter', () => {
+    expect(BRAILLE_SPINNER_FRAMES.length).toBe(10)
+    for (const frame of BRAILLE_SPINNER_FRAMES) {
+      expect(displayWidth(frame)).toBe(1)
     }
   })
 
-  it('animates swimming fish across all 8 frames based on live elapsed time', () => {
-    expect(getSwimmingFishFrame(undefined)).toBe(SWIMMING_FISH_FRAMES[0])
-    expect(getSwimmingFishFrame(0)).toBe(SWIMMING_FISH_FRAMES[0])
-    expect(getSwimmingFishFrame(150)).toBe(SWIMMING_FISH_FRAMES[1])
-    expect(getSwimmingFishFrame(300)).toBe(SWIMMING_FISH_FRAMES[2])
-    expect(getSwimmingFishFrame(450)).toBe(SWIMMING_FISH_FRAMES[3])
-    expect(getSwimmingFishFrame(600)).toBe(SWIMMING_FISH_FRAMES[4])
-    expect(getSwimmingFishFrame(750)).toBe(SWIMMING_FISH_FRAMES[5])
-    expect(getSwimmingFishFrame(900)).toBe(SWIMMING_FISH_FRAMES[6])
-    expect(getSwimmingFishFrame(1050)).toBe(SWIMMING_FISH_FRAMES[7])
-    expect(getSwimmingFishFrame(1200)).toBe(SWIMMING_FISH_FRAMES[0])
+  it('animates braille spinner across all 10 frames based on live elapsed time', () => {
+    expect(getBrailleSpinnerFrame(undefined)).toBe(BRAILLE_SPINNER_FRAMES[0])
+    expect(getBrailleSpinnerFrame(0)).toBe(BRAILLE_SPINNER_FRAMES[0])
+    expect(getBrailleSpinnerFrame(100)).toBe(BRAILLE_SPINNER_FRAMES[1])
+    expect(getBrailleSpinnerFrame(200)).toBe(BRAILLE_SPINNER_FRAMES[2])
+    expect(getBrailleSpinnerFrame(300)).toBe(BRAILLE_SPINNER_FRAMES[3])
+    expect(getBrailleSpinnerFrame(400)).toBe(BRAILLE_SPINNER_FRAMES[4])
+    expect(getBrailleSpinnerFrame(500)).toBe(BRAILLE_SPINNER_FRAMES[5])
+    expect(getBrailleSpinnerFrame(600)).toBe(BRAILLE_SPINNER_FRAMES[6])
+    expect(getBrailleSpinnerFrame(700)).toBe(BRAILLE_SPINNER_FRAMES[7])
+    expect(getBrailleSpinnerFrame(800)).toBe(BRAILLE_SPINNER_FRAMES[8])
+    expect(getBrailleSpinnerFrame(900)).toBe(BRAILLE_SPINNER_FRAMES[9])
+    expect(getBrailleSpinnerFrame(1000)).toBe(BRAILLE_SPINNER_FRAMES[0])
+  })
+
+  it('maintains backward compatibility with getSwimmingFishFrame', () => {
+    expect(getSwimmingFishFrame(0)).toBe(BRAILLE_SPINNER_FRAMES[0])
+    expect(SWIMMING_FISH_FRAMES).toBe(BRAILLE_SPINNER_FRAMES)
   })
 
   it('returns rotating bilingual tips for zh-CN and en-US', () => {

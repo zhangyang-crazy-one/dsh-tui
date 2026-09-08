@@ -606,7 +606,7 @@ describe('HTML terminal design geometry', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const frame = atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
-      const headingRow = frame.split('\n').findIndex(line => line.includes('⚠️')) + 1
+      const headingRow = frame.split('\n').findIndex(line => line.includes('🚨') || line.includes('⚠️')) + 1
       expect(headingRow).toBeGreaterThan(0)
       expect(atlas.cellAt(columns, headingRow)?.ch).toBe('█')
       expect(atlas.cellAt(columns - 1, headingRow)?.ch).not.toBe('█')

@@ -56,11 +56,11 @@ import { CommandMenu, completeFirst, completeSelected, filterCommands, moveSelec
 import type { CommandItem } from './command-menu.tsx'
 import { Mention, normalizeMentionInsertion } from './mention.tsx'
 import type { ListMentions, MentionCandidate, MentionPhase } from './mention.tsx'
-import { clampCaretIndex, moveCaretByGrapheme } from './composer-cursor.ts'
+import { clampCaretIndex, moveCaretByGrapheme, moveCaretUpLine, moveCaretDownLine } from './composer-cursor.ts'
 import { setMouseRailListener, setMouseScrollListener } from './mouse-io.ts'
 import { escapeContent, displayWidth } from './content.ts'
 import { inkColor, paintBackgroundRow, paintRow, styled } from './theme.ts'
-import type { ViewModel } from './projection.ts'
+import type { FrozenMessage, ViewModel } from './projection.ts'
 import type { TranscriptViewportCommand } from './transcript-viewport.ts'
 import type { InteractionState } from './interaction-state.ts'
 import type { ToolPresenterLookup } from './tool-cards.ts'
@@ -329,6 +329,10 @@ export interface LoopInputState {
   mentionDismissed: boolean
   /** Caret offset into `text`; omitted means the end of the buffer. */
   caretIndex?: number | undefined
+  /** History browsing index: undefined means at live prompt; 0..N-1 is index into inputHistory. */
+  historyIndex?: number | undefined
+  /** Saved draft before entering history browsing. */
+  historyDraft?: string | undefined
 }
 
 /** One keyed action the reducer asks the owner to perform. */
@@ -347,6 +351,8 @@ export type LoopKeyEffect =
     commandDismissed?: boolean | undefined
     /** Next caret offset; omitted means the end of the (possibly new) text. */
     caretIndex?: number | undefined
+    historyIndex?: number | undefined
+    historyDraft?: string | undefined
   }
 
 interface MentionKeyState {
@@ -416,6 +422,8 @@ function holdComposer(
     commandSelectedIndex: state.commandSelectedIndex,
     commandDismissed: state.commandDismissed,
     caretIndex: state.caretIndex,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft,
   }
 }
 
@@ -607,6 +615,7 @@ export function mapKeyEvent(
   },
   queuedDraft: { readonly headText?: string | undefined } = {},
   compaction: { readonly available: boolean } = { available: false },
+  inputHistory: readonly string[] = [],
 ): LoopKeyEffect {
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))
@@ -934,6 +943,20 @@ export function mapKeyEvent(
         renaming: state.renaming,
       }
     }
+    if (state.historyIndex !== undefined) {
+      const restored = state.historyDraft ?? ''
+      return {
+        kind: 'dispatch',
+        action: { kind: 'none' as never },
+        text: restored,
+        commandQuery: undefined,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: restored.length,
+        historyIndex: undefined,
+        historyDraft: undefined,
+      }
+    }
     return {
       kind: 'dispatch',
       action: { kind: 'none' as never },
@@ -1114,6 +1137,8 @@ export function mapKeyEvent(
       commandSelectedIndex: 0,
       commandDismissed: false,
       caretIndex: previous,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
     }
   }
   if ((key === '\t' || keyInfo.tab) && keyInfo.shift) {
@@ -1525,8 +1550,8 @@ export function mapKeyEvent(
       renaming: state.renaming,
     }
   }
-  // ←/→ move the composer caret one grapheme; ↑/↓ scroll the conversation
-  // even while the composer holds a draft (j/k stay ordinary letters then).
+  // ←/→ move the composer caret one grapheme; ↑/↓ navigate prompt history
+  // (or move caret vertically across lines in multiline text), never scrolling the conversation.
   if (keyInfo.leftArrow || keyInfo.rightArrow) {
     const caret = clampCaretIndex(state.text, state.caretIndex)
     return {
@@ -1541,6 +1566,8 @@ export function mapKeyEvent(
         caret,
         keyInfo.leftArrow ? -1 : 1,
       ),
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
     }
   }
   if (keyInfo.pageUp) {
@@ -1556,6 +1583,23 @@ export function mapKeyEvent(
     return holdComposer(state, { kind: 'scroll-edge', edge: 'latest' })
   }
   if (keyInfo.upArrow) {
+    if (state.text.includes('\n')) {
+      const caret = clampCaretIndex(state.text, state.caretIndex)
+      const targetCaret = moveCaretUpLine(state.text, caret)
+      if (targetCaret !== undefined) {
+        return {
+          kind: 'dispatch',
+          action: { kind: 'none' as never },
+          text: state.text,
+          commandQuery: state.commandQuery,
+          prefixG: false,
+          renaming: state.renaming,
+          caretIndex: targetCaret,
+          historyIndex: state.historyIndex,
+          historyDraft: state.historyDraft,
+        }
+      }
+    }
     if (state.text === '' && queuedDraft.headText !== undefined) {
       return {
         kind: 'dispatch',
@@ -1565,28 +1609,78 @@ export function mapKeyEvent(
         prefixG: false,
         renaming: state.renaming,
         caretIndex: queuedDraft.headText.length,
+        historyIndex: undefined,
+        historyDraft: undefined,
       }
     }
-    return {
-      kind: 'dispatch',
-      action: { kind: 'scroll', delta: 1 },
-      text: state.text,
-      commandQuery: state.commandQuery,
-      prefixG: false,
-      renaming: state.renaming,
-      caretIndex: state.caretIndex,
+    if (inputHistory.length > 0) {
+      const isBrowsing = state.historyIndex !== undefined
+      const currentIndex = state.historyIndex ?? inputHistory.length
+      const nextIndex = Math.max(0, currentIndex - 1)
+      const nextText = inputHistory[nextIndex] ?? ''
+      const savedDraft = isBrowsing ? state.historyDraft : state.text
+      return {
+        kind: 'dispatch',
+        action: { kind: 'none' as never },
+        text: nextText,
+        commandQuery: undefined,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: nextText.length,
+        historyIndex: nextIndex,
+        historyDraft: savedDraft,
+      }
     }
+    return { kind: 'none' }
   }
   if (keyInfo.downArrow) {
-    return {
-      kind: 'dispatch',
-      action: { kind: 'scroll', delta: -1 },
-      text: state.text,
-      commandQuery: state.commandQuery,
-      prefixG: false,
-      renaming: state.renaming,
-      caretIndex: state.caretIndex,
+    if (state.text.includes('\n')) {
+      const caret = clampCaretIndex(state.text, state.caretIndex)
+      const targetCaret = moveCaretDownLine(state.text, caret)
+      if (targetCaret !== undefined) {
+        return {
+          kind: 'dispatch',
+          action: { kind: 'none' as never },
+          text: state.text,
+          commandQuery: state.commandQuery,
+          prefixG: false,
+          renaming: state.renaming,
+          caretIndex: targetCaret,
+          historyIndex: state.historyIndex,
+          historyDraft: state.historyDraft,
+        }
+      }
     }
+    if (state.historyIndex !== undefined) {
+      const nextIndex = state.historyIndex + 1
+      if (nextIndex < inputHistory.length) {
+        const nextText = inputHistory[nextIndex] ?? ''
+        return {
+          kind: 'dispatch',
+          action: { kind: 'none' as never },
+          text: nextText,
+          commandQuery: undefined,
+          prefixG: false,
+          renaming: state.renaming,
+          caretIndex: nextText.length,
+          historyIndex: nextIndex,
+          historyDraft: state.historyDraft,
+        }
+      }
+      const restored = state.historyDraft ?? ''
+      return {
+        kind: 'dispatch',
+        action: { kind: 'none' as never },
+        text: restored,
+        commandQuery: undefined,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: restored.length,
+        historyIndex: undefined,
+        historyDraft: undefined,
+      }
+    }
+    return { kind: 'none' }
   }
   // j/k scroll only while the composer is empty (j newer, k older); with
   // text buffered they are ordinary letters (02-UI-SPEC §3 scrolling vs K4).
@@ -1625,6 +1719,8 @@ export function mapKeyEvent(
       caretIndex: caret + 1,
       commandSelectedIndex: 0,
       commandDismissed: false,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
     }
   }
   if (key === '@') {
@@ -1641,6 +1737,8 @@ export function mapKeyEvent(
       commandSelectedIndex: 0,
       commandDismissed: false,
       caretIndex: caret + 1,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
     }
   }
   if (isTextInput(key, keyInfo)) {
@@ -1658,6 +1756,8 @@ export function mapKeyEvent(
       commandSelectedIndex: 0,
       commandDismissed: false,
       caretIndex: caret + key.length,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
     }
   }
   void mentionMode
@@ -1670,6 +1770,8 @@ export function mapKeyEvent(
     commandQuery: state.commandQuery,
     prefixG: false,
     renaming: state.renaming,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft,
   }
 }
 
@@ -2107,6 +2209,20 @@ export function TuiLoop({
   helpLinesRef.current = helpPane.lines
   const historyLengthRef = useRef(model.history.length)
   historyLengthRef.current = model.history.length
+  const sentHistoryRef = useRef<string[]>([])
+  const inputHistory = useMemo(() => {
+    const fromModel = model.history
+      .filter((m): m is FrozenMessage & { kind: 'user' } => m.kind === 'user' && typeof m.text === 'string' && m.text.trim().length > 0)
+      .map(m => m.text)
+    const combined: string[] = []
+    for (const item of [...fromModel, ...sentHistoryRef.current]) {
+      const trimmed = item.trim()
+      if (trimmed.length > 0 && combined.at(-1) !== trimmed) {
+        combined.push(trimmed)
+      }
+    }
+    return combined
+  }, [model.history])
   const chordTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   )
@@ -2245,6 +2361,7 @@ export function TuiLoop({
       },
       { headText: queuedDraftText },
       { available: (model.compactionDividers?.length ?? 0) > 0 },
+      inputHistory,
     )
     if (effect.kind === 'dispatch') {
       const action = effect.action
@@ -2280,11 +2397,24 @@ export function TuiLoop({
         issueViewportCommand({ kind: 'page', delta: action.delta })
       } else if (action.kind === 'scroll-edge') {
         issueViewportCommand({ kind: 'edge', edge: action.edge })
+      } else if (action.kind === 'send') {
+        const trimmed = action.text.trim()
+        if (trimmed.length > 0 && sentHistoryRef.current.at(-1) !== trimmed) {
+          sentHistoryRef.current.push(trimmed)
+        }
+        issueViewportCommand({ kind: 'reset' })
+        controller.dispatch(action)
+      } else if (action.kind === 'command') {
+        const queryText = action.query.trim().startsWith('/') ? action.query.trim() : `/${action.query.trim()}`
+        if (queryText.length > 0 && sentHistoryRef.current.at(-1) !== queryText) {
+          sentHistoryRef.current.push(queryText)
+        }
+        controller.dispatch(action)
       } else if (
-        action.kind === 'send'
-        || action.kind === 'new-session'
+        action.kind === 'new-session'
         || action.kind === 'select-session'
       ) {
+        sentHistoryRef.current = []
         issueViewportCommand({ kind: 'reset' })
         controller.dispatch(action)
       } else if (action.kind === 'intake-clipboard-image') {
@@ -2332,6 +2462,8 @@ export function TuiLoop({
           caretIndex:
             effect.caretIndex
             ?? (effect.text === current.text ? current.caretIndex : undefined),
+          historyIndex: effect.historyIndex,
+          historyDraft: effect.historyDraft,
         }
         : current
     stateRef.current = next
@@ -2350,6 +2482,8 @@ export function TuiLoop({
       commandSelectedIndex: 0,
       commandDismissed: false,
       caretIndex: caret + token.length,
+      historyIndex: undefined,
+      historyDraft: undefined,
     }
     stateRef.current = next
     setState(next)
@@ -2400,6 +2534,8 @@ export function TuiLoop({
       commandSelectedIndex: 0,
       commandDismissed: false,
       caretIndex: caret + pasted.length,
+      historyIndex: undefined,
+      historyDraft: undefined,
     }
     stateRef.current = next
     setState(next)

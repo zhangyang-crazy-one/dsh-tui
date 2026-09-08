@@ -111,14 +111,29 @@ export function wcwidthSafeSlice(text: string, maxCols: number): string {
 }
 
 /**
+ * Mapping of narrow BMP emojis (East Asian Width 'N' in Unicode, causing terminal
+ * grids to allocate only 1 column and clip/overlap the glyph) to true wide
+ * emojis (East Asian Width 'W', 2 columns across all terminal emulators).
+ */
+export const NARROW_TO_WIDE_EMOJIS: Record<string, string> = {
+  '\u26A0': '🚨', // ⚠️ / ⚠ -> 🚨 (warning / alert)
+  '\u2139': '💡', // ℹ️ / ℹ -> 💡 (info / tip)
+  '\u2699': '🔧', // ⚙️ / ⚙ -> 🔧 (settings / tools)
+  '\u23F1': '⏰', // ⏱️ / ⏱ -> ⏰ (timer / clock)
+  '\u2709': '📧', // ✉️ / ✉ -> 📧 (mail)
+  '\u270F': '📝', // ✏️ / ✏ -> 📝 (edit / memo)
+}
+
+/**
  * Format symbols and emojis with balanced spacing and variation selectors so
  * they don't collide with adjacent CJK characters or get clipped in monospace
  * terminal grids.
  *
- * 1. Attaches VS16 (\uFE0F) to common BMP emojis missing presentation selector
- *    (e.g. ⚠ -> ⚠️, ⚙ -> ⚙️).
+ * 1. Replaces narrow BMP emojis/symbols that terminals treat as 1-column with
+ *    true wide emojis (East Asian Width 'W', 2 columns) so they render without
+ *    cell clipping or overlap (e.g. ⚠️ -> 🚨, ℹ️ -> 💡, ⚙️ -> 🔧).
  * 2. Adds padding space between circled numbers / emojis and adjacent CJK ideographs
- *    (e.g. "①和" -> "① 和", "把①" -> "把 ①", "⚠️注意" -> "⚠️ 注意").
+ *    (e.g. "①和" -> "① 和", "把①" -> "把 ①", "🚨注意" -> "🚨 注意").
  *
  * @param text - source plain text.
  * @returns text with balanced symbol spacing.
@@ -126,7 +141,11 @@ export function wcwidthSafeSlice(text: string, maxCols: number): string {
 export function formatSymbolSpacing(text: string): string {
   if (text === '' || /^[\x20-\x7e]*$/u.test(text)) return text
   let res = text.replace(
-    /([\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764])(?!\uFE0F|\uFE0E)/gu,
+    /([\u26A0\u2699\u2139\u23F1\u2709\u270F])[\uFE0E\uFE0F]?/gu,
+    (_, ch) => NARROW_TO_WIDE_EMOJIS[ch] ?? ch,
+  )
+  res = res.replace(
+    /([\u2328\u2712\u2702\u26C8\u2764])(?!\uFE0F|\uFE0E)/gu,
     '$1\uFE0F',
   )
   res = res.replace(

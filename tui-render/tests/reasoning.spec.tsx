@@ -58,7 +58,7 @@ describe('ReasoningBlock', () => {
         durationMs: 48800,
       }),
     )
-    expect(out).toContain('✻ 思考 (48.8s)')
+    expect(out).toContain('⠇ 思考 (48.8s)')
     expect(out).not.toContain('…')
     for (const line of lines) expect(out).toContain(line)
   })
