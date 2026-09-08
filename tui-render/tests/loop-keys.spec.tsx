@@ -2503,9 +2503,9 @@ describe('styled status and feedback lines', () => {
 
   it('shows the fgDim key hint only beside generating/stopped status rows (W2-T6)', () => {
     expect(statusHint('generating')).toContain('\x1b[38;2;164;169;176m')
-    expect(statusHint('generating')).toContain('↑↓/jk 滚动')
+    expect(statusHint('generating')).toContain('j/k 滚动')
     expect(statusHint('generating')).not.toContain('/ 命令')
-    expect(statusHint('stopped')).toContain('↑↓/jk 滚动')
+    expect(statusHint('stopped')).toContain('j/k 滚动')
     expect(statusHint('generating', true)).toBe('')
     expect(statusHint('stopped', true)).toBe('')
     expect(statusHint('exit-armed')).toBe('')
@@ -2514,11 +2514,11 @@ describe('styled status and feedback lines', () => {
 
   it('composes the status slot as the accent label plus the fgDim hint', () => {
     expect(statusSlot('generating')).toContain('\x1b[38;2;77;107;254m⏹ Ctrl+C 停止')
-    expect(statusSlot('generating')).toContain('\x1b[38;2;164;169;176m↑↓/jk 滚动')
-    expect(statusSlot('generating', true)).not.toContain('↑↓/jk 滚动')
+    expect(statusSlot('generating')).toContain('\x1b[38;2;164;169;176mj/k 滚动')
+    expect(statusSlot('generating', true)).not.toContain('j/k 滚动')
     expect(statusSlot('stopped')).toContain('\x1b[38;2;77;107;254m继续生成')
     expect(statusSlot('exit-armed')).toContain('\x1b[38;2;77;107;254m再按一次 Ctrl+C 退出')
-    expect(statusSlot('exit-armed')).not.toContain('↑↓/jk 滚动')
+    expect(statusSlot('exit-armed')).not.toContain('j/k 滚动')
   })
 
   it('builds the idle composer status from cwd, badge, and command hints', () => {

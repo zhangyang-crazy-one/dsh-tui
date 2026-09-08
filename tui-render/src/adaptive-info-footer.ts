@@ -39,6 +39,7 @@ export interface AdaptiveInfoFooterView {
   readonly spinner?: string | undefined
   readonly effort?: string | undefined
   readonly environment?: string | undefined
+  readonly gitBranch?: string | undefined
   readonly tip?: string | undefined
   readonly tokenUsage?: AdaptiveTokenUsage | undefined
   readonly contextPressure?: AdaptiveContextPressure | undefined
@@ -130,6 +131,15 @@ function workspaceSegments(view: AdaptiveInfoFooterView, columns: number): Segme
       selected = [environment, statusSegment]
     }
   }
+  if (view.gitBranch !== undefined && view.gitBranch !== '') {
+    const git = segment(`git: ${escapeContent(view.gitBranch)}`, 'accentText')
+    const candidate = selected.length > 1
+      ? [selected[0]!, git, ...selected.slice(1)]
+      : [...selected, git]
+    if (displayWidth(segmentsText(candidate)) <= columns) {
+      selected = candidate
+    }
+  }
   if (view.retry !== undefined) {
     const retry = segment(retryText(view.retry, view.locale), 'warning')
     if (displayWidth(segmentsText([...selected, retry])) <= columns) selected.push(retry)
@@ -197,9 +207,14 @@ function usageSegments(view: AdaptiveInfoFooterView): Segment[] {
 }
 
 function metricsSegments(view: AdaptiveInfoFooterView, columns: number): Segment[] {
-  const effort = view.effort === undefined
+  const effortText = view.effort !== undefined && view.effort !== ''
+    ? `${tuiCopy('effort', view.locale)} ${escapeContent(view.effort)}`
+    : view.reasoningVisible !== undefined
+      ? `${tuiCopy('reasoning', view.locale)} ${tuiCopy(view.reasoningVisible ? 'on' : 'off', view.locale)}`
+      : undefined
+  const effort = effortText === undefined
     ? undefined
-    : segment(`${tuiCopy('effort', view.locale)} ${escapeContent(view.effort)}`, 'fgDim')
+    : segment(effortText, 'fgDim')
   const usage = usageSegments(view)
   const contextVariants = contextSegments(view.contextPressure, view.locale)
   const fixed = effort === undefined ? [] : [effort]

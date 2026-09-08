@@ -69,6 +69,7 @@ import { goalFooterHead, goalFooterRuns } from './goal-footer.ts'
 import type { GoalFooterRuns, GoalFooterView } from './goal-footer.ts'
 import { formatAdaptiveInfoFooterRows, formatQuietStatusRow } from './adaptive-info-footer.ts'
 import type { AdaptiveInfoFooterView } from './adaptive-info-footer.ts'
+import { detectGitBranch } from './git-branch.ts'
 import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
@@ -1811,7 +1812,7 @@ export function statusLine(interaction: InteractionState): string {
 
 /** The fgDim key-hint line beside the generation status (02-UI-SPEC §1.3 L3);
  * `/` and `@` stay on the idle composer and `/help`, not the status row. */
-export const STATUS_HINT = '↑↓/jk 滚动'
+export const STATUS_HINT = 'j/k 滚动'
 
 /**
  * Plain status hint for width calculation and adaptive-footer formatting.
@@ -2617,6 +2618,9 @@ export function TuiLoop({
     goalRuns = goalFooterRuns(goalFooter, budget)
   }
   const footerRowBudget = statusDetails ? (rows >= 32 ? 3 : rows >= 12 ? 2 : 1) : 1
+  const detailsTip = statusLabel === ''
+    ? `/ 命令 · @ 提及 · Ctrl+O ${tuiCopy('reasoning', locale)} · /status ${tuiCopy('statusDetails', locale)}`
+    : `${scrollHint} · Ctrl+O ${tuiCopy('reasoning', locale)} · /status ${tuiCopy('statusDetails', locale)}`
   const adaptiveRows = adaptiveInfoFooter === undefined
     ? []
     : footerRowBudget === 1
@@ -2631,8 +2635,10 @@ export function TuiLoop({
         ...adaptiveInfoFooter,
         locale,
         spinner: footerSpinner,
+        reasoningVisible: model.reasoningExpanded,
+        gitBranch: detectGitBranch(controller.getCwd()),
         environment: shortenHomePath(controller.getCwd(), homedir()),
-        tip: statusLabel === '' ? '/ 命令 · @ 提及' : scrollHint,
+        tip: detailsTip,
       }, columns, footerRowBudget)
   let status: ReactNode
   let statusRowCount: number

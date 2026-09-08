@@ -230,4 +230,17 @@ describe('formatAdaptiveInfoFooter', () => {
     }, 120)
     expect(quiet.runs.map(r => r.text).join('')).toContain('⠋ 生成中')
   })
+
+  it('formats git branch beside environment and reasoning status in metrics when effort is absent', () => {
+    const rows = formatAdaptiveInfoFooterRows({
+      ...view,
+      effort: undefined,
+      reasoningVisible: true,
+      gitBranch: 'main',
+    }, 120, 2)
+    expect(rows[0]?.runs.map(r => r.text).join('')).toBe(
+      '~/project · git: main · 状态 生成中 · deepseek-official',
+    )
+    expect(rows[1]?.runs.map(r => r.text).join('')).toContain('思考 开')
+  })
 })

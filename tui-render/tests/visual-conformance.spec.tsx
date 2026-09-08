@@ -334,7 +334,7 @@ describe('theme tiers', () => {
     expect(markdown).toContain('const x = 1')
 
     expect(statusSlot('generating')).toBe(
-      '⏹ Ctrl+C 停止 · ↑↓/jk 滚动',
+      '⏹ Ctrl+C 停止 · j/k 滚动',
     )
   })
 })
@@ -426,10 +426,10 @@ describe('markdown tier mapping', () => {
 
 describe('status copy and hint', () => {
   it('keeps the locked copy and adds the fgDim hint beside generating/stopped rows', () => {
-    expect(STATUS_HINT).toBe('↑↓/jk 滚动')
+    expect(STATUS_HINT).toBe('j/k 滚动')
     expect(statusSlot('generating')).toBe(
       '\x1b[48;2;21;22;24m\x1b[38;2;77;107;254m⏹ Ctrl+C 停止\x1b[0m\x1b[0m' +
-        '\x1b[48;2;21;22;24m · \x1b[38;2;164;169;176m↑↓/jk 滚动\x1b[0m\x1b[0m',
+        '\x1b[48;2;21;22;24m · \x1b[38;2;164;169;176mj/k 滚动\x1b[0m\x1b[0m',
     )
     expect(statusSlot('stopped')).toContain('继续生成')
     expect(statusSlot('exit-armed')).toBe(
@@ -446,7 +446,7 @@ describe('status copy and hint', () => {
     )
     expect(out).toContain('\x1b[48;2;35;38;43m')
     expect(out).toContain('/workspace · ⏹ Ctrl+C 停止')
-    expect(out).toContain('↑↓/jk 滚动')
+    expect(out).toContain('j/k 滚动')
     expect(out).not.toContain('/ 命令')
   })
 
@@ -466,7 +466,7 @@ describe('status copy and hint', () => {
       }),
     )
     const plain = stripAnsi(out)
-    expect(plain).toContain('↑↓/jk 滚动')
+    expect(plain).toContain('j/k 滚动')
     expect(plain).not.toContain('\\x1b[')
   })
 
