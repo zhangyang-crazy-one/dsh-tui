@@ -73,7 +73,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
   truecolor: {
     bg: '#151618',
     messageBg: '#25282C',
-    toolBg: '#1A1C1F',
+    toolBg: '#252830',
     inputBg: '#23262B',
     codeBg: '#202328',
     fg: '#EEF0F2',
@@ -98,7 +98,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
   '256': {
     bg: '233',
     messageBg: '235',
-    toolBg: '234',
+    toolBg: '236',
     inputBg: '235',
     codeBg: '235',
     fg: '255',

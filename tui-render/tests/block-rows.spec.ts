@@ -122,6 +122,11 @@ describe('projectBlockRows — non-markdown blocks', () => {
     const projection = projectBlockRows(entry, settledScope({ width: 40 }), undefined)
     expect(projection.lines.length).toBeGreaterThan(2)
     expect(projection.lines[0]?.text.startsWith('▾ ✻ 思考 (2.5s)')).toBe(true)
+    expect(projection.lines[0]?.spans.some(s => s.token === 'accentText')).toBe(true)
+    expect(projection.lines[0]?.background).toBe('toolBg')
+    expect(projection.lines[0]?.backgroundColumns).toBe(40)
+    expect(projection.lines[1]?.background).toBe('toolBg')
+    expect(projection.lines[1]?.backgroundColumns).toBe(40)
   })
 
   it('rendering a divider yields a single fg-dim row', () => {

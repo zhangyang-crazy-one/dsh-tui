@@ -8,6 +8,7 @@
 import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
+import { renderPaneLine as line } from './overlay-shell.tsx'
 import { paintRow, styled } from './theme.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
@@ -86,24 +87,7 @@ export const EMPTY_SETTINGS_PANE: SettingsPaneState = {
   editing: false,
 }
 
-/**
- * One painted, escaped row.
- * @param text - untrusted or static copy.
- * @param token - theme token.
- * @param bold - heading uses the fg bold tier.
- * @returns the Text element.
- */
-function line(
-  text: string,
-  token: 'fg' | 'fgDim' | 'error' | 'accent',
-  bold = false,
-): ReactNode {
-  return (
-    <Text>
-      {paintRow([styled(escapeContent(text), token, undefined, bold)])}
-    </Text>
-  )
-}
+
 
 /**
  * Fit a value into `maxCols`, appending {@link VALUE_ELLIPSIS} when it overflows.

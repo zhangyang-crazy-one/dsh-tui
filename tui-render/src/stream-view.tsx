@@ -85,7 +85,7 @@ import {
 import type {
   MarkdownProjectorState,
 } from './block-rows.ts'
-import type { MarkdownRenderLine } from './markdown-projector.ts'
+import type { MarkdownRenderLine, MarkdownRenderSpan } from './markdown-projector.ts'
 import {
   createTranscriptRenderStore,
 } from './transcript-line-store.ts'
@@ -555,7 +555,7 @@ function liveDurationTarget(
   ) {
     return {
       identity: `turn-${String(turn.turn)}-pending-after-tool-${String(index)}`,
-      durationMs: turn.reasoningDurationMs ?? 0,
+      durationMs: turn.reasoningDurationMs,
     }
   }
   return undefined
@@ -793,6 +793,24 @@ function overlayPromptOnSpans(
 
 const frameLineCache = new WeakMap<MarkdownRenderLine, Map<string, PhysicalLine>>()
 
+function clonePhysicalLineWithSpans(
+  base: PhysicalLine,
+  blockId: string,
+  spans: readonly PhysicalLineSpan[],
+): PhysicalLine {
+  return createPhysicalLine({
+    blockId,
+    spans,
+    sourceStart: base.sourceStart,
+    sourceEnd: base.sourceEnd,
+    blockRow: base.blockRow,
+    ...(base.background === undefined ? {} : { background: base.background }),
+    ...(base.backgroundColumns === undefined
+      ? {}
+      : { backgroundColumns: base.backgroundColumns }),
+  })
+}
+
 /** Add transcript marker or indent cells to a snapshot-owned row. */
 function framePhysicalLine(
   blockId: string,
@@ -822,19 +840,10 @@ function framePhysicalLine(
         },
         ...base.spans,
       ]
+
     const created = lead === ''
       ? base
-      : createPhysicalLine({
-        blockId,
-        spans,
-        sourceStart: base.sourceStart,
-        sourceEnd: base.sourceEnd,
-        blockRow: base.blockRow,
-        ...(base.background === undefined ? {} : { background: base.background }),
-        ...(base.backgroundColumns === undefined
-          ? {}
-          : { backgroundColumns: base.backgroundColumns }),
-      })
+      : clonePhysicalLineWithSpans(base, blockId, spans)
     byLine.set(key, created)
     return created
   }
@@ -850,17 +859,7 @@ function framePhysicalLine(
     ...base.spans,
   ]
   const spans = overlayPromptOnSpans(initialSpans, prompt)
-  return createPhysicalLine({
-    blockId,
-    spans,
-    sourceStart: base.sourceStart,
-    sourceEnd: base.sourceEnd,
-    blockRow: base.blockRow,
-    ...(base.background === undefined ? {} : { background: base.background }),
-    ...(base.backgroundColumns === undefined
-      ? {}
-      : { backgroundColumns: base.backgroundColumns }),
-  })
+  return clonePhysicalLineWithSpans(base, blockId, spans)
 }
 
 /** Get or create the projector state for one (blockId, scopeKey) pair. */
@@ -1138,9 +1137,27 @@ function projectBlockEntry(
   }
   if (entry.kind === 'reasoning' && entry.meta?.reasoningExpanded === true && entry.source !== '') {
     const rows = new RowSequence<MarkdownRenderLine>()
-    const header = `${entry.meta.reasoningLive === true ? '' : '▾ '}✻ ${tuiCopy('reasoning', deps.locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1000).toFixed(1)}s)`
-    rows.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: 'fgDim', bold: false }] })
-    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)))
+    const prefix = entry.meta.reasoningLive === true ? '' : '▾ '
+    const title = `✻ ${tuiCopy('reasoning', deps.locale)}`
+    const duration = ` (${((entry.meta.reasoningDurationMs ?? 0) / 1000).toFixed(1)}s)`
+    const header = `${prefix}${title}${duration}`
+    const prefixWidth = displayWidth(prefix)
+    const titleWidth = displayWidth(title)
+    const totalWidth = displayWidth(header)
+    const spans: MarkdownRenderSpan[] = [
+      ...(prefixWidth > 0 ? [{ start: 0, end: prefixWidth, token: 'accentText' as const, bold: false }] : []),
+      { start: prefixWidth, end: prefixWidth + titleWidth, token: 'accentText' as const, bold: false },
+      { start: prefixWidth + titleWidth, end: totalWidth, token: 'fgDim' as const, bold: false },
+    ]
+    rows.push({
+      ...GAP_LINE,
+      text: header,
+      displayWidth: totalWidth,
+      spans,
+      background: 'toolBg',
+      backgroundColumns: scope.width,
+    })
+    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4), scope.width, 'toolBg'))
     return { lines: rows.build() }
   }
   const projection = projectBlockRows(entry, scope, state)
@@ -1153,6 +1170,81 @@ function projectBlockEntry(
   })
   return projection
 }
+
+/**
+ * Create a block projector closure bound to common row-projection dependencies.
+ * @param deps - cache and locale dependencies.
+ * @param storeBlocks - target stored-block map populated during projection.
+ * @returns block projection callback.
+ */
+function makeBlockProjector(
+  deps: {
+    toolRows: ToolRowCache
+    plainRows: PlainTextRowCache
+    locale: TuiLocale
+  },
+  storeBlocks: Map<string, StoredBlockRows>,
+) {
+  return (
+    ownerId: string,
+    entry: Parameters<typeof projectBlockRows>[0],
+    scope: BlockRowsScope,
+    state: MarkdownProjectorState | undefined,
+    active: boolean,
+  ) => projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active)
+}
+
+/**
+ * Build a block entry descriptor for a tool summary part.
+ * @param id - owner block id.
+ * @param summary - tool stack summary payload.
+ * @param contentWidth - available content width for formatting.
+ * @returns block entry ready for projectBlockEntry.
+ */
+function makeToolSummaryBlockEntry(
+  id: string,
+  summary: ToolStackSummary,
+  contentWidth: number,
+): Parameters<typeof projectBlockRows>[0] {
+  return {
+    id: `${id}-tool-summary`,
+    kind: 'tool-summary',
+    source: toolSummaryText(summary, contentWidth),
+    meta: { toolSummaryStatus: toolSummaryStatus(summary) },
+  }
+}
+
+/**
+ * Build a block entry descriptor for a tool card part.
+ * @param id - owner block id.
+ * @param card - tool card presentation model.
+ * @returns block entry ready for projectBlockEntry.
+ */
+function makeToolCardBlockEntry(
+  id: string,
+  card: ToolCardModel,
+): Parameters<typeof projectBlockRows>[0] {
+  return {
+    id: `${id}-c-${card.callId}`,
+    kind: 'tool-card',
+    source: '',
+    meta: {
+      toolCard: {
+        name: card.name,
+        arguments: card.arguments,
+        status: card.status,
+        ...(card.resultText === undefined
+          ? {}
+          : { resultText: card.resultText }),
+        ...(card.meta === undefined ? {} : { meta: card.meta }),
+        ...(card.error === undefined ? {} : { error: card.error }),
+        ...(card.callView === undefined ? {} : { callView: card.callView }),
+        ...(card.resultView === undefined ? {} : { resultView: card.resultView }),
+      },
+    },
+  }
+}
+
 
 /**
  * Render the measured transcript inside one fixed physical-row viewport.
@@ -1425,13 +1517,7 @@ export function StreamView({
     const textRanges = new Map<string, readonly BlockTextRange[]>()
     const storeBlocks = new Map<string, StoredBlockRows>()
     const projectorCache = projectorStates.current
-    const project = (
-      ownerId: string,
-      entry: Parameters<typeof projectBlockRows>[0],
-      scope: BlockRowsScope,
-      state: MarkdownProjectorState | undefined,
-      active: boolean,
-    ) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active)
+    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks)
     const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
     for (const [index, row] of transcript.entries()) {
       const id = transcriptBlockId(row)
@@ -1486,35 +1572,23 @@ export function StreamView({
           continue
         }
         if (part.kind === 'tool-summary') {
-          rows.append(project(id, {
-            id: `${id}-tool-summary`,
-            kind: 'tool-summary',
-            source: toolSummaryText(part.summary, contentWidth),
-            meta: { toolSummaryStatus: toolSummaryStatus(part.summary) },
-          }, settledBlockRowsScope, undefined, false).lines)
+          rows.append(project(
+            id,
+            makeToolSummaryBlockEntry(id, part.summary, contentWidth),
+            settledBlockRowsScope,
+            undefined,
+            false,
+          ).lines)
           continue
         }
         if (part.kind === 'card') {
-          const card = part.card
-          rows.append(project(id, {
-            id: `${id}-c-${card.callId}`,
-            kind: 'tool-card',
-            source: '',
-            meta: {
-              toolCard: {
-                name: card.name,
-                arguments: card.arguments,
-                status: card.status,
-                ...(card.resultText === undefined
-                  ? {}
-                  : { resultText: card.resultText }),
-                ...(card.meta === undefined ? {} : { meta: card.meta }),
-                ...(card.error === undefined ? {} : { error: card.error }),
-                ...(card.callView === undefined ? {} : { callView: card.callView }),
-                ...(card.resultView === undefined ? {} : { resultView: card.resultView }),
-              },
-            },
-          }, settledBlockRowsScope, undefined, false).lines)
+          rows.append(project(
+            id,
+            makeToolCardBlockEntry(id, part.card),
+            settledBlockRowsScope,
+            undefined,
+            false,
+          ).lines)
           continue
         }
         const start = rows.length
@@ -1603,13 +1677,7 @@ export function StreamView({
     } }
     const storeBlocks = new Map<string, StoredBlockRows>()
     const projectorCache = projectorStates.current
-    const project = (
-      ownerId: string,
-      entry: Parameters<typeof projectBlockRows>[0],
-      scope: BlockRowsScope,
-      state: MarkdownProjectorState | undefined,
-      active: boolean,
-    ) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active)
+    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks)
     const id = `assistant-turn-${String(activeTurn.turn)}`
     const rawParts = partsFromTurn(activeTurn)
     const visibleParts = displayedParts(rawParts, reasoningExpanded)
@@ -1660,35 +1728,23 @@ export function StreamView({
         continue
       }
       if (part.kind === 'tool-summary') {
-        rows.append(project(id, {
-          id: `${id}-tool-summary`,
-          kind: 'tool-summary',
-          source: toolSummaryText(part.summary, contentWidth),
-          meta: { toolSummaryStatus: toolSummaryStatus(part.summary) },
-        }, blockRowsScope, undefined, status === 'generating').lines)
+        rows.append(project(
+          id,
+          makeToolSummaryBlockEntry(id, part.summary, contentWidth),
+          blockRowsScope,
+          undefined,
+          status === 'generating',
+        ).lines)
         continue
       }
       if (part.kind === 'card') {
-        const card = part.card
-        rows.append(project(id, {
-          id: `${id}-c-${card.callId}`,
-          kind: 'tool-card',
-          source: '',
-          meta: {
-            toolCard: {
-              name: card.name,
-              arguments: card.arguments,
-              status: card.status,
-              ...(card.resultText === undefined
-                ? {}
-                : { resultText: card.resultText }),
-              ...(card.meta === undefined ? {} : { meta: card.meta }),
-              ...(card.error === undefined ? {} : { error: card.error }),
-              ...(card.callView === undefined ? {} : { callView: card.callView }),
-              ...(card.resultView === undefined ? {} : { resultView: card.resultView }),
-            },
-          },
-        }, blockRowsScope, undefined, status === 'generating').lines)
+        rows.append(project(
+          id,
+          makeToolCardBlockEntry(id, part.card),
+          blockRowsScope,
+          undefined,
+          status === 'generating',
+        ).lines)
         continue
       }
       const start = rows.length

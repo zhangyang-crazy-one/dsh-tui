@@ -9,6 +9,17 @@ export interface RowSource<T> {
   slice(start?: number, end?: number): T[]
 }
 
+function clampSliceOffset(index: number, length: number): number {
+  const truncated = Math.trunc(index)
+  return Math.min(length, Math.max(0, index < 0 ? length + truncated : truncated))
+}
+
+function resolveItemIndex(index: number, length: number): number | undefined {
+  const integer = Math.trunc(index)
+  const absolute = integer < 0 ? length + integer : integer
+  return absolute < 0 || absolute >= length ? undefined : absolute
+}
+
 /**
  * Expose known-height data through bounded array-style reads.
  * @param length - exact non-negative row count.
@@ -16,18 +27,16 @@ export interface RowSource<T> {
  * @returns a source that reads no rows until at/slice is called.
  */
 export function indexedRows<T>(length: number, read: (index: number) => T): RowSource<T> {
-  const offset = (index: number): number => Math.min(length, Math.max(0, index < 0 ? length + Math.trunc(index) : Math.trunc(index)))
   return Object.freeze({
     length,
     at(index: number): T | undefined {
-      const integer = Math.trunc(index)
-      const absolute = integer < 0 ? length + integer : integer
-      return absolute < 0 || absolute >= length ? undefined : read(absolute)
+      const absolute = resolveItemIndex(index, length)
+      return absolute === undefined ? undefined : read(absolute)
     },
     slice(start = 0, end = length): T[] {
       const out: T[] = []
-      const last = offset(end)
-      for (let index = offset(start); index < last; index += 1) out.push(read(index))
+      const last = clampSliceOffset(end, length)
+      for (let index = clampSliceOffset(start, length); index < last; index += 1) out.push(read(index))
       return out
     },
   })
@@ -74,19 +83,17 @@ export class RowSequence<T> {
       }
       return low
     }
-    const offset = (index: number): number => Math.min(length, Math.max(0, index < 0 ? length + Math.trunc(index) : Math.trunc(index)))
     return Object.freeze({
       length,
       at(index: number): T | undefined {
-        const integer = Math.trunc(index)
-        const absolute = integer < 0 ? length + integer : integer
-        if (absolute < 0 || absolute >= length) return undefined
+        const absolute = resolveItemIndex(index, length)
+        if (absolute === undefined) return undefined
         const segment = segments[locate(absolute)] as (typeof segments)[number]
         return segment.rows.at(absolute - segment.start)
       },
       slice(start = 0, end = length): T[] {
-        const first = offset(start)
-        const last = offset(end)
+        const first = clampSliceOffset(start, length)
+        const last = clampSliceOffset(end, length)
         const out: T[] = []
         for (let index = locate(first); index < segments.length; index += 1) {
           const segment = segments[index] as (typeof segments)[number]

@@ -15,10 +15,14 @@ export interface ToolBodyOptions {
   readonly locale: TuiLocale
 }
 
+/** Diff role of a tool body line for syntax-highlighted diff rendering. */
+export type ToolBodyDiffKind = 'add' | 'delete' | 'context' | 'hunk' | 'header'
+
 /** A logical source line before escaping or terminal wrapping. */
 export interface ToolBodyLine {
   readonly text: string
   readonly token: 'fgDim' | 'codeBg'
+  readonly diffKind?: ToolBodyDiffKind | undefined
 }
 
 /** Resume point inside a logical source line; offset is a UTF-16 character offset. */
@@ -189,7 +193,7 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
       let lastPath: string | undefined
       for (const diff of diffs) {
         if (diff.path !== lastPath) {
-          source.push({ text: `--- ${diff.path}`, token: 'codeBg' })
+          source.push({ text: `--- ${diff.path}`, token: 'codeBg', diffKind: 'header' })
           lastPath = diff.path
         }
         const oldStart = diff.oldStart ?? (diff.oldText === null ? 0 : 1)
@@ -217,7 +221,7 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
 
         const oldHunk = `${oldStart}${oldLinesCount !== 1 ? `,${oldLinesCount}` : ''}`
         const newHunk = `${newStart}${newLinesCount !== 1 ? `,${newLinesCount}` : ''}`
-        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: 'codeBg' })
+        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: 'codeBg', diffKind: 'hunk' })
 
         const maxLine = Math.max(oldStart + oldLinesCount, newStart + newLinesCount, 1)
         const gutterWidth = Math.max(3, String(maxLine).length)
@@ -229,20 +233,20 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
           if (raw.startsWith('\\')) continue
           if (raw.startsWith('-')) {
             const num = String(curOld).padStart(gutterWidth, ' ')
-            source.push({ text: `${num} │ - ${raw.slice(1)}`, token: 'codeBg' })
+            source.push({ text: `${num} │ - ${raw.slice(1)}`, token: 'codeBg', diffKind: 'delete' })
             curOld++
           } else if (raw.startsWith('+')) {
             const num = String(curNew).padStart(gutterWidth, ' ')
-            source.push({ text: `${num} │ + ${raw.slice(1)}`, token: 'codeBg' })
+            source.push({ text: `${num} │ + ${raw.slice(1)}`, token: 'codeBg', diffKind: 'add' })
             curNew++
           } else if (raw.startsWith(' ')) {
             const num = String(curNew).padStart(gutterWidth, ' ')
-            source.push({ text: `${num} │   ${raw.slice(1)}`, token: 'codeBg' })
+            source.push({ text: `${num} │   ${raw.slice(1)}`, token: 'codeBg', diffKind: 'context' })
             curOld++
             curNew++
           } else {
             const num = String(curNew).padStart(gutterWidth, ' ')
-            source.push({ text: `${num} │   ${raw}`, token: 'codeBg' })
+            source.push({ text: `${num} │   ${raw}`, token: 'codeBg', diffKind: 'context' })
             curOld++
             curNew++
           }
@@ -345,7 +349,11 @@ export function planToolBodyWindow(
  */
 export function materializeToolBodyRow(document: RowSource<ToolBodyLine>, fragment: ToolBodyFragment): ToolBodyLine {
   const source = document.at(fragment.line) as ToolBodyLine
-  return { text: escapeToolText(source.text.slice(fragment.start, fragment.end)), token: source.token }
+  return {
+    text: escapeToolText(source.text.slice(fragment.start, fragment.end)),
+    token: source.token,
+    ...(source.diffKind !== undefined ? { diffKind: source.diffKind } : {}),
+  }
 }
 
 /**

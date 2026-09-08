@@ -76,13 +76,13 @@ export function visibleFrameSnapshot(): VisibleFrameSnapshot | undefined {
   return publishedSnapshot
 }
 
+const lineIdentityCache = new WeakMap<PhysicalLine, string>()
+
 /**
  * Build a stable identity including text, style, link and background semantics.
  * @param line - physical line to identify.
  * @returns deterministic comparison identity.
  */
-const lineIdentityCache = new WeakMap<PhysicalLine, string>()
-
 export function physicalLineIdentity(line: PhysicalLine): string {
   let cached = lineIdentityCache.get(line)
   if (cached !== undefined) return cached

@@ -726,14 +726,32 @@ function projectReasoningEntry(
     return { revision: 0, sourceLength: entry.source.length, lines: [] }
   }
   const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : '✻'
-  const headerText = `${live ? '' : '▾ '}${icon} 思考 (${secondsLabel}s)`
-  const lines: MarkdownRenderLine[] = [
-    lineForText(headerText, 'fgDim', false, 0),
-  ]
+  const prefix = live ? '' : '▾ '
+  const headerLine = surfaceLine([
+    ...(prefix !== '' ? [{ text: prefix, token: 'accentText' as const, bold: false }] : []),
+    { text: `${icon} 思考`, token: 'accentText' as const, bold: false },
+    { text: ` (${secondsLabel}s)`, token: 'fgDim' as const, bold: false },
+  ], 0, 'toolBg', scope.width)
+  const lines: MarkdownRenderLine[] = [headerLine]
   const escaped = escapeContent(entry.source)
   const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4))
   for (const row of body) {
-    lines.push(lineForText(`  ${row}`, 'fgDim', false, lines.length))
+    const text = `│ ${row}`
+    const cols = displayWidth(text)
+    lines.push({
+      text,
+      displayWidth: cols,
+      spans: [
+        { start: 0, end: 2, token: 'accentText', bold: false },
+        { start: 2, end: cols, token: 'fgDim', bold: false },
+      ],
+      rowInBlock: lines.length,
+      sourceStart: -1,
+      sourceEnd: -1,
+      rawTail: false,
+      background: 'toolBg',
+      backgroundColumns: scope.width,
+    })
   }
   return { revision: 0, sourceLength: entry.source.length, lines }
 }

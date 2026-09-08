@@ -8,6 +8,7 @@
 import { Box, Text } from 'ink'
 import type { ReactNode } from 'react'
 import { escapeContent } from './content.ts'
+import { renderPaneLine as line } from './overlay-shell.tsx'
 import { paintRow, styled } from './theme.ts'
 
 /** Exact key footnote when the question has at least one option. */
@@ -47,24 +48,7 @@ export const EMPTY_ASK_USER_PANE: AskUserPaneState = {
   selectedIndex: 0,
 }
 
-/**
- * One painted, escaped row in the composer slot.
- * @param text - untrusted or static copy.
- * @param token - theme token.
- * @param bold - heading uses the fg bold tier.
- * @returns the Text element.
- */
-function line(
-  text: string,
-  token: 'fg' | 'fgDim' | 'error' | 'accent',
-  bold = false,
-): ReactNode {
-  return (
-    <Text>
-      {paintRow([styled(escapeContent(text), token, undefined, bold)])}
-    </Text>
-  )
-}
+
 
 /**
  * The ask-user dialog: header, numbered labels, or the zero-option error.

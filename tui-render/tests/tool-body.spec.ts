@@ -104,6 +104,25 @@ describe('tool body windows', () => {
       ' 11 │ + new2',
       ' 12 │   line3',
     ])
+    expect(document.slice().map(row => row.diffKind)).toEqual([
+      undefined,
+      'header',
+      'hunk',
+      'context',
+      'delete',
+      'add',
+      'context',
+    ])
+    const window = planToolBodyWindow(document, { line: 0, offset: 0 }, 60, 7)
+    expect(window.fragments.map(f => materializeToolBodyRow(document, f).diffKind)).toEqual([
+      undefined,
+      'header',
+      'hunk',
+      'context',
+      'delete',
+      'add',
+      'context',
+    ])
   })
 
   it('computes fallback LCS diff with gutter line numbers when lines is omitted', () => {

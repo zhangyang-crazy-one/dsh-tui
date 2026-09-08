@@ -586,21 +586,7 @@ export function MarkdownBlock({
       </Fragment>,
     )
   }
-  if (out.length === 0 && tail === undefined) {
-    return <Box flexDirection="column" width="100%" />
-  }
-  if (out.length === 0) {
-    return (
-      <Box flexDirection="column" width="100%">
-        <Text>{prefix?.first}{tail}</Text>
-      </Box>
-    )
-  }
-  return (
-    <Box flexDirection="column" width="100%">
-      {out}
-    </Box>
-  )
+  return wrapMarkdownOutput(out, tail, prefix)
 }
 
 /** Render one cached block entry, recomputing on cache miss. */
@@ -713,6 +699,14 @@ function renderFullSource(
     }
     out.push(<Fragment key="full-active-table">{renderActiveTable(snap.rows, bodyWidth, tableAffixes, hyperlinks)}</Fragment>)
   }
+  return wrapMarkdownOutput(out, tail, prefix)
+}
+
+function wrapMarkdownOutput(
+  out: readonly ReactNode[],
+  tail: ReactNode | undefined,
+  prefix: MarkdownRowPrefix | undefined,
+): ReactNode {
   if (out.length === 0 && tail === undefined) {
     return <Box flexDirection="column" width="100%" />
   }

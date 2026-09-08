@@ -380,6 +380,55 @@ export class ScreenAtlas {
     return lines.join('\n')
   }
 
+  private collectRowTextRuns(
+    row: number,
+    from: number,
+    to: number,
+    onRun: (runCol: number, runText: string) => void,
+  ): void {
+    let run = ''
+    let runCol = 0
+    const flush = (): void => {
+      if (run === '' || runCol === 0) return
+      onRun(runCol, run)
+      run = ''
+      runCol = 0
+    }
+    for (let col = from; col <= to; col++) {
+      if (this.isSnapshotRailControlCell(col, row)) {
+        flush()
+        continue
+      }
+      const cell = this.cellAt(col, row)
+      if (cell === undefined || !cell.written || cell.ch === '') {
+        flush()
+        continue
+      }
+      if (run === '') runCol = col
+      run += cell.ch
+    }
+    flush()
+  }
+
+  /**
+   * Iterate over screen rows within a selection range, calculating the column span.
+   * @param a - one endpoint.
+   * @param b - the other endpoint.
+   * @param callback - visitor receiving row index and column bounds [from, to].
+   */
+  private forEachRowInRange(
+    a: ScreenPoint,
+    b: ScreenPoint,
+    callback: (row: number, from: number, to: number) => void,
+  ): void {
+    const { start, end } = orderedPoints(a, b)
+    for (let row = start.row; row <= end.row; row++) {
+      const from = row === start.row ? start.col : 1
+      const to = row === end.row ? end.col : this.width
+      callback(row, from, to)
+    }
+  }
+
   /**
    * Reverse-video overlay that rewrites selectable cells. Published rail cells
    * are excluded. Empty when the range has no glyphs.
@@ -388,34 +437,12 @@ export class ScreenAtlas {
    * @returns CUP + reverse SGR bytes.
    */
   selectionOverlay(a: ScreenPoint, b: ScreenPoint): string {
-    const { start, end } = orderedPoints(a, b)
     let out = ''
-    for (let row = start.row; row <= end.row; row++) {
-      const from = row === start.row ? start.col : 1
-      const to = row === end.row ? end.col : this.width
-      let run = ''
-      let runCol = 0
-      const flush = () => {
-        if (run === '' || runCol === 0) return
+    this.forEachRowInRange(a, b, (row, from, to) => {
+      this.collectRowTextRuns(row, from, to, (runCol, run) => {
         out += `\x1b[${row};${runCol}H\x1b[7m${run}\x1b[27m`
-        run = ''
-        runCol = 0
-      }
-      for (let col = from; col <= to; col++) {
-        if (this.isSnapshotRailControlCell(col, row)) {
-          flush()
-          continue
-        }
-        const cell = this.cellAt(col, row)
-        if (cell === undefined || !cell.written || cell.ch === '') {
-          flush()
-          continue
-        }
-        if (run === '') runCol = col
-        run += cell.ch
-      }
-      flush()
-    }
+      })
+    })
     return out
   }
 
@@ -428,11 +455,8 @@ export class ScreenAtlas {
    * @returns CUP + normal painted runs for the occupied cells.
    */
   restoreOverlay(a: ScreenPoint, b: ScreenPoint): string {
-    const { start, end } = orderedPoints(a, b)
     let out = ''
-    for (let row = start.row; row <= end.row; row++) {
-      const from = row === start.row ? start.col : 1
-      const to = row === end.row ? end.col : this.width
+    this.forEachRowInRange(a, b, (row, from, to) => {
       const snapshotRow = this.snapshotRows.get(row)
       if (
         snapshotRow !== undefined
@@ -441,31 +465,12 @@ export class ScreenAtlas {
         && to >= snapshotRow.col
       ) {
         out += `\x1b[${row};${snapshotRow.col}H${paintSnapshotLine(snapshotRow.line)}`
-        continue
+        return
       }
-      let run = ''
-      let runCol = 0
-      const flush = () => {
-        if (run === '' || runCol === 0) return
+      this.collectRowTextRuns(row, from, to, (runCol, run) => {
         out += `\x1b[${row};${runCol}H${paintRow([styled(run, 'fg')])}`
-        run = ''
-        runCol = 0
-      }
-      for (let col = from; col <= to; col++) {
-        if (this.isSnapshotRailControlCell(col, row)) {
-          flush()
-          continue
-        }
-        const cell = this.cellAt(col, row)
-        if (cell === undefined || !cell.written || cell.ch === '') {
-          flush()
-          continue
-        }
-        if (run === '') runCol = col
-        run += cell.ch
-      }
-      flush()
-    }
+      })
+    })
     return out
   }
 

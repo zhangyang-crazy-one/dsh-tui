@@ -223,6 +223,35 @@ function layoutState(
 }
 
 /**
+ * Commit a computed bottom offset and follow state, re-anchoring when not following.
+ * @param state - previous viewport state.
+ * @param offsetFromBottom - clamped target offset from bottom.
+ * @param follow - target stick-to-bottom follow flag.
+ * @returns updated viewport state, or previous state if unchanged.
+ */
+function applyOffsetAndFollow(
+  state: TranscriptViewportState,
+  offsetFromBottom: number,
+  follow: boolean,
+): TranscriptViewportState {
+  if (
+    offsetFromBottom === state.offsetFromBottom
+    && follow === state.follow
+    && (follow ? 0 : state.unseenRows) === state.unseenRows
+  ) {
+    return state
+  }
+  const nextTop = topRow({ ...state, offsetFromBottom })
+  return {
+    ...state,
+    follow,
+    offsetFromBottom,
+    unseenRows: follow ? 0 : state.unseenRows,
+    anchor: follow ? undefined : anchorForRow(nextTop, state.blocks),
+  }
+}
+
+/**
  * Fold one measured layout or navigation command over the transcript viewport.
  * @param state - current physical-row viewport.
  * @param action - measured layout or user navigation.
@@ -253,21 +282,7 @@ export function reduceTranscriptViewport(
         : action.delta > 0
           ? false
           : state.follow
-      if (
-        offsetFromBottom === state.offsetFromBottom
-        && follow === state.follow
-        && (follow ? 0 : state.unseenRows) === state.unseenRows
-      ) {
-        return state
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom })
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? undefined : anchorForRow(nextTop, state.blocks),
-      }
+      return applyOffsetAndFollow(state, offsetFromBottom, follow)
     }
     case 'offset': {
       const offsetFromBottom = clampOffset(
@@ -275,43 +290,13 @@ export function reduceTranscriptViewport(
         state.contentRows,
         state.viewportRows,
       )
-      const follow = offsetFromBottom === 0
-      if (
-        offsetFromBottom === state.offsetFromBottom
-        && follow === state.follow
-        && (follow ? 0 : state.unseenRows) === state.unseenRows
-      ) {
-        return state
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom })
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? undefined : anchorForRow(nextTop, state.blocks),
-      }
+      return applyOffsetAndFollow(state, offsetFromBottom, offsetFromBottom === 0)
     }
     case 'position': {
       const available = maxOffset(state.contentRows, state.viewportRows)
       const fraction = Math.max(0, Math.min(action.fraction, 1))
       const offsetFromBottom = Math.round(available * (1 - fraction))
-      const follow = offsetFromBottom === 0
-      if (
-        offsetFromBottom === state.offsetFromBottom
-        && follow === state.follow
-        && (follow ? 0 : state.unseenRows) === state.unseenRows
-      ) {
-        return state
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom })
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? undefined : anchorForRow(nextTop, state.blocks),
-      }
+      return applyOffsetAndFollow(state, offsetFromBottom, offsetFromBottom === 0)
     }
     case 'edge': {
       if (action.edge === 'latest') {

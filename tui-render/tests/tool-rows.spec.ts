@@ -70,6 +70,14 @@ describe('ToolRowCache', () => {
     expect(textRows[2]).toContain('--- test.ts')
     expect(textRows[3]).toContain('@@ -1,10 +1,10 @@')
     expect(textRows.at(-1)).toContain('10-mod')
+    const hunkRow = rows.at(3)
+    expect(hunkRow?.spans.some(s => s.token === 'accentText')).toBe(true)
+    const delRow = rows.at(13)
+    expect(delRow?.spans.some(s => s.token === 'error')).toBe(true)
+    expect(delRow?.spans.some(s => s.token === 'fgDim')).toBe(true)
+    const addRow = rows.at(14)
+    expect(addRow?.spans.some(s => s.token === 'success')).toBe(true)
+    expect(addRow?.spans.some(s => s.token === 'fgDim')).toBe(true)
   })
 
   it('bounds diff cards to diffPreviewRows when diff exceeds the configured budget', () => {

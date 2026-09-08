@@ -142,7 +142,7 @@ export function formatSymbolSpacing(text: string): string {
   if (text === '' || /^[\x20-\x7e]*$/u.test(text)) return text
   let res = text.replace(
     /([\u26A0\u2699\u2139\u23F1\u2709\u270F])[\uFE0E\uFE0F]?/gu,
-    (_, ch) => NARROW_TO_WIDE_EMOJIS[ch] ?? ch,
+    (_: string, ch: string): string => NARROW_TO_WIDE_EMOJIS[ch] ?? ch,
   )
   res = res.replace(
     /([\u2328\u2712\u2702\u26C8\u2764])(?!\uFE0F|\uFE0E)/gu,

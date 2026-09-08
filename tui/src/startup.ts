@@ -29,6 +29,8 @@ export interface TuiStartupValues {
   cwd?: string
   /** Frame-stats JSON output path, when `--frame-stats <path>` was given. */
   frameStats?: string
+  /** Model id override, when `--model <id>` was given. */
+  model?: string
 }
 
 /**
@@ -43,6 +45,7 @@ function tuiCommand(): Command {
     )
     .helpOption('-h, --help', 'show this help')
     .argument('[task...]', 'an optional first-message seed; multiple words are joined by spaces')
+    .option('--model <id>', 'model id override')
     .option('--resume <id>', 'resume the session with this id')
     .option('--cwd <dir>', 'working directory override')
     .option(
@@ -56,6 +59,7 @@ Examples:
   dsh --profile deepseek-tui                  open the interactive loop idle
   dsh --profile deepseek-tui "说 hi"          seed the first message, then keep the loop open
   dsh --profile deepseek-tui --resume <id>    resume an earlier session (loads history idle)
+  dsh --profile deepseek-tui --model <id>     override startup model
 `,
     )
 }
@@ -63,9 +67,10 @@ Examples:
 /**
  * Parse raw argv into the startup values the command publishes.
  * @param argv - raw command-line arguments (without node and script).
- * @returns the resolved task plus the `--resume`, `--cwd`, and `--frame-stats`
- *   values; `task` is empty for a missing or whitespace-only positional, which
- *   boots the loop idle (the runtime sends no initial message).
+ * @returns the resolved task plus the `--resume`, `--cwd`, `--model`, and
+ *   `--frame-stats` values; `task` is empty for a missing or whitespace-only
+ *   positional, which boots the loop idle (the runtime sends no initial
+ *   message).
  */
 export function parseTuiArgs(argv: string[]): TuiStartupValues {
   const program = tuiCommand()
@@ -73,8 +78,9 @@ export function parseTuiArgs(argv: string[]): TuiStartupValues {
   program.allowExcessArguments()
   const opts = program
     .parse(argv, { from: 'user' })
-    .opts<{ resume?: string; cwd?: string; frameStats?: string }>()
+    .opts<{ resume?: string; cwd?: string; frameStats?: string; model?: string }>()
   const values: TuiStartupValues = { task: program.args.join(' ').trim() }
+  if (opts.model !== undefined) values.model = opts.model
   if (opts.resume !== undefined) values.resume = opts.resume
   if (opts.cwd !== undefined) values.cwd = opts.cwd
   if (opts.frameStats !== undefined) values.frameStats = opts.frameStats
@@ -84,7 +90,7 @@ export function parseTuiArgs(argv: string[]): TuiStartupValues {
 /**
  * Parse and provide the task values as an ordinary Cordis service. The
  * command's action publishes the optional task seed and the `--resume`,
- * `--cwd`, and `--frame-stats` options it was given; a missing or
+ * `--cwd`, `--model`, and `--frame-stats` options it was given; a missing or
  * whitespace-only task publishes an empty seed so the profile boots the loop
  * idle. `--help` provides nothing, leaving dependent rows pending.
  * @param ctx - plugin context carrying the command line.
@@ -92,8 +98,9 @@ export function parseTuiArgs(argv: string[]): TuiStartupValues {
 export function apply(ctx: Context): void {
   const program = tuiCommand()
   program.action(() => {
-    const options = program.opts<{ resume?: string; cwd?: string; frameStats?: string }>()
+    const options = program.opts<{ resume?: string; cwd?: string; frameStats?: string; model?: string }>()
     const values: TuiStartupValues = { task: program.args.join(' ').trim() }
+    if (options.model !== undefined) values.model = options.model
     if (options.resume !== undefined) values.resume = options.resume
     if (options.cwd !== undefined) values.cwd = options.cwd
     if (options.frameStats !== undefined) values.frameStats = options.frameStats

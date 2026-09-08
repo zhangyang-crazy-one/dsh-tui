@@ -3,6 +3,7 @@ import { displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import type { MarkdownRenderLine } from './markdown-projector.ts'
 import type { RenderPolicyCache } from './render-policy.ts'
 import { indexedRows, type RowSource } from './row-source.ts'
+import type { BackgroundToken } from './theme.ts'
 
 interface CachedText {
   readonly source: string
@@ -10,6 +11,8 @@ interface CachedText {
   readonly bytes: number
   readonly naturalWidth: number
   readonly width: number
+  readonly backgroundColumns?: number
+  readonly background?: BackgroundToken
 }
 
 /** Bounded wrap indexes for complete reasoning text, independent of unrelated fold state. */
@@ -26,10 +29,18 @@ export class PlainTextRowCache {
    * @param id - stable owning text id.
    * @param source - canonical, unabridged reasoning text.
    * @param width - body width excluding its two-column indentation.
+   * @param backgroundColumns - optional surface width in terminal columns.
+   * @param background - optional surface token painted behind every row.
    * @returns every physical body row; the main transcript owns clipping and scrolling.
    */
-  rows(id: string, source: string, width: number): RowSource<MarkdownRenderLine> {
-    const key = `${id}\u0000${width}`
+  rows(
+    id: string,
+    source: string,
+    width: number,
+    backgroundColumns?: number,
+    background: BackgroundToken = 'toolBg',
+  ): RowSource<MarkdownRenderLine> {
+    const key = `${id}\u0000${width}\u0000${backgroundColumns ?? ''}\u0000${background}`
     const cached = this.entries.get(key)
     if (cached?.source === source) {
       this.entries.delete(key)
@@ -38,7 +49,12 @@ export class PlainTextRowCache {
     }
     if (cached !== undefined) this.remove(key, cached)
     for (const entry of this.entries.values()) {
-      if (entry.source === source && entry.naturalWidth <= Math.min(width, entry.width)) {
+      if (
+        entry.source === source &&
+        entry.naturalWidth <= Math.min(width, entry.width) &&
+        (backgroundColumns === undefined || entry.backgroundColumns === backgroundColumns) &&
+        entry.background === background
+      ) {
         this.remember(key, entry)
         return entry.rows
       }
@@ -55,13 +71,34 @@ export class PlainTextRowCache {
     const rows = indexedRows(wrapped.length, (index) => {
       const hit = materialized.get(index)
       if (hit !== undefined) return hit
-      const text = `  ${wrapped[index] as string}`
+      const text = `│ ${wrapped[index] as string}`
       const columns = displayWidth(text)
-      const row: MarkdownRenderLine = { text, displayWidth: columns, spans: [{ start: 0, end: columns, token: 'fgDim', bold: false }], rowInBlock: index + 1, sourceStart: -1, sourceEnd: -1, rawTail: false }
+      const row: MarkdownRenderLine = {
+        text,
+        displayWidth: columns,
+        spans: [
+          { start: 0, end: 2, token: 'accentText', bold: false },
+          { start: 2, end: columns, token: 'fgDim', bold: false },
+        ],
+        rowInBlock: index + 1,
+        sourceStart: -1,
+        sourceEnd: -1,
+        rawTail: false,
+        background,
+        ...(backgroundColumns !== undefined ? { backgroundColumns } : {}),
+      }
       materialized.set(index, row)
       return row
     })
-    this.remember(key, { source, rows, naturalWidth, width, bytes: Buffer.byteLength(source) + wrapped.length * 128 })
+    this.remember(key, {
+      source,
+      rows,
+      naturalWidth,
+      width,
+      bytes: Buffer.byteLength(source) + wrapped.length * 128,
+      ...(backgroundColumns !== undefined ? { backgroundColumns } : {}),
+      background,
+    })
     return rows
   }
 

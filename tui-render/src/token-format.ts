@@ -3,6 +3,7 @@
  * @module @deepseek-ai/dsh-tui-render/token-format
  */
 
+/* jscpd:ignore-start -- Host/Client isolation: TUI mirrors web token format without cross-plane deps */
 /** Round a cache-read ratio to exact percentage units, with positive ties rounded up. */
 function roundedPercentUnits(cacheReadTokens: number, denominator: number, decimalPlaces: 0 | 1): number {
   const unitsPerPercent = decimalPlaces === 0 ? 1 : 10
@@ -70,3 +71,4 @@ export function formatCacheHitPercent(
   }
   return `99.${'9'.repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`
 }
+/* jscpd:ignore-end */

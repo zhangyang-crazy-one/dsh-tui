@@ -24,12 +24,14 @@ const BRAND_ANIMATION_LABELS = {
 
 type BrandAnimationSetting = keyof typeof BRAND_ANIMATION_LABELS
 
+/* jscpd:ignore-start -- plain object check mirrors settings package */
 /** Whether a value is a plain data object (not an array or class instance). */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const proto: unknown = Object.getPrototypeOf(value)
   return proto === Object.prototype || proto === null
 }
+/* jscpd:ignore-end */
 
 /**
  * Render one field value for the overlay composer.

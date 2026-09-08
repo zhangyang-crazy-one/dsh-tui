@@ -429,6 +429,145 @@ function holdComposer(
 }
 
 /**
+ * Dispatch an action while resetting the composer buffer text to empty or a specific value.
+ * @param state - current buffered state.
+ * @param action - controller action to emit.
+ * @param text - replacement buffer text (defaults to empty string).
+ * @returns a dispatch effect resetting the text.
+ */
+function resetComposerDispatch(
+  state: LoopInputState,
+  action: LoopAction,
+  text = '',
+): LoopKeyEffect {
+  return {
+    kind: 'dispatch',
+    action,
+    text,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming,
+  }
+}
+
+/**
+ * Restore composer text to the pre-history browse draft.
+ * @param state - current buffered state.
+ * @returns a dispatch effect with the restored draft.
+ */
+function restoreHistoryDraft(state: LoopInputState): LoopKeyEffect {
+  const restored = state.historyDraft ?? ''
+  return {
+    kind: 'dispatch',
+    action: { kind: 'none' as never },
+    text: restored,
+    commandQuery: undefined,
+    prefixG: false,
+    renaming: state.renaming,
+    caretIndex: restored.length,
+    historyIndex: undefined,
+    historyDraft: undefined,
+  }
+}
+
+/**
+ * Commit the currently selected candidate from the mention popup into the buffer.
+ * @param state - current buffered state.
+ * @param candidate - selected candidate from the mention state, or undefined.
+ * @returns a dispatch effect inserting the candidate or none when undefined.
+ */
+function applySelectedMention(
+  state: LoopInputState,
+  candidate: MentionCandidate | undefined,
+): LoopKeyEffect {
+  if (candidate === undefined) return { kind: 'none' }
+  const inserted = normalizeMentionInsertion(candidate)
+  return {
+    kind: 'dispatch',
+    action: { kind: 'none' as never },
+    text: inserted,
+    commandQuery: undefined,
+    prefixG: false,
+    renaming: state.renaming,
+    mentionSelectedIndex: 0,
+    mentionDismissed: false,
+    commandSelectedIndex: 0,
+    commandDismissed: false,
+    caretIndex: inserted.length,
+  }
+}
+
+/**
+ * Route j/k or down/up arrows to a vertical navigation action.
+ * @param key - the printable key string.
+ * @param keyInfo - Ink's key descriptor.
+ * @param state - current input state.
+ * @param actionForDelta - factory creating an action for navigation delta (+1 or -1).
+ * @returns a dispatch effect if a navigation key was pressed, otherwise undefined.
+ */
+function verticalNavEffect(
+  key: string,
+  keyInfo: Key,
+  state: LoopInputState,
+  actionForDelta: (delta: 1 | -1) => LoopAction,
+): LoopKeyEffect | undefined {
+  if (key === 'j' || keyInfo.downArrow) {
+    return holdComposer(state, actionForDelta(1))
+  }
+  if (key === 'k' || keyInfo.upArrow) {
+    return holdComposer(state, actionForDelta(-1))
+  }
+  return undefined
+}
+
+/**
+ * Append an input character to the query text and dispatch a filter action.
+ * @param state - current buffered state.
+ * @param char - typed character to append.
+ * @param makeAction - factory creating a filter action for the new query.
+ * @returns a dispatch effect updating query text and action.
+ */
+function appendQueryFilterEffect(
+  state: LoopInputState,
+  char: string,
+  makeAction: (query: string) => LoopAction,
+): LoopKeyEffect {
+  const appended = state.text + char
+  return {
+    kind: 'dispatch',
+    action: makeAction(appended),
+    text: appended,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming,
+  }
+}
+
+/**
+ * Move the composer caret to a specific index while preserving the buffer and history context.
+ * @param state - current buffered state.
+ * @param caretIndex - target caret position.
+ * @returns a dispatch effect with the new caret position.
+ */
+function moveCaretToEffect(
+  state: LoopInputState,
+  caretIndex: number,
+): LoopKeyEffect {
+  return {
+    kind: 'dispatch',
+    action: { kind: 'none' as never },
+    text: state.text,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming,
+    caretIndex,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft,
+  }
+}
+
+
+/**
  * Draft-mode key routing shared by the settings field editor and the
  * workspace path draft: Esc cancels, Enter applies, arrows/backspace/text
  * edit the composer buffer in place, everything else is swallowed.
@@ -885,34 +1024,13 @@ export function mapKeyEvent(
     if (modelPane.open) {
       // Close the model panel; the composer buffer stays empty as it was
       // when `/model` opened it (K4: focus returns to the input).
-      return {
-        kind: 'dispatch',
-        action: { kind: 'model-pane' },
-        text: '',
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return resetComposerDispatch(state, { kind: 'model-pane' })
     }
     if (helpPane.open) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'help-pane' },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return holdComposer(state, { kind: 'help-pane' })
     }
     if (search.open) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'search-pane' },
-        text: '',
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return resetComposerDispatch(state, { kind: 'search-pane' })
     }
     if (state.renaming) {
       return {
@@ -945,18 +1063,7 @@ export function mapKeyEvent(
       }
     }
     if (state.historyIndex !== undefined) {
-      const restored = state.historyDraft ?? ''
-      return {
-        kind: 'dispatch',
-        action: { kind: 'none' as never },
-        text: restored,
-        commandQuery: undefined,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: restored.length,
-        historyIndex: undefined,
-        historyDraft: undefined,
-      }
+      return restoreHistoryDraft(state)
     }
     return {
       kind: 'dispatch',
@@ -969,19 +1076,7 @@ export function mapKeyEvent(
   }
   if (keyInfo.return) {
     if (mention.open) {
-      if (mention.selectedCandidate === undefined) return { kind: 'none' }
-      const inserted = normalizeMentionInsertion(mention.selectedCandidate)
-      return {
-        kind: 'dispatch',
-        action: { kind: 'none' as never },
-        text: inserted,
-        commandQuery: undefined,
-        prefixG: false,
-        renaming: state.renaming,
-        mentionSelectedIndex: 0,
-        mentionDismissed: false,
-        caretIndex: inserted.length,
-      }
+      return applySelectedMention(state, mention.selectedCandidate)
     }
     if (agentHubOpen) {
       return holdComposer(state, { kind: 'agent-hub-enter' })
@@ -1008,36 +1103,21 @@ export function mapKeyEvent(
     }
     if (modelPane.open) {
       if (modelPane.selectedId === undefined) return { kind: 'none' }
-      return {
-        kind: 'dispatch',
-        action: { kind: 'select-model', id: modelPane.selectedId },
-        text: '',
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return resetComposerDispatch(state, {
+        kind: 'select-model',
+        id: modelPane.selectedId,
+      })
     }
     if (helpPane.open) {
       // Enter closes the help sheet like Escape.
-      return {
-        kind: 'dispatch',
-        action: { kind: 'help-pane' },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return holdComposer(state, { kind: 'help-pane' })
     }
     if (search.open) {
       if (search.selectedId === undefined) return { kind: 'none' }
-      return {
-        kind: 'dispatch',
-        action: { kind: 'select-session', id: search.selectedId },
-        text: '',
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return resetComposerDispatch(state, {
+        kind: 'select-session',
+        id: search.selectedId,
+      })
     }
     if (state.renaming) {
       return {
@@ -1155,21 +1235,7 @@ export function mapKeyEvent(
   }
   if (key === '\t' || keyInfo.tab) {
     if (mention.open) {
-      if (mention.selectedCandidate === undefined) return { kind: 'none' }
-      const inserted = normalizeMentionInsertion(mention.selectedCandidate)
-      return {
-        kind: 'dispatch',
-        action: { kind: 'none' as never },
-        text: inserted,
-        commandQuery: undefined,
-        prefixG: false,
-        renaming: state.renaming,
-        mentionSelectedIndex: 0,
-        mentionDismissed: false,
-        commandSelectedIndex: 0,
-        commandDismissed: false,
-        caretIndex: inserted.length,
-      }
+      return applySelectedMention(state, mention.selectedCandidate)
     }
     if (commandMode) {
       const query = state.commandQuery ?? state.text.slice(1)
@@ -1262,132 +1328,36 @@ export function mapKeyEvent(
     // Search mode owns the keymap: j/k move the candidate highlight, every
     // other printable key filters the query. Escape/Enter/Backspace already
     // returned above; `g s` is inert here.
-    if (key === 'j' || keyInfo.downArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'session-pane-move', delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'session-pane-move', delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'session-pane-move', delta }))
+    if (nav !== undefined) return nav
     if (isTextInput(key, keyInfo)) {
-      const appended = state.text + key
-      return {
-        kind: 'dispatch',
-        action: { kind: 'search', query: appended },
-        text: appended,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return appendQueryFilterEffect(state, key, query => ({ kind: 'search', query }))
     }
     return { kind: 'none' }
   }
   if (timeline.open) {
     // Timeline mode owns j/k (scroll the 60-row window) and Escape (close,
     // handled above); every other key is inert.
-    if (key === 'j' || keyInfo.downArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'timeline-scroll', delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'timeline-scroll', delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'timeline-scroll', delta }))
+    if (nav !== undefined) return nav
     return { kind: 'none' }
   }
   if (modelPane.open) {
     // Model pane owns the keymap: j/k move the highlight, every printable key
     // filters the catalog (mirroring search mode). Escape/Enter/Backspace
     // already returned above; `g s` stays inert here.
-    if (key === 'j' || keyInfo.downArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'model-move', delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'model-move', delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'model-move', delta }))
+    if (nav !== undefined) return nav
     if (isTextInput(key, keyInfo)) {
-      const appended = state.text + key
-      return {
-        kind: 'dispatch',
-        action: { kind: 'model-filter', query: appended },
-        text: appended,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-      }
+      return appendQueryFilterEffect(state, key, query => ({ kind: 'model-filter', query }))
     }
     return { kind: 'none' }
   }
   if (helpPane.open) {
     // Help pane owns j/k (scroll the sheet window) and Escape/Enter (close,
     // handled above); every other key is inert.
-    if (key === 'j' || keyInfo.downArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'help-scroll', delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'help-scroll', delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'help-scroll', delta }))
+    if (nav !== undefined) return nav
     return { kind: 'none' }
   }
   if (key === 'g' && state.text === '') {
@@ -1498,28 +1468,8 @@ export function mapKeyEvent(
     return { kind: 'none' }
   }
   if (pane.open) {
-    if (key === 'j' || keyInfo.downArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'session-pane-move', delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return {
-        kind: 'dispatch',
-        action: { kind: 'session-pane-move', delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex,
-      }
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'session-pane-move', delta }))
+    if (nav !== undefined) return nav
     if (key === 'r') {
       return {
         kind: 'dispatch',
@@ -1588,17 +1538,7 @@ export function mapKeyEvent(
       const caret = clampCaretIndex(state.text, state.caretIndex)
       const targetCaret = moveCaretUpLine(state.text, caret)
       if (targetCaret !== undefined) {
-        return {
-          kind: 'dispatch',
-          action: { kind: 'none' as never },
-          text: state.text,
-          commandQuery: state.commandQuery,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: targetCaret,
-          historyIndex: state.historyIndex,
-          historyDraft: state.historyDraft,
-        }
+        return moveCaretToEffect(state, targetCaret)
       }
     }
     if (state.text === '' && queuedDraft.headText !== undefined) {
@@ -1639,17 +1579,7 @@ export function mapKeyEvent(
       const caret = clampCaretIndex(state.text, state.caretIndex)
       const targetCaret = moveCaretDownLine(state.text, caret)
       if (targetCaret !== undefined) {
-        return {
-          kind: 'dispatch',
-          action: { kind: 'none' as never },
-          text: state.text,
-          commandQuery: state.commandQuery,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: targetCaret,
-          historyIndex: state.historyIndex,
-          historyDraft: state.historyDraft,
-        }
+        return moveCaretToEffect(state, targetCaret)
       }
     }
     if (state.historyIndex !== undefined) {
@@ -1668,18 +1598,7 @@ export function mapKeyEvent(
           historyDraft: state.historyDraft,
         }
       }
-      const restored = state.historyDraft ?? ''
-      return {
-        kind: 'dispatch',
-        action: { kind: 'none' as never },
-        text: restored,
-        commandQuery: undefined,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: restored.length,
-        historyIndex: undefined,
-        historyDraft: undefined,
-      }
+      return restoreHistoryDraft(state)
     }
     return { kind: 'none' }
   }
@@ -2030,7 +1949,9 @@ export function TuiLoop({
     const timer = setInterval(() => {
       setGeneratingTick(t => (t + 1) % 10000)
     }, 100)
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+    }
   }, [model.status])
   const footerSpinner = model.status === 'generating'
     ? getBrailleSpinnerFrame(Date.now())
@@ -2741,25 +2662,6 @@ export function TuiLoop({
       )),
     )
   }
-  const brandBlocked =
-    state.text !== ''
-    || model.status !== 'idle'
-    || pane.open
-    || search.open
-    || timelineOpen
-    || modelPane.open
-    || helpPane.open
-    || toolDetailsPane.open
-    || approvalPane.open
-    || askUserPane.open
-    || permissionPane.open
-    || settingsPane.open
-    || agentHubPane.open
-    || planDirectoryPane.open
-    || workspacePane.open
-    || feedbackPane.open
-    || workflowOverlay.open
-    || planReviewPane.open
   const viewportMotionPaused = pane.open
     || search.open
     || timelineOpen
@@ -2776,6 +2678,10 @@ export function TuiLoop({
     || feedbackPane.open
     || workflowOverlay.open
     || planReviewPane.open
+  const brandBlocked =
+    state.text !== ''
+    || model.status !== 'idle'
+    || viewportMotionPaused
   const brandLifecycleAllowed = !brandBlocked
     && (brandAnimationMode === 'on'
       || (brandAnimationMode === 'auto' && brandAutoEligible))

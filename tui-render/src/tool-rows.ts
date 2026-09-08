@@ -5,7 +5,7 @@ import type { MarkdownRenderLine, MarkdownStyleToken } from './markdown-projecto
 import type { RenderPolicyTools } from './render-policy.ts'
 import { indexedRows, type RowSource } from './row-source.ts'
 import { createToolBodyDocument, materializeToolBodyRow, planToolBodyWindow } from './tool-body.ts'
-import type { ToolBodyCard, ToolBodyLine, ToolBodyWindow } from './tool-body.ts'
+import type { ToolBodyCard, ToolBodyDiffKind, ToolBodyLine, ToolBodyWindow } from './tool-body.ts'
 import { collapsedToolCardSummary, fileUrlFromToolArguments, tokenizeCommandHeading, toolCardDisplayStatus, truncateDisplay } from './tool-cards.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
@@ -83,8 +83,92 @@ export function toolHeadingRow(card: ToolBodyCard, width: number, expanded: bool
  * @param width - full card width, including the two-column indent.
  * @returns a semantic tool/code surface row.
  */
+const GUTTER_SEPARATOR = ' │ '
+
+/**
+ * Infer diff role from raw line text as fallback when metadata is absent.
+ * @param text - escaped line text.
+ * @returns diff role or undefined when not recognized as diff output.
+ */
+function inferDiffKind(text: string): ToolBodyDiffKind | undefined {
+  if (text.startsWith('--- ')) return 'header'
+  if (/^@@ -\d+.* @@$/u.test(text)) return 'hunk'
+  if (text.includes(' │ + ')) return 'add'
+  if (text.includes(' │ - ')) return 'delete'
+  if (/^\s*\d+ │ /u.test(text)) return 'context'
+  return undefined
+}
+
+/**
+ * Split diff line text into styled semantic parts for syntax highlighting.
+ * @param text - escaped line text without the two-column card indent.
+ * @param kind - diff role of the line.
+ * @returns styled parts whose concatenation equals `  ${text}`.
+ */
+function formatDiffParts(
+  text: string,
+  kind: ToolBodyDiffKind,
+): { text: string; token: MarkdownStyleToken }[] {
+  switch (kind) {
+    case 'header':
+      return [{ text: `  ${text}`, token: 'fgDim' }]
+    case 'hunk':
+      return [{ text: `  ${text}`, token: 'accentText' }]
+    case 'add': {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR)
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length)
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length)
+        return [
+          { text: `  ${gutter}`, token: 'fgDim' },
+          { text: content, token: 'success' },
+        ]
+      }
+      return [{ text: `  ${text}`, token: 'success' }]
+    }
+    case 'delete': {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR)
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length)
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length)
+        return [
+          { text: `  ${gutter}`, token: 'fgDim' },
+          { text: content, token: 'error' },
+        ]
+      }
+      return [{ text: `  ${text}`, token: 'error' }]
+    }
+    case 'context': {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR)
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length)
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length)
+        return [
+          { text: `  ${gutter}`, token: 'fgDim' },
+          { text: content, token: 'fgSoft' },
+        ]
+      }
+      return [{ text: `  ${text}`, token: 'fgSoft' }]
+    }
+  }
+}
+
+/**
+ * Indent one already-escaped detail fragment without traversing other source rows.
+ * @param line - one fragment from materializeToolBodyRow.
+ * @param index - physical row index inside the card.
+ * @param width - full card width, including the two-column indent.
+ * @returns a semantic tool/code surface row.
+ */
 export function toolBodyRenderRow(line: ToolBodyLine, index: number, width: number): MarkdownRenderLine {
-  return toolRow([{ text: `  ${line.text}`, token: line.token === 'codeBg' ? 'fgSoft' : 'fgDim' }], index, width, line.token === 'codeBg' ? 'codeBg' : 'toolBg')
+  const bg = line.token === 'codeBg' ? 'codeBg' : 'toolBg'
+  const diffKind = line.diffKind ?? inferDiffKind(line.text)
+
+  if (diffKind !== undefined) {
+    return toolRow(formatDiffParts(line.text, diffKind), index, width, bg)
+  }
+
+  return toolRow([{ text: `  ${line.text}`, token: line.token === 'codeBg' ? 'fgSoft' : 'fgDim' }], index, width, bg)
 }
 
 /**

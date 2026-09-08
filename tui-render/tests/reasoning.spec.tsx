@@ -10,6 +10,10 @@ afterEach(() => {
   applyTheme('truecolor')
 })
 
+function stripAnsi(text: string): string {
+  return text.replace(/\x1B\[[0-9;]*[a-zA-Z]/gu, '')
+}
+
 function render(
   collapsed: boolean,
   text = 'deep thinking\nsecond line',
@@ -58,7 +62,8 @@ describe('ReasoningBlock', () => {
         durationMs: 48800,
       }),
     )
-    expect(out).toContain('⠇ 思考 (48.8s)')
+    expect(stripAnsi(out)).toContain('⠇ 思考 (48.8s)')
+    expect(out).toContain('\x1b[38;2;117;137;255m⠇ 思考')
     expect(out).not.toContain('…')
     for (const line of lines) expect(out).toContain(line)
   })
@@ -68,5 +73,19 @@ describe('ReasoningBlock', () => {
     expect(out).toContain('deep thinking')
     expect(out).toContain('second line')
     expect(out).not.toContain('Ctrl+O 展开')
+  })
+
+  it('applies toolBg card background to header and body rows with left border bar', () => {
+    const out = renderToString(
+      createElement(ReasoningBlock, {
+        text: 'deep thinking',
+        collapsed: false,
+        durationMs: 1234,
+        maxCols: 40,
+      }),
+    )
+    expect(out).toContain('\x1b[48;2;37;40;48m')
+    expect(stripAnsi(out)).toContain('✻ 思考 (1.2s)')
+    expect(stripAnsi(out)).toContain('│ deep thinking')
   })
 })

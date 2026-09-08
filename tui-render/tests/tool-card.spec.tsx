@@ -36,7 +36,7 @@ describe('ToolCard', () => {
     expect(out).toContain('▸ bash · ')
     expect(out).toContain('运行中')
     expect(out).toContain('\x1b[38;2;117;137;255m运行中')
-    expect(out).toContain('\x1b[48;2;26;28;31m')
+    expect(out).toContain('\x1b[48;2;37;40;48m')
     expect(out).not.toContain('Submit')
     expect(out).not.toContain('OK')
   })

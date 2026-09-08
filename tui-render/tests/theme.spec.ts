@@ -30,7 +30,7 @@ describe('THEME_LEVELS', () => {
     expect(THEME_LEVELS.truecolor).toEqual({
       bg: '#151618',
       messageBg: '#25282C',
-      toolBg: '#1A1C1F',
+      toolBg: '#252830',
       codeBg: '#202328',
       inputBg: '#23262B',
       fg: '#EEF0F2',
@@ -94,7 +94,7 @@ describe('styled', () => {
   it('maps background tokens to 48;2 form', () => {
     expect(styled('x', 'bg', 'truecolor')).toBe('\x1b[48;2;21;22;24mx\x1b[0m')
     expect(styled('x', 'messageBg', 'truecolor')).toBe('\x1b[48;2;37;40;44mx\x1b[0m')
-    expect(styled('x', 'toolBg', 'truecolor')).toBe('\x1b[48;2;26;28;31mx\x1b[0m')
+    expect(styled('x', 'toolBg', 'truecolor')).toBe('\x1b[48;2;37;40;48mx\x1b[0m')
     expect(styled('x', 'inputBg', 'truecolor')).toBe('\x1b[48;2;35;38;43mx\x1b[0m')
   })
 

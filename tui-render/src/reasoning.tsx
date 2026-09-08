@@ -7,7 +7,7 @@
 import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { escapeContent, wrapDisplayLines } from './content.ts'
-import { paintRow, styled } from './theme.ts'
+import { inkColor, paintBackgroundRow, styled } from './theme.ts'
 import { getBrailleSpinnerFrame } from './ui-copy.ts'
 
 /** Display state for one reasoning block. */
@@ -29,23 +29,23 @@ export function formatSeconds(ms: number): string {
   return (ms / 1000).toFixed(1)
 }
 
-/** Dim header for the live or expanded thinking block. */
-function thinkingHeader(durationMs: number, expanded: boolean, live = false): string {
+/** Header for the live or expanded thinking block with accent title. */
+function thinkingHeader(durationMs: number, expanded: boolean, live = false, width?: number): string {
   const mark = expanded ? '▾ ' : ''
   const icon = live ? getBrailleSpinnerFrame(durationMs) : '✻'
-  return paintRow([
-    styled(
-      `${mark}${icon} 思考 (${formatSeconds(durationMs)}s)`,
-      'fgDim',
-    ),
-  ])
+  const parts = [
+    ...(mark !== '' ? [styled(mark, 'accentText')] : []),
+    styled(`${icon} 思考`, 'accentText'),
+    styled(` (${formatSeconds(durationMs)}s)`, 'fgDim'),
+  ]
+  return paintBackgroundRow(parts, 'toolBg', width !== undefined && width > 0 ? width : 0)
 }
 
-/** One dim wrapped body row, indented two columns. */
-function bodyRow(line: string, key: number): ReactNode {
+/** One dim wrapped body row with an accent-colored left border bar on card background. */
+function bodyRow(line: string, key: number, width?: number): ReactNode {
   return (
-    <Text key={key}>
-      {paintRow([styled(`  ${escapeContent(line)}`, 'fgDim')])}
+    <Text key={key} wrap="truncate">
+      {paintBackgroundRow([styled('│ ', 'accentText'), styled(escapeContent(line), 'fgDim')], 'toolBg', width !== undefined && width > 0 ? width : 0)}
     </Text>
   )
 }
@@ -65,12 +65,13 @@ export function ReasoningBlock({
 }: ReasoningBlockProps): ReactNode {
   const { columns } = useWindowSize()
   if (collapsed || text === '') return null
+  const width = maxCols ?? columns
   const escaped = escapeContent(text)
-  const body = wrapDisplayLines(escaped, Math.max(1, (maxCols ?? columns) - 4))
+  const body = wrapDisplayLines(escaped, Math.max(1, width - 4))
   return (
-    <Box flexDirection="column" width="100%">
-      <Text>{thinkingHeader(durationMs, !live, live)}</Text>
-      {body.map((line, index) => bodyRow(line, index))}
+    <Box flexDirection="column" width="100%" backgroundColor={inkColor('toolBg')}>
+      <Text wrap="truncate">{thinkingHeader(durationMs, !live, live, width)}</Text>
+      {body.map((line, index) => bodyRow(line, index, width))}
     </Box>
   )
 }

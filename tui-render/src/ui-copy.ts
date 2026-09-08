@@ -133,7 +133,11 @@ export function getBrailleSpinnerFrame(liveMs: number | undefined): string {
 /** Backward-compatible alias for BRAILLE_SPINNER_FRAMES. */
 export const SWIMMING_FISH_FRAMES = BRAILLE_SPINNER_FRAMES
 
-/** Backward-compatible alias for getBrailleSpinnerFrame. */
+/**
+ * Backward-compatible alias for getBrailleSpinnerFrame.
+ * @param liveMs - elapsed time in milliseconds.
+ * @returns spinner frame string.
+ */
 export function getSwimmingFishFrame(liveMs: number | undefined): string {
   return getBrailleSpinnerFrame(liveMs)
 }
@@ -150,6 +154,7 @@ export const GENERATION_TIPS_ZH = [
   '提示：Ctrl+C 中断当前生成 · 随时安全停止',
 ] as const
 
+/** English rotating tips during generation / tool execution. */
 export const GENERATION_TIPS_EN = [
   'Tip: Ctrl+E to expand tool cards · /tools for full output',
   'Tip: Ctrl+O to toggle thinking process · follow reasoning',

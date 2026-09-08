@@ -133,8 +133,9 @@ function workspaceSegments(view: AdaptiveInfoFooterView, columns: number): Segme
   }
   if (view.gitBranch !== undefined && view.gitBranch !== '') {
     const git = segment(`git: ${escapeContent(view.gitBranch)}`, 'accentText')
-    const candidate = selected.length > 1
-      ? [selected[0]!, git, ...selected.slice(1)]
+    const first = selected[0]
+    const candidate = selected.length > 1 && first !== undefined
+      ? [first, git, ...selected.slice(1)]
       : [...selected, git]
     if (displayWidth(segmentsText(candidate)) <= columns) {
       selected = candidate

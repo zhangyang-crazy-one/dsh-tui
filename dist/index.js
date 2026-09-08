@@ -1,6 +1,6 @@
 // tui-render/src/index.ts
 import { render, renderToString, Text as Text32 } from "ink";
-import { createElement as createElement3 } from "react";
+import React, { createElement as createElement3 } from "react";
 
 // tui-render/src/app-shell.tsx
 import { Box, Text, useWindowSize } from "ink";
@@ -126,20 +126,20 @@ function wrapDisplayLines(text, maxCols) {
   const source = text.split("\n");
   if (maxCols <= 0) return source;
   const out = [];
-  for (const line8 of source) {
-    if (line8 === "" || displayWidth(line8) <= maxCols) {
-      out.push(line8);
+  for (const line5 of source) {
+    if (line5 === "" || displayWidth(line5) <= maxCols) {
+      out.push(line5);
       continue;
     }
-    if (/^[\x20-\x7e]*$/u.test(line8)) {
-      for (let i = 0; i < line8.length; i += maxCols) {
-        out.push(line8.slice(i, i + maxCols));
+    if (/^[\x20-\x7e]*$/u.test(line5)) {
+      for (let i = 0; i < line5.length; i += maxCols) {
+        out.push(line5.slice(i, i + maxCols));
       }
       continue;
     }
     let curLine = "";
     let curCols = 0;
-    for (const { segment: segment2 } of GRAPHEME.segment(line8)) {
+    for (const { segment: segment2 } of GRAPHEME.segment(line5)) {
       const width = displayWidth(segment2);
       if (curCols + width > maxCols && curLine !== "") {
         out.push(curLine);
@@ -225,7 +225,7 @@ var THEME_LEVELS = {
   truecolor: {
     bg: "#151618",
     messageBg: "#25282C",
-    toolBg: "#1A1C1F",
+    toolBg: "#252830",
     inputBg: "#23262B",
     codeBg: "#202328",
     fg: "#EEF0F2",
@@ -250,7 +250,7 @@ var THEME_LEVELS = {
   "256": {
     bg: "233",
     messageBg: "235",
-    toolBg: "234",
+    toolBg: "236",
     inputBg: "235",
     codeBg: "235",
     fg: "255",
@@ -856,11 +856,11 @@ function trimPartialClosingFence(root, source) {
 }
 
 // tui-render/src/painted-line.ts
-function paintLineFromRenderLine(line8, hyperlinks2 = hyperlinksEnabled()) {
-  if (line8.spans.length === 0) return paintRow([]);
+function paintLineFromRenderLine(line5, hyperlinks2 = hyperlinksEnabled()) {
+  if (line5.spans.length === 0) return paintRow([]);
   const parts = [];
-  for (const span of line8.spans) {
-    const text = displayColumnSlice(line8.text, span.start, span.end);
+  for (const span of line5.spans) {
+    const text = displayColumnSlice(line5.text, span.start, span.end);
     if (text === "") continue;
     const styledText = styled(text, span.token, void 0, span.bold);
     if (span.href !== void 0 && hyperlinks2 && isOsc8Href(span.href)) {
@@ -869,11 +869,11 @@ function paintLineFromRenderLine(line8, hyperlinks2 = hyperlinksEnabled()) {
       parts.push(styledText);
     }
   }
-  if (line8.background !== void 0 && line8.background !== "bg") {
+  if (line5.background !== void 0 && line5.background !== "bg") {
     return paintBackgroundRow(
       parts,
-      line8.background,
-      line8.backgroundColumns ?? Math.max(line8.displayWidth, 1)
+      line5.background,
+      line5.backgroundColumns ?? Math.max(line5.displayWidth, 1)
     );
   }
   return paintRow(parts);
@@ -893,10 +893,10 @@ var PLAIN_TEXT_RENDERER = {
     if (text === "") return [emptyLine(blockIndex)];
     const wrapped = wrapDisplayLines(text, scope.width);
     const startOffset = node.position?.start.offset ?? 0;
-    return wrapped.map((line8, index) => ({
-      text: line8,
-      displayWidth: displayWidth(line8),
-      spans: [{ start: 0, end: displayWidth(line8), token: "fg", bold: false }],
+    return wrapped.map((line5, index) => ({
+      text: line5,
+      displayWidth: displayWidth(line5),
+      spans: [{ start: 0, end: displayWidth(line5), token: "fg", bold: false }],
       rowInBlock: index,
       sourceStart: index === 0 ? startOffset : -1,
       sourceEnd: -1,
@@ -1410,7 +1410,7 @@ function appendedRowsPreserveTableMetrics(rows, metrics) {
     const metric = metrics[column];
     const values = rows.map((row) => row[column] ?? "");
     for (const value of values) {
-      if (value.split("\n").some((line8) => !metric.wrapWidths.includes(displayWidth(line8)))) return false;
+      if (value.split("\n").some((line5) => !metric.wrapWidths.includes(displayWidth(line5)))) return false;
       if (longestFittingIdentifier(value, DEFAULT_WORD_CAP) > metric.minimum) return false;
     }
     const appendedCategory = classifyColumn(values);
@@ -1562,16 +1562,16 @@ function buildGridLayout(headerCells, bodyCells, metrics, widths, maxCols, divid
   const ruleMid = ruleText(widths, "mid", dividerChar);
   const ruleBottom = ruleText(widths, "bottom", dividerChar);
   lines.push({ kind: "rule", text: ruleTop });
-  for (const line8 of wrapRow(headerCells, widths, true)) {
-    lines.push(line8);
+  for (const line5 of wrapRow(headerCells, widths, true)) {
+    lines.push(line5);
   }
   lines.push({ kind: "rule", text: ruleMid });
   let previousMultiline = false;
   for (const [index, row] of bodyCells.entries()) {
     const multiline = isMultilineTableRow(row.map((cell) => cell.text), widths);
     if (index > 0 && (previousMultiline || multiline)) lines.push({ kind: "rule", text: ruleMid });
-    for (const line8 of wrapRow(row, widths, false)) {
-      lines.push(line8);
+    for (const line5 of wrapRow(row, widths, false)) {
+      lines.push(line5);
     }
     previousMultiline = multiline;
   }
@@ -1611,18 +1611,18 @@ function wrapTableCell(text, width) {
   if (width <= 0) return text.split("\n");
   const out = [];
   for (const source of text.split("\n")) {
-    let line8 = "";
+    let line5 = "";
     for (const token of source.match(/\s+|\S+/gu) ?? []) {
-      if (displayWidth(line8 + token) <= width) {
-        line8 += token;
+      if (displayWidth(line5 + token) <= width) {
+        line5 += token;
         continue;
       }
-      if (line8.trimEnd() !== "") out.push(line8.trimEnd());
+      if (line5.trimEnd() !== "") out.push(line5.trimEnd());
       const pieces = wrapDisplayLines(token.trimStart(), width);
       out.push(...pieces.slice(0, -1));
-      line8 = pieces.at(-1) ?? "";
+      line5 = pieces.at(-1) ?? "";
     }
-    out.push(line8.trimEnd());
+    out.push(line5.trimEnd());
   }
   return out;
 }
@@ -1827,9 +1827,9 @@ function renderHeading(node, width, rowOffset, sourceStart) {
   const prefix = depth ? "\u2501\u2501\u2501 " : "\u2501 ";
   const suffix = depth ? " \u2501\u2501\u2501" : "";
   const wrapped = wrapDisplayLines(`${prefix}${escapeContent(formatSymbolSpacing(text))}${suffix}`, width);
-  return wrapped.map((line8, index) => {
+  return wrapped.map((line5, index) => {
     const buffer = makeBuffer();
-    appendSegment(buffer, { text: line8, token: "accentText", bold: true });
+    appendSegment(buffer, { text: line5, token: "accentText", bold: true });
     return freezeLine(buffer, rowOffset + index, index === 0 ? sourceStart : -1);
   });
 }
@@ -1838,9 +1838,9 @@ function renderBlockquote(children, width, rowOffset, sourceStart, hyperlinks2) 
   for (const child of children) segments.push(...inlineToSegments(child, hyperlinks2));
   const merged = segments.map((s) => s.text).join("");
   const wrapped = wrapDisplayLines(`\u2502 ${escapeContent(merged)}`, width);
-  return wrapped.map((line8, index) => {
+  return wrapped.map((line5, index) => {
     const buffer = makeBuffer();
-    appendSegment(buffer, { text: line8, token: "fgDim", bold: false });
+    appendSegment(buffer, { text: line5, token: "fgDim", bold: false });
     return freezeLine(buffer, rowOffset + index, index === 0 ? sourceStart : -1);
   });
 }
@@ -1860,8 +1860,8 @@ function renderCode(value, width, rowOffset, sourceStart) {
   const lines = value.split("\n");
   const out = [];
   let row = rowOffset;
-  for (const [index, line8] of lines.entries()) {
-    const wrapped = wrapDisplayLines(escapeContent(line8), Math.max(1, width - 2));
+  for (const [index, line5] of lines.entries()) {
+    const wrapped = wrapDisplayLines(escapeContent(line5), Math.max(1, width - 2));
     if (wrapped.length === 0) {
       out.push(freezeEmpty(row, index === 0 ? sourceStart : -1));
       row += 1;
@@ -1873,12 +1873,12 @@ function renderCode(value, width, rowOffset, sourceStart) {
       for (const tk of tokens) {
         appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold });
       }
-      const line9 = freezeLine(
+      const line6 = freezeLine(
         buffer,
         row,
         index === 0 && partIndex === 0 ? sourceStart : -1
       );
-      out.push({ ...line9, background: "codeBg" });
+      out.push({ ...line6, background: "codeBg" });
       row += 1;
     }
   }
@@ -1982,8 +1982,8 @@ function renderTableCells(cells, width, rowOffset, sourceStart) {
     renderRecordLayout(layout, Math.max(1, width), appendLine);
     return lines;
   }
-  for (const line8 of layout.lines) {
-    appendLine(gridLayoutSegments(line8));
+  for (const line5 of layout.lines) {
+    appendLine(gridLayoutSegments(line5));
   }
   return lines;
 }
@@ -2125,44 +2125,44 @@ function renderGridRow(row, widths, header, rowOffset, sourceStart) {
   }
   return out;
 }
-function gridLayoutSegments(line8) {
-  if (line8.kind === "rule" || line8.kind === "plain") {
-    return [{ text: line8.text, token: line8.kind === "rule" ? "fgDim" : "fg", bold: false }];
+function gridLayoutSegments(line5) {
+  if (line5.kind === "rule" || line5.kind === "plain") {
+    return [{ text: line5.text, token: line5.kind === "rule" ? "fgDim" : "fg", bold: false }];
   }
-  if (line8.kind === "record") return [];
+  if (line5.kind === "record") return [];
   const segments = [{ text: "\u2502 ", token: "fgDim", bold: false }];
-  for (const [index, cell] of line8.cells.entries()) {
+  for (const [index, cell] of line5.cells.entries()) {
     if (index > 0) segments.push({ text: " \u2502 ", token: "fgDim", bold: false });
     segments.push({
       text: cell.text,
-      token: line8.header ? "accentText" : "fg",
-      bold: line8.header
+      token: line5.header ? "accentText" : "fg",
+      bold: line5.header
     });
   }
   segments.push({ text: " \u2502", token: "fgDim", bold: false });
   return segments;
 }
 function renderRecordLayout(layout, width, appendLine) {
-  const records = layout.lines.filter((line8) => line8.kind === "record");
+  const records = layout.lines.filter((line5) => line5.kind === "record");
   if (records.length <= 1) {
     const header = layout.header.map((cell) => cell.text).join(" | ");
-    for (const line8 of wrapDisplayLines(header, width)) {
-      appendLine([{ text: line8, token: "accentText", bold: true }]);
+    for (const line5 of wrapDisplayLines(header, width)) {
+      appendLine([{ text: line5, token: "accentText", bold: true }]);
     }
     return;
   }
-  for (const line8 of layout.lines) {
-    if (line8.kind === "rule") {
-      appendLine([{ text: line8.text, token: "fgDim", bold: false }]);
+  for (const line5 of layout.lines) {
+    if (line5.kind === "rule") {
+      appendLine([{ text: line5.text, token: "fgDim", bold: false }]);
       continue;
     }
-    if (line8.kind !== "record" || line8.key.row === 0) continue;
+    if (line5.kind !== "record" || line5.key.row === 0) continue;
     const keyLabel = layout.header[0]?.text ?? "key";
-    const keyText = keyLabel === "" ? line8.key.text : `${keyLabel}: ${line8.key.text}`;
+    const keyText = keyLabel === "" ? line5.key.text : `${keyLabel}: ${line5.key.text}`;
     for (const text of wrapTableCell(keyText, width)) {
       appendLine([{ text, token: "accentText", bold: true }]);
     }
-    for (const value of line8.values) {
+    for (const value of line5.values) {
       const label = layout.header[value.column]?.text ?? `#${String(value.column + 1)}`;
       const indent = wcwidthSafeSlice(layout.valueIndent, Math.max(0, width - 1));
       for (const text of wrapTableCell(`${label}: ${value.text}`, width - displayWidth(indent))) {
@@ -2308,19 +2308,19 @@ var TableScanner = class {
       if (buf.charCodeAt(i) === 10) {
         let end = i;
         if (end > lineStart && buf.charCodeAt(end - 1) === 13) end -= 1;
-        const line8 = buf.slice(lineStart, end);
+        const line5 = buf.slice(lineStart, end);
         const startOff = this.bufferBaseOffset + lineStart;
         const endOff = this.bufferBaseOffset + end;
-        this.handleLine(line8, startOff, endOff);
+        this.handleLine(line5, startOff, endOff);
         lineStart = i + 1;
       }
       i += 1;
     }
     if (forceFlush && lineStart < buf.length) {
-      const line8 = buf.slice(lineStart);
+      const line5 = buf.slice(lineStart);
       const startOff = this.bufferBaseOffset + lineStart;
       const endOff = this.bufferBaseOffset + buf.length;
-      this.handleLine(line8, startOff, endOff);
+      this.handleLine(line5, startOff, endOff);
       lineStart = buf.length;
     }
     if (lineStart > 0) {
@@ -2329,8 +2329,8 @@ var TableScanner = class {
     }
   }
   /** Dispatch one completed line through the state machine. */
-  handleLine(line8, start, end) {
-    const fence = detectFence(line8);
+  handleLine(line5, start, end) {
+    const fence = detectFence(line5);
     if (fence !== null) {
       if (this.fenceMarker === null) {
         this.fenceMarker = fence.marker;
@@ -2343,20 +2343,20 @@ var TableScanner = class {
       return;
     }
     if (this.fenceMarker !== null) return;
-    const cells = parsePipeRow(line8);
+    const cells = parsePipeRow(line5);
     if (cells === null) {
       this.closeTable();
       return;
     }
     if (this.stateKind === "none") {
       this.stateKind = "pending-header";
-      this.headerRow = { text: line8, cells, start, end, isDelimiter: false };
+      this.headerRow = { text: line5, cells, start, end, isDelimiter: false };
       return;
     }
     if (this.stateKind === "pending-header" && this.headerRow) {
       if (isDelimiterRow(cells) && cells.length === this.headerRow.cells.length) {
         const delimiter = {
-          text: line8,
+          text: line5,
           cells,
           start,
           end,
@@ -2367,12 +2367,12 @@ var TableScanner = class {
         this.bodyRows = [];
         return;
       }
-      this.headerRow = { text: line8, cells, start, end, isDelimiter: false };
+      this.headerRow = { text: line5, cells, start, end, isDelimiter: false };
       return;
     }
     if (this.stateKind === "confirmed-table" && this.delimiterRow) {
       if (cells.length === this.delimiterRow.cells.length) {
-        this.bodyRows.push({ text: line8, cells, start, end, isDelimiter: false });
+        this.bodyRows.push({ text: line5, cells, start, end, isDelimiter: false });
         return;
       }
       this.closeTable();
@@ -2418,26 +2418,26 @@ var TableScanner = class {
     return { kind: "none" };
   }
 };
-function detectFence(line8) {
+function detectFence(line5) {
   let i = 0;
-  while (i < line8.length && (line8.charCodeAt(i) === 32 || line8.charCodeAt(i) === 9)) i += 1;
+  while (i < line5.length && (line5.charCodeAt(i) === 32 || line5.charCodeAt(i) === 9)) i += 1;
   if (i >= 4) return null;
-  if (i >= line8.length) return null;
-  const ch = line8.charCodeAt(i);
+  if (i >= line5.length) return null;
+  const ch = line5.charCodeAt(i);
   if (ch !== 96 && ch !== 126) return null;
   const runStart = i;
-  while (i < line8.length && line8.charCodeAt(i) === ch) i += 1;
+  while (i < line5.length && line5.charCodeAt(i) === ch) i += 1;
   const length = i - runStart;
   if (length < FENCE_MIN) return null;
   if (ch === 96) {
-    for (let j = i; j < line8.length; j += 1) {
-      if (line8.charCodeAt(j) === 96) return null;
+    for (let j = i; j < line5.length; j += 1) {
+      if (line5.charCodeAt(j) === 96) return null;
     }
   }
   return { marker: String.fromCharCode(ch), length };
 }
-function parsePipeRow(line8) {
-  const trimmed = line8.trim();
+function parsePipeRow(line5) {
+  const trimmed = line5.trim();
   if (trimmed === "") return null;
   let pipeCount = 0;
   for (let i2 = 0; i2 < trimmed.length; i2 += 1) {
@@ -2475,8 +2475,8 @@ function parsePipeRow(line8) {
   cells.push(current.trim());
   return cells;
 }
-function parsePipeTableCells(line8) {
-  return parsePipeRow(line8) ?? void 0;
+function parsePipeTableCells(line5) {
+  return parsePipeRow(line5) ?? void 0;
 }
 function isDelimiterRow(cells) {
   if (cells.length === 0) return false;
@@ -2595,7 +2595,7 @@ function tokenize(source, lang) {
     return cached;
   }
   tokenMisses += 1;
-  const tokens = source.split("\n").flatMap((line8) => tokenizeLine(line8));
+  const tokens = source.split("\n").flatMap((line5) => tokenizeLine(line5));
   lruSet2(tokenCache, key, tokens, () => {
     tokenEvictions += 1;
   });
@@ -2642,10 +2642,10 @@ function CodeBlock({
   tail
 }) {
   const lines = source.split("\n");
-  return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", children: lines.map((line8, index) => /* @__PURE__ */ jsx2(
+  return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", children: lines.map((line5, index) => /* @__PURE__ */ jsx2(
     HighlightedLine,
     {
-      source: line8,
+      source: line5,
       lang,
       prefix: index === 0 ? lead : rest,
       tail: index === lines.length - 1 ? tail : void 0
@@ -2653,13 +2653,13 @@ function CodeBlock({
     index
   )) });
 }
-function paintedLineFromRenderLine(line8, hyperlinks2) {
-  return paintLineFromRenderLine(line8, hyperlinks2 && hyperlinksEnabled());
+function paintedLineFromRenderLine(line5, hyperlinks2) {
+  return paintLineFromRenderLine(line5, hyperlinks2 && hyperlinksEnabled());
 }
 function linesToJsx(lines, affixes, hyperlinks2) {
   if (lines.length === 0) return null;
-  return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%", children: lines.map((line8, index) => {
-    const painted = paintedLineFromRenderLine(line8, hyperlinks2);
+  return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%", children: lines.map((line5, index) => {
+    const painted = paintedLineFromRenderLine(line5, hyperlinks2);
     const prefix = index === 0 ? affixes.lead : affixes.rest;
     const tail = index === lines.length - 1 ? affixes.tail : void 0;
     return /* @__PURE__ */ jsxs2(Text2, { wrap: "truncate", children: [
@@ -2811,16 +2811,7 @@ function MarkdownBlock({
       ) }, "tail")
     );
   }
-  if (out.length === 0 && tail === void 0) {
-    return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%" });
-  }
-  if (out.length === 0) {
-    return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%", children: /* @__PURE__ */ jsxs2(Text2, { children: [
-      prefix?.first,
-      tail
-    ] }) });
-  }
-  return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%", children: out });
+  return wrapMarkdownOutput(out, tail, prefix);
 }
 function renderBlockEntry(block, affixes, state, _scope) {
   const rangeKey2 = `${block.range.start}:${block.range.end}`;
@@ -2899,6 +2890,9 @@ function renderFullSource(source, bodyWidth, prefix, tail, settled) {
     };
     out.push(/* @__PURE__ */ jsx2(Fragment, { children: renderActiveTable(snap.rows, bodyWidth, tableAffixes, hyperlinks2) }, "full-active-table"));
   }
+  return wrapMarkdownOutput(out, tail, prefix);
+}
+function wrapMarkdownOutput(out, tail, prefix) {
   if (out.length === 0 && tail === void 0) {
     return /* @__PURE__ */ jsx2(Box2, { flexDirection: "column", width: "100%" });
   }
@@ -3051,18 +3045,18 @@ import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
 function formatSeconds(ms) {
   return (ms / 1e3).toFixed(1);
 }
-function thinkingHeader(durationMs, expanded, live = false) {
+function thinkingHeader(durationMs, expanded, live = false, width) {
   const mark = expanded ? "\u25BE " : "";
   const icon = live ? getBrailleSpinnerFrame(durationMs) : "\u273B";
-  return paintRow([
-    styled(
-      `${mark}${icon} \u601D\u8003 (${formatSeconds(durationMs)}s)`,
-      "fgDim"
-    )
-  ]);
+  const parts = [
+    ...mark !== "" ? [styled(mark, "accentText")] : [],
+    styled(`${icon} \u601D\u8003`, "accentText"),
+    styled(` (${formatSeconds(durationMs)}s)`, "fgDim")
+  ];
+  return paintBackgroundRow(parts, "toolBg", width !== void 0 && width > 0 ? width : 0);
 }
-function bodyRow(line8, key) {
-  return /* @__PURE__ */ jsx3(Text3, { children: paintRow([styled(`  ${escapeContent(line8)}`, "fgDim")]) }, key);
+function bodyRow(line5, key, width) {
+  return /* @__PURE__ */ jsx3(Text3, { wrap: "truncate", children: paintBackgroundRow([styled("\u2502 ", "accentText"), styled(escapeContent(line5), "fgDim")], "toolBg", width !== void 0 && width > 0 ? width : 0) }, key);
 }
 function ReasoningBlock({
   text,
@@ -3073,11 +3067,12 @@ function ReasoningBlock({
 }) {
   const { columns } = useWindowSize3();
   if (collapsed || text === "") return null;
+  const width = maxCols ?? columns;
   const escaped = escapeContent(text);
-  const body = wrapDisplayLines(escaped, Math.max(1, (maxCols ?? columns) - 4));
-  return /* @__PURE__ */ jsxs3(Box3, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ jsx3(Text3, { children: thinkingHeader(durationMs, !live, live) }),
-    body.map((line8, index) => bodyRow(line8, index))
+  const body = wrapDisplayLines(escaped, Math.max(1, width - 4));
+  return /* @__PURE__ */ jsxs3(Box3, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: [
+    /* @__PURE__ */ jsx3(Text3, { wrap: "truncate", children: thinkingHeader(durationMs, !live, live, width) }),
+    body.map((line5, index) => bodyRow(line5, index, width))
   ] });
 }
 
@@ -3085,19 +3080,26 @@ function ReasoningBlock({
 import { Box as Box4, Text as Text4 } from "ink";
 
 // tui-render/src/row-source.ts
+function clampSliceOffset(index, length) {
+  const truncated = Math.trunc(index);
+  return Math.min(length, Math.max(0, index < 0 ? length + truncated : truncated));
+}
+function resolveItemIndex(index, length) {
+  const integer = Math.trunc(index);
+  const absolute = integer < 0 ? length + integer : integer;
+  return absolute < 0 || absolute >= length ? void 0 : absolute;
+}
 function indexedRows(length, read) {
-  const offset = (index) => Math.min(length, Math.max(0, index < 0 ? length + Math.trunc(index) : Math.trunc(index)));
   return Object.freeze({
     length,
     at(index) {
-      const integer = Math.trunc(index);
-      const absolute = integer < 0 ? length + integer : integer;
-      return absolute < 0 || absolute >= length ? void 0 : read(absolute);
+      const absolute = resolveItemIndex(index, length);
+      return absolute === void 0 ? void 0 : read(absolute);
     },
     slice(start = 0, end = length) {
       const out = [];
-      const last = offset(end);
-      for (let index = offset(start); index < last; index += 1) out.push(read(index));
+      const last = clampSliceOffset(end, length);
+      for (let index = clampSliceOffset(start, length); index < last; index += 1) out.push(read(index));
       return out;
     }
   });
@@ -3142,19 +3144,17 @@ var RowSequence = class {
       }
       return low;
     };
-    const offset = (index) => Math.min(length, Math.max(0, index < 0 ? length + Math.trunc(index) : Math.trunc(index)));
     return Object.freeze({
       length,
       at(index) {
-        const integer = Math.trunc(index);
-        const absolute = integer < 0 ? length + integer : integer;
-        if (absolute < 0 || absolute >= length) return void 0;
+        const absolute = resolveItemIndex(index, length);
+        if (absolute === void 0) return void 0;
         const segment2 = segments[locate(absolute)];
         return segment2.rows.at(absolute - segment2.start);
       },
       slice(start = 0, end = length) {
-        const first = offset(start);
-        const last = offset(end);
+        const first = clampSliceOffset(start, length);
+        const last = clampSliceOffset(end, length);
         const out = [];
         for (let index = locate(first); index < segments.length; index += 1) {
           const segment2 = segments[index];
@@ -3195,8 +3195,8 @@ function splitDiffLines(text) {
   return normalized.split(/\r?\n/u);
 }
 function diffLines(oldLines, newLines) {
-  if (oldLines.length === 0) return newLines.map((line8) => `+${line8}`);
-  if (newLines.length === 0) return oldLines.map((line8) => `-${line8}`);
+  if (oldLines.length === 0) return newLines.map((line5) => `+${line5}`);
+  if (newLines.length === 0) return oldLines.map((line5) => `-${line5}`);
   const m = oldLines.length;
   const n = newLines.length;
   if (m * n > 5e5) {
@@ -3216,9 +3216,9 @@ function diffLines(oldLines, newLines) {
   const midN = trimmedNew.length;
   const middle = [];
   if (midM === 0) {
-    for (const line8 of trimmedNew) middle.push(`+${line8}`);
+    for (const line5 of trimmedNew) middle.push(`+${line5}`);
   } else if (midN === 0) {
-    for (const line8 of trimmedOld) middle.push(`-${line8}`);
+    for (const line5 of trimmedOld) middle.push(`-${line5}`);
   } else {
     const stride = midN + 1;
     const dp = new Int32Array((midM + 1) * stride);
@@ -3259,8 +3259,8 @@ function diffLines(oldLines, newLines) {
   for (let k = 0; k < prefixCount; k++) {
     result.push(` ${oldLines[k]}`);
   }
-  for (const line8 of middle) {
-    result.push(line8);
+  for (const line5 of middle) {
+    result.push(line5);
   }
   for (let k = m - suffixCount; k < m; k++) {
     result.push(` ${oldLines[k]}`);
@@ -3295,7 +3295,7 @@ function createToolBodyDocument(card, options) {
       let lastPath;
       for (const diff of diffs) {
         if (diff.path !== lastPath) {
-          source.push({ text: `--- ${diff.path}`, token: "codeBg" });
+          source.push({ text: `--- ${diff.path}`, token: "codeBg", diffKind: "header" });
           lastPath = diff.path;
         }
         const oldStart = diff.oldStart ?? (diff.oldText === null ? 0 : 1);
@@ -3309,7 +3309,7 @@ function createToolBodyDocument(card, options) {
           newLinesCount ??= splitDiffLines(diff.newText).length;
         } else if (diff.oldText === null) {
           const split = splitDiffLines(diff.newText);
-          lines = split.map((line8) => `+${line8}`);
+          lines = split.map((line5) => `+${line5}`);
           oldLinesCount = 0;
           newLinesCount = split.length;
         } else {
@@ -3321,7 +3321,7 @@ function createToolBodyDocument(card, options) {
         }
         const oldHunk = `${oldStart}${oldLinesCount !== 1 ? `,${oldLinesCount}` : ""}`;
         const newHunk = `${newStart}${newLinesCount !== 1 ? `,${newLinesCount}` : ""}`;
-        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: "codeBg" });
+        source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: "codeBg", diffKind: "hunk" });
         const maxLine = Math.max(oldStart + oldLinesCount, newStart + newLinesCount, 1);
         const gutterWidth = Math.max(3, String(maxLine).length);
         let curOld = oldStart === 0 ? 1 : oldStart;
@@ -3330,20 +3330,20 @@ function createToolBodyDocument(card, options) {
           if (raw.startsWith("\\")) continue;
           if (raw.startsWith("-")) {
             const num = String(curOld).padStart(gutterWidth, " ");
-            source.push({ text: `${num} \u2502 - ${raw.slice(1)}`, token: "codeBg" });
+            source.push({ text: `${num} \u2502 - ${raw.slice(1)}`, token: "codeBg", diffKind: "delete" });
             curOld++;
           } else if (raw.startsWith("+")) {
             const num = String(curNew).padStart(gutterWidth, " ");
-            source.push({ text: `${num} \u2502 + ${raw.slice(1)}`, token: "codeBg" });
+            source.push({ text: `${num} \u2502 + ${raw.slice(1)}`, token: "codeBg", diffKind: "add" });
             curNew++;
           } else if (raw.startsWith(" ")) {
             const num = String(curNew).padStart(gutterWidth, " ");
-            source.push({ text: `${num} \u2502   ${raw.slice(1)}`, token: "codeBg" });
+            source.push({ text: `${num} \u2502   ${raw.slice(1)}`, token: "codeBg", diffKind: "context" });
             curOld++;
             curNew++;
           } else {
             const num = String(curNew).padStart(gutterWidth, " ");
-            source.push({ text: `${num} \u2502   ${raw}`, token: "codeBg" });
+            source.push({ text: `${num} \u2502   ${raw}`, token: "codeBg", diffKind: "context" });
             curOld++;
             curNew++;
           }
@@ -3367,8 +3367,8 @@ function createToolBodyDocument(card, options) {
     }
     case "read":
       if (result?.card === "read") section(tuiCopy("result", options.locale), indexedRows(result.lines.length, (index) => {
-        const line8 = result.lines[index];
-        return { text: `${line8.number} ${line8.text}`, token: "codeBg" };
+        const line5 = result.lines[index];
+        return { text: `${line5.number} ${line5.text}`, token: "codeBg" };
       }));
       break;
     case "web":
@@ -3412,22 +3412,26 @@ function fragmentEnd(text, start, width) {
 }
 function planToolBodyWindow(document, cursor, width, maxRows) {
   const fragments = [];
-  let line8 = cursor.line;
+  let line5 = cursor.line;
   let offset = cursor.offset;
-  while (line8 < document.length && fragments.length < maxRows) {
-    const source = document.at(line8);
+  while (line5 < document.length && fragments.length < maxRows) {
+    const source = document.at(line5);
     const end = fragmentEnd(source.text, offset, width);
-    fragments.push({ line: line8, start: offset, end });
+    fragments.push({ line: line5, start: offset, end });
     if (end === source.text.length) {
-      line8 += 1;
+      line5 += 1;
       offset = 0;
     } else offset = end;
   }
-  return { fragments, next: line8 < document.length ? { line: line8, offset } : void 0, remainingLines: document.length - line8 };
+  return { fragments, next: line5 < document.length ? { line: line5, offset } : void 0, remainingLines: document.length - line5 };
 }
 function materializeToolBodyRow(document, fragment) {
   const source = document.at(fragment.line);
-  return { text: escapeToolText(source.text.slice(fragment.start, fragment.end)), token: source.token };
+  return {
+    text: escapeToolText(source.text.slice(fragment.start, fragment.end)),
+    token: source.token,
+    ...source.diffKind !== void 0 ? { diffKind: source.diffKind } : {}
+  };
 }
 function toolCardOriginalText(card, options) {
   const parts = [card.name, tuiCopy("arguments", options.locale), card.arguments];
@@ -3448,8 +3452,8 @@ function toolCardDisplayStatus(card) {
 }
 function collapsedResultTail(text) {
   if (text === void 0) return void 0;
-  const line8 = text.split(/\r?\n/u).map((item) => item.trim()).filter(Boolean).at(-1);
-  return line8 === void 0 ? void 0 : escapeContent(line8);
+  const line5 = text.split(/\r?\n/u).map((item) => item.trim()).filter(Boolean).at(-1);
+  return line5 === void 0 ? void 0 : escapeContent(line5);
 }
 function collapsedFailureSummary(card) {
   const terminal = card.resultView?.card === "terminal" ? card.resultView : void 0;
@@ -3678,8 +3682,66 @@ function toolHeadingRow(card, width, expanded, locale) {
   if (summary !== void 0 && available >= 2) parts.push({ text: ` ${truncateDisplay(summary, available)}`, token: "fgDim", ...href === void 0 ? {} : { href } });
   return toolRow(parts, 0, width, "toolBg");
 }
-function toolBodyRenderRow(line8, index, width) {
-  return toolRow([{ text: `  ${line8.text}`, token: line8.token === "codeBg" ? "fgSoft" : "fgDim" }], index, width, line8.token === "codeBg" ? "codeBg" : "toolBg");
+var GUTTER_SEPARATOR = " \u2502 ";
+function inferDiffKind(text) {
+  if (text.startsWith("--- ")) return "header";
+  if (/^@@ -\d+.* @@$/u.test(text)) return "hunk";
+  if (text.includes(" \u2502 + ")) return "add";
+  if (text.includes(" \u2502 - ")) return "delete";
+  if (/^\s*\d+ │ /u.test(text)) return "context";
+  return void 0;
+}
+function formatDiffParts(text, kind) {
+  switch (kind) {
+    case "header":
+      return [{ text: `  ${text}`, token: "fgDim" }];
+    case "hunk":
+      return [{ text: `  ${text}`, token: "accentText" }];
+    case "add": {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR);
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length);
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length);
+        return [
+          { text: `  ${gutter}`, token: "fgDim" },
+          { text: content, token: "success" }
+        ];
+      }
+      return [{ text: `  ${text}`, token: "success" }];
+    }
+    case "delete": {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR);
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length);
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length);
+        return [
+          { text: `  ${gutter}`, token: "fgDim" },
+          { text: content, token: "error" }
+        ];
+      }
+      return [{ text: `  ${text}`, token: "error" }];
+    }
+    case "context": {
+      const sepIndex = text.indexOf(GUTTER_SEPARATOR);
+      if (sepIndex !== -1) {
+        const gutter = text.slice(0, sepIndex + GUTTER_SEPARATOR.length);
+        const content = text.slice(sepIndex + GUTTER_SEPARATOR.length);
+        return [
+          { text: `  ${gutter}`, token: "fgDim" },
+          { text: content, token: "fgSoft" }
+        ];
+      }
+      return [{ text: `  ${text}`, token: "fgSoft" }];
+    }
+  }
+}
+function toolBodyRenderRow(line5, index, width) {
+  const bg = line5.token === "codeBg" ? "codeBg" : "toolBg";
+  const diffKind = line5.diffKind ?? inferDiffKind(line5.text);
+  if (diffKind !== void 0) {
+    return toolRow(formatDiffParts(line5.text, diffKind), index, width, bg);
+  }
+  return toolRow([{ text: `  ${line5.text}`, token: line5.token === "codeBg" ? "fgSoft" : "fgDim" }], index, width, bg);
 }
 function toolRemainingRow(remaining, width, index, locale) {
   const action = tuiCopy("toolDetails", locale);
@@ -3828,7 +3890,7 @@ import { jsx as jsx4 } from "react/jsx-runtime";
 function ToolCard({ card, expanded = false, maxCols = 80, locale = "zh-CN", policy = toolPolicyDefaults() }) {
   const cache2 = new ToolRowCache(policy);
   const rows = cache2.rows(card.callId, card, maxCols, expanded, locale).slice();
-  return /* @__PURE__ */ jsx4(Box4, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: rows.map((line8, index) => /* @__PURE__ */ jsx4(Text4, { wrap: "truncate", children: paintLineFromRenderLine(line8, hyperlinksEnabled()) }, index)) });
+  return /* @__PURE__ */ jsx4(Box4, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: rows.map((line5, index) => /* @__PURE__ */ jsx4(Text4, { wrap: "truncate", children: paintLineFromRenderLine(line5, hyperlinksEnabled()) }, index)) });
 }
 
 // tui-render/src/tool-presenter-cache.ts
@@ -3899,10 +3961,12 @@ var PlainTextRowCache = class {
    * @param id - stable owning text id.
    * @param source - canonical, unabridged reasoning text.
    * @param width - body width excluding its two-column indentation.
+   * @param backgroundColumns - optional surface width in terminal columns.
+   * @param background - optional surface token painted behind every row.
    * @returns every physical body row; the main transcript owns clipping and scrolling.
    */
-  rows(id, source, width) {
-    const key = `${id}\0${width}`;
+  rows(id, source, width, backgroundColumns, background = "toolBg") {
+    const key = `${id}\0${width}\0${backgroundColumns ?? ""}\0${background}`;
     const cached = this.entries.get(key);
     if (cached?.source === source) {
       this.entries.delete(key);
@@ -3911,30 +3975,51 @@ var PlainTextRowCache = class {
     }
     if (cached !== void 0) this.remove(key, cached);
     for (const entry of this.entries.values()) {
-      if (entry.source === source && entry.naturalWidth <= Math.min(width, entry.width)) {
+      if (entry.source === source && entry.naturalWidth <= Math.min(width, entry.width) && (backgroundColumns === void 0 || entry.backgroundColumns === backgroundColumns) && entry.background === background) {
         this.remember(key, entry);
         return entry.rows;
       }
     }
     const wrapped = [];
     let naturalWidth = 0;
-    for (const line8 of escapeContent(source).replace(/\t/gu, "\\t").split("\n")) {
-      const columns = displayWidth(line8);
+    for (const line5 of escapeContent(source).replace(/\t/gu, "\\t").split("\n")) {
+      const columns = displayWidth(line5);
       naturalWidth = Math.max(naturalWidth, columns);
-      if (columns <= width) wrapped.push(line8);
-      else wrapped.push(...wrapDisplayLines(line8, width));
+      if (columns <= width) wrapped.push(line5);
+      else wrapped.push(...wrapDisplayLines(line5, width));
     }
     const materialized = /* @__PURE__ */ new Map();
     const rows = indexedRows(wrapped.length, (index) => {
       const hit = materialized.get(index);
       if (hit !== void 0) return hit;
-      const text = `  ${wrapped[index]}`;
+      const text = `\u2502 ${wrapped[index]}`;
       const columns = displayWidth(text);
-      const row = { text, displayWidth: columns, spans: [{ start: 0, end: columns, token: "fgDim", bold: false }], rowInBlock: index + 1, sourceStart: -1, sourceEnd: -1, rawTail: false };
+      const row = {
+        text,
+        displayWidth: columns,
+        spans: [
+          { start: 0, end: 2, token: "accentText", bold: false },
+          { start: 2, end: columns, token: "fgDim", bold: false }
+        ],
+        rowInBlock: index + 1,
+        sourceStart: -1,
+        sourceEnd: -1,
+        rawTail: false,
+        background,
+        ...backgroundColumns !== void 0 ? { backgroundColumns } : {}
+      };
       materialized.set(index, row);
       return row;
     });
-    this.remember(key, { source, rows, naturalWidth, width, bytes: Buffer.byteLength(source) + wrapped.length * 128 });
+    this.remember(key, {
+      source,
+      rows,
+      naturalWidth,
+      width,
+      bytes: Buffer.byteLength(source) + wrapped.length * 128,
+      ...backgroundColumns !== void 0 ? { backgroundColumns } : {},
+      background
+    });
     return rows;
   }
   remember(key, entry) {
@@ -4287,6 +4372,19 @@ function layoutState(state, action) {
   if (state.contentRows === next.contentRows && state.viewportRows === next.viewportRows && state.offsetFromBottom === next.offsetFromBottom && state.unseenRows === next.unseenRows && state.anchor?.blockId === next.anchor?.blockId && state.anchor?.rowWithinBlock === next.anchor?.rowWithinBlock && state.anchor?.viewportRow === next.anchor?.viewportRow && sameBlocks(state.blocks, next.blocks)) return state;
   return next;
 }
+function applyOffsetAndFollow(state, offsetFromBottom, follow) {
+  if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
+    return state;
+  }
+  const nextTop = topRow({ ...state, offsetFromBottom });
+  return {
+    ...state,
+    follow,
+    offsetFromBottom,
+    unseenRows: follow ? 0 : state.unseenRows,
+    anchor: follow ? void 0 : anchorForRow(nextTop, state.blocks)
+  };
+}
 function reduceTranscriptViewport(state, action) {
   switch (action.kind) {
     case "layout":
@@ -4303,17 +4401,7 @@ function reduceTranscriptViewport(state, action) {
         state.viewportRows
       );
       const follow = offsetFromBottom === 0 ? true : action.delta > 0 ? false : state.follow;
-      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
-        return state;
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom });
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? void 0 : anchorForRow(nextTop, state.blocks)
-      };
+      return applyOffsetAndFollow(state, offsetFromBottom, follow);
     }
     case "offset": {
       const offsetFromBottom = clampOffset(
@@ -4321,35 +4409,13 @@ function reduceTranscriptViewport(state, action) {
         state.contentRows,
         state.viewportRows
       );
-      const follow = offsetFromBottom === 0;
-      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
-        return state;
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom });
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? void 0 : anchorForRow(nextTop, state.blocks)
-      };
+      return applyOffsetAndFollow(state, offsetFromBottom, offsetFromBottom === 0);
     }
     case "position": {
       const available = maxOffset(state.contentRows, state.viewportRows);
       const fraction = Math.max(0, Math.min(action.fraction, 1));
       const offsetFromBottom = Math.round(available * (1 - fraction));
-      const follow = offsetFromBottom === 0;
-      if (offsetFromBottom === state.offsetFromBottom && follow === state.follow && (follow ? 0 : state.unseenRows) === state.unseenRows) {
-        return state;
-      }
-      const nextTop = topRow({ ...state, offsetFromBottom });
-      return {
-        ...state,
-        follow,
-        offsetFromBottom,
-        unseenRows: follow ? 0 : state.unseenRows,
-        anchor: follow ? void 0 : anchorForRow(nextTop, state.blocks)
-      };
+      return applyOffsetAndFollow(state, offsetFromBottom, offsetFromBottom === 0);
     }
     case "edge": {
       if (action.edge === "latest") {
@@ -4608,22 +4674,22 @@ function visibleFrameSnapshot() {
   return publishedSnapshot;
 }
 var lineIdentityCache = /* @__PURE__ */ new WeakMap();
-function physicalLineIdentity(line8) {
-  let cached = lineIdentityCache.get(line8);
+function physicalLineIdentity(line5) {
+  let cached = lineIdentityCache.get(line5);
   if (cached !== void 0) return cached;
   cached = JSON.stringify([
-    line8.text,
-    line8.displayWidth,
-    line8.background ?? "bg",
-    line8.backgroundColumns ?? line8.displayWidth,
-    line8.spans.map((span) => [
+    line5.text,
+    line5.displayWidth,
+    line5.background ?? "bg",
+    line5.backgroundColumns ?? line5.displayWidth,
+    line5.spans.map((span) => [
       span.text,
       span.token,
       span.bold === true ? 1 : 0,
       span.href ?? ""
     ])
   ]);
-  lineIdentityCache.set(line8, cached);
+  lineIdentityCache.set(line5, cached);
   return cached;
 }
 function createFrameSnapshotRow(input) {
@@ -4644,8 +4710,8 @@ function sameGeometry(a, b) {
 function screenRowKey(row) {
   return row.row << 16 | row.col;
 }
-function paintedColumns(line8) {
-  return line8.backgroundColumns ?? line8.displayWidth;
+function paintedColumns(line5) {
+  return line5.backgroundColumns ?? line5.displayWidth;
 }
 function diffVisibleFrameSnapshots(previous, next) {
   const forced = previous === void 0 || !sameGeometry(previous.geometry, next.geometry);
@@ -4761,24 +4827,24 @@ function railOverlay(tier, force = false) {
   return cells === "" ? "" : `\x1B7${cells}\x1B8`;
 }
 var paintedPhysicalLineCache = /* @__PURE__ */ new WeakMap();
-function paintPhysicalLine(line8, tier) {
+function paintPhysicalLine(line5, tier) {
   const hyperlinks2 = hyperlinksEnabled();
   const cacheKey = `${tier}:${hyperlinks2 ? 1 : 0}`;
-  let byTier = paintedPhysicalLineCache.get(line8);
+  let byTier = paintedPhysicalLineCache.get(line5);
   if (byTier === void 0) {
     byTier = /* @__PURE__ */ new Map();
-    paintedPhysicalLineCache.set(line8, byTier);
+    paintedPhysicalLineCache.set(line5, byTier);
   }
   const cached = byTier.get(cacheKey);
   if (cached !== void 0) return cached;
-  const parts = line8.spans.map((span) => {
+  const parts = line5.spans.map((span) => {
     const text = styled(span.text, span.token, tier, span.bold);
     return span.href !== void 0 && hyperlinks2 && isOsc8Href(span.href) ? wrapOsc8(text, span.href) : text;
   });
-  const painted = line8.background !== void 0 && line8.background !== "bg" ? paintBackgroundRow(
+  const painted = line5.background !== void 0 && line5.background !== "bg" ? paintBackgroundRow(
     parts,
-    line8.background,
-    line8.backgroundColumns ?? Math.max(1, line8.displayWidth),
+    line5.background,
+    line5.backgroundColumns ?? Math.max(1, line5.displayWidth),
     tier
   ) : paintRow(parts, tier);
   byTier.set(cacheKey, painted);
@@ -4936,21 +5002,21 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
 var TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
 function countWrittenCells(chunk) {
   const printable = chunk.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
-  return printable.split("\n").reduce((cells, line8) => cells + displayWidth(line8), 0);
+  return printable.split("\n").reduce((cells, line5) => cells + displayWidth(line5), 0);
 }
 
 // tui-render/src/screen-atlas.ts
 var GRAPHEME2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-function paintSnapshotLine(line8) {
-  const parts = line8.spans.map((span) => {
+function paintSnapshotLine(line5) {
+  const parts = line5.spans.map((span) => {
     const painted = styled(span.text, span.token, void 0, span.bold);
-    const href = span.href ?? line8.osc8?.href;
+    const href = span.href ?? line5.osc8?.href;
     return href === void 0 || !hyperlinksEnabled() ? painted : wrapOsc8(painted, href);
   });
-  return line8.background !== void 0 && line8.background !== "bg" ? paintBackgroundRow(
+  return line5.background !== void 0 && line5.background !== "bg" ? paintBackgroundRow(
     parts,
-    line8.background,
-    line8.backgroundColumns ?? Math.max(1, line8.displayWidth)
+    line5.background,
+    line5.backgroundColumns ?? Math.max(1, line5.displayWidth)
   ) : paintRow(parts);
 }
 function orderedPoints(a, b) {
@@ -5243,16 +5309,54 @@ var ScreenAtlas = class {
     for (let row = start.row; row <= end.row; row++) {
       const from = row === start.row ? start.col : 1;
       const to = row === end.row ? end.col : this.width;
-      let line8 = "";
+      let line5 = "";
       for (let col = from; col <= to; col++) {
         if (this.isSnapshotRailControlCell(col, row)) continue;
         const cell = this.cellAt(col, row);
         if (cell === void 0 || cell.ch === "") continue;
-        line8 += cell.ch;
+        line5 += cell.ch;
       }
-      lines.push(line8.replace(/ +$/u, ""));
+      lines.push(line5.replace(/ +$/u, ""));
     }
     return lines.join("\n");
+  }
+  collectRowTextRuns(row, from, to, onRun) {
+    let run = "";
+    let runCol = 0;
+    const flush = () => {
+      if (run === "" || runCol === 0) return;
+      onRun(runCol, run);
+      run = "";
+      runCol = 0;
+    };
+    for (let col = from; col <= to; col++) {
+      if (this.isSnapshotRailControlCell(col, row)) {
+        flush();
+        continue;
+      }
+      const cell = this.cellAt(col, row);
+      if (cell === void 0 || !cell.written || cell.ch === "") {
+        flush();
+        continue;
+      }
+      if (run === "") runCol = col;
+      run += cell.ch;
+    }
+    flush();
+  }
+  /**
+   * Iterate over screen rows within a selection range, calculating the column span.
+   * @param a - one endpoint.
+   * @param b - the other endpoint.
+   * @param callback - visitor receiving row index and column bounds [from, to].
+   */
+  forEachRowInRange(a, b, callback) {
+    const { start, end } = orderedPoints(a, b);
+    for (let row = start.row; row <= end.row; row++) {
+      const from = row === start.row ? start.col : 1;
+      const to = row === end.row ? end.col : this.width;
+      callback(row, from, to);
+    }
   }
   /**
    * Reverse-video overlay that rewrites selectable cells. Published rail cells
@@ -5262,34 +5366,12 @@ var ScreenAtlas = class {
    * @returns CUP + reverse SGR bytes.
    */
   selectionOverlay(a, b) {
-    const { start, end } = orderedPoints(a, b);
     let out = "";
-    for (let row = start.row; row <= end.row; row++) {
-      const from = row === start.row ? start.col : 1;
-      const to = row === end.row ? end.col : this.width;
-      let run = "";
-      let runCol = 0;
-      const flush = () => {
-        if (run === "" || runCol === 0) return;
+    this.forEachRowInRange(a, b, (row, from, to) => {
+      this.collectRowTextRuns(row, from, to, (runCol, run) => {
         out += `\x1B[${row};${runCol}H\x1B[7m${run}\x1B[27m`;
-        run = "";
-        runCol = 0;
-      };
-      for (let col = from; col <= to; col++) {
-        if (this.isSnapshotRailControlCell(col, row)) {
-          flush();
-          continue;
-        }
-        const cell = this.cellAt(col, row);
-        if (cell === void 0 || !cell.written || cell.ch === "") {
-          flush();
-          continue;
-        }
-        if (run === "") runCol = col;
-        run += cell.ch;
-      }
-      flush();
-    }
+      });
+    });
     return out;
   }
   /**
@@ -5301,39 +5383,17 @@ var ScreenAtlas = class {
    * @returns CUP + normal painted runs for the occupied cells.
    */
   restoreOverlay(a, b) {
-    const { start, end } = orderedPoints(a, b);
     let out = "";
-    for (let row = start.row; row <= end.row; row++) {
-      const from = row === start.row ? start.col : 1;
-      const to = row === end.row ? end.col : this.width;
+    this.forEachRowInRange(a, b, (row, from, to) => {
       const snapshotRow = this.snapshotRows.get(row);
       if (snapshotRow !== void 0 && !this.snapshotRowOverlapsRailControl(snapshotRow) && from <= snapshotRow.col + snapshotRow.line.displayWidth - 1 && to >= snapshotRow.col) {
         out += `\x1B[${row};${snapshotRow.col}H${paintSnapshotLine(snapshotRow.line)}`;
-        continue;
+        return;
       }
-      let run = "";
-      let runCol = 0;
-      const flush = () => {
-        if (run === "" || runCol === 0) return;
+      this.collectRowTextRuns(row, from, to, (runCol, run) => {
         out += `\x1B[${row};${runCol}H${paintRow([styled(run, "fg")])}`;
-        run = "";
-        runCol = 0;
-      };
-      for (let col = from; col <= to; col++) {
-        if (this.isSnapshotRailControlCell(col, row)) {
-          flush();
-          continue;
-        }
-        const cell = this.cellAt(col, row);
-        if (cell === void 0 || !cell.written || cell.ch === "") {
-          flush();
-          continue;
-        }
-        if (run === "") runCol = col;
-        run += cell.ch;
-      }
-      flush();
-    }
+      });
+    });
     return out;
   }
   blank() {
@@ -6155,23 +6215,23 @@ function appendMarkdownBlock(out, lines) {
   if (out.length > 0) out.push(MARKDOWN_BLOCK_GAP_LINE);
   out.push(...lines);
 }
-function wrapRawTailRows(line8, width) {
-  const pieces = wrapDisplayLines(line8.text, Math.max(1, width));
-  const style = line8.spans[0] ?? {
+function wrapRawTailRows(line5, width) {
+  const pieces = wrapDisplayLines(line5.text, Math.max(1, width));
+  const style = line5.spans[0] ?? {
     start: 0,
-    end: line8.displayWidth,
+    end: line5.displayWidth,
     token: "fg",
     bold: false
   };
   return pieces.map((text, index) => {
-    const row = lineForText(text, style.token, style.bold, line8.rowInBlock + index);
+    const row = lineForText(text, style.token, style.bold, line5.rowInBlock + index);
     return {
       ...row,
-      sourceStart: index === 0 ? line8.sourceStart : -1,
-      sourceEnd: index === pieces.length - 1 ? line8.sourceEnd : -1,
+      sourceStart: index === 0 ? line5.sourceStart : -1,
+      sourceEnd: index === pieces.length - 1 ? line5.sourceEnd : -1,
       rawTail: true,
-      ...line8.background === void 0 ? {} : { background: line8.background },
-      ...line8.backgroundColumns === void 0 ? {} : { backgroundColumns: line8.backgroundColumns }
+      ...line5.background === void 0 ? {} : { background: line5.background },
+      ...line5.backgroundColumns === void 0 ? {} : { backgroundColumns: line5.backgroundColumns }
     };
   });
 }
@@ -6196,22 +6256,40 @@ function projectReasoningEntry(entry, scope) {
     return { revision: 0, sourceLength: entry.source.length, lines: [] };
   }
   const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : "\u273B";
-  const headerText = `${live ? "" : "\u25BE "}${icon} \u601D\u8003 (${secondsLabel}s)`;
-  const lines = [
-    lineForText(headerText, "fgDim", false, 0)
-  ];
+  const prefix = live ? "" : "\u25BE ";
+  const headerLine = surfaceLine([
+    ...prefix !== "" ? [{ text: prefix, token: "accentText", bold: false }] : [],
+    { text: `${icon} \u601D\u8003`, token: "accentText", bold: false },
+    { text: ` (${secondsLabel}s)`, token: "fgDim", bold: false }
+  ], 0, "toolBg", scope.width);
+  const lines = [headerLine];
   const escaped = escapeContent(entry.source);
   const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4));
   for (const row of body) {
-    lines.push(lineForText(`  ${row}`, "fgDim", false, lines.length));
+    const text = `\u2502 ${row}`;
+    const cols = displayWidth(text);
+    lines.push({
+      text,
+      displayWidth: cols,
+      spans: [
+        { start: 0, end: 2, token: "accentText", bold: false },
+        { start: 2, end: cols, token: "fgDim", bold: false }
+      ],
+      rowInBlock: lines.length,
+      sourceStart: -1,
+      sourceEnd: -1,
+      rawTail: false,
+      background: "toolBg",
+      backgroundColumns: scope.width
+    });
   }
   return { revision: 0, sourceLength: entry.source.length, lines };
 }
 function projectToolCardEntry(entry, scope) {
   const card = entry.meta?.toolCard;
   if (card === void 0) {
-    const line8 = lineForText(entry.source, "fg", false, 0);
-    return { revision: 0, sourceLength: entry.source.length, lines: [line8] };
+    const line5 = lineForText(entry.source, "fg", false, 0);
+    return { revision: 0, sourceLength: entry.source.length, lines: [line5] };
   }
   const cache2 = new ToolRowCache(toolPolicyDefaults());
   const lines = cache2.rows(entry.id, card, scope.width, scope.fold.tools, scope.locale ?? "zh-CN").slice();
@@ -6221,8 +6299,8 @@ function projectDividerEntry(entry, scope) {
   if (entry.source === "" || entry.source === "\u2500") {
     return { revision: 0, sourceLength: entry.source.length, lines: [messageSeparatorLine(scope.width)] };
   }
-  const line8 = lineForText(entry.source, "fgDim", false, 0);
-  return { revision: 0, sourceLength: entry.source.length, lines: [line8] };
+  const line5 = lineForText(entry.source, "fgDim", false, 0);
+  return { revision: 0, sourceLength: entry.source.length, lines: [line5] };
 }
 function projectCompactionEntry(entry) {
   const shadowed = entry.meta?.compactionShadowedCount;
@@ -6266,8 +6344,8 @@ function projectTurnTailEntry(entry, scope) {
 function projectToolSummaryEntry(entry, scope) {
   const status = entry.meta?.toolSummaryStatus;
   const token = status === "error" ? "error" : status === "running" ? "accentText" : "fgDim";
-  const line8 = lineForText(entry.source, token, false, 0, "toolBg", scope.width);
-  return { revision: 0, sourceLength: entry.source.length, lines: [line8] };
+  const line5 = lineForText(entry.source, token, false, 0, "toolBg", scope.width);
+  return { revision: 0, sourceLength: entry.source.length, lines: [line5] };
 }
 function projectActivePlaceholderEntry(entry) {
   const text = entry.meta?.activePlaceholder ?? "\u25CF \u6B63\u5728\u601D\u8003\u2026";
@@ -6279,8 +6357,8 @@ function projectActivePlaceholderEntry(entry) {
   ] : [
     { text, token: "fg", bold: false }
   ];
-  const line8 = mixedLine(segments, 0);
-  return { revision: 0, sourceLength: entry.source.length, lines: [line8] };
+  const line5 = mixedLine(segments, 0);
+  return { revision: 0, sourceLength: entry.source.length, lines: [line5] };
 }
 function lineForText(text, token, bold, blockRow, background, backgroundColumns) {
   const width = displayWidth(text);
@@ -6412,7 +6490,7 @@ function createPhysicalLine(input) {
       ...span.href === void 0 ? {} : { href: span.href }
     }))
   );
-  const line8 = {
+  const line5 = {
     blockId: input.blockId,
     text,
     displayWidth: displayWidth(text),
@@ -6425,15 +6503,15 @@ function createPhysicalLine(input) {
     ...input.osc8 === void 0 ? {} : { osc8: Object.freeze({ href: input.osc8.href, id: input.osc8.id }) },
     ...input.graphemeSources === void 0 ? {} : { graphemeSources: Object.freeze([...input.graphemeSources]) }
   };
-  return Object.freeze(line8);
+  return Object.freeze(line5);
 }
-function physicalLineByteSize(line8) {
+function physicalLineByteSize(line5) {
   let bytes = 0;
-  bytes += line8.text.length;
-  for (const span of line8.spans) bytes += span.text.length + (span.href?.length ?? 0);
-  bytes += line8.sourceEnd - line8.sourceStart;
-  if (line8.osc8 !== void 0) bytes += line8.osc8.href.length + line8.osc8.id.length;
-  if (line8.graphemeSources !== void 0) bytes += line8.graphemeSources.length * 4;
+  bytes += line5.text.length;
+  for (const span of line5.spans) bytes += span.text.length + (span.href?.length ?? 0);
+  bytes += line5.sourceEnd - line5.sourceStart;
+  if (line5.osc8 !== void 0) bytes += line5.osc8.href.length + line5.osc8.id.length;
+  if (line5.graphemeSources !== void 0) bytes += line5.graphemeSources.length * 4;
   return bytes;
 }
 
@@ -6669,7 +6747,7 @@ var TranscriptRenderStoreImpl = class {
       }
       cachedBlocks += 1;
       cachedRows += lines.length;
-      for (const line8 of lines) cachedBytes += physicalLineByteSize(line8);
+      for (const line5 of lines) cachedBytes += physicalLineByteSize(line5);
     }
     return {
       hits: this.counters.hits,
@@ -6767,7 +6845,7 @@ var TranscriptRenderStoreImpl = class {
       const settled = entry.settledLines;
       const rowCount = settled.length;
       let byteCount = 0;
-      for (const line8 of settled) byteCount += physicalLineByteSize(line8);
+      for (const line5 of settled) byteCount += physicalLineByteSize(line5);
       entry.settledLines = null;
       entry.lastAccess = 0;
       this.counters.evictions += 1;
@@ -6780,9 +6858,9 @@ var TranscriptRenderStoreImpl = class {
     let bytes = 0;
     for (const entry of this.entries.values()) {
       const lines = entry.activeRevision === null ? entry.settledLines ?? EMPTY_LINES : entry.activeRevision.lines;
-      for (const line8 of lines) {
+      for (const line5 of lines) {
         rows += 1;
-        bytes += physicalLineByteSize(line8);
+        bytes += physicalLineByteSize(line5);
       }
     }
     return { rows, bytes };
@@ -7333,7 +7411,7 @@ function liveDurationTarget(turn, status) {
   if (part?.kind === "card" && part.card.status !== "running" || part?.kind === "tool-summary" && part.summary.runningCount === 0) {
     return {
       identity: `turn-${String(turn.turn)}-pending-after-tool-${String(index)}`,
-      durationMs: turn.reasoningDurationMs ?? 0
+      durationMs: turn.reasoningDurationMs
     };
   }
   return void 0;
@@ -7410,17 +7488,17 @@ function latestAssistantId(history, activeTurn) {
   return void 0;
 }
 var baseMarkdownLineCache = /* @__PURE__ */ new WeakMap();
-function markdownLineToPhysicalLine(blockId, line8) {
-  let byBlock = baseMarkdownLineCache.get(line8);
+function markdownLineToPhysicalLine(blockId, line5) {
+  let byBlock = baseMarkdownLineCache.get(line5);
   if (byBlock === void 0) {
     byBlock = /* @__PURE__ */ new Map();
-    baseMarkdownLineCache.set(line8, byBlock);
+    baseMarkdownLineCache.set(line5, byBlock);
   }
   const cached = byBlock.get(blockId);
   if (cached !== void 0) return cached;
   const segments = [];
-  for (const span of line8.spans) {
-    const text = displayColumnSlice(line8.text, span.start, span.end);
+  for (const span of line5.spans) {
+    const text = displayColumnSlice(line5.text, span.start, span.end);
     if (text === "") continue;
     segments.push({
       text,
@@ -7429,16 +7507,16 @@ function markdownLineToPhysicalLine(blockId, line8) {
       ...span.href === void 0 ? {} : { href: span.href }
     });
   }
-  const sourceStart = Math.max(0, line8.sourceStart);
-  const sourceEnd = Math.max(sourceStart, line8.sourceEnd < 0 ? sourceStart : line8.sourceEnd);
+  const sourceStart = Math.max(0, line5.sourceStart);
+  const sourceEnd = Math.max(sourceStart, line5.sourceEnd < 0 ? sourceStart : line5.sourceEnd);
   const created = createPhysicalLine({
     blockId,
     spans: segments.length === 0 ? [{ text: "", token: "fg", bold: false }] : segments,
     sourceStart,
     sourceEnd,
-    blockRow: Math.max(0, line8.rowInBlock),
-    ...line8.background === void 0 ? {} : { background: line8.background },
-    ...line8.backgroundColumns === void 0 ? {} : { backgroundColumns: line8.backgroundColumns }
+    blockRow: Math.max(0, line5.rowInBlock),
+    ...line5.background === void 0 ? {} : { background: line5.background },
+    ...line5.backgroundColumns === void 0 ? {} : { backgroundColumns: line5.backgroundColumns }
   });
   byBlock.set(blockId, created);
   return created;
@@ -7478,47 +7556,7 @@ function overlayPromptOnSpans(spans, prompt) {
   return result;
 }
 var frameLineCache = /* @__PURE__ */ new WeakMap();
-function framePhysicalLine(blockId, line8, lead, active, prompt) {
-  if (prompt === void 0) {
-    let byLine = frameLineCache.get(line8);
-    if (byLine === void 0) {
-      byLine = /* @__PURE__ */ new Map();
-      frameLineCache.set(line8, byLine);
-    }
-    const key = `${blockId}:${lead}:${active ? "1" : "0"}`;
-    const cached = byLine.get(key);
-    if (cached !== void 0) return cached;
-    const base2 = markdownLineToPhysicalLine(blockId, line8);
-    const spans2 = lead === "" ? base2.spans : [
-      {
-        text: lead,
-        token: lead.trim() === "" ? "bg" : "accentText",
-        bold: active && lead.trim() !== ""
-      },
-      ...base2.spans
-    ];
-    const created = lead === "" ? base2 : createPhysicalLine({
-      blockId,
-      spans: spans2,
-      sourceStart: base2.sourceStart,
-      sourceEnd: base2.sourceEnd,
-      blockRow: base2.blockRow,
-      ...base2.background === void 0 ? {} : { background: base2.background },
-      ...base2.backgroundColumns === void 0 ? {} : { backgroundColumns: base2.backgroundColumns }
-    });
-    byLine.set(key, created);
-    return created;
-  }
-  const base = markdownLineToPhysicalLine(blockId, line8);
-  const initialSpans = [
-    ...lead === "" ? [] : [{
-      text: lead,
-      token: lead.trim() === "" ? "bg" : "accentText",
-      bold: active && lead.trim() !== ""
-    }],
-    ...base.spans
-  ];
-  const spans = overlayPromptOnSpans(initialSpans, prompt);
+function clonePhysicalLineWithSpans(base, blockId, spans) {
   return createPhysicalLine({
     blockId,
     spans,
@@ -7528,6 +7566,41 @@ function framePhysicalLine(blockId, line8, lead, active, prompt) {
     ...base.background === void 0 ? {} : { background: base.background },
     ...base.backgroundColumns === void 0 ? {} : { backgroundColumns: base.backgroundColumns }
   });
+}
+function framePhysicalLine(blockId, line5, lead, active, prompt) {
+  if (prompt === void 0) {
+    let byLine = frameLineCache.get(line5);
+    if (byLine === void 0) {
+      byLine = /* @__PURE__ */ new Map();
+      frameLineCache.set(line5, byLine);
+    }
+    const key = `${blockId}:${lead}:${active ? "1" : "0"}`;
+    const cached = byLine.get(key);
+    if (cached !== void 0) return cached;
+    const base2 = markdownLineToPhysicalLine(blockId, line5);
+    const spans2 = lead === "" ? base2.spans : [
+      {
+        text: lead,
+        token: lead.trim() === "" ? "bg" : "accentText",
+        bold: active && lead.trim() !== ""
+      },
+      ...base2.spans
+    ];
+    const created = lead === "" ? base2 : clonePhysicalLineWithSpans(base2, blockId, spans2);
+    byLine.set(key, created);
+    return created;
+  }
+  const base = markdownLineToPhysicalLine(blockId, line5);
+  const initialSpans = [
+    ...lead === "" ? [] : [{
+      text: lead,
+      token: lead.trim() === "" ? "bg" : "accentText",
+      bold: active && lead.trim() !== ""
+    }],
+    ...base.spans
+  ];
+  const spans = overlayPromptOnSpans(initialSpans, prompt);
+  return clonePhysicalLineWithSpans(base, blockId, spans);
 }
 function projectorStateFor(cache2, blockId, scope, aliases = [], source) {
   const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)$/u, "");
@@ -7607,15 +7680,15 @@ function intersectingLayoutIndexes(layouts, start, end) {
   return indexes;
 }
 var paintedRenderLineCache = /* @__PURE__ */ new WeakMap();
-function cachedPaintedRenderLine(line8, cacheKey, hyperlinks2) {
-  let variants = paintedRenderLineCache.get(line8);
+function cachedPaintedRenderLine(line5, cacheKey, hyperlinks2) {
+  let variants = paintedRenderLineCache.get(line5);
   if (variants === void 0) {
     variants = /* @__PURE__ */ new Map();
-    paintedRenderLineCache.set(line8, variants);
+    paintedRenderLineCache.set(line5, variants);
   }
   const cached = variants.get(cacheKey);
   if (cached !== void 0) return cached;
-  const painted = paintLineFromRenderLine(line8, hyperlinks2);
+  const painted = paintLineFromRenderLine(line5, hyperlinks2);
   variants.set(cacheKey, painted);
   return painted;
 }
@@ -7631,11 +7704,11 @@ var SlicedLinesBlock = memo(function SlicedLinesBlock2(props) {
   const hyperlinks2 = hyperlinksEnabled();
   const paintCacheKey = `${currentTier()}:${hyperlinks2 ? "links" : "plain"}`;
   for (let index = start; index < end; index += 1) {
-    const line8 = lines.at(index);
-    if (line8 === void 0) {
+    const line5 = lines.at(index);
+    if (line5 === void 0) {
       continue;
     }
-    const painted = cachedPaintedRenderLine(line8, paintCacheKey, hyperlinks2);
+    const painted = cachedPaintedRenderLine(line5, paintCacheKey, hyperlinks2);
     const lead = slicedLead(prefix, textRanges, index);
     const trailing = index === effectiveTailRow ? tail : void 0;
     out.push(
@@ -7657,9 +7730,27 @@ function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
   }
   if (entry.kind === "reasoning" && entry.meta?.reasoningExpanded === true && entry.source !== "") {
     const rows = new RowSequence();
-    const header = `${entry.meta.reasoningLive === true ? "" : "\u25BE "}\u273B ${tuiCopy("reasoning", deps.locale)} (${((entry.meta.reasoningDurationMs ?? 0) / 1e3).toFixed(1)}s)`;
-    rows.push({ ...GAP_LINE, text: header, displayWidth: displayWidth(header), spans: [{ start: 0, end: displayWidth(header), token: "fgDim", bold: false }] });
-    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4)));
+    const prefix = entry.meta.reasoningLive === true ? "" : "\u25BE ";
+    const title = `\u273B ${tuiCopy("reasoning", deps.locale)}`;
+    const duration = ` (${((entry.meta.reasoningDurationMs ?? 0) / 1e3).toFixed(1)}s)`;
+    const header = `${prefix}${title}${duration}`;
+    const prefixWidth = displayWidth(prefix);
+    const titleWidth = displayWidth(title);
+    const totalWidth = displayWidth(header);
+    const spans = [
+      ...prefixWidth > 0 ? [{ start: 0, end: prefixWidth, token: "accentText", bold: false }] : [],
+      { start: prefixWidth, end: prefixWidth + titleWidth, token: "accentText", bold: false },
+      { start: prefixWidth + titleWidth, end: totalWidth, token: "fgDim", bold: false }
+    ];
+    rows.push({
+      ...GAP_LINE,
+      text: header,
+      displayWidth: totalWidth,
+      spans,
+      background: "toolBg",
+      backgroundColumns: scope.width
+    });
+    rows.append(deps.plainRows.rows(entry.id, entry.source, Math.max(1, scope.width - 4), scope.width, "toolBg"));
     return { lines: rows.build() };
   }
   const projection = projectBlockRows(entry, scope, state);
@@ -7671,6 +7762,36 @@ function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
     active
   });
   return projection;
+}
+function makeBlockProjector(deps, storeBlocks) {
+  return (ownerId, entry, scope, state, active) => projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active);
+}
+function makeToolSummaryBlockEntry(id, summary, contentWidth) {
+  return {
+    id: `${id}-tool-summary`,
+    kind: "tool-summary",
+    source: toolSummaryText(summary, contentWidth),
+    meta: { toolSummaryStatus: toolSummaryStatus(summary) }
+  };
+}
+function makeToolCardBlockEntry(id, card) {
+  return {
+    id: `${id}-c-${card.callId}`,
+    kind: "tool-card",
+    source: "",
+    meta: {
+      toolCard: {
+        name: card.name,
+        arguments: card.arguments,
+        status: card.status,
+        ...card.resultText === void 0 ? {} : { resultText: card.resultText },
+        ...card.meta === void 0 ? {} : { meta: card.meta },
+        ...card.error === void 0 ? {} : { error: card.error },
+        ...card.callView === void 0 ? {} : { callView: card.callView },
+        ...card.resultView === void 0 ? {} : { resultView: card.resultView }
+      }
+    }
+  };
 }
 function StreamView({
   model,
@@ -7727,7 +7848,7 @@ function StreamView({
           throw new Error(`TranscriptRenderStore: missing source descriptor for ${blockId}`);
         }
         const state = descriptor.entry.kind === "markdown" || descriptor.entry.kind === "assistant-prose" ? createMarkdownProjectorState(blockId, descriptor.scope) : void 0;
-        return projectBlockRows(descriptor.entry, descriptor.scope, state).lines.map((line8) => markdownLineToPhysicalLine(blockId, line8));
+        return projectBlockRows(descriptor.entry, descriptor.scope, state).lines.map((line5) => markdownLineToPhysicalLine(blockId, line5));
       }
     });
   }
@@ -7907,7 +8028,7 @@ function StreamView({
     const textRanges = /* @__PURE__ */ new Map();
     const storeBlocks = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
-    const project = (ownerId, entry, scope, state, active) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active);
+    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks);
     const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
     for (const [index, row] of transcript.entries()) {
       const id = transcriptBlockId(row);
@@ -7960,33 +8081,23 @@ function StreamView({
           continue;
         }
         if (part.kind === "tool-summary") {
-          rows2.append(project(id, {
-            id: `${id}-tool-summary`,
-            kind: "tool-summary",
-            source: toolSummaryText(part.summary, contentWidth),
-            meta: { toolSummaryStatus: toolSummaryStatus(part.summary) }
-          }, settledBlockRowsScope, void 0, false).lines);
+          rows2.append(project(
+            id,
+            makeToolSummaryBlockEntry(id, part.summary, contentWidth),
+            settledBlockRowsScope,
+            void 0,
+            false
+          ).lines);
           continue;
         }
         if (part.kind === "card") {
-          const card = part.card;
-          rows2.append(project(id, {
-            id: `${id}-c-${card.callId}`,
-            kind: "tool-card",
-            source: "",
-            meta: {
-              toolCard: {
-                name: card.name,
-                arguments: card.arguments,
-                status: card.status,
-                ...card.resultText === void 0 ? {} : { resultText: card.resultText },
-                ...card.meta === void 0 ? {} : { meta: card.meta },
-                ...card.error === void 0 ? {} : { error: card.error },
-                ...card.callView === void 0 ? {} : { callView: card.callView },
-                ...card.resultView === void 0 ? {} : { resultView: card.resultView }
-              }
-            }
-          }, settledBlockRowsScope, void 0, false).lines);
+          rows2.append(project(
+            id,
+            makeToolCardBlockEntry(id, part.card),
+            settledBlockRowsScope,
+            void 0,
+            false
+          ).lines);
           continue;
         }
         const start = rows2.length;
@@ -8062,7 +8173,7 @@ function StreamView({
     } };
     const storeBlocks = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
-    const project = (ownerId, entry, scope, state, active) => projectBlockEntry({ toolRows, plainRows, locale, storeBlocks }, ownerId, entry, scope, state, active);
+    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks);
     const id = `assistant-turn-${String(activeTurn.turn)}`;
     const rawParts = partsFromTurn(activeTurn);
     const visibleParts = displayedParts(rawParts, reasoningExpanded);
@@ -8110,33 +8221,23 @@ function StreamView({
         continue;
       }
       if (part.kind === "tool-summary") {
-        rows2.append(project(id, {
-          id: `${id}-tool-summary`,
-          kind: "tool-summary",
-          source: toolSummaryText(part.summary, contentWidth),
-          meta: { toolSummaryStatus: toolSummaryStatus(part.summary) }
-        }, blockRowsScope, void 0, status === "generating").lines);
+        rows2.append(project(
+          id,
+          makeToolSummaryBlockEntry(id, part.summary, contentWidth),
+          blockRowsScope,
+          void 0,
+          status === "generating"
+        ).lines);
         continue;
       }
       if (part.kind === "card") {
-        const card = part.card;
-        rows2.append(project(id, {
-          id: `${id}-c-${card.callId}`,
-          kind: "tool-card",
-          source: "",
-          meta: {
-            toolCard: {
-              name: card.name,
-              arguments: card.arguments,
-              status: card.status,
-              ...card.resultText === void 0 ? {} : { resultText: card.resultText },
-              ...card.meta === void 0 ? {} : { meta: card.meta },
-              ...card.error === void 0 ? {} : { error: card.error },
-              ...card.callView === void 0 ? {} : { callView: card.callView },
-              ...card.resultView === void 0 ? {} : { resultView: card.resultView }
-            }
-          }
-        }, blockRowsScope, void 0, status === "generating").lines);
+        rows2.append(project(
+          id,
+          makeToolCardBlockEntry(id, part.card),
+          blockRowsScope,
+          void 0,
+          status === "generating"
+        ).lines);
         continue;
       }
       const start = rows2.length;
@@ -8259,15 +8360,15 @@ function StreamView({
         String(descriptor.lines.length)
       ]);
       if (!descriptor.active && !activeLineRevisions.current.has(descriptor.entry.id) && storedLineSignatures.current.get(descriptor.entry.id) === signature) continue;
-      const physical = descriptor.lines.map((line8) => {
-        let byBlock = physicalLineCache.current.get(line8);
+      const physical = descriptor.lines.map((line5) => {
+        let byBlock = physicalLineCache.current.get(line5);
         if (byBlock === void 0) {
           byBlock = /* @__PURE__ */ new Map();
-          physicalLineCache.current.set(line8, byBlock);
+          physicalLineCache.current.set(line5, byBlock);
         }
         let cached = byBlock.get(descriptor.entry.id);
         if (cached === void 0) {
-          cached = markdownLineToPhysicalLine(descriptor.entry.id, line8);
+          cached = markdownLineToPhysicalLine(descriptor.entry.id, line5);
           byBlock.set(descriptor.entry.id, cached);
         }
         return cached;
@@ -8682,8 +8783,8 @@ function StreamView({
       const assistant = entry.kind === "active" || entry.row.kind === "message" && entry.row.message.kind === "assistant";
       const ranges = assistant ? activeEntryRows.textRanges.get(entry.id) ?? EMPTY_TEXT_RANGES : EMPTY_TEXT_RANGES;
       for (let index = start; index < end; index += 1) {
-        const line8 = entry.lines.at(index);
-        if (line8 === void 0) continue;
+        const line5 = entry.lines.at(index);
+        if (line5 === void 0) continue;
         const absoluteRow = 3 + verticalBase + layout.top + index - visibleTop;
         if (absoluteRow < 3 || absoluteRow >= 3 + effectiveViewportRows) continue;
         const isBottomRow = absoluteRow === 3 + effectiveViewportRows - 1;
@@ -8698,7 +8799,7 @@ function StreamView({
           id: `${entry.id}:${String(index)}`,
           row: absoluteRow,
           col: contentLeft + 1,
-          line: framePhysicalLine(entry.id, line8, lead, entry.kind === "active", promptOverlay)
+          line: framePhysicalLine(entry.id, line5, lead, entry.kind === "active", promptOverlay)
         }));
       }
     }
@@ -9346,7 +9447,7 @@ function HelpPane({ lines, offset }) {
       safeOffset,
       " \u884C"
     ] }) : null,
-    visible.map((line8, index) => /* @__PURE__ */ jsx10(Text10, { children: escapeContent(line8) }, safeOffset + index)),
+    visible.map((line5, index) => /* @__PURE__ */ jsx10(Text10, { children: escapeContent(line5) }, safeOffset + index)),
     /* @__PURE__ */ jsx10(Text10, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc/Enter \u5173\u95ED"), "fgDim") })
   ] });
 }
@@ -9424,8 +9525,36 @@ function ApprovalPane({
 }
 
 // tui-render/src/permission-pane.tsx
+import { Box as Box13, Text as Text13 } from "ink";
+
+// tui-render/src/overlay-shell.tsx
 import { Box as Box12, Text as Text12 } from "ink";
 import { jsx as jsx12, jsxs as jsxs11 } from "react/jsx-runtime";
+var EMPTY_OVERLAY_PANE = { open: false };
+function renderPaneLine(text, token, bold = false) {
+  return /* @__PURE__ */ jsx12(Text12, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
+}
+var line2 = renderPaneLine;
+function OverlayShell({
+  title,
+  body,
+  footnote,
+  error,
+  errorNext,
+  children
+}) {
+  return /* @__PURE__ */ jsxs11(Box12, { flexDirection: "column", width: "100%", children: [
+    line2(title, "fg", true),
+    body !== void 0 && body !== "" ? line2(body, "fg") : null,
+    children,
+    error !== void 0 && error !== "" ? line2(`\u2717 ${error}`, "error") : null,
+    error !== void 0 && error !== "" && errorNext !== void 0 && errorNext !== "" ? line2(errorNext, "fgDim") : null,
+    line2(footnote, "fgDim")
+  ] });
+}
+
+// tui-render/src/permission-pane.tsx
+import { jsx as jsx13, jsxs as jsxs12 } from "react/jsx-runtime";
 var TITLE = "\u6743\u9650\u9884\u8BBE";
 var FOOTNOTE = "\u2191\u2193/jk \u9009\u62E9 \xB7 1-3 \u76F4\u8FBE \xB7 Enter \u5E94\u7528 \xB7 Esc \u5173\u95ED";
 var CONFIRM = "\u786E\u8BA4\u5207\u6362\u5230 danger-full-access\uFF1F";
@@ -9439,9 +9568,6 @@ var EMPTY_PERMISSION_PANE = {
   currentName: "",
   confirmDanger: false
 };
-function line2(text, token, bold = false) {
-  return /* @__PURE__ */ jsx12(Text12, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
-}
 function PermissionPane({
   names,
   selectedIndex,
@@ -9451,38 +9577,38 @@ function PermissionPane({
   switchError
 }) {
   if (confirmDanger) {
-    return /* @__PURE__ */ jsxs11(Box12, { flexDirection: "column", width: "100%", children: [
-      line2(CONFIRM, "fg", true),
-      line2(CONFIRM_FOOTNOTE, "fgDim")
+    return /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
+      renderPaneLine(CONFIRM, "fg", true),
+      renderPaneLine(CONFIRM_FOOTNOTE, "fgDim")
     ] });
   }
   const errorReason = switchError ?? (names.length === 0 ? EMPTY_TABLE_REASON : void 0);
-  return /* @__PURE__ */ jsxs11(Box12, { flexDirection: "column", width: "100%", children: [
-    line2(TITLE, "fg", true),
+  return /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
+    renderPaneLine(TITLE, "fg", true),
     names.map((name, index) => {
       const selected = index === selectedIndex;
       const current = name === currentName;
       const description = descriptions?.[index];
       const label = current ? `${name} \xB7 \u5F53\u524D` : name;
-      return /* @__PURE__ */ jsxs11(Box12, { flexDirection: "column", width: "100%", children: [
-        /* @__PURE__ */ jsxs11(Box12, { width: "100%", children: [
-          /* @__PURE__ */ jsx12(Text12, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
-          /* @__PURE__ */ jsx12(Text12, { children: paintRow([styled(escapeContent(label), selected ? "fg" : "fgDim")]) })
+      return /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
+        /* @__PURE__ */ jsxs12(Box13, { width: "100%", children: [
+          /* @__PURE__ */ jsx13(Text13, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
+          /* @__PURE__ */ jsx13(Text13, { children: paintRow([styled(escapeContent(label), selected ? "fg" : "fgDim")]) })
         ] }),
-        description !== void 0 && description !== "" ? line2(description, "fgDim") : null
+        description !== void 0 && description !== "" ? renderPaneLine(description, "fgDim") : null
       ] }, name);
     }),
-    errorReason !== void 0 ? /* @__PURE__ */ jsxs11(Box12, { flexDirection: "column", width: "100%", children: [
-      line2(`\u2717 \u5207\u6362\u6743\u9650\u5931\u8D25\uFF1A${errorReason}`, "error"),
-      line2(FAIL_NEXT, "fgDim")
+    errorReason !== void 0 ? /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
+      renderPaneLine(`\u2717 \u5207\u6362\u6743\u9650\u5931\u8D25\uFF1A${errorReason}`, "error"),
+      renderPaneLine(FAIL_NEXT, "fgDim")
     ] }) : null,
-    line2(FOOTNOTE, "fgDim")
+    renderPaneLine(FOOTNOTE, "fgDim")
   ] });
 }
 
 // tui-render/src/settings-pane.tsx
-import { Box as Box13, Text as Text13, useWindowSize as useWindowSize5 } from "ink";
-import { jsx as jsx13, jsxs as jsxs12 } from "react/jsx-runtime";
+import { Box as Box14, Text as Text14, useWindowSize as useWindowSize5 } from "ink";
+import { jsx as jsx14, jsxs as jsxs13 } from "react/jsx-runtime";
 var TITLE2 = "\u8BBE\u7F6E";
 var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
 var FOOTNOTE2 = "\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED";
@@ -9500,9 +9626,6 @@ var EMPTY_SETTINGS_PANE = {
   selectedIndex: 0,
   editing: false
 };
-function line3(text, token, bold = false) {
-  return /* @__PURE__ */ jsx13(Text13, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
-}
 function fitValue(value, maxCols) {
   if (maxCols <= 0) return "";
   if (displayWidth(value) <= maxCols) return value;
@@ -9560,57 +9683,30 @@ function SettingsPane({
     rows.length - size
   );
   const visible = rows.slice(start, start + size);
-  return /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
-    line3(onboarding === true ? ONBOARDING_TITLE : TITLE2, "fg", true),
-    start > 0 ? line3(`\u2026 \u8FD8\u6709 ${String(start)} \u9879`, "fgDim") : null,
+  return /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
+    renderPaneLine(onboarding === true ? ONBOARDING_TITLE : TITLE2, "fg", true),
+    start > 0 ? renderPaneLine(`\u2026 \u8FD8\u6709 ${String(start)} \u9879`, "fgDim") : null,
     visible.map((row, index) => {
       const absolute = start + index;
       const selected = absolute === selectedIndex;
       const localized = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
       const label = `${row.namespace} \xB7 ${localized}`;
-      return /* @__PURE__ */ jsx13(Box13, { width: "100%", children: /* @__PURE__ */ jsx13(Text13, { children: paintRow(fieldRow(label, row.value, selected, width)) }) }, `${row.namespace}:${row.field}`);
+      return /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintRow(fieldRow(label, row.value, selected, width)) }) }, `${row.namespace}:${row.field}`);
     }),
-    rows.length > start + size ? line3(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
-    errorReason !== void 0 ? /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
-      line3(
+    rows.length > start + size ? renderPaneLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
+    errorReason !== void 0 ? /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
+      renderPaneLine(
         errorReason === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason}`,
         "error"
       ),
-      errorReason === EMPTY_TABLE_REASON2 ? null : line3(FAIL_NEXT2, "fgDim")
+      errorReason === EMPTY_TABLE_REASON2 ? null : renderPaneLine(FAIL_NEXT2, "fgDim")
     ] }) : null,
-    line3(footnote, "fgDim")
+    renderPaneLine(footnote, "fgDim")
   ] });
 }
 
 // tui-render/src/agent-hub-pane.tsx
 import { Box as Box15, Text as Text15 } from "ink";
-
-// tui-render/src/overlay-shell.tsx
-import { Box as Box14, Text as Text14 } from "ink";
-import { jsx as jsx14, jsxs as jsxs13 } from "react/jsx-runtime";
-var EMPTY_OVERLAY_PANE = { open: false };
-function line4(text, token, bold = false) {
-  return /* @__PURE__ */ jsx14(Text14, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
-}
-function OverlayShell({
-  title,
-  body,
-  footnote,
-  error,
-  errorNext,
-  children
-}) {
-  return /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
-    line4(title, "fg", true),
-    body !== void 0 && body !== "" ? line4(body, "fg") : null,
-    children,
-    error !== void 0 && error !== "" ? line4(`\u2717 ${error}`, "error") : null,
-    error !== void 0 && error !== "" && errorNext !== void 0 && errorNext !== "" ? line4(errorNext, "fgDim") : null,
-    line4(footnote, "fgDim")
-  ] });
-}
-
-// tui-render/src/agent-hub-pane.tsx
 import { jsx as jsx15, jsxs as jsxs14 } from "react/jsx-runtime";
 function formatTokens(value) {
   const scaled = (next) => next >= 100 ? String(Math.round(next)) : String(Math.round(next * 10) / 10);
@@ -9685,8 +9781,8 @@ function AgentHubPane({
         }
       );
     }
-    const lines = (transcript ?? "").split("\n").filter((line8) => line8 !== "");
-    return /* @__PURE__ */ jsx15(OverlayShell, { title: "\u5B50\u4EE3\u7406", footnote: "Esc \u8FD4\u56DE", children: lines.map((line8, index) => /* @__PURE__ */ jsx15(Text15, { children: paintRow([styled(escapeContent(line8), "fg")]) }, index)) });
+    const lines = (transcript ?? "").split("\n").filter((line5) => line5 !== "");
+    return /* @__PURE__ */ jsx15(OverlayShell, { title: "\u5B50\u4EE3\u7406", footnote: "Esc \u8FD4\u56DE", children: lines.map((line5, index) => /* @__PURE__ */ jsx15(Text15, { children: paintRow([styled(escapeContent(line5), "fg")]) }, index)) });
   }
   if (error !== void 0 && error !== "") {
     return /* @__PURE__ */ jsx15(
@@ -9742,7 +9838,7 @@ function directoryRow(label, selected, current) {
     /* @__PURE__ */ jsx16(Text16, { children: paintRow([styled(escapeContent(text), selected ? "fg" : "fgDim")]) })
   ] }, label);
 }
-function line5(text, token) {
+function line3(text, token) {
   return /* @__PURE__ */ jsx16(Text16, { children: paintRow([styled(escapeContent(text), token)]) });
 }
 function PlanDirectoryPane({
@@ -9770,8 +9866,8 @@ function PlanDirectoryPane({
       )
     ),
     switchError !== void 0 && switchError !== "" ? /* @__PURE__ */ jsxs15(Box16, { flexDirection: "column", width: "100%", children: [
-      line5(`\u2717 \u5207\u6362\u8BA1\u5212\u5931\u8D25\uFF1A${switchError}`, "error"),
-      line5(SWITCH_NEXT, "fgDim")
+      line3(`\u2717 \u5207\u6362\u8BA1\u5212\u5931\u8D25\uFF1A${switchError}`, "error"),
+      line3(SWITCH_NEXT, "fgDim")
     ] }) : null
   ] });
 }
@@ -9787,7 +9883,7 @@ var PLAN_REVIEW_WINDOW = 12;
 var EMPTY_PLAN_REVIEW_PANE = {
   open: false
 };
-function line6(text, token, bold = false) {
+function line4(text, token, bold = false) {
   return /* @__PURE__ */ jsx17(Text17, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
 }
 function PlanReviewPane({
@@ -9800,14 +9896,14 @@ function PlanReviewPane({
   const safeOffset = Math.max(0, offset);
   const windowed = lines.slice(safeOffset, safeOffset + PLAN_REVIEW_WINDOW).join("\n");
   return /* @__PURE__ */ jsxs16(Box17, { flexDirection: "column", width: "100%", children: [
-    line6(TITLE4, "fg", true),
+    line4(TITLE4, "fg", true),
     deliveryError !== void 0 && deliveryError !== "" ? /* @__PURE__ */ jsxs16(Box17, { flexDirection: "column", width: "100%", children: [
-      line6(`\u2717 \u8BA1\u5212\u8BC4\u5BA1\u672A\u80FD\u9001\u8FBE\uFF1A${deliveryError}`, "error"),
-      line6(DELIVERY_NEXT2, "fgDim")
-    ] }) : empty ? line6(EMPTY_BODY, "fg") : /* @__PURE__ */ jsx17(MarkdownBlock, { source: windowed }),
-    line6("\u6279\u51C6", "fg"),
-    line6("\u7EE7\u7EED\u89C4\u5212", "fg"),
-    line6(FOOTNOTE4, "fgDim")
+      line4(`\u2717 \u8BA1\u5212\u8BC4\u5BA1\u672A\u80FD\u9001\u8FBE\uFF1A${deliveryError}`, "error"),
+      line4(DELIVERY_NEXT2, "fgDim")
+    ] }) : empty ? line4(EMPTY_BODY, "fg") : /* @__PURE__ */ jsx17(MarkdownBlock, { source: windowed }),
+    line4("\u6279\u51C6", "fg"),
+    line4("\u7EE7\u7EED\u89C4\u5212", "fg"),
+    line4(FOOTNOTE4, "fgDim")
   ] });
 }
 
@@ -9823,9 +9919,6 @@ var EMPTY_ASK_USER_PANE = {
   options: [],
   selectedIndex: 0
 };
-function line7(text, token, bold = false) {
-  return /* @__PURE__ */ jsx18(Text18, { children: paintRow([styled(escapeContent(text), token, void 0, bold)]) });
-}
 function AskUserPane({
   header,
   options,
@@ -9833,13 +9926,13 @@ function AskUserPane({
 }) {
   if (options.length === 0) {
     return /* @__PURE__ */ jsxs17(Box18, { flexDirection: "column", width: "100%", children: [
-      line7(INVALID_TITLE, "error", true),
-      line7(INVALID_NEXT, "fgDim")
+      renderPaneLine(INVALID_TITLE, "error", true),
+      renderPaneLine(INVALID_NEXT, "fgDim")
     ] });
   }
   const footnote = FOOTNOTE5;
   return /* @__PURE__ */ jsxs17(Box18, { flexDirection: "column", width: "100%", children: [
-    header !== "" ? line7(header, "fg", true) : null,
+    header !== "" ? renderPaneLine(header, "fg", true) : null,
     /* @__PURE__ */ jsx18(Box18, { flexDirection: "column", marginTop: header !== "" ? 1 : 0, width: "100%", children: options.map((label, index) => {
       const selected = index === selectedIndex;
       const numbered = `${index + 1} ${label}`;
@@ -9848,7 +9941,7 @@ function AskUserPane({
         /* @__PURE__ */ jsx18(Text18, { children: paintRow([styled(escapeContent(numbered), selected ? "fg" : "fgDim", void 0, selected)]) })
       ] }, `${index}:${label}`);
     }) }),
-    /* @__PURE__ */ jsx18(Box18, { marginTop: 1, width: "100%", children: line7(footnote, "fgDim") })
+    /* @__PURE__ */ jsx18(Box18, { marginTop: 1, width: "100%", children: renderPaneLine(footnote, "fgDim") })
   ] });
 }
 
@@ -9888,8 +9981,8 @@ function TimelineView({
   ] });
 }
 function firstLine(text) {
-  const line8 = text.split("\n")[0];
-  return line8.length > FIRST_LINE_MAX ? `${line8.slice(0, FIRST_LINE_MAX)}\u2026` : line8;
+  const line5 = text.split("\n")[0];
+  return line5.length > FIRST_LINE_MAX ? `${line5.slice(0, FIRST_LINE_MAX)}\u2026` : line5;
 }
 
 // tui-render/src/input-bar.tsx
@@ -10085,8 +10178,8 @@ function InputBar({
   const caret = Math.max(0, Math.min(caretIndex ?? text.length, text.length));
   const caretLine = text.slice(0, caret).split("\n").length - 1;
   const caretLineStart = caret === 0 ? 0 : text.lastIndexOf("\n", caret - 1) + 1;
-  const windows = lines.map((line8, index) => composerLineWindow(
-    line8,
+  const windows = lines.map((line5, index) => composerLineWindow(
+    line5,
     index === caretLine ? caret - caretLineStart : void 0,
     Math.max(1, columns - 4)
   ));
@@ -10136,11 +10229,11 @@ function InputBar({
       backgroundColor: inkColor("inputBg"),
       children: [
         /* @__PURE__ */ jsx20(Text20, { wrap: "truncate", children: paintBackgroundRow(headerParts, "inputBg", columns) }),
-        lines.map((line8, lineIndex) => {
+        lines.map((line5, lineIndex) => {
           const window = windows[lineIndex];
           let sourceColumn = 0;
           const endColumn = window.startColumn + displayWidth(window.text);
-          const tokenParts = tokenizeComposer(line8).map((token) => {
+          const tokenParts = tokenizeComposer(line5).map((token) => {
             const safe = escapeContent(token.text).replace(/\t/gu, "\\t");
             const width = displayWidth(safe);
             const visible = displayColumnSlice(
@@ -10375,7 +10468,8 @@ function workspaceSegments(view, columns) {
   }
   if (view.gitBranch !== void 0 && view.gitBranch !== "") {
     const git = segment(`git: ${escapeContent(view.gitBranch)}`, "accentText");
-    const candidate = selected.length > 1 ? [selected[0], git, ...selected.slice(1)] : [...selected, git];
+    const first = selected[0];
+    const candidate = selected.length > 1 && first !== void 0 ? [first, git, ...selected.slice(1)] : [...selected, git];
     if (displayWidth(segmentsText(candidate)) <= columns) {
       selected = candidate;
     }
@@ -10916,7 +11010,7 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
   }
   return /* @__PURE__ */ jsxs21(Box23, { flexDirection: "column", width: "100%", children: [
     /* @__PURE__ */ jsx29(Text29, { wrap: "truncate", children: heading }),
-    lines.map((line8, index) => /* @__PURE__ */ jsx29(Text29, { wrap: "truncate", children: line8 }, index)),
+    lines.map((line5, index) => /* @__PURE__ */ jsx29(Text29, { wrap: "truncate", children: line5 }, index)),
     /* @__PURE__ */ jsx29(Text29, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
   ] });
 }
@@ -10963,6 +11057,80 @@ function holdComposer(state, action) {
     commandSelectedIndex: state.commandSelectedIndex,
     commandDismissed: state.commandDismissed,
     caretIndex: state.caretIndex,
+    historyIndex: state.historyIndex,
+    historyDraft: state.historyDraft
+  };
+}
+function resetComposerDispatch(state, action, text = "") {
+  return {
+    kind: "dispatch",
+    action,
+    text,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming
+  };
+}
+function restoreHistoryDraft(state) {
+  const restored = state.historyDraft ?? "";
+  return {
+    kind: "dispatch",
+    action: { kind: "none" },
+    text: restored,
+    commandQuery: void 0,
+    prefixG: false,
+    renaming: state.renaming,
+    caretIndex: restored.length,
+    historyIndex: void 0,
+    historyDraft: void 0
+  };
+}
+function applySelectedMention(state, candidate) {
+  if (candidate === void 0) return { kind: "none" };
+  const inserted = normalizeMentionInsertion(candidate);
+  return {
+    kind: "dispatch",
+    action: { kind: "none" },
+    text: inserted,
+    commandQuery: void 0,
+    prefixG: false,
+    renaming: state.renaming,
+    mentionSelectedIndex: 0,
+    mentionDismissed: false,
+    commandSelectedIndex: 0,
+    commandDismissed: false,
+    caretIndex: inserted.length
+  };
+}
+function verticalNavEffect(key, keyInfo, state, actionForDelta) {
+  if (key === "j" || keyInfo.downArrow) {
+    return holdComposer(state, actionForDelta(1));
+  }
+  if (key === "k" || keyInfo.upArrow) {
+    return holdComposer(state, actionForDelta(-1));
+  }
+  return void 0;
+}
+function appendQueryFilterEffect(state, char, makeAction) {
+  const appended = state.text + char;
+  return {
+    kind: "dispatch",
+    action: makeAction(appended),
+    text: appended,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming
+  };
+}
+function moveCaretToEffect(state, caretIndex) {
+  return {
+    kind: "dispatch",
+    action: { kind: "none" },
+    text: state.text,
+    commandQuery: state.commandQuery,
+    prefixG: false,
+    renaming: state.renaming,
+    caretIndex,
     historyIndex: state.historyIndex,
     historyDraft: state.historyDraft
   };
@@ -11306,34 +11474,13 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
       return holdComposer(state, { kind: "workflow-overlay-escape" });
     }
     if (modelPane.open) {
-      return {
-        kind: "dispatch",
-        action: { kind: "model-pane" },
-        text: "",
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return resetComposerDispatch(state, { kind: "model-pane" });
     }
     if (helpPane.open) {
-      return {
-        kind: "dispatch",
-        action: { kind: "help-pane" },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return holdComposer(state, { kind: "help-pane" });
     }
     if (search.open) {
-      return {
-        kind: "dispatch",
-        action: { kind: "search-pane" },
-        text: "",
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return resetComposerDispatch(state, { kind: "search-pane" });
     }
     if (state.renaming) {
       return {
@@ -11366,18 +11513,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
       };
     }
     if (state.historyIndex !== void 0) {
-      const restored = state.historyDraft ?? "";
-      return {
-        kind: "dispatch",
-        action: { kind: "none" },
-        text: restored,
-        commandQuery: void 0,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: restored.length,
-        historyIndex: void 0,
-        historyDraft: void 0
-      };
+      return restoreHistoryDraft(state);
     }
     return {
       kind: "dispatch",
@@ -11390,19 +11526,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
   }
   if (keyInfo.return) {
     if (mention.open) {
-      if (mention.selectedCandidate === void 0) return { kind: "none" };
-      const inserted = normalizeMentionInsertion(mention.selectedCandidate);
-      return {
-        kind: "dispatch",
-        action: { kind: "none" },
-        text: inserted,
-        commandQuery: void 0,
-        prefixG: false,
-        renaming: state.renaming,
-        mentionSelectedIndex: 0,
-        mentionDismissed: false,
-        caretIndex: inserted.length
-      };
+      return applySelectedMention(state, mention.selectedCandidate);
     }
     if (agentHubOpen) {
       return holdComposer(state, { kind: "agent-hub-enter" });
@@ -11428,35 +11552,20 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
     }
     if (modelPane.open) {
       if (modelPane.selectedId === void 0) return { kind: "none" };
-      return {
-        kind: "dispatch",
-        action: { kind: "select-model", id: modelPane.selectedId },
-        text: "",
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return resetComposerDispatch(state, {
+        kind: "select-model",
+        id: modelPane.selectedId
+      });
     }
     if (helpPane.open) {
-      return {
-        kind: "dispatch",
-        action: { kind: "help-pane" },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return holdComposer(state, { kind: "help-pane" });
     }
     if (search.open) {
       if (search.selectedId === void 0) return { kind: "none" };
-      return {
-        kind: "dispatch",
-        action: { kind: "select-session", id: search.selectedId },
-        text: "",
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return resetComposerDispatch(state, {
+        kind: "select-session",
+        id: search.selectedId
+      });
     }
     if (state.renaming) {
       return {
@@ -11574,21 +11683,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
   }
   if (key === "	" || keyInfo.tab) {
     if (mention.open) {
-      if (mention.selectedCandidate === void 0) return { kind: "none" };
-      const inserted = normalizeMentionInsertion(mention.selectedCandidate);
-      return {
-        kind: "dispatch",
-        action: { kind: "none" },
-        text: inserted,
-        commandQuery: void 0,
-        prefixG: false,
-        renaming: state.renaming,
-        mentionSelectedIndex: 0,
-        mentionDismissed: false,
-        commandSelectedIndex: 0,
-        commandDismissed: false,
-        caretIndex: inserted.length
-      };
+      return applySelectedMention(state, mention.selectedCandidate);
     }
     if (commandMode) {
       const query = state.commandQuery ?? state.text.slice(1);
@@ -11674,125 +11769,29 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
     }
   }
   if (search.open) {
-    if (key === "j" || keyInfo.downArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "session-pane-move", delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
-    if (key === "k" || keyInfo.upArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "session-pane-move", delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, (delta) => ({ kind: "session-pane-move", delta }));
+    if (nav !== void 0) return nav;
     if (isTextInput(key, keyInfo)) {
-      const appended = state.text + key;
-      return {
-        kind: "dispatch",
-        action: { kind: "search", query: appended },
-        text: appended,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return appendQueryFilterEffect(state, key, (query) => ({ kind: "search", query }));
     }
     return { kind: "none" };
   }
   if (timeline.open) {
-    if (key === "j" || keyInfo.downArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "timeline-scroll", delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
-    if (key === "k" || keyInfo.upArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "timeline-scroll", delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, (delta) => ({ kind: "timeline-scroll", delta }));
+    if (nav !== void 0) return nav;
     return { kind: "none" };
   }
   if (modelPane.open) {
-    if (key === "j" || keyInfo.downArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "model-move", delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
-    if (key === "k" || keyInfo.upArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "model-move", delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, (delta) => ({ kind: "model-move", delta }));
+    if (nav !== void 0) return nav;
     if (isTextInput(key, keyInfo)) {
-      const appended = state.text + key;
-      return {
-        kind: "dispatch",
-        action: { kind: "model-filter", query: appended },
-        text: appended,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming
-      };
+      return appendQueryFilterEffect(state, key, (query) => ({ kind: "model-filter", query }));
     }
     return { kind: "none" };
   }
   if (helpPane.open) {
-    if (key === "j" || keyInfo.downArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "help-scroll", delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
-    if (key === "k" || keyInfo.upArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "help-scroll", delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, (delta) => ({ kind: "help-scroll", delta }));
+    if (nav !== void 0) return nav;
     return { kind: "none" };
   }
   if (key === "g" && state.text === "") {
@@ -11895,28 +11894,8 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
     return { kind: "none" };
   }
   if (pane.open) {
-    if (key === "j" || keyInfo.downArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "session-pane-move", delta: 1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
-    if (key === "k" || keyInfo.upArrow) {
-      return {
-        kind: "dispatch",
-        action: { kind: "session-pane-move", delta: -1 },
-        text: state.text,
-        commandQuery: state.commandQuery,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: state.caretIndex
-      };
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, (delta) => ({ kind: "session-pane-move", delta }));
+    if (nav !== void 0) return nav;
     if (key === "r") {
       return {
         kind: "dispatch",
@@ -11981,17 +11960,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
       const caret = clampCaretIndex(state.text, state.caretIndex);
       const targetCaret = moveCaretUpLine(state.text, caret);
       if (targetCaret !== void 0) {
-        return {
-          kind: "dispatch",
-          action: { kind: "none" },
-          text: state.text,
-          commandQuery: state.commandQuery,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: targetCaret,
-          historyIndex: state.historyIndex,
-          historyDraft: state.historyDraft
-        };
+        return moveCaretToEffect(state, targetCaret);
       }
     }
     if (state.text === "" && queuedDraft.headText !== void 0) {
@@ -12032,17 +12001,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
       const caret = clampCaretIndex(state.text, state.caretIndex);
       const targetCaret = moveCaretDownLine(state.text, caret);
       if (targetCaret !== void 0) {
-        return {
-          kind: "dispatch",
-          action: { kind: "none" },
-          text: state.text,
-          commandQuery: state.commandQuery,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: targetCaret,
-          historyIndex: state.historyIndex,
-          historyDraft: state.historyDraft
-        };
+        return moveCaretToEffect(state, targetCaret);
       }
     }
     if (state.historyIndex !== void 0) {
@@ -12061,18 +12020,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
           historyDraft: state.historyDraft
         };
       }
-      const restored = state.historyDraft ?? "";
-      return {
-        kind: "dispatch",
-        action: { kind: "none" },
-        text: restored,
-        commandQuery: void 0,
-        prefixG: false,
-        renaming: state.renaming,
-        caretIndex: restored.length,
-        historyIndex: void 0,
-        historyDraft: void 0
-      };
+      return restoreHistoryDraft(state);
     }
     return { kind: "none" };
   }
@@ -12251,7 +12199,9 @@ function TuiLoop({
     const timer = setInterval(() => {
       setGeneratingTick((t) => (t + 1) % 1e4);
     }, 100);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, [model.status]);
   const footerSpinner = model.status === "generating" ? getBrailleSpinnerFrame(Date.now()) : void 0;
   const interaction = useSyncExternalStore(
@@ -12861,7 +12811,7 @@ function TuiLoop({
     const visibleLines = [
       truncateDisplay(workspace.join(" \xB7 "), Math.max(1, columns)),
       truncateDisplay(identity.join(" \xB7 "), Math.max(1, columns))
-    ].filter((line8) => line8 !== "");
+    ].filter((line5) => line5 !== "");
     statusRowCount = visibleLines.length;
     status = createElement2(
       Box24,
@@ -12870,15 +12820,15 @@ function TuiLoop({
         width: "100%",
         backgroundColor: inkColor("bg")
       },
-      ...visibleLines.map((line8, index) => createElement2(
+      ...visibleLines.map((line5, index) => createElement2(
         Text31,
         { key: `fallback-footer-${String(index)}` },
-        paintBackgroundRow([styled(line8, "fgDim")], "bg", columns)
+        paintBackgroundRow([styled(line5, "fgDim")], "bg", columns)
       ))
     );
   }
-  const brandBlocked = state.text !== "" || model.status !== "idle" || pane.open || search.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
   const viewportMotionPaused = pane.open || search.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
+  const brandBlocked = state.text !== "" || model.status !== "idle" || viewportMotionPaused;
   const brandLifecycleAllowed = !brandBlocked && (brandAnimationMode === "on" || brandAnimationMode === "auto" && brandAutoEligible);
   if (brandRevealStartedRef.current && !brandLifecycleAllowed) {
     brandRevealStoppedRef.current = true;
@@ -13191,16 +13141,16 @@ function lastFencedCode(text) {
   let openingLength;
   let bodyStart = 0;
   let latest;
-  for (const [index, line8] of lines.entries()) {
+  for (const [index, line5] of lines.entries()) {
     if (openingLength === void 0) {
-      const opening = /^ {0,3}(`{3,})[^`]*$/u.exec(line8);
+      const opening = /^ {0,3}(`{3,})[^`]*$/u.exec(line5);
       if (opening !== null) {
         openingLength = opening[1].length;
         bodyStart = index + 1;
       }
       continue;
     }
-    const closing = /^ {0,3}(`{3,})[ \t]*$/u.exec(line8);
+    const closing = /^ {0,3}(`{3,})[ \t]*$/u.exec(line5);
     if (closing === null || closing[1].length < openingLength) continue;
     latest = lines.slice(bodyStart, index).join("\n");
     openingLength = void 0;
@@ -13642,6 +13592,10 @@ function reduceInteraction(state, event) {
 }
 
 // tui-render/src/index.ts
+if (typeof globalThis.React === "undefined") {
+  ;
+  globalThis.React = React;
+}
 function mountTuiRender(node, options = {}) {
   const env = options.env ?? process.env;
   const policy = options.renderPolicy ?? renderPolicyDefaults();

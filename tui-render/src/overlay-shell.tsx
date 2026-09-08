@@ -39,15 +39,15 @@ export interface OverlayShellProps {
 }
 
 /**
- * One painted, escaped row.
+ * One painted, escaped row for overlay panes.
  * @param text - untrusted or static copy.
  * @param token - theme token.
  * @param bold - heading uses the fg bold tier.
  * @returns the Text element.
  */
-function line(
+export function renderPaneLine(
   text: string,
-  token: 'fg' | 'fgDim' | 'error',
+  token: 'fg' | 'fgDim' | 'error' | 'accent',
   bold = false,
 ): ReactNode {
   return (
@@ -56,6 +56,8 @@ function line(
     </Text>
   )
 }
+
+const line = renderPaneLine
 
 /**
  * Shared overlay chrome: bold-fg title, optional body, optional children,

@@ -7,7 +7,11 @@
  */
 
 import { render, renderToString, Text } from 'ink'
-import { createElement } from 'react'
+import React, { createElement } from 'react'
+
+if (typeof (globalThis as unknown as { React?: typeof React }).React === 'undefined') {
+  ;(globalThis as unknown as { React: typeof React }).React = React
+}
 import type { ReactNode } from 'react'
 import { AppShell } from './app-shell.tsx'
 import { StreamView } from './stream-view.tsx'
@@ -104,6 +108,7 @@ export {
   SWIMMING_FISH_FRAMES,
   tuiCopy,
 } from './ui-copy.ts'
+export type { TuiLocale } from './ui-copy.ts'
 export type {
   SessionRow,
   SessionPaneProps,

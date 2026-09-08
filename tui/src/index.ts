@@ -85,19 +85,23 @@ interface LegacySessionTarget {
  * earlier `@deepseek-ai/dsh-session` releases (such as 0.1.2-rc.1) where the
  * event log was exposed via `session.snapshotEvents()` instead of `session.events`.
  */
-try {
-  if (typeof Session === 'function' && !('events' in Session.prototype)) {
-    Object.defineProperty(Session.prototype, 'events', {
-      get(this: LegacySessionTarget) {
-        return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
-      },
-      configurable: true,
-      enumerable: false,
-    })
+function installSessionEventsCompat(): void {
+  try {
+    if (typeof Session === 'function' && !('events' in Session.prototype)) {
+      Object.defineProperty(Session.prototype, 'events', {
+        get(this: LegacySessionTarget) {
+          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+        },
+        configurable: true,
+        enumerable: false,
+      })
+    }
+  } catch {
+    // Swallow defineProperty errors in sealed environments
   }
-} catch {
-  // Swallow defineProperty errors in sealed environments
 }
+installSessionEventsCompat()
+
 
 /**
  * Ensure `session.events` getter exists on the Session prototype or instance.
@@ -366,6 +370,8 @@ export interface Config {
   cwd?: string
   /** Frame-stats JSON output path, if given on the command line. */
   frameStats?: string
+  /** Model id override, if given on the command line or patch config. */
+  model?: string
   /** Resolved render policy the host hands the renderer; absent falls back to defaults. */
   renderPolicy?: RenderPolicy
 }
@@ -375,6 +381,7 @@ export const Config: z<Config> = z.object({
   resume: z.string(),
   cwd: z.string(),
   frameStats: z.string(),
+  model: z.string(),
   renderPolicy: z.transform(
     z.object({
       transcriptOverscan: z.number().min(0).max(RENDER_POLICY_MAX_OVERSCAN)
@@ -1788,18 +1795,7 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the launch cwd and load its first level (stale-guarded). */
   private async loadWorkspaceRoot(seq: number): Promise<void> {
-    const fs = this.ctx.get('fs')
-    if (fs === undefined) return
-    try {
-      const root = await fs.resolve(this.config.cwd ?? '.')
-      const children = await fs.listDir(root)
-      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
-      this.commitResolvedWorkspaceRoot(root, children)
-    } catch (error: unknown) {
-      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
-      this.workspaceResolveError = errorReason(error)
-    }
-    this.emit()
+    await this.resolveAndCommitWorkspaceRoot(this.config.cwd ?? '.', seq)
   }
 
   /** Expand (loading on first open) or collapse the selected directory. */
@@ -1830,10 +1826,19 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the typed path draft; failure keeps the previous root (D-09). */
   private async applyWorkspacePath(value: string, seq: number): Promise<void> {
+    await this.resolveAndCommitWorkspaceRoot(value, seq)
+  }
+
+  /**
+   * Resolve a workspace target directory and commit its listing if still current.
+   * @param targetPath - relative or absolute directory path to resolve.
+   * @param seq - workspace sequence token.
+   */
+  private async resolveAndCommitWorkspaceRoot(targetPath: string, seq: number): Promise<void> {
     const fs = this.ctx.get('fs')
     if (fs === undefined) return
     try {
-      const root = await fs.resolve(value)
+      const root = await fs.resolve(targetPath)
       const children = await fs.listDir(root)
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       this.commitResolvedWorkspaceRoot(root, children)
@@ -3963,6 +3968,19 @@ export class RuntimeController implements TuiController {
       )
     }
     const selection = defaultModel.currentSelection()
+    if (this.config.model) {
+      const trimmed = this.config.model.trim()
+      if (trimmed.length > 0) {
+        const colon = trimmed.indexOf(':')
+        if (colon > 0 && colon < trimmed.length - 1) {
+          selection.provider = trimmed.slice(0, colon)
+          selection.model = trimmed.slice(colon + 1)
+        } else {
+          selection.model = trimmed
+        }
+        await defaultModel.saveSelection(selection).catch(() => {})
+      }
+    }
     const ref: ModelSelectionRef = {
       current: selection,
       assembled: undefined,
@@ -4811,7 +4829,7 @@ export class RuntimeController implements TuiController {
     }
     this.modelStatus = 'loading'
     this.emit()
-    const current = defaultModel.currentSelection()
+    const current = this.modelSelectionRef?.current ?? defaultModel.currentSelection()
     try {
       const providers = llm.listProviders()
       const groups = await Promise.all(providers.map(async (provider) => {
@@ -5059,7 +5077,7 @@ export class RuntimeController implements TuiController {
 
       // Exclude delegated subagent child sessions: they belong to the agent hub,
       // not the interactive session manager directory.
-      const interactiveItems = items.filter(item => {
+      const interactiveItems = items.filter((item) => {
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
         return (header as unknown as { origin?: string }).origin !== 'subagent'
           && (header as unknown as { parentSession?: unknown }).parentSession === undefined
@@ -5105,7 +5123,7 @@ export class RuntimeController implements TuiController {
             initialRows.push({
               id,
               title: id,
-              updatedAt: header.createdAt ?? 0,
+              updatedAt: header.createdAt,
             })
           }
         }
@@ -5133,7 +5151,6 @@ export class RuntimeController implements TuiController {
       if (uncached.length > 0) {
         const BATCH_SIZE = 16
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
-          if (this.closed) return
           const batch = uncached.slice(i, i + BATCH_SIZE)
           const fetched = await Promise.all(
             batch.map(async ({ id, revision }) => {
@@ -5141,49 +5158,49 @@ export class RuntimeController implements TuiController {
               return { id, row, revision }
             }),
           )
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
+          if (this.closed) return
           for (const entry of fetched) {
             this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision })
           }
 
           // Progressively update the session list after each batch settles.
-          if (!this.closed) {
-            const updatedRows: SessionRow[] = []
-            for (const item of interactiveItems) {
-              const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
-              const id = header.id
-              if (liveSession !== undefined && liveSession.id === id) {
-                updatedRows.push(this.rowForLiveSession(liveSession))
+          const updatedRows: SessionRow[] = []
+          for (const item of interactiveItems) {
+            const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+            const id = header.id
+            if (liveSession !== undefined && liveSession.id === id) {
+              updatedRows.push(this.rowForLiveSession(liveSession))
+            } else {
+              const cached = this.sessionRowCache.get(id)
+              if (cached !== undefined) {
+                updatedRows.push(cached.row)
               } else {
-                const cached = this.sessionRowCache.get(id)
-                if (cached !== undefined) {
-                  updatedRows.push(cached.row)
-                } else {
-                  updatedRows.push({
-                    id,
-                    title: id,
-                    updatedAt: header.createdAt ?? 0,
-                  })
-                }
+                updatedRows.push({
+                  id,
+                  title: id,
+                  updatedAt: header.createdAt,
+                })
               }
             }
-            if (
-              this.session !== undefined
-              && !updatedRows.some(row => row.id === this.session?.id)
-            ) {
-              updatedRows.push(this.rowForLiveSession(this.session))
-            }
-            updatedRows.sort((a, b) => b.updatedAt - a.updatedAt)
-            this.sessionList = updatedRows
-            if (preferredId !== undefined) {
-              const preferredIndex = updatedRows.findIndex(row => row.id === preferredId)
-              if (preferredIndex >= 0) {
-                this.selectedIndex = preferredIndex
-              }
-            } else if (this.selectedIndex >= updatedRows.length) {
-              this.selectedIndex = Math.max(0, updatedRows.length - 1)
-            }
-            this.emit()
           }
+          if (
+            this.session !== undefined
+            && !updatedRows.some(row => row.id === this.session?.id)
+          ) {
+            updatedRows.push(this.rowForLiveSession(this.session))
+          }
+          updatedRows.sort((a, b) => b.updatedAt - a.updatedAt)
+          this.sessionList = updatedRows
+          if (preferredId !== undefined) {
+            const preferredIndex = updatedRows.findIndex(row => row.id === preferredId)
+            if (preferredIndex >= 0) {
+              this.selectedIndex = preferredIndex
+            }
+          } else if (this.selectedIndex >= updatedRows.length) {
+            this.selectedIndex = Math.max(0, updatedRows.length - 1)
+          }
+          this.emit()
         }
       }
 
@@ -6010,7 +6027,7 @@ async function run(
     throw new Error('tui-runtime: session store is unavailable after loader settlement')
   }
 
-  const releaseSignals = ctx.get('releaseSignals')
+  const releaseSignals = ctx.get('releaseSignals') as (() => (() => void) | undefined) | undefined
   const lifecycle = createRuntimeLifecycle(
     releaseSignals === undefined ? 'unavailable' : 'generic-owned',
   )
@@ -6295,17 +6312,7 @@ async function run(
  * @param config - validated startup task, resume, cwd, and frame-stats values.
  */
 export function apply(ctx: Context, config: Config): void {
-  try {
-    if (typeof Session === 'function' && !('events' in Session.prototype)) {
-      Object.defineProperty(Session.prototype, 'events', {
-        get(this: LegacySessionTarget) {
-          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
-        },
-        configurable: true,
-        enumerable: false,
-      })
-    }
-  } catch {}
+  installSessionEventsCompat()
   // Read through the global service store, not the property proxy: appExit is
   // an optional host value, never an injected dependency.
   const exit = ctx.get('appExit')
