@@ -8,7 +8,9 @@ import { renderToString, useWindowSize } from 'ink'
 import { createElement } from 'react'
 import {
   EMPTY_SETTINGS_PANE,
+  SETTINGS_WINDOW,
   SettingsPane,
+  computeSettingsWindow,
 } from '../src/settings-pane.tsx'
 import { applyTheme } from '../src/theme.ts'
 import { TuiLoop } from '../src/loop.tsx'
@@ -26,6 +28,7 @@ vi.mock('ink', async importOriginal => ({
 
 afterEach(() => {
   applyTheme('truecolor')
+  vi.mocked(useWindowSize).mockReturnValue({ columns: 80, rows: 24 })
 })
 
 const DEEPSEEK_ROW = {
@@ -191,6 +194,37 @@ describe('SettingsPane', () => {
     vi.mocked(useWindowSize).mockReturnValueOnce({ columns: 27, rows: 24 })
     expect(render()).toContain('…')
   })
+
+  it('computes adaptive settings window based on row budget and errors', () => {
+    expect(computeSettingsWindow(undefined, 20, undefined)).toBe(SETTINGS_WINDOW)
+    expect(computeSettingsWindow(25, 10, undefined)).toBe(10)
+    // 25 maxRows, 2 fixedOverhead, 2 overflow reserve => 21
+    expect(computeSettingsWindow(25, 30, undefined)).toBe(21)
+    // With update failure (2 error rows): 25 - 4 - 2 => 19
+    expect(computeSettingsWindow(25, 30, 'err')).toBe(19)
+    // Empty table (1 error row): 0 rows <= available => 0
+    expect(computeSettingsWindow(25, 0, '无可用设置')).toBe(0)
+  })
+
+  it('adapts visible rows dynamically to maxRows', () => {
+    const rows = Array.from({ length: 20 }, (_, index) => ({
+      namespace: 'llm-deepseek',
+      field: `field${String(index)}`,
+      value: `val-${String(index)}`,
+    }))
+    // When maxRows is large enough (e.g. 30), all 20 rows are shown without overflow hint
+    const wideOut = render({ rows, selectedIndex: 0, maxRows: 30 })
+    expect(wideOut).toContain('llm-deepseek · field0')
+    expect(wideOut).toContain('llm-deepseek · field19')
+    expect(wideOut).not.toContain('… 还有')
+
+    // When maxRows is tight (e.g. 12: 12 - 2 fixed - 2 overflow = 8 items)
+    const tightOut = render({ rows, selectedIndex: 0, maxRows: 12 })
+    expect(tightOut).toContain('llm-deepseek · field0')
+    expect(tightOut).toContain('llm-deepseek · field7')
+    expect(tightOut).not.toContain('llm-deepseek · field8')
+    expect(tightOut).toContain('… 还有 12 项')
+  })
 })
 
 describe('TuiLoop settings overlay', () => {
@@ -274,5 +308,57 @@ describe('TuiLoop settings overlay', () => {
     expect(out).toContain('Enter 应用 · Esc 取消')
     expect(out).toContain('\x1b[38;2;117;137;255m│ > ')
     expect(out).not.toContain('有什么可以帮忙的')
+  })
+
+  it('adapts visible settings rows to terminal height in TuiLoop', () => {
+    vi.mocked(useWindowSize).mockReturnValue({ columns: 80, rows: 30 })
+    const manyRows = Array.from({ length: 25 }, (_, index) => ({
+      namespace: 'llm-deepseek',
+      field: `opt${String(index)}`,
+      value: `val${String(index)}`,
+    }))
+    const settingsState = {
+      open: true,
+      rows: manyRows,
+      selectedIndex: 0,
+      editing: false,
+    }
+    const controller: TuiController = {
+      getModel: () => IDLE_MODEL,
+      getInteraction: () => 'idle',
+      getBadge: () => 'provider',
+      getTitle: () => '会话',
+      getSessionPane: () => CLOSED_SESSION,
+      getSearchPane: () => CLOSED_SEARCH,
+      getTimelineOpen: () => false,
+      getModelPane: () => CLOSED_MODEL,
+      getHelpPane: () => CLOSED_HELP,
+      getApprovalPane: () => EMPTY_APPROVAL_PANE,
+      getAskUserPane: () => EMPTY_ASK_USER_PANE,
+      getPermissionPane: () => EMPTY_PERMISSION_PANE,
+      getSettingsPane: () => settingsState,
+      getAgentHubPane: () => EMPTY_OVERLAY_PANE,
+      getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
+      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
+      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
+      getComposerHud: () => undefined,
+      getToolPresenters: () => undefined,
+      getSubmitOnEnter: () => true,
+      getFeedback: () => undefined,
+      subscribe: () => () => {},
+      dispatch: () => {},
+      commands: [],
+      getCwd: () => '/workspace',
+      listMentions: async () => [],
+    }
+    const out = renderToString(
+      createElement(TuiLoop, { title: 't', controller }),
+    )
+    expect(out).toContain('设置')
+    expect(out).toContain('llm-deepseek · opt0')
+    expect(out).toContain('llm-deepseek · opt20')
+    expect(out).toContain('… 还有 4 项')
   })
 })

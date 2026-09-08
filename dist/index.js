@@ -9530,22 +9530,34 @@ function fieldRow(label, value, selected, columns) {
     ...fittedValue === "" ? [] : [styled(fittedValue, "fgDim")]
   ];
 }
+function computeSettingsWindow(maxRows, totalRows, errorReason) {
+  if (maxRows === void 0) return SETTINGS_WINDOW;
+  const errorLines = errorReason === void 0 ? 0 : errorReason === EMPTY_TABLE_REASON2 ? 1 : 2;
+  const fixedOverhead = 2 + errorLines;
+  const available = Math.max(1, maxRows - fixedOverhead);
+  if (totalRows <= available) {
+    return totalRows;
+  }
+  return Math.max(1, available - 2);
+}
 function SettingsPane({
   rows,
   selectedIndex,
   editing,
   onboarding,
   updateError,
-  locale
+  locale,
+  maxRows
 }) {
   const { columns } = useWindowSize5();
   const width = columns > 0 ? columns : 80;
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON2 : void 0);
   const footnote = onboarding === true ? ONBOARDING_FOOTNOTE : editing ? EDIT_FOOTNOTE : FOOTNOTE2;
-  const size = Math.min(SETTINGS_WINDOW, rows.length);
-  const start = rows.length <= SETTINGS_WINDOW ? 0 : Math.min(
-    Math.max(0, selectedIndex - Math.floor(SETTINGS_WINDOW / 2)),
-    rows.length - SETTINGS_WINDOW
+  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason);
+  const size = Math.min(windowLimit, rows.length);
+  const start = rows.length <= size ? 0 : Math.min(
+    Math.max(0, selectedIndex - Math.floor(size / 2)),
+    rows.length - size
   );
   const visible = rows.slice(start, start + size);
   return /* @__PURE__ */ jsxs12(Box13, { flexDirection: "column", width: "100%", children: [
@@ -12955,11 +12967,14 @@ function TuiLoop({
       switchError: permissionPane.switchError
     });
   } else if (settingsPane.open) {
+    const settingsEditingRows = settingsPane.editing ? state.text.split("\n").length + 1 : 0;
+    const settingsMaxRows = Math.max(4, rows - 3 - statusRowCount - settingsEditingRows);
     content = createElement2(SettingsPane, {
       locale,
       rows: settingsPane.rows,
       selectedIndex: settingsPane.selectedIndex,
       editing: settingsPane.editing,
+      maxRows: settingsMaxRows,
       ...settingsPane.onboarding === void 0 ? {} : { onboarding: settingsPane.onboarding },
       ...settingsPane.updateError === void 0 ? {} : { updateError: settingsPane.updateError }
     });
@@ -13825,6 +13840,7 @@ export {
   completeFirst,
   composerCursorPosition,
   composerFrameAnchor,
+  computeSettingsWindow,
   conversationLeft,
   conversationWidth,
   copyText,

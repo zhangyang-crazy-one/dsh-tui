@@ -58,6 +58,8 @@ export interface SettingsPaneProps {
   onboarding?: boolean
   /** Update-failure reason; when set, paints the ✗ pair. */
   updateError?: string
+  /** Available row budget; when omitted, defaults to {@link SETTINGS_WINDOW}. */
+  maxRows?: number
 }
 
 /** Controller snapshot backing the settings overlay. */
@@ -154,10 +156,33 @@ function fieldRow(
 }
 
 /**
- * The settings overlay: heading, a {@link SETTINGS_WINDOW} of one-line
+ * Compute the maximum visible items in the settings table.
+ *
+ * @param maxRows - available vertical row budget, or undefined for default window.
+ * @param totalRows - total settings field rows count.
+ * @param errorReason - failure copy or empty table reason if present.
+ * @returns number of item rows visible in the window.
+ */
+export function computeSettingsWindow(
+  maxRows: number | undefined,
+  totalRows: number,
+  errorReason: string | undefined,
+): number {
+  if (maxRows === undefined) return SETTINGS_WINDOW
+  const errorLines = errorReason === undefined ? 0 : errorReason === EMPTY_TABLE_REASON ? 1 : 2
+  const fixedOverhead = 2 + errorLines
+  const available = Math.max(1, maxRows - fixedOverhead)
+  if (totalRows <= available) {
+    return totalRows
+  }
+  return Math.max(1, available - 2)
+}
+
+/**
+ * The settings overlay: heading, an adaptive window of one-line
  * table rows (label left, value right) around the selection, optional
  * error pair, and the browse or edit footnote. Does not call `ctx.settings`.
- * @param props - host rows, selection, editing flag, and optional error.
+ * @param props - host rows, selection, editing flag, optional error, and row budget.
  * @returns the element tree.
  */
 export function SettingsPane({
@@ -167,6 +192,7 @@ export function SettingsPane({
   onboarding,
   updateError,
   locale,
+  maxRows,
 }: SettingsPaneProps): ReactNode {
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
@@ -174,12 +200,13 @@ export function SettingsPane({
   const footnote = onboarding === true
     ? ONBOARDING_FOOTNOTE
     : editing ? EDIT_FOOTNOTE : FOOTNOTE
-  const size = Math.min(SETTINGS_WINDOW, rows.length)
-  const start = rows.length <= SETTINGS_WINDOW
+  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason)
+  const size = Math.min(windowLimit, rows.length)
+  const start = rows.length <= size
     ? 0
     : Math.min(
-      Math.max(0, selectedIndex - Math.floor(SETTINGS_WINDOW / 2)),
-      rows.length - SETTINGS_WINDOW,
+      Math.max(0, selectedIndex - Math.floor(size / 2)),
+      rows.length - size,
     )
   const visible = rows.slice(start, start + size)
   return (

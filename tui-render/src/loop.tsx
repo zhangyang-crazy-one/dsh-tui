@@ -2882,11 +2882,14 @@ export function TuiLoop({
       switchError: permissionPane.switchError,
     })
   } else if (settingsPane.open) {
+    const settingsEditingRows = settingsPane.editing ? state.text.split('\n').length + 1 : 0
+    const settingsMaxRows = Math.max(4, rows - 3 - statusRowCount - settingsEditingRows)
     content = createElement(SettingsPane, {
       locale,
       rows: settingsPane.rows,
       selectedIndex: settingsPane.selectedIndex,
       editing: settingsPane.editing,
+      maxRows: settingsMaxRows,
       ...(settingsPane.onboarding === undefined
         ? {}
         : { onboarding: settingsPane.onboarding }),

@@ -131,7 +131,7 @@ export { AskUserPane, EMPTY_ASK_USER_PANE } from './ask-user-pane.tsx'
 export type { AskUserPaneProps, AskUserPaneState } from './ask-user-pane.tsx'
 export { PermissionPane, EMPTY_PERMISSION_PANE } from './permission-pane.tsx'
 export type { PermissionPaneProps, PermissionPaneState } from './permission-pane.tsx'
-export { SettingsPane, EMPTY_SETTINGS_PANE, SETTINGS_WINDOW } from './settings-pane.tsx'
+export { SettingsPane, EMPTY_SETTINGS_PANE, SETTINGS_WINDOW, computeSettingsWindow } from './settings-pane.tsx'
 export type {
   SettingsFieldRow,
   SettingsPaneProps,
