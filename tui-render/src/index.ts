@@ -181,10 +181,11 @@ export {
   cardsFromActiveTurn,
   cardsFromTurn,
   collapsedCardSummary,
+  parseSubagentArguments,
   truncateDisplay,
   attachPresenterViews,
 } from './tool-cards.ts'
-export type { ToolCardModel, ToolCardStatus, ToolPresenterLookup } from './tool-cards.ts'
+export type { SubagentCallInfo, ToolCardModel, ToolCardStatus, ToolPresenterLookup } from './tool-cards.ts'
 export { createProjector, EMPTY_VIEW, latestAssistantCopyTarget } from './projection.ts'
 export type {
   Projector,

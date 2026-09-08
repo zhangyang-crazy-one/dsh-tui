@@ -3169,6 +3169,220 @@ var RowSequence = class {
   }
 };
 
+// tui-render/src/tool-cards.ts
+import { isAbsolute } from "node:path";
+import { pathToFileURL } from "node:url";
+function toolCardDisplayStatus(card) {
+  const terminal = card.resultView?.card === "terminal" ? card.resultView : void 0;
+  if (terminal?.signal !== void 0) return "error";
+  if (terminal?.exitCode !== void 0 && terminal.exitCode !== 0) return "error";
+  return card.status;
+}
+function collapsedResultTail(text) {
+  if (text === void 0) return void 0;
+  const line5 = text.split(/\r?\n/u).map((item) => item.trim()).filter(Boolean).at(-1);
+  return line5 === void 0 ? void 0 : escapeContent(line5);
+}
+function collapsedFailureSummary(card) {
+  const terminal = card.resultView?.card === "terminal" ? card.resultView : void 0;
+  const identity = terminal?.exitCode !== void 0 ? `exitCode ${String(terminal.exitCode)}` : terminal?.signal !== void 0 ? `signal ${terminal.signal}` : card.error?.code;
+  const detail = collapsedResultTail(terminal?.output ?? card.resultText);
+  if (identity === void 0) return detail;
+  return detail === void 0 || detail === identity ? identity : `${identity} \xB7 ${detail}`;
+}
+function collapsedToolCardSummary(card) {
+  if (toolCardDisplayStatus(card) === "error") {
+    const failure = collapsedFailureSummary(card);
+    if (failure !== void 0) return failure;
+  }
+  const result = card.resultView;
+  const kind = result?.card ?? card.callView?.card ?? "generic";
+  switch (kind) {
+    case "terminal":
+      if (result?.card === "terminal" && result.exitCode !== void 0) {
+        return `exitCode ${String(result.exitCode)}`;
+      }
+      if (result?.card === "terminal" && result.signal !== void 0) {
+        return `signal ${result.signal}`;
+      }
+      if (result?.card === "terminal" && result.output !== void 0 && result.output !== "") {
+        return escapeContent(result.output.replace(/\n/g, " "));
+      }
+      return card.callView?.card === "terminal" && card.callView.cwd !== void 0 ? escapeContent(card.callView.cwd) : void 0;
+    case "diff": {
+      const paths = card.callView?.card === "diff" ? card.callView.locations ?? card.callView.diffs.map((diff) => ({ path: diff.path })) : result.diffs.map((diff) => ({ path: diff.path }));
+      return paths.length === 0 ? void 0 : escapeContent(paths.map((entry) => entry.path).join(" \xB7 "));
+    }
+    case "search":
+      return result?.card === "search" ? `${String(result.total)} matches` : void 0;
+    case "read":
+      return result?.card === "read" ? escapeContent(result.path) : void 0;
+    case "web":
+      if (result?.card !== "web") return void 0;
+      if (result.kind === "fetch") {
+        return escapeContent(`${result.url} \xB7 ${String(result.statusCode)}`);
+      }
+      if (result.sources.length === 0) return void 0;
+      return escapeContent(result.sources.length === 1 ? result.sources[0]?.title ?? result.sources[0]?.url : `${String(result.sources.length)} sources`);
+    default:
+      return card.callView === void 0 ? collapsedCardSummary(card.arguments) : void 0;
+  }
+}
+function cardsFrom(content) {
+  const pending = /* @__PURE__ */ new Map();
+  const ordered = [];
+  for (const item of content) {
+    if (item.kind === "tool-call") {
+      const card2 = {
+        callId: item.callId,
+        name: item.name,
+        arguments: item.arguments,
+        status: "running"
+      };
+      pending.set(item.callId, card2);
+      ordered.push(card2);
+      continue;
+    }
+    if (item.kind !== "tool-result") continue;
+    const card = pending.get(item.callId);
+    if (card === void 0) continue;
+    card.status = item.isError ? "error" : "ok";
+    card.resultText = item.text;
+    if (item.meta !== void 0) card.meta = item.meta;
+    if (item.error !== void 0) card.error = item.error;
+  }
+  return ordered;
+}
+function cardsFromActiveTurn(toolCalls, content = []) {
+  const calls = toolCalls.map((call) => ({
+    kind: "tool-call",
+    callId: call.callId,
+    name: call.name,
+    arguments: call.arguments
+  }));
+  const results = content.filter(
+    (item) => item.kind === "tool-result"
+  );
+  return cardsFrom([...calls, ...results]);
+}
+function cardsFromTurn(turn) {
+  return cardsFromActiveTurn(turn.toolCalls, turn.content ?? []);
+}
+function attachPresenterViews(tools, card) {
+  if (tools === void 0) return card;
+  let args;
+  try {
+    args = JSON.parse(card.arguments);
+  } catch {
+    return card;
+  }
+  const def = tools.get(card.name);
+  if (def === void 0) return card;
+  let callView;
+  try {
+    const view = def.presentCall?.(args);
+    if (view !== void 0 && typeof view.title === "string" && view.title !== "") {
+      callView = view;
+    }
+  } catch {
+  }
+  let resultView;
+  if (card.status !== "running") {
+    try {
+      const view = def.presentResult?.(args, {
+        content: [{ type: "text", text: card.resultText ?? "" }],
+        isError: card.status === "error",
+        ...card.meta === void 0 ? {} : { meta: card.meta }
+      });
+      if (view !== void 0) {
+        resultView = view;
+      }
+    } catch {
+    }
+  }
+  if (callView === void 0 && resultView === void 0) return card;
+  return {
+    ...card,
+    ...callView === void 0 ? {} : { callView },
+    ...resultView === void 0 ? {} : { resultView }
+  };
+}
+function parseSubagentArguments(argumentsJson) {
+  if (argumentsJson === "" || argumentsJson === "{}") return void 0;
+  try {
+    const parsed = JSON.parse(argumentsJson);
+    if (parsed !== null && typeof parsed === "object") {
+      const obj = parsed;
+      const description = typeof obj.description === "string" && obj.description !== "" ? obj.description : void 0;
+      const prompt = typeof obj.prompt === "string" && obj.prompt !== "" ? obj.prompt : void 0;
+      const model = typeof obj.model === "string" && obj.model !== "" ? obj.model : void 0;
+      const runInBackground = typeof obj.run_in_background === "boolean" ? obj.run_in_background : void 0;
+      if (description !== void 0 || prompt !== void 0 || model !== void 0) {
+        return { description, prompt, model, runInBackground };
+      }
+    }
+  } catch {
+  }
+  return void 0;
+}
+function collapsedCardSummary(argumentsJson) {
+  if (argumentsJson === "") return void 0;
+  let command;
+  try {
+    const parsed = JSON.parse(argumentsJson);
+    if (parsed !== null && typeof parsed === "object") {
+      const obj = parsed;
+      if (typeof obj.command === "string" && obj.command !== "") {
+        command = obj.command;
+      } else if (typeof obj.description === "string" && obj.description !== "") {
+        command = obj.description;
+      } else if (typeof obj.prompt === "string" && obj.prompt !== "") {
+        command = obj.prompt;
+      } else if (typeof obj.query === "string" && obj.query !== "") {
+        command = obj.query;
+      } else if (typeof obj.task === "string" && obj.task !== "") {
+        command = obj.task;
+      }
+    }
+  } catch {
+  }
+  return escapeContent(command ?? argumentsJson).replace(/\n/g, " ");
+}
+function truncateDisplay(text, maxCols) {
+  if (maxCols <= 0) return "";
+  if (displayWidth(text) <= maxCols) return text;
+  if (maxCols === 1) return "\u2026";
+  return `${wcwidthSafeSlice(text, maxCols - 1)}\u2026`;
+}
+var FILE_PATH_KEYS = ["path", "file_path", "file", "target_file", "target"];
+function fileUrlFromToolArguments(argumentsJson) {
+  try {
+    const parsed = JSON.parse(argumentsJson);
+    if (parsed === null || typeof parsed !== "object") return void 0;
+    const record = parsed;
+    for (const key of FILE_PATH_KEYS) {
+      const value = record[key];
+      if (typeof value !== "string" || !isAbsolute(value)) continue;
+      if (/[\u0000-\u001f\u007f]/.test(value)) continue;
+      return pathToFileURL(value).href;
+    }
+  } catch {
+  }
+  return void 0;
+}
+function tokenizeCommandHeading(heading) {
+  const trimmed = heading.trimStart();
+  const leading = heading.slice(0, heading.length - trimmed.length);
+  const firstSpace = trimmed.indexOf(" ");
+  const cmd = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
+  const rest = firstSpace === -1 ? "" : trimmed.slice(firstSpace);
+  const tokens = [];
+  if (leading !== "") tokens.push({ text: leading, token: "fgSoft" });
+  if (cmd !== "") tokens.push({ text: cmd, token: "codeCommand" });
+  if (rest !== "") tokens.push({ text: rest, token: "fgSoft" });
+  return Object.freeze(tokens);
+}
+
 // tui-render/src/tool-body.ts
 var graphemes = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function textLines(text, prefix = "") {
@@ -3383,10 +3597,31 @@ function createToolBodyDocument(card, options) {
         }
       }
       break;
-    default:
-      args();
+    default: {
+      const isSubagent = card.name === "subagent" || card.name.startsWith("subagent_") || card.name === "delegate";
+      const subInfo = isSubagent ? parseSubagentArguments(card.arguments) : void 0;
+      if (subInfo !== void 0) {
+        if (subInfo.description !== void 0) {
+          section(options.locale === "zh-CN" ? "\u4EFB\u52A1\u76EE\u6807" : "Task", textLines(subInfo.description));
+        }
+        if (subInfo.model !== void 0) {
+          section(options.locale === "zh-CN" ? "\u59D4\u6D3E\u6A21\u578B" : "Model", textLines(subInfo.model));
+        }
+        if (card.status === "running") {
+          section(
+            options.locale === "zh-CN" ? "\u8FD0\u884C\u72B6\u6001" : "Status",
+            textLines(options.locale === "zh-CN" ? "\u25CF \u6B63\u5728\u6267\u884C\u5B50\u4EE3\u7406\u4EFB\u52A1..." : "\u25CF Running subagent task...")
+          );
+        }
+        if (subInfo.prompt !== void 0) {
+          section(options.locale === "zh-CN" ? "\u4EFB\u52A1\u6307\u4EE4" : "Prompt", textLines(subInfo.prompt));
+        }
+      } else {
+        args();
+      }
       if (card.resultText !== void 0) section(tuiCopy("result", options.locale), textLines(card.resultText));
       break;
+    }
   }
   if (result === void 0 && kind !== "generic" && card.resultText !== void 0) {
     section(tuiCopy("result", options.locale), textLines(card.resultText));
@@ -3441,191 +3676,6 @@ function toolCardOriginalText(card, options) {
 `;
 }
 
-// tui-render/src/tool-cards.ts
-import { isAbsolute } from "node:path";
-import { pathToFileURL } from "node:url";
-function toolCardDisplayStatus(card) {
-  const terminal = card.resultView?.card === "terminal" ? card.resultView : void 0;
-  if (terminal?.signal !== void 0) return "error";
-  if (terminal?.exitCode !== void 0 && terminal.exitCode !== 0) return "error";
-  return card.status;
-}
-function collapsedResultTail(text) {
-  if (text === void 0) return void 0;
-  const line5 = text.split(/\r?\n/u).map((item) => item.trim()).filter(Boolean).at(-1);
-  return line5 === void 0 ? void 0 : escapeContent(line5);
-}
-function collapsedFailureSummary(card) {
-  const terminal = card.resultView?.card === "terminal" ? card.resultView : void 0;
-  const identity = terminal?.exitCode !== void 0 ? `exitCode ${String(terminal.exitCode)}` : terminal?.signal !== void 0 ? `signal ${terminal.signal}` : card.error?.code;
-  const detail = collapsedResultTail(terminal?.output ?? card.resultText);
-  if (identity === void 0) return detail;
-  return detail === void 0 || detail === identity ? identity : `${identity} \xB7 ${detail}`;
-}
-function collapsedToolCardSummary(card) {
-  if (toolCardDisplayStatus(card) === "error") {
-    const failure = collapsedFailureSummary(card);
-    if (failure !== void 0) return failure;
-  }
-  const result = card.resultView;
-  const kind = result?.card ?? card.callView?.card ?? "generic";
-  switch (kind) {
-    case "terminal":
-      if (result?.card === "terminal" && result.exitCode !== void 0) {
-        return `exitCode ${String(result.exitCode)}`;
-      }
-      if (result?.card === "terminal" && result.signal !== void 0) {
-        return `signal ${result.signal}`;
-      }
-      if (result?.card === "terminal" && result.output !== void 0 && result.output !== "") {
-        return escapeContent(result.output.replace(/\n/g, " "));
-      }
-      return card.callView?.card === "terminal" && card.callView.cwd !== void 0 ? escapeContent(card.callView.cwd) : void 0;
-    case "diff": {
-      const paths = card.callView?.card === "diff" ? card.callView.locations ?? card.callView.diffs.map((diff) => ({ path: diff.path })) : result.diffs.map((diff) => ({ path: diff.path }));
-      return paths.length === 0 ? void 0 : escapeContent(paths.map((entry) => entry.path).join(" \xB7 "));
-    }
-    case "search":
-      return result?.card === "search" ? `${String(result.total)} matches` : void 0;
-    case "read":
-      return result?.card === "read" ? escapeContent(result.path) : void 0;
-    case "web":
-      if (result?.card !== "web") return void 0;
-      if (result.kind === "fetch") {
-        return escapeContent(`${result.url} \xB7 ${String(result.statusCode)}`);
-      }
-      if (result.sources.length === 0) return void 0;
-      return escapeContent(result.sources.length === 1 ? result.sources[0]?.title ?? result.sources[0]?.url : `${String(result.sources.length)} sources`);
-    default:
-      return card.callView === void 0 ? collapsedCardSummary(card.arguments) : void 0;
-  }
-}
-function cardsFrom(content) {
-  const pending = /* @__PURE__ */ new Map();
-  const ordered = [];
-  for (const item of content) {
-    if (item.kind === "tool-call") {
-      const card2 = {
-        callId: item.callId,
-        name: item.name,
-        arguments: item.arguments,
-        status: "running"
-      };
-      pending.set(item.callId, card2);
-      ordered.push(card2);
-      continue;
-    }
-    if (item.kind !== "tool-result") continue;
-    const card = pending.get(item.callId);
-    if (card === void 0) continue;
-    card.status = item.isError ? "error" : "ok";
-    card.resultText = item.text;
-    if (item.meta !== void 0) card.meta = item.meta;
-    if (item.error !== void 0) card.error = item.error;
-  }
-  return ordered;
-}
-function cardsFromActiveTurn(toolCalls, content = []) {
-  const calls = toolCalls.map((call) => ({
-    kind: "tool-call",
-    callId: call.callId,
-    name: call.name,
-    arguments: call.arguments
-  }));
-  const results = content.filter(
-    (item) => item.kind === "tool-result"
-  );
-  return cardsFrom([...calls, ...results]);
-}
-function cardsFromTurn(turn) {
-  return cardsFromActiveTurn(turn.toolCalls, turn.content ?? []);
-}
-function attachPresenterViews(tools, card) {
-  if (tools === void 0) return card;
-  let args;
-  try {
-    args = JSON.parse(card.arguments);
-  } catch {
-    return card;
-  }
-  const def = tools.get(card.name);
-  if (def === void 0) return card;
-  let callView;
-  try {
-    const view = def.presentCall?.(args);
-    if (view !== void 0 && typeof view.title === "string" && view.title !== "") {
-      callView = view;
-    }
-  } catch {
-  }
-  let resultView;
-  if (card.status !== "running") {
-    try {
-      const view = def.presentResult?.(args, {
-        content: [{ type: "text", text: card.resultText ?? "" }],
-        isError: card.status === "error",
-        ...card.meta === void 0 ? {} : { meta: card.meta }
-      });
-      if (view !== void 0) {
-        resultView = view;
-      }
-    } catch {
-    }
-  }
-  if (callView === void 0 && resultView === void 0) return card;
-  return {
-    ...card,
-    ...callView === void 0 ? {} : { callView },
-    ...resultView === void 0 ? {} : { resultView }
-  };
-}
-function collapsedCardSummary(argumentsJson) {
-  if (argumentsJson === "") return void 0;
-  let command;
-  try {
-    const parsed = JSON.parse(argumentsJson);
-    if (parsed !== null && typeof parsed === "object" && "command" in parsed && typeof parsed.command === "string") {
-      command = parsed.command;
-    }
-  } catch {
-  }
-  return escapeContent(command ?? argumentsJson).replace(/\n/g, " ");
-}
-function truncateDisplay(text, maxCols) {
-  if (maxCols <= 0) return "";
-  if (displayWidth(text) <= maxCols) return text;
-  if (maxCols === 1) return "\u2026";
-  return `${wcwidthSafeSlice(text, maxCols - 1)}\u2026`;
-}
-var FILE_PATH_KEYS = ["path", "file_path", "file", "target_file", "target"];
-function fileUrlFromToolArguments(argumentsJson) {
-  try {
-    const parsed = JSON.parse(argumentsJson);
-    if (parsed === null || typeof parsed !== "object") return void 0;
-    const record = parsed;
-    for (const key of FILE_PATH_KEYS) {
-      const value = record[key];
-      if (typeof value !== "string" || !isAbsolute(value)) continue;
-      if (/[\u0000-\u001f\u007f]/.test(value)) continue;
-      return pathToFileURL(value).href;
-    }
-  } catch {
-  }
-  return void 0;
-}
-function tokenizeCommandHeading(heading) {
-  const trimmed = heading.trimStart();
-  const leading = heading.slice(0, heading.length - trimmed.length);
-  const firstSpace = trimmed.indexOf(" ");
-  const cmd = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
-  const rest = firstSpace === -1 ? "" : trimmed.slice(firstSpace);
-  const tokens = [];
-  if (leading !== "") tokens.push({ text: leading, token: "fgSoft" });
-  if (cmd !== "") tokens.push({ text: cmd, token: "codeCommand" });
-  if (rest !== "") tokens.push({ text: rest, token: "fgSoft" });
-  return Object.freeze(tokens);
-}
-
 // tui-render/src/tool-rows.ts
 var graphemes2 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function truncateMiddleDisplay(text, maxCols, leadingShare = 0.5) {
@@ -3668,8 +3718,48 @@ function toolRow(parts, index, width, background) {
 }
 function toolHeadingRow(card, width, expanded, locale) {
   const status = toolCardDisplayStatus(card);
-  const label = status === "ok" ? "\u2713" : tuiCopy(status === "error" ? "failed" : "running", locale);
   const glyph = expanded ? "\u25BE" : "\u25B8";
+  const isSubagent = card.name === "subagent" || card.name.startsWith("subagent_") || card.name === "delegate";
+  const subagentInfo = isSubagent ? parseSubagentArguments(card.arguments) : void 0;
+  if (isSubagent) {
+    const statusLabel = status === "ok" ? locale === "zh-CN" ? "\u2713 \u5DF2\u5B8C\u6210" : "\u2713 completed" : status === "error" ? locale === "zh-CN" ? "\u2717 \u5931\u8D25" : "\u2717 failed" : locale === "zh-CN" ? "\u25CF \u8FD0\u884C\u4E2D" : "\u25CF running";
+    const statusToken2 = status === "error" ? "error" : status === "running" ? "accentText" : "success";
+    const glyphToken = status === "running" ? "accentText" : "fgDim";
+    const tag = locale === "zh-CN" ? "[\u5B50\u4EE3\u7406] " : "[Subagent] ";
+    if (width < displayWidth(`${glyph} \u2026 \xB7 ${statusLabel}`)) {
+      return toolRow([{ text: truncateDisplay(`${glyph} ${statusLabel}`, width), token: statusToken2 }], 0, width, "toolBg");
+    }
+    const headingText = subagentInfo?.description !== void 0 && subagentInfo.description !== "" ? subagentInfo.description : card.resultView?.title ?? card.callView?.title ?? card.name;
+    const heading2 = escapeContent(headingText).replace(/[\n\t]/gu, " ");
+    const prefixBudget = displayWidth(`${glyph} ${tag} \xB7 ${statusLabel}`);
+    const fitted2 = truncateMiddleDisplay(heading2, Math.max(1, width - prefixBudget), 0.6);
+    const parts2 = [
+      { text: `${glyph} `, token: glyphToken },
+      { text: tag, token: "codeKeyword" },
+      { text: `${fitted2} \xB7 `, token: "fg" },
+      { text: statusLabel, token: statusToken2 }
+    ];
+    if (subagentInfo?.model !== void 0) {
+      parts2.push({ text: ` [${subagentInfo.model}]`, token: "markdownCode" });
+    }
+    let summary2;
+    if (status === "error") {
+      summary2 = collapsedToolCardSummary(card);
+    } else if (!expanded) {
+      if (subagentInfo?.prompt !== void 0 && subagentInfo.prompt !== "") {
+        summary2 = escapeContent(subagentInfo.prompt).replace(/\n/g, " ");
+      } else {
+        summary2 = collapsedToolCardSummary(card);
+      }
+    }
+    const available2 = width - parts2.reduce((sum, part) => sum + displayWidth(part.text), 0) - 1;
+    const href2 = fileUrlFromToolArguments(card.arguments);
+    if (summary2 !== void 0 && available2 >= 2) {
+      parts2.push({ text: ` ${truncateDisplay(summary2, available2)}`, token: "fgSoft", ...href2 === void 0 ? {} : { href: href2 } });
+    }
+    return toolRow(parts2, 0, width, "toolBg");
+  }
+  const label = status === "ok" ? "\u2713" : tuiCopy(status === "error" ? "failed" : "running", locale);
   if (width < displayWidth(`${glyph} \u2026 \xB7 ${label}`)) return toolRow([{ text: truncateDisplay(`${glyph} ${label}`, width), token: status === "error" ? "error" : "fgDim" }], 0, width, "toolBg");
   const heading = escapeContent(card.resultView?.title ?? card.callView?.title ?? card.name).replace(/[\n\t]/gu, " ");
   const terminal = card.callView?.card === "terminal" || card.resultView?.card === "terminal";
@@ -3740,6 +3830,9 @@ function toolBodyRenderRow(line5, index, width) {
   const diffKind = line5.diffKind ?? inferDiffKind(line5.text);
   if (diffKind !== void 0) {
     return toolRow(formatDiffParts(line5.text, diffKind), index, width, bg);
+  }
+  if (line5.text.includes("\u25CF \u6B63\u5728\u6267\u884C") || line5.text.includes("\u25CF Running")) {
+    return toolRow([{ text: `  ${line5.text}`, token: "accentText" }], index, width, bg);
   }
   return toolRow([{ text: `  ${line5.text}`, token: line5.token === "codeBg" ? "fgSoft" : "fgDim" }], index, width, bg);
 }
@@ -13838,6 +13931,7 @@ export {
   notifyBytes,
   paintBackgroundRow,
   paintRow,
+  parseSubagentArguments,
   physicalLineIdentity,
   physicalScrollRailGeometry,
   planToolBodyWindow,

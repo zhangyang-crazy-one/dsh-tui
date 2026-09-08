@@ -381,10 +381,49 @@ export function attachPresenterViews(
   }
 }
 
+
 /**
- * Collapsed-row summary: bash `command` when `arguments` is JSON with a
- * string `command`, otherwise the escaped arguments as one line. Empty
- * arguments produce no summary.
+ * Structured delegation arguments parsed from tool-call JSON arguments.
+ */
+export interface SubagentCallInfo {
+  /** Short human-readable task description. */
+  readonly description?: string | undefined
+  /** Full task instructions for the child agent. */
+  readonly prompt?: string | undefined
+  /** Model id override, when provided. */
+  readonly model?: string | undefined
+  /** Whether the delegation requested background execution. */
+  readonly runInBackground?: boolean | undefined
+}
+
+/**
+ * Extract structured subagent delegation parameters from raw JSON arguments.
+ * @param argumentsJson - raw tool-call JSON arguments string.
+ * @returns parsed subagent delegation fields, or undefined when not recognized.
+ */
+export function parseSubagentArguments(argumentsJson: string): SubagentCallInfo | undefined {
+  if (argumentsJson === '' || argumentsJson === '{}') return undefined
+  try {
+    const parsed: unknown = JSON.parse(argumentsJson)
+    if (parsed !== null && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>
+      const description = typeof obj.description === 'string' && obj.description !== '' ? obj.description : undefined
+      const prompt = typeof obj.prompt === 'string' && obj.prompt !== '' ? obj.prompt : undefined
+      const model = typeof obj.model === 'string' && obj.model !== '' ? obj.model : undefined
+      const runInBackground = typeof obj.run_in_background === 'boolean' ? obj.run_in_background : undefined
+      if (description !== undefined || prompt !== undefined || model !== undefined) {
+        return { description, prompt, model, runInBackground }
+      }
+    }
+  } catch {
+    // JSON.parse throws SyntaxError on invalid JSON.
+  }
+  return undefined
+}
+
+/**
+ * Collapsed-row summary: bash `command` or subagent description/prompt when `arguments`
+ * is JSON, otherwise the escaped arguments as one line. Empty arguments produce no summary.
  * @param argumentsJson - raw tool-call arguments.
  * @returns escaped single-line summary, or undefined when there is nothing to show.
  */
@@ -393,13 +432,19 @@ export function collapsedCardSummary(argumentsJson: string): string | undefined 
   let command: string | undefined
   try {
     const parsed: unknown = JSON.parse(argumentsJson)
-    if (
-      parsed !== null
-      && typeof parsed === 'object'
-      && 'command' in parsed
-      && typeof parsed.command === 'string'
-    ) {
-      command = parsed.command
+    if (parsed !== null && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>
+      if (typeof obj.command === 'string' && obj.command !== '') {
+        command = obj.command
+      } else if (typeof obj.description === 'string' && obj.description !== '') {
+        command = obj.description
+      } else if (typeof obj.prompt === 'string' && obj.prompt !== '') {
+        command = obj.prompt
+      } else if (typeof obj.query === 'string' && obj.query !== '') {
+        command = obj.query
+      } else if (typeof obj.task === 'string' && obj.task !== '') {
+        command = obj.task
+      }
     }
   } catch {
     // JSON.parse throws SyntaxError on invalid JSON; use the escaped raw

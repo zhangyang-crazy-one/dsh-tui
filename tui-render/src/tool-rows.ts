@@ -6,7 +6,7 @@ import type { RenderPolicyTools } from './render-policy.ts'
 import { indexedRows, type RowSource } from './row-source.ts'
 import { createToolBodyDocument, materializeToolBodyRow, planToolBodyWindow } from './tool-body.ts'
 import type { ToolBodyCard, ToolBodyDiffKind, ToolBodyLine, ToolBodyWindow } from './tool-body.ts'
-import { collapsedToolCardSummary, fileUrlFromToolArguments, tokenizeCommandHeading, toolCardDisplayStatus, truncateDisplay } from './tool-cards.ts'
+import { collapsedToolCardSummary, fileUrlFromToolArguments, parseSubagentArguments, tokenizeCommandHeading, toolCardDisplayStatus, truncateDisplay } from './tool-cards.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
@@ -59,8 +59,62 @@ function toolRow(parts: readonly { text: string; token: MarkdownStyleToken; href
  */
 export function toolHeadingRow(card: ToolBodyCard, width: number, expanded: boolean, locale: TuiLocale): MarkdownRenderLine {
   const status = toolCardDisplayStatus(card)
-  const label = status === 'ok' ? '✓' : tuiCopy(status === 'error' ? 'failed' : 'running', locale)
   const glyph = expanded ? '▾' : '▸'
+
+  const isSubagent = card.name === 'subagent' || card.name.startsWith('subagent_') || card.name === 'delegate'
+  const subagentInfo = isSubagent ? parseSubagentArguments(card.arguments) : undefined
+
+  if (isSubagent) {
+    const statusLabel = status === 'ok'
+      ? (locale === 'zh-CN' ? '✓ 已完成' : '✓ completed')
+      : status === 'error'
+        ? (locale === 'zh-CN' ? '✗ 失败' : '✗ failed')
+        : (locale === 'zh-CN' ? '● 运行中' : '● running')
+    const statusToken: MarkdownStyleToken = status === 'error' ? 'error' : status === 'running' ? 'accentText' : 'success'
+    const glyphToken: MarkdownStyleToken = status === 'running' ? 'accentText' : 'fgDim'
+    const tag = locale === 'zh-CN' ? '[子代理] ' : '[Subagent] '
+
+    if (width < displayWidth(`${glyph} … · ${statusLabel}`)) {
+      return toolRow([{ text: truncateDisplay(`${glyph} ${statusLabel}`, width), token: statusToken }], 0, width, 'toolBg')
+    }
+
+    const headingText = subagentInfo?.description !== undefined && subagentInfo.description !== ''
+      ? subagentInfo.description
+      : (card.resultView?.title ?? card.callView?.title ?? card.name)
+    const heading = escapeContent(headingText).replace(/[\n\t]/gu, ' ')
+    const prefixBudget = displayWidth(`${glyph} ${tag} · ${statusLabel}`)
+    const fitted = truncateMiddleDisplay(heading, Math.max(1, width - prefixBudget), 0.6)
+
+    const parts: { text: string; token: MarkdownStyleToken; href?: string }[] = [
+      { text: `${glyph} `, token: glyphToken },
+      { text: tag, token: 'codeKeyword' },
+      { text: `${fitted} · `, token: 'fg' },
+      { text: statusLabel, token: statusToken },
+    ]
+    if (subagentInfo?.model !== undefined) {
+      parts.push({ text: ` [${subagentInfo.model}]`, token: 'markdownCode' })
+    }
+
+    let summary: string | undefined
+    if (status === 'error') {
+      summary = collapsedToolCardSummary(card)
+    } else if (!expanded) {
+      if (subagentInfo?.prompt !== undefined && subagentInfo.prompt !== '') {
+        summary = escapeContent(subagentInfo.prompt).replace(/\n/g, ' ')
+      } else {
+        summary = collapsedToolCardSummary(card)
+      }
+    }
+
+    const available = width - parts.reduce((sum, part) => sum + displayWidth(part.text), 0) - 1
+    const href = fileUrlFromToolArguments(card.arguments)
+    if (summary !== undefined && available >= 2) {
+      parts.push({ text: ` ${truncateDisplay(summary, available)}`, token: 'fgSoft', ...(href === undefined ? {} : { href }) })
+    }
+    return toolRow(parts, 0, width, 'toolBg')
+  }
+
+  const label = status === 'ok' ? '✓' : tuiCopy(status === 'error' ? 'failed' : 'running', locale)
   if (width < displayWidth(`${glyph} … · ${label}`)) return toolRow([{ text: truncateDisplay(`${glyph} ${label}`, width), token: status === 'error' ? 'error' : 'fgDim' }], 0, width, 'toolBg')
   const heading = escapeContent(card.resultView?.title ?? card.callView?.title ?? card.name).replace(/[\n\t]/gu, ' ')
   const terminal = card.callView?.card === 'terminal' || card.resultView?.card === 'terminal'
@@ -166,6 +220,10 @@ export function toolBodyRenderRow(line: ToolBodyLine, index: number, width: numb
 
   if (diffKind !== undefined) {
     return toolRow(formatDiffParts(line.text, diffKind), index, width, bg)
+  }
+
+  if (line.text.includes('● 正在执行') || line.text.includes('● Running')) {
+    return toolRow([{ text: `  ${line.text}`, token: 'accentText' }], index, width, bg)
   }
 
   return toolRow([{ text: `  ${line.text}`, token: line.token === 'codeBg' ? 'fgSoft' : 'fgDim' }], index, width, bg)

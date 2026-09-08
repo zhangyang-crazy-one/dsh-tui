@@ -11,6 +11,7 @@ import {
   cardsFromTurn,
   collapsedCardSummary,
   fileUrlFromToolArguments,
+  parseSubagentArguments,
   tokenizeCommandHeading,
   toolCardDisplayStatus,
   truncateDisplay,
@@ -321,3 +322,30 @@ describe('tokenizeCommandHeading', () => {
     ])
   })
 })
+
+describe('parseSubagentArguments', () => {
+  it('parses structured subagent arguments correctly', () => {
+    expect(parseSubagentArguments('')).toBeUndefined()
+    expect(parseSubagentArguments('{}')).toBeUndefined()
+    expect(parseSubagentArguments('invalid-json')).toBeUndefined()
+    expect(parseSubagentArguments(JSON.stringify({
+      description: '探索代码库',
+      prompt: '请分析 packages/ 结构',
+      model: 'deepseek-chat',
+      run_in_background: true,
+    }))).toEqual({
+      description: '探索代码库',
+      prompt: '请分析 packages/ 结构',
+      model: 'deepseek-chat',
+      runInBackground: true,
+    })
+  })
+
+  it('summarizes description, prompt, query, or task in collapsedCardSummary', () => {
+    expect(collapsedCardSummary(JSON.stringify({ description: '研究方案' }))).toBe('研究方案')
+    expect(collapsedCardSummary(JSON.stringify({ prompt: '执行指令' }))).toBe('执行指令')
+    expect(collapsedCardSummary(JSON.stringify({ query: '搜索关键词' }))).toBe('搜索关键词')
+    expect(collapsedCardSummary(JSON.stringify({ task: '执行后台任务' }))).toBe('执行后台任务')
+  })
+})
+

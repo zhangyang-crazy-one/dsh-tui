@@ -3,6 +3,7 @@
 import { displayWidth, escapeContent } from './content.ts'
 import { indexedRows, RowSequence, type RowSource } from './row-source.ts'
 import type { ToolCardModel } from './tool-cards.ts'
+import { parseSubagentArguments } from './tool-cards.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 /** Raw tool fields required by the detail reader; identity stays with the owning card. */
@@ -286,11 +287,32 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
         }
       }
       break
-    default:
-      // Unknown presenter tags retain the generic argument/result document.
-      args()
+    default: {
+      const isSubagent = card.name === 'subagent' || card.name.startsWith('subagent_') || card.name === 'delegate'
+      const subInfo = isSubagent ? parseSubagentArguments(card.arguments) : undefined
+      if (subInfo !== undefined) {
+        if (subInfo.description !== undefined) {
+          section(options.locale === 'zh-CN' ? '任务目标' : 'Task', textLines(subInfo.description))
+        }
+        if (subInfo.model !== undefined) {
+          section(options.locale === 'zh-CN' ? '委派模型' : 'Model', textLines(subInfo.model))
+        }
+        if (card.status === 'running') {
+          section(
+            options.locale === 'zh-CN' ? '运行状态' : 'Status',
+            textLines(options.locale === 'zh-CN' ? '● 正在执行子代理任务...' : '● Running subagent task...'),
+          )
+        }
+        if (subInfo.prompt !== undefined) {
+          section(options.locale === 'zh-CN' ? '任务指令' : 'Prompt', textLines(subInfo.prompt))
+        }
+      } else {
+        // Unknown presenter tags retain the generic argument/result document.
+        args()
+      }
       if (card.resultText !== undefined) section(tuiCopy('result', options.locale), textLines(card.resultText))
       break
+    }
   }
   if (result === undefined && kind !== 'generic' && card.resultText !== undefined) {
     section(tuiCopy('result', options.locale), textLines(card.resultText))

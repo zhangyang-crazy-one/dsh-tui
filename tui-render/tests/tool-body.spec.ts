@@ -195,4 +195,28 @@ describe('tool body windows', () => {
       ' 50 │ + y',
     ])
   })
+
+  it('renders structured subagent sections instead of raw JSON arguments', () => {
+    const subagentCard: ToolBodyCard = {
+      name: 'subagent',
+      arguments: JSON.stringify({
+        description: '架构分析',
+        prompt: '调研 render 渲染逻辑',
+        model: 'deepseek-coder',
+      }),
+      status: 'running',
+    }
+    const document = createToolBodyDocument(subagentCard, options)
+    const lines = document.slice().map(row => row.text)
+    expect(lines).toContain('任务目标')
+    expect(lines).toContain('架构分析')
+    expect(lines).toContain('委派模型')
+    expect(lines).toContain('deepseek-coder')
+    expect(lines).toContain('运行状态')
+    expect(lines).toContain('● 正在执行子代理任务...')
+    expect(lines).toContain('任务指令')
+    expect(lines).toContain('调研 render 渲染逻辑')
+    expect(lines).not.toContain('{"description":"架构分析"')
+  })
 })
+

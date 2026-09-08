@@ -1,6 +1,6 @@
 /** Preview row generation follows viewport demand; eviction never removes source. */
 import { describe, expect, it } from 'vitest'
-import { ToolRowCache } from '../src/tool-rows.ts'
+import { toolHeadingRow, ToolRowCache } from '../src/tool-rows.ts'
 import { toolPolicyDefaults } from '../src/render-policy.ts'
 import type { ToolBodyCard } from '../src/tool-body.ts'
 
@@ -108,4 +108,26 @@ describe('ToolRowCache', () => {
     expect(textRows).toHaveLength(7)
     expect(textRows.at(-1)).toContain('/tools')
   })
+
+  it('renders subagent tool card with high contrast colors and semantic tokens', () => {
+    const subagentCard: ToolBodyCard = {
+      name: 'subagent',
+      arguments: JSON.stringify({
+        description: '探索架构',
+        prompt: '分析代码库结构',
+        model: 'deepseek-chat',
+      }),
+      status: 'running',
+    }
+    const heading = toolHeadingRow(subagentCard, 80, false, 'zh-CN')
+    expect(heading.text).toContain('[子代理]')
+    expect(heading.text).toContain('探索架构')
+    expect(heading.text).toContain('● 运行中')
+    expect(heading.text).toContain('[deepseek-chat]')
+    expect(heading.spans.some(s => s.token === 'codeKeyword')).toBe(true)
+    expect(heading.spans.some(s => s.token === 'fg')).toBe(true)
+    expect(heading.spans.some(s => s.token === 'accentText')).toBe(true)
+    expect(heading.spans.some(s => s.token === 'markdownCode')).toBe(true)
+  })
 })
+
