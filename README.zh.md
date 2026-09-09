@@ -33,9 +33,9 @@ kind: "package-group"
 <a id="screenshots"></a>
 ## 截图
 
-空闲首页：
+交互式设置面板（`/settings`）：
 
-![dsh-tui 空闲首页](assets/screenshots/dsh-tui-home.png)
+![dsh-tui 设置面板](assets/screenshots/dsh-tui-settings.png)
 
 发送 `你好` 后：
 

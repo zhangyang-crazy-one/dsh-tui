@@ -33,9 +33,9 @@ English | [中文](README.zh.md)
 <a id="screenshots"></a>
 ## Screenshots
 
-Idle home:
+Interactive settings pane (`/settings`):
 
-![dsh-tui idle home](assets/screenshots/dsh-tui-home.png)
+![dsh-tui settings pane](assets/screenshots/dsh-tui-settings.png)
 
 After sending `你好`:
 
