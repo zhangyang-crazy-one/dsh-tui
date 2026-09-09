@@ -8,8 +8,7 @@
 import { Box, Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
-import { renderPaneLine as line } from './overlay-shell.tsx'
-import { paintRow, styled } from './theme.ts'
+import { paintBackgroundRow, styled } from './theme.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 /** Exact overlay heading (bold fg, never accent). */
@@ -43,6 +42,10 @@ export interface SettingsFieldRow {
   field: string
   /** Current resolved value, already a string for display. */
   value: string
+  /** Whether this field is required by the schema / template (renders * in accent/error color). */
+  required?: boolean
+  /** Optional custom display label for the field. */
+  label?: string
 }
 
 /** SettingsPane props. */
@@ -117,14 +120,19 @@ function fieldRow(
   value: string,
   selected: boolean,
   columns: number,
+  required = false,
 ): string[] {
   const marker = selected
     ? styled(escapeContent('› '), 'accent', undefined, true)
     : '  '
+  const reqMark = required
+    ? styled('* ', 'error', undefined, true)
+    : ''
+  const reqWidth = required ? 2 : 0
   const escapedLabel = escapeContent(label)
   const escapedValue = escapeContent(value)
-  const labelToken = selected ? 'fg' : 'fgDim'
-  const labelCols = MARKER_COLS + displayWidth(escapedLabel)
+  const labelToken = selected ? 'fg' : 'fgSoft'
+  const labelCols = MARKER_COLS + reqWidth + displayWidth(escapedLabel)
   const valueBudget = Math.max(0, columns - labelCols - VALUE_GAP)
   const fittedValue = fitValue(escapedValue, valueBudget)
   const gap = Math.max(
@@ -133,9 +141,10 @@ function fieldRow(
   )
   return [
     marker,
+    ...(required ? [reqMark] : []),
     styled(escapedLabel, labelToken),
-    styled(' '.repeat(gap), 'bg'),
-    ...(fittedValue === '' ? [] : [styled(fittedValue, 'fgDim')]),
+    styled(' '.repeat(gap), 'settingsCardBg'),
+    ...(fittedValue === '' ? [] : [styled(fittedValue, selected ? 'fg' : 'fgDim')]),
   ]
 }
 
@@ -193,44 +202,58 @@ export function SettingsPane({
       rows.length - size,
     )
   const visible = rows.slice(start, start + size)
+  const renderLine = (text: string, token: 'fg' | 'fgDim' | 'error' | 'accent', bold = false) => (
+    <Box width="100%">
+      <Text>
+        {paintBackgroundRow([styled(escapeContent(text), token, undefined, bold)], 'settingsCardBg', width)}
+      </Text>
+    </Box>
+  )
   return (
     <Box flexDirection="column" width="100%">
-      {line(onboarding === true ? ONBOARDING_TITLE : TITLE, 'fg', true)}
-      {start > 0 ? line(`… 还有 ${String(start)} 项`, 'fgDim') : null}
+      {renderLine(onboarding === true ? ONBOARDING_TITLE : TITLE, 'fg', true)}
+      {start > 0 ? renderLine(`… 还有 ${String(start)} 项`, 'fgDim') : null}
       {visible.map((row, index) => {
         const absolute = start + index
         const selected = absolute === selectedIndex
-        const localized = row.namespace === 'tui'
+        let localized: string
+        if (row.label !== undefined) {
+          localized = row.label
+        } else if (
+          row.namespace === 'tui'
           && (row.field === 'reasoning' || row.field === 'scrollbar'
             || row.field === 'statusDetails' || row.field === 'locale')
-          ? `${row.field} · ${tuiCopy(row.field, locale)}`
-          : row.field === 'apiKeyEnv'
-            ? `${row.field} · 环境变量名`
-            : row.field
-        const label = `${row.namespace} · ${localized}`
+        ) {
+          localized = `${row.field} · ${tuiCopy(row.field, locale)}`
+        } else if (row.field === 'apiKeyEnv') {
+          localized = `${row.field} · 环境变量名`
+        } else {
+          localized = row.field
+        }
+        const label = row.label === undefined ? `${row.namespace} · ${localized}` : localized
         return (
           <Box key={`${row.namespace}:${row.field}`} width="100%">
             <Text>
-              {paintRow(fieldRow(label, row.value, selected, width))}
+              {paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), 'settingsCardBg', width)}
             </Text>
           </Box>
         )
       })}
       {rows.length > start + size
-        ? line(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim')
+        ? renderLine(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim')
         : null}
-      {errorReason !== undefined ? (
+      {errorReason === undefined ? null : (
         <Box flexDirection="column" width="100%">
-          {line(
+          {renderLine(
             errorReason === EMPTY_TABLE_REASON
               ? EMPTY_TABLE_REASON
               : `✗ 更新失败：${errorReason}`,
             'error',
           )}
-          {errorReason === EMPTY_TABLE_REASON ? null : line(FAIL_NEXT, 'fgDim')}
+          {errorReason === EMPTY_TABLE_REASON ? null : renderLine(FAIL_NEXT, 'fgDim')}
         </Box>
-      ) : null}
-      {line(footnote, 'fgDim')}
+      )}
+      {renderLine(footnote, 'fgDim')}
     </Box>
   )
 }

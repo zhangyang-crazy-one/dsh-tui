@@ -20,6 +20,9 @@ import { EMPTY_APPROVAL_PANE } from '../src/approval-pane.tsx'
 import { EMPTY_ASK_USER_PANE } from '../src/ask-user-pane.tsx'
 import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
+import { EMPTY_WORKSPACE_PANE } from '../src/workspace-pane.tsx'
+import { EMPTY_FEEDBACK_PANE } from '../src/feedback-pane.tsx'
+import { EMPTY_WORKFLOW_OVERLAY } from '../src/workflow-overlay.tsx'
 
 vi.mock('ink', async importOriginal => ({
   ...await importOriginal<typeof import('ink')>(),
@@ -245,14 +248,18 @@ describe('TuiLoop settings overlay', () => {
       getSettingsPane: () => OPEN_SETTINGS,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_WORKSPACE_PANE,
+      getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+      getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,
       getSubmitOnEnter: () => true,
       getFeedback: () => undefined,
+      noteUserActivity: () => {},
+      note: () => {},
+      intakeClipboardImage: async () => ({ ok: false as const, reason: 'stub' }),
+      intakeImagePath: async () => ({ ok: false as const, reason: 'stub' }),
       subscribe: () => () => {},
       dispatch: () => {},
       commands: [],
@@ -287,14 +294,18 @@ describe('TuiLoop settings overlay', () => {
       getSettingsPane: () => OPEN_SETTINGS_EDITING,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_WORKSPACE_PANE,
+      getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+      getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,
       getSubmitOnEnter: () => true,
       getFeedback: () => undefined,
+      noteUserActivity: () => {},
+      note: () => {},
+      intakeClipboardImage: async () => ({ ok: false as const, reason: 'stub' }),
+      intakeImagePath: async () => ({ ok: false as const, reason: 'stub' }),
       subscribe: () => () => {},
       dispatch: () => {},
       commands: [],
@@ -339,14 +350,18 @@ describe('TuiLoop settings overlay', () => {
       getSettingsPane: () => settingsState,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_WORKSPACE_PANE,
+      getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+      getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,
       getSubmitOnEnter: () => true,
       getFeedback: () => undefined,
+      noteUserActivity: () => {},
+      note: () => {},
+      intakeClipboardImage: async () => ({ ok: false as const, reason: 'stub' }),
+      intakeImagePath: async () => ({ ok: false as const, reason: 'stub' }),
       subscribe: () => () => {},
       dispatch: () => {},
       commands: [],
@@ -360,5 +375,33 @@ describe('TuiLoop settings overlay', () => {
     expect(out).toContain('llm-deepseek · opt0')
     expect(out).toContain('llm-deepseek · opt20')
     expect(out).toContain('… 还有 4 项')
+  })
+  it('renders required asterisk and custom label for schema-driven rows', () => {
+    const rows = [
+      {
+        namespace: 'llm-pi-ai',
+        field: 'providers.siliconflow.baseURL',
+        value: 'https://api.siliconflow.cn/v1',
+        required: true,
+        label: 'providers · siliconflow · 端点 (baseURL)',
+      },
+      {
+        namespace: 'llm-pi-ai',
+        field: 'providers.siliconflow.displayName',
+        value: '硅基流动',
+        required: false,
+        label: 'providers · siliconflow · 别名 (displayName)',
+      },
+    ]
+    const out = renderToString(
+      createElement(SettingsPane, {
+        rows,
+        selectedIndex: 0,
+        editing: false,
+      }),
+    )
+    expect(out).toContain('* ')
+    expect(out).toContain('providers · siliconflow · 端点 (baseURL)')
+    expect(out).toContain('providers · siliconflow · 别名 (displayName)')
   })
 })

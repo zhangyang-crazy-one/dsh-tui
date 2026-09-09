@@ -167,4 +167,61 @@ describe('settingsRowsFromDescribe', () => {
       'shell · timeoutMs',
     ])
   })
+  it('formats models as comma-separated string and parses comma-separated inputs', () => {
+    expect(parseSettingsFieldValue('llm-pi-ai', 'providers.siliconflow.models', [], 'deepseek-v3, deepseek-r1'))
+      .toEqual([{ id: 'deepseek-v3' }, { id: 'deepseek-r1' }])
+    expect(stringifySettingsFieldValue('llm-pi-ai', 'providers.siliconflow.models', [{ id: 'm1' }, { id: 'm2' }]))
+      .toBe('m1, m2')
+  })
+
+  it('pre-fills provider template when selecting by name or index', () => {
+    const prefilled = parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'siliconflow') as Record<string, unknown>
+    expect(prefilled['siliconflow']).toMatchObject({
+      api: 'openai-completions',
+      baseURL: 'https://api.siliconflow.cn/v1',
+      apiKeyEnv: 'SILICONFLOW_API_KEY',
+      displayName: '硅基流动',
+    })
+  })
+
+  it('validates required fields for provider configuration', () => {
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers.custom.api', 'openai-completions', '  '))
+      .toThrow('api 协议为必填项，不可为空')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers.custom.baseURL', 'https://...', ''))
+      .toThrow('baseURL 接口地址为必填项，不可为空')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers.custom.apiKeyEnv', 'KEY', ''))
+      .toThrow('providers.custom.apiKeyEnv 环境变量名为必填项，不可为空')
+  })
+
+  it('expands provider child fields with required markers when expandProviders is enabled', () => {
+    const rows = settingsRowsFromDescribe(
+      [descriptor('llm-pi-ai')],
+      () => ({
+        providers: {
+          sf: {
+            api: 'openai-completions',
+            baseURL: 'https://api.siliconflow.cn/v1',
+            apiKeyEnv: 'SILICONFLOW_API_KEY',
+            displayName: '硅基流动',
+            models: [{ id: 'deepseek-v3' }],
+          },
+        },
+      }),
+      { expandProviders: true },
+    )
+    expect(rows.map(r => r.field)).toEqual([
+      'providers',
+      'providers.sf.api',
+      'providers.sf.baseURL',
+      'providers.sf.apiKeyEnv',
+      'providers.sf.displayName',
+      'providers.sf.models',
+      'providers',
+    ])
+    expect(rows[1]?.required).toBe(true)
+    expect(rows[2]?.required).toBe(true)
+    expect(rows[3]?.required).toBe(true)
+    expect(rows[4]?.required).toBe(false)
+    expect(rows[5]?.value).toBe('deepseek-v3')
+  })
 })

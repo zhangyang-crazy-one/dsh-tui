@@ -14,7 +14,7 @@ describe('THEME_LEVELS', () => {
   it('keeps essential ANSI-16 text distinct from every panel background', () => {
     const theme = THEME_LEVELS['16']
     for (const foreground of ['fg', 'fgSoft', 'fgDim'] as const) {
-      for (const background of ['bg', 'toolBg', 'inputBg', 'messageBg', 'codeBg'] as const) {
+      for (const background of ['bg', 'toolBg', 'inputBg', 'messageBg', 'codeBg', 'settingsCardBg'] as const) {
         expect(theme[foreground]).not.toBe(theme[background])
       }
     }
@@ -33,6 +33,7 @@ describe('THEME_LEVELS', () => {
       toolBg: '#252830',
       codeBg: '#202328',
       inputBg: '#23262B',
+      settingsCardBg: '#182236',
       fg: '#EEF0F2',
       fgSoft: '#D1D4D8',
       fgDim: '#A4A9B0',

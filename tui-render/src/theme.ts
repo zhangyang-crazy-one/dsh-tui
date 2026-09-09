@@ -19,6 +19,7 @@ export type StyleToken =
   | 'toolBg'
   | 'inputBg'
   | 'codeBg'
+  | 'settingsCardBg'
   | 'fg'
   | 'fgSoft'
   | 'fgDim'
@@ -39,7 +40,7 @@ export type StyleToken =
   | 'markdownLink'
 
 /** Tokens that paint terminal cell backgrounds rather than foreground glyphs. */
-export type BackgroundToken = 'bg' | 'messageBg' | 'toolBg' | 'inputBg' | 'codeBg'
+export type BackgroundToken = 'bg' | 'messageBg' | 'toolBg' | 'inputBg' | 'codeBg' | 'settingsCardBg'
 
 /** Concrete colors for one tier. Empty strings at `none` disable styling. */
 export interface ThemeTokens {
@@ -48,6 +49,7 @@ export interface ThemeTokens {
   toolBg: string
   inputBg: string
   codeBg: string
+  settingsCardBg: string
   fg: string
   fgSoft: string
   fgDim: string
@@ -76,6 +78,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
     toolBg: '#252830',
     inputBg: '#23262B',
     codeBg: '#202328',
+    settingsCardBg: '#182236',
     fg: '#EEF0F2',
     fgSoft: '#D1D4D8',
     fgDim: '#A4A9B0',
@@ -101,6 +104,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
     toolBg: '236',
     inputBg: '235',
     codeBg: '235',
+    settingsCardBg: '236',
     fg: '255',
     fgSoft: '252',
     fgDim: '248',
@@ -126,6 +130,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
     toolBg: 'black',
     inputBg: 'bright-black',
     codeBg: 'black',
+    settingsCardBg: 'blue',
     fg: 'white',
     fgSoft: 'white',
     fgDim: 'white',
@@ -151,6 +156,7 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
     toolBg: '',
     inputBg: '',
     codeBg: '',
+    settingsCardBg: '',
     fg: '',
     fgSoft: '',
     fgDim: '',
@@ -373,4 +379,5 @@ const BACKGROUND_TOKENS: ReadonlySet<StyleToken> = new Set<StyleToken>([
   'toolBg',
   'inputBg',
   'codeBg',
+  'settingsCardBg',
 ])

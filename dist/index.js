@@ -228,6 +228,7 @@ var THEME_LEVELS = {
     toolBg: "#252830",
     inputBg: "#23262B",
     codeBg: "#202328",
+    settingsCardBg: "#182236",
     fg: "#EEF0F2",
     fgSoft: "#D1D4D8",
     fgDim: "#A4A9B0",
@@ -253,6 +254,7 @@ var THEME_LEVELS = {
     toolBg: "236",
     inputBg: "235",
     codeBg: "235",
+    settingsCardBg: "236",
     fg: "255",
     fgSoft: "252",
     fgDim: "248",
@@ -278,6 +280,7 @@ var THEME_LEVELS = {
     toolBg: "black",
     inputBg: "bright-black",
     codeBg: "black",
+    settingsCardBg: "blue",
     fg: "white",
     fgSoft: "white",
     fgDim: "white",
@@ -303,6 +306,7 @@ var THEME_LEVELS = {
     toolBg: "",
     inputBg: "",
     codeBg: "",
+    settingsCardBg: "",
     fg: "",
     fgSoft: "",
     fgDim: "",
@@ -416,7 +420,8 @@ var BACKGROUND_TOKENS = /* @__PURE__ */ new Set([
   "messageBg",
   "toolBg",
   "inputBg",
-  "codeBg"
+  "codeBg",
+  "settingsCardBg"
 ]);
 
 // tui-render/src/brand.ts
@@ -9727,12 +9732,14 @@ function fitValue(value, maxCols) {
   if (budget <= 0) return wcwidthSafeSlice(VALUE_ELLIPSIS, maxCols);
   return `${wcwidthSafeSlice(value, budget)}${VALUE_ELLIPSIS}`;
 }
-function fieldRow(label, value, selected, columns) {
+function fieldRow(label, value, selected, columns, required = false) {
   const marker = selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ";
+  const reqMark = required ? styled("* ", "error", void 0, true) : "";
+  const reqWidth = required ? 2 : 0;
   const escapedLabel = escapeContent(label);
   const escapedValue = escapeContent(value);
-  const labelToken = selected ? "fg" : "fgDim";
-  const labelCols = MARKER_COLS + displayWidth(escapedLabel);
+  const labelToken = selected ? "fg" : "fgSoft";
+  const labelCols = MARKER_COLS + reqWidth + displayWidth(escapedLabel);
   const valueBudget = Math.max(0, columns - labelCols - VALUE_GAP);
   const fittedValue = fitValue(escapedValue, valueBudget);
   const gap = Math.max(
@@ -9741,9 +9748,10 @@ function fieldRow(label, value, selected, columns) {
   );
   return [
     marker,
+    ...required ? [reqMark] : [],
     styled(escapedLabel, labelToken),
-    styled(" ".repeat(gap), "bg"),
-    ...fittedValue === "" ? [] : [styled(fittedValue, "fgDim")]
+    styled(" ".repeat(gap), "settingsCardBg"),
+    ...fittedValue === "" ? [] : [styled(fittedValue, selected ? "fg" : "fgDim")]
   ];
 }
 function computeSettingsWindow(maxRows, totalRows, errorReason) {
@@ -9776,25 +9784,35 @@ function SettingsPane({
     rows.length - size
   );
   const visible = rows.slice(start, start + size);
+  const renderLine = (text, token, bold = false) => /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintBackgroundRow([styled(escapeContent(text), token, void 0, bold)], "settingsCardBg", width) }) });
   return /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
-    renderPaneLine(onboarding === true ? ONBOARDING_TITLE : TITLE2, "fg", true),
-    start > 0 ? renderPaneLine(`\u2026 \u8FD8\u6709 ${String(start)} \u9879`, "fgDim") : null,
+    renderLine(onboarding === true ? ONBOARDING_TITLE : TITLE2, "fg", true),
+    start > 0 ? renderLine(`\u2026 \u8FD8\u6709 ${String(start)} \u9879`, "fgDim") : null,
     visible.map((row, index) => {
       const absolute = start + index;
       const selected = absolute === selectedIndex;
-      const localized = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
-      const label = `${row.namespace} \xB7 ${localized}`;
-      return /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintRow(fieldRow(label, row.value, selected, width)) }) }, `${row.namespace}:${row.field}`);
+      let localized;
+      if (row.label !== void 0) {
+        localized = row.label;
+      } else if (row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale")) {
+        localized = `${row.field} \xB7 ${tuiCopy(row.field, locale)}`;
+      } else if (row.field === "apiKeyEnv") {
+        localized = `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D`;
+      } else {
+        localized = row.field;
+      }
+      const label = row.label === void 0 ? `${row.namespace} \xB7 ${localized}` : localized;
+      return /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${row.field}`);
     }),
-    rows.length > start + size ? renderPaneLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
-    errorReason !== void 0 ? /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
-      renderPaneLine(
+    rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
+    errorReason === void 0 ? null : /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
+      renderLine(
         errorReason === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason}`,
         "error"
       ),
-      errorReason === EMPTY_TABLE_REASON2 ? null : renderPaneLine(FAIL_NEXT2, "fgDim")
-    ] }) : null,
-    renderPaneLine(footnote, "fgDim")
+      errorReason === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim")
+    ] }),
+    renderLine(footnote, "fgDim")
   ] });
 }
 
