@@ -9756,7 +9756,12 @@ function fieldRow(label, value, selected, columns, required = false) {
 }
 function computeSettingsWindow(maxRows, totalRows, errorReason) {
   if (maxRows === void 0) return SETTINGS_WINDOW;
-  const errorLines = errorReason === void 0 ? 0 : errorReason === EMPTY_TABLE_REASON2 ? 1 : 2;
+  let errorLines = 0;
+  if (errorReason === EMPTY_TABLE_REASON2) {
+    errorLines = 1;
+  } else if (errorReason !== void 0) {
+    errorLines = 2;
+  }
   const fixedOverhead = 2 + errorLines;
   const available = Math.max(1, maxRows - fixedOverhead);
   if (totalRows <= available) {
@@ -9776,7 +9781,12 @@ function SettingsPane({
   const { columns } = useWindowSize5();
   const width = columns > 0 ? columns : 80;
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON2 : void 0);
-  const footnote = onboarding === true ? ONBOARDING_FOOTNOTE : editing ? EDIT_FOOTNOTE : FOOTNOTE2;
+  let footnote = FOOTNOTE2;
+  if (onboarding === true) {
+    footnote = ONBOARDING_FOOTNOTE;
+  } else if (editing) {
+    footnote = EDIT_FOOTNOTE;
+  }
   const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason);
   const size = Math.min(windowLimit, rows.length);
   const start = rows.length <= size ? 0 : Math.min(
@@ -9802,7 +9812,7 @@ function SettingsPane({
         localized = row.field;
       }
       const label = row.label === void 0 ? `${row.namespace} \xB7 ${localized}` : localized;
-      return /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${row.field}`);
+      return /* @__PURE__ */ jsx14(Box14, { width: "100%", children: /* @__PURE__ */ jsx14(Text14, { children: paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${row.field}:${String(absolute)}`);
     }),
     rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
     errorReason === void 0 ? null : /* @__PURE__ */ jsxs13(Box14, { flexDirection: "column", width: "100%", children: [
@@ -12603,7 +12613,7 @@ function TuiLoop({
         open: settingsPaneRef.current.open,
         editing: settingsPaneRef.current.editing,
         onboarding: settingsPaneRef.current.onboarding,
-        editValue: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.value
+        editValue: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editValue ?? settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.value
       },
       controller.getSubmitOnEnter(),
       {

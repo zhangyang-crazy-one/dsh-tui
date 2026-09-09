@@ -183,7 +183,7 @@ export function stringifySettingsFieldValue(
   ) {
     return BRAND_ANIMATION_LABELS[value]
   }
-  if (field.includes('providers.') && field.endsWith('.models')) {
+  if (field === 'models' || field.endsWith('.models')) {
     return formatModelsList(value)
   }
   if (field === 'providers' && isPlainObject(value)) {
@@ -305,6 +305,7 @@ export function settingsRowsFromDescribe(
             field: 'providers',
             value: stringifySettingsFieldValue('llm-pi-ai', 'providers', providersObj),
             label: 'providers · 预置模板添加 (按 Enter)',
+            editValue: '',
           })
         } else {
           rows.push({
@@ -312,6 +313,7 @@ export function settingsRowsFromDescribe(
             field: 'providers',
             value: stringifySettingsFieldValue('llm-pi-ai', 'providers', providersObj),
             label: 'providers · 提供商列表 (按 Enter 追加模板)',
+            editValue: '',
           })
           for (const pId of providerIds) {
             const profile = isPlainObject(providersObj[pId]) ? providersObj[pId] : {}
@@ -356,6 +358,7 @@ export function settingsRowsFromDescribe(
             field: 'providers',
             value: '按 Enter 追加新 Provider 模板',
             label: 'providers · [+ 添加新 Provider 模板]',
+            editValue: '',
           })
         }
         continue
@@ -364,6 +367,9 @@ export function settingsRowsFromDescribe(
         namespace: String(entry.ns),
         field,
         value: stringifySettingsFieldValue(String(entry.ns), field, fieldValue),
+        ...((field === 'models' || field.endsWith('.models')) && Array.isArray(fieldValue)
+          ? { editValue: stringifySettingValue(fieldValue) }
+          : {}),
       })
     }
     const key = String(entry.ns)

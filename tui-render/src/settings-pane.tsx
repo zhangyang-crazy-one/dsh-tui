@@ -46,6 +46,8 @@ export interface SettingsFieldRow {
   required?: boolean
   /** Optional custom display label for the field. */
   label?: string
+  /** Composer seed for editing; defaults to {@link value} when omitted. */
+  editValue?: string
 }
 
 /** SettingsPane props. */
@@ -162,7 +164,12 @@ export function computeSettingsWindow(
   errorReason: string | undefined,
 ): number {
   if (maxRows === undefined) return SETTINGS_WINDOW
-  const errorLines = errorReason === undefined ? 0 : errorReason === EMPTY_TABLE_REASON ? 1 : 2
+  let errorLines = 0
+  if (errorReason === EMPTY_TABLE_REASON) {
+    errorLines = 1
+  } else if (errorReason !== undefined) {
+    errorLines = 2
+  }
   const fixedOverhead = 2 + errorLines
   const available = Math.max(1, maxRows - fixedOverhead)
   if (totalRows <= available) {
@@ -190,9 +197,12 @@ export function SettingsPane({
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON : undefined)
-  const footnote = onboarding === true
-    ? ONBOARDING_FOOTNOTE
-    : editing ? EDIT_FOOTNOTE : FOOTNOTE
+  let footnote = FOOTNOTE
+  if (onboarding === true) {
+    footnote = ONBOARDING_FOOTNOTE
+  } else if (editing) {
+    footnote = EDIT_FOOTNOTE
+  }
   const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason)
   const size = Math.min(windowLimit, rows.length)
   const start = rows.length <= size
@@ -232,7 +242,7 @@ export function SettingsPane({
         }
         const label = row.label === undefined ? `${row.namespace} · ${localized}` : localized
         return (
-          <Box key={`${row.namespace}:${row.field}`} width="100%">
+          <Box key={`${row.namespace}:${row.field}:${String(absolute)}`} width="100%">
             <Text>
               {paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), 'settingsCardBg', width)}
             </Text>

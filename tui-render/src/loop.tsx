@@ -2263,6 +2263,8 @@ export function TuiLoop({
         onboarding: settingsPaneRef.current.onboarding,
         editValue:
           settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]
+            ?.editValue
+          ?? settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]
             ?.value,
       },
       controller.getSubmitOnEnter(),

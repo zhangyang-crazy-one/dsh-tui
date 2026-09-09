@@ -110,7 +110,8 @@ describe('settingsRowsFromDescribe', () => {
       'llm-pi-ai · providers',
       'shell · timeoutMs',
     ])
-    expect(rows[1]?.value).toBe('[{"id":"deepseek-v4-flash"}]')
+    expect(rows[1]?.value).toBe('deepseek-v4-flash')
+    expect(rows[1]?.editValue).toBe('[{"id":"deepseek-v4-flash"}]')
   })
 
   it('shows brandAnimation with the approved label in the leading tui section', () => {
