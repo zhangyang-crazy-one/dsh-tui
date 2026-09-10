@@ -206,7 +206,7 @@ describe('settingsRowsFromDescribe', () => {
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gateway', known))
       .toThrow('未知 Provider "my-gateway"')
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, '   ', known))
-      .toThrow('请输入 Provider 名称或模板序号')
+      .toThrow('请输入 Provider 名称、模板序号，或按表单填写')
   })
 
   it('declares a custom provider from the one-line name/endpoint/model form', () => {
@@ -236,11 +236,38 @@ describe('settingsRowsFromDescribe', () => {
     // A route the catalog does not describe cannot default its endpoint or models,
     // and each refusal names the field while the user is still looking at it.
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw https://gw.example/v1', []))
-      .toThrow('自定义形式')
+      .toThrow('至少一个模型')
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'My-GW https://gw/v1 m1', []))
       .toThrow('以小写字母开头')
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw gw.example/v1 m1', []))
       .toThrow('需以 http:// 或 https:// 开头')
+  })
+
+  it('declares a custom provider from the multi-line form', () => {
+    const draft = ['name=my-gw', 'baseURL=https://gw.example/v1', 'models=gpt-4o, gpt-4o-mini', 'api=openai-completions'].join('\n')
+    const declared = parseSettingsFieldValue('llm-pi-ai', 'providers', {}, draft, []) as Record<string, unknown>
+    expect(declared['my-gw']).toEqual({
+      api: 'openai-completions',
+      baseURL: 'https://gw.example/v1',
+      apiKeyEnv: 'MY_GW_API_KEY',
+      displayName: 'my-gw',
+      models: [{ id: 'gpt-4o' }, { id: 'gpt-4o-mini' }],
+    })
+    // The seeded template is editable rather than strict: comments and blank
+    // lines are ignored, and a missing required field names itself.
+    const withComments = ['# 一行一个 key=value', 'name=gw2', '', 'baseURL=https://gw2/v1', 'models=m1'].join('\n')
+    expect(parseSettingsFieldValue('llm-pi-ai', 'providers', {}, withComments, [])).toMatchObject({
+      gw2: { baseURL: 'https://gw2/v1', models: [{ id: 'm1' }] },
+    })
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'name=my-gw\nbaseURL=https://gw/v1\nmodels=', []))
+      .toThrow('请填写 models=')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'name=\nbaseURL=https://gw/v1\nmodels=m', []))
+      .toThrow('请填写 name=')
+    // Explicit credentials and display name win over the derived defaults.
+    const explicit = ['name=gw', 'baseURL=https://gw/v1', 'models=m', 'apiKeyEnv=CUSTOM_KEY', 'displayName=网关'].join('\n')
+    expect(parseSettingsFieldValue('llm-pi-ai', 'providers', {}, explicit, [])).toMatchObject({
+      gw: { apiKeyEnv: 'CUSTOM_KEY', displayName: '网关' },
+    })
   })
 
   it('validates required fields for provider configuration', () => {

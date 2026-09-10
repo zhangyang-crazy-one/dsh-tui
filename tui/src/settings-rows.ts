@@ -58,6 +58,10 @@ export interface CustomProviderDraft {
   readonly baseURL: string
   /** At least one model id, in draft order. */
   readonly models: readonly string[]
+  /** Explicit credential reference; the route-derived name when omitted. */
+  readonly apiKeyEnv?: string
+  /** Explicit display name; the route key when omitted. */
+  readonly displayName?: string
 }
 
 /**
@@ -71,17 +75,13 @@ export interface CustomProviderDraft {
  */
 export function parseCustomProviderDraft(draft: string): CustomProviderDraft | undefined {
   const tokens = draft.split(/\s+/u).filter(token => token !== '')
-  if (tokens.length < 3) return undefined
+  if (tokens.length < 2) return undefined
+  if (tokens.length < 3) {
+    // Name and endpoint alone cannot describe a route the catalog does not ship.
+    throw new TypeError('自定义 Provider 需要至少一个模型（跟在端点后，用逗号分隔）')
+  }
   const name = tokens[0] as string
   const endpoint = tokens[1] as string
-  if (!ROUTE_ID_PATTERN.test(name)) {
-    throw new TypeError(
-      `Provider 名称 "${name}" 需以小写字母开头，仅含小写字母、数字与连字符`,
-    )
-  }
-  if (!/^https?:\/\/\S+$/u.test(endpoint)) {
-    throw new TypeError(`端点 "${endpoint}" 需以 http:// 或 https:// 开头`)
-  }
   let api = 'openai-completions'
   const models: string[] = []
   for (const token of tokens.slice(2)) {
@@ -95,8 +95,107 @@ export function parseCustomProviderDraft(draft: string): CustomProviderDraft | u
       if (trimmedId !== '') models.push(trimmedId)
     }
   }
-  if (models.length === 0) return undefined
-  return { name, api, baseURL: endpoint, models }
+  return normalizeCustomProvider({ name, api, baseURL: endpoint, models })
+}
+
+/**
+ * Compose seed for a hand-declared provider: one `key=value` per line, so the
+ * composer opens as a field-by-field form instead of one long line.
+ */
+export const PROVIDER_FORM_TEMPLATE = 'name=\nbaseURL=\nmodels=\napi=openai-completions'
+
+/**
+ * Validate the fields a hand-declared route must supply before it can be served.
+ * The endpoint and at least one model are required because the settings
+ * validator refuses a route the installed catalog does not describe without
+ * them, so a name alone cannot become a serviceable profile.
+ * @param input - parsed fields; `apiKeyEnv` and `displayName` are optional.
+ * @returns the normalized draft.
+ * @throws {TypeError} naming the field that cannot be served.
+ */
+function normalizeCustomProvider(input: {
+  name: string
+  api: string
+  baseURL: string
+  models: readonly string[]
+  apiKeyEnv?: string
+  displayName?: string
+}): CustomProviderDraft {
+  if (!ROUTE_ID_PATTERN.test(input.name)) {
+    throw new TypeError(
+      `Provider 名称 "${input.name}" 需以小写字母开头，仅含小写字母、数字与连字符`,
+    )
+  }
+  if (!/^https?:\/\/\S+$/u.test(input.baseURL)) {
+    throw new TypeError(`端点 "${input.baseURL}" 需以 http:// 或 https:// 开头`)
+  }
+  if (input.models.length === 0) {
+    throw new TypeError('自定义 Provider 需要至少一个模型（models= 逗号分隔）')
+  }
+  const api = input.api === '' ? 'openai-completions' : input.api
+  return {
+    name: input.name,
+    api,
+    baseURL: input.baseURL,
+    models: input.models,
+    ...(input.apiKeyEnv === undefined || input.apiKeyEnv === ''
+      ? {}
+      : { apiKeyEnv: input.apiKeyEnv }),
+    ...(input.displayName === undefined || input.displayName === ''
+      ? {}
+      : { displayName: input.displayName }),
+  }
+}
+
+/**
+ * Parse the multi-line `key=value` provider form (`name=`, `baseURL=`,
+ * `models=`, optional `api=`/`apiKeyEnv=`/`displayName=`). Lines starting with
+ * `#` and blank lines are ignored, so the seeded template stays editable.
+ * @param draft - raw composer text; must span more than one line.
+ * @returns the draft, or undefined when the text is not that form.
+ * @throws {TypeError} naming the first field that is missing or unserviceable.
+ */
+export function parseProviderFormDraft(draft: string): CustomProviderDraft | undefined {
+  if (!draft.includes('\n')) return undefined
+  const fields = new Map<string, string>()
+  for (const rawLine of draft.split('\n')) {
+    const line = rawLine.trim()
+    if (line === '' || line.startsWith('#')) continue
+    const separator = line.indexOf('=')
+    if (separator < 0) {
+      throw new TypeError(`每行需为 key=value 形式，无法解析："${line}"`)
+    }
+    const key = line.slice(0, separator).trim().toLowerCase()
+    if (key !== '') fields.set(key, line.slice(separator + 1).trim())
+  }
+  const name = fields.get('name') ?? fields.get('id') ?? ''
+  if (name === '') throw new TypeError('请填写 name=（Provider 名称）')
+  const baseURL = fields.get('baseurl') ?? fields.get('url') ?? ''
+  if (baseURL === '') throw new TypeError('请填写 baseURL=（接口地址，含 http:// 或 https://）')
+  const models = (fields.get('models') ?? '')
+    .split(',')
+    .map(id => id.trim())
+    .filter(id => id !== '')
+  if (models.length === 0) throw new TypeError('请填写 models=（至少一个模型，逗号分隔）')
+  return normalizeCustomProvider({
+    name,
+    baseURL,
+    models,
+    api: fields.get('api') ?? '',
+    apiKeyEnv: fields.get('apikeyenv') ?? fields.get('keyenv') ?? '',
+    displayName: fields.get('displayname') ?? '',
+  })
+}
+
+/** Build the stored profile for one hand-declared provider draft. */
+function customProviderProfile(draft: CustomProviderDraft): Record<string, unknown> {
+  return {
+    api: draft.api,
+    baseURL: draft.baseURL,
+    apiKeyEnv: draft.apiKeyEnv ?? credentialEnvName(draft.name),
+    displayName: draft.displayName ?? draft.name,
+    models: draft.models.map(id => ({ id })),
+  }
 }
 
 /** Standard provider templates available for instant configuration. */
@@ -289,13 +388,17 @@ export function parseSettingsFieldValue(
   if (field === 'providers' && (isPlainObject(current) || current === undefined)) {
     const trimmed = draft.trim()
     if (trimmed === '') {
-      throw new TypeError('请输入 Provider 名称或模板序号')
+      throw new TypeError('请输入 Provider 名称、模板序号，或按表单填写')
     }
     if (trimmed.startsWith('{')) {
       return parseSettingValue(current, draft)
     }
-    const query = trimmed.toLowerCase()
     const existing = isPlainObject(current) ? current : {}
+    const form = parseProviderFormDraft(draft)
+    if (form !== undefined) {
+      return { ...existing, [form.name]: customProviderProfile(form) }
+    }
+    const query = trimmed.toLowerCase()
     const matched = PROVIDER_TEMPLATES.find(
       (t, idx) => query === String(idx + 1)
         || query === t.id
@@ -316,28 +419,19 @@ export function parseSettingsFieldValue(
       }
     }
     // A catalog provider needs only its credential reference: the installed
-    // catalog supplies the endpoint, protocol, and models. Any other name needs a
-    // full profile, which this single-line composer cannot collect field by field.
+    // catalog supplies the endpoint, protocol, and models. Any other route needs a
+    // full profile, so it is declared through the form or the single-line form.
     const catalog = knownProviders.find(id => id.toLowerCase() === query)
     if (catalog !== undefined) {
       return { ...existing, [catalog]: { apiKeyEnv: credentialEnvName(catalog) } }
     }
     const custom = parseCustomProviderDraft(trimmed)
     if (custom !== undefined) {
-      return {
-        ...existing,
-        [custom.name]: {
-          api: custom.api,
-          baseURL: custom.baseURL,
-          apiKeyEnv: credentialEnvName(custom.name),
-          displayName: custom.name,
-          models: custom.models.map(id => ({ id })),
-        },
-      }
+      return { ...existing, [custom.name]: customProviderProfile(custom) }
     }
     throw new TypeError(
       `未知 Provider "${trimmed}"；可输入目录名（如 openai、anthropic、google）、模板序号 1-4，`
-        + '或自定义形式 "名称 端点 模型"（如 my-gw https://gw.example/v1 gpt-4o,gpt-4o-mini）',
+        + '或多行表单（name= / baseURL= / models=），单行可用 "名称 端点 模型"',
     )
   }
   if (field === 'api' || field.endsWith('.api')) {
@@ -397,9 +491,9 @@ export function settingsRowsFromDescribe(
           rows.push({
             namespace: 'llm-pi-ai',
             field: 'providers',
-            value: 'Enter 添加：目录名 / 模板序号 1-4 / 自定义「名称 端点 模型」',
+            value: 'Enter：目录名 / 模板序号 1-4 / 或按表单填写',
             label: 'providers · [+ 添加 Provider]',
-            editValue: '',
+            editValue: PROVIDER_FORM_TEMPLATE,
           })
         } else {
           rows.push({
@@ -407,7 +501,7 @@ export function settingsRowsFromDescribe(
             field: 'providers',
             value: stringifySettingsFieldValue('llm-pi-ai', 'providers', providersObj),
             label: 'providers · 提供商列表 (Enter 追加)',
-            editValue: '',
+            editValue: PROVIDER_FORM_TEMPLATE,
           })
           for (const pId of providerIds) {
             const profile = isPlainObject(providersObj[pId]) ? providersObj[pId] : {}
@@ -450,9 +544,9 @@ export function settingsRowsFromDescribe(
           rows.push({
             namespace: 'llm-pi-ai',
             field: 'providers',
-            value: 'Enter 添加：目录名 / 模板序号 1-4 / 自定义「名称 端点 模型」',
+            value: 'Enter：目录名 / 模板序号 1-4 / 或按表单填写',
             label: 'providers · [+ 添加 Provider]',
-            editValue: '',
+            editValue: PROVIDER_FORM_TEMPLATE,
           })
         }
         continue
