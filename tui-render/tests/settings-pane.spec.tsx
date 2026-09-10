@@ -175,6 +175,81 @@ describe('SettingsPane', () => {
     expect(out).toContain('当前值保持不变 · 可重试')
   })
 
+  it('renders the auto-discover busy line when busy: true', () => {
+    const out = render({ busy: true })
+    expect(out).toContain('正在获取模型列表…')
+    // The browse footnote remains visible alongside the busy indicator.
+    expect(out).toContain('↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭')
+  })
+
+  it('omits the busy line when busy is unset or false', () => {
+    expect(render()).not.toContain('正在获取模型列表…')
+    expect(render({ busy: false })).not.toContain('正在获取模型列表…')
+  })
+
+  it('keeps the required marker, the failure row, and the window under busy: true', () => {
+    const rows = [
+      {
+        namespace: 'llm-pi-ai',
+        field: 'providers.siliconflow.baseURL',
+        value: 'https://api.siliconflow.cn/v1',
+        required: true,
+        label: 'providers · siliconflow · 端点 (baseURL)',
+      },
+      {
+        namespace: 'llm-pi-ai',
+        field: 'providers.siliconflow.models',
+        value: 'deepseek-v3',
+        required: false,
+        label: 'providers · siliconflow · 模型 (models, 逗号分隔)',
+      },
+    ]
+    const out = renderToString(
+      createElement(SettingsPane, {
+        rows,
+        selectedIndex: 0,
+        editing: false,
+        busy: true,
+        updateError: 'unreadable',
+      }),
+    )
+    // Required marker and the auto-discover candidate row are still rendered.
+    expect(out).toContain('* ')
+    expect(out).toContain('providers · siliconflow · 端点 (baseURL)')
+    expect(out).toContain('providers · siliconflow · 模型 (models, 逗号分隔)')
+    // Failure row keeps its own pair; the busy line sits between the failure
+    // pair and the browse footnote without displacing either.
+    expect(out).toContain('✗ 更新失败：unreadable')
+    expect(out).toContain('当前值保持不变 · 可重试')
+    expect(out).toContain('正在获取模型列表…')
+    expect(out).toContain('↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭')
+    // Order check: failure → busy → footnote.
+    const failureIdx = out.indexOf('✗ 更新失败：unreadable')
+    const busyIdx = out.indexOf('正在获取模型列表…')
+    const footnoteIdx = out.indexOf('↑↓/jk 选择')
+    expect(failureIdx).toBeGreaterThan(-1)
+    expect(busyIdx).toBeGreaterThan(failureIdx)
+    expect(footnoteIdx).toBeGreaterThan(busyIdx)
+  })
+
+  it('reserves the busy row instead of growing past a tight maxRows', () => {
+    const rows = Array.from({ length: 20 }, (_, index) => ({
+      namespace: 'llm-deepseek',
+      field: `field${String(index)}`,
+      value: `val-${String(index)}`,
+    }))
+    // 12 - 2 fixed - 2 overflow - 1 busy = 7 items: the busy line is paid for
+    // by the window, so the overlay stays inside the height it was given.
+    const withBusy = render({ rows, selectedIndex: 0, maxRows: 12, busy: true })
+    const withoutBusy = render({ rows, selectedIndex: 0, maxRows: 12 })
+    expect(withBusy).toContain('llm-deepseek · field0')
+    expect(withBusy).toContain('llm-deepseek · field6')
+    expect(withBusy).not.toContain('llm-deepseek · field7')
+    expect(withBusy).toContain('… 还有 13 项')
+    expect(withBusy).toContain('正在获取模型列表…')
+    expect(withoutBusy).toContain('llm-deepseek · field7')
+    expect(withBusy.split('\n').length).toBe(withoutBusy.split('\n').length)
+  })
   it('escapes CSI in the field value and failure reason', () => {
     const out = render({
       rows: [{ namespace: 'llm-deepseek', field: 'baseURL', value: 'https://x\x1b[2J' }],

@@ -5,6 +5,9 @@
 import { describe, expect, it } from 'vitest'
 import type { SettingsDescriptor } from '@deepseek-ai/dsh-settings'
 import {
+  isAutoDiscoverProviderDraft,
+  parseCustomProviderDraft,
+  parseProviderFormDraft,
   parseSettingValue,
   parseSettingsFieldValue,
   settingsRowsFromDescribe,
@@ -233,10 +236,44 @@ describe('settingsRowsFromDescribe', () => {
       [],
     ) as Record<string, unknown>
     expect(anthropic['gw2']).toMatchObject({ api: 'anthropic', models: [{ id: 'm1' }] })
-    // A route the catalog does not describe cannot default its endpoint or models,
-    // and each refusal names the field while the user is still looking at it.
-    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw https://gw.example/v1', []))
-      .toThrow('至少一个模型')
+    // Two tokens — name and endpoint alone — defer model assembly to discovery.
+    const auto = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'my-gw https://gw.example/v1',
+      [],
+    )
+    expect(isAutoDiscoverProviderDraft(auto)).toBe(true)
+    expect(auto).toMatchObject({
+      name: 'my-gw',
+      api: 'openai-completions',
+      baseURL: 'https://gw.example/v1',
+      apiKeyEnv: 'MY_GW_API_KEY',
+      displayName: 'my-gw',
+    })
+    // A route the catalog does not describe still validates name, baseURL,
+    // and the field the user typed while still looking at it. An empty
+    // models list with the literal `auto` token is the explicit auto-discover.
+    const autoFromKeyword = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'my-gw https://gw/v1 auto api=anthropic',
+      [],
+    )
+    expect(isAutoDiscoverProviderDraft(autoFromKeyword)).toBe(true)
+    expect(autoFromKeyword).toMatchObject({ api: 'anthropic' })
+    // Mixed tokens that include at least one real model name still parse as a
+    // manual profile — `auto` is ignored when other models are present.
+    const mixed = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'my-gw https://gw/v1 m1,auto,m2',
+      [],
+    ) as Record<string, unknown>
+    expect(mixed['my-gw']).toMatchObject({ models: [{ id: 'm1' }, { id: 'm2' }] })
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'My-GW https://gw/v1 m1', []))
       .toThrow('以小写字母开头')
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw gw.example/v1 m1', []))
@@ -259,8 +296,31 @@ describe('settingsRowsFromDescribe', () => {
     expect(parseSettingsFieldValue('llm-pi-ai', 'providers', {}, withComments, [])).toMatchObject({
       gw2: { baseURL: 'https://gw2/v1', models: [{ id: 'm1' }] },
     })
-    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'name=my-gw\nbaseURL=https://gw/v1\nmodels=', []))
-      .toThrow('请填写 models=')
+    // Empty models= is now the auto-discover trigger, not a refusal.
+    const autoFromEmpty = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'name=my-gw\nbaseURL=https://gw/v1\nmodels=',
+      [],
+    )
+    expect(isAutoDiscoverProviderDraft(autoFromEmpty)).toBe(true)
+    expect(autoFromEmpty).toMatchObject({
+      name: 'my-gw',
+      api: 'openai-completions',
+      baseURL: 'https://gw/v1',
+      apiKeyEnv: 'MY_GW_API_KEY',
+      displayName: 'my-gw',
+    })
+    // Literal `auto` is the explicit form of the same request.
+    const autoFromKeyword = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'name=my-gw\nbaseURL=https://gw/v1\nmodels=auto',
+      [],
+    )
+    expect(isAutoDiscoverProviderDraft(autoFromKeyword)).toBe(true)
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'name=\nbaseURL=https://gw/v1\nmodels=m', []))
       .toThrow('请填写 name=')
     // Explicit credentials and display name win over the derived defaults.
@@ -268,6 +328,88 @@ describe('settingsRowsFromDescribe', () => {
     expect(parseSettingsFieldValue('llm-pi-ai', 'providers', {}, explicit, [])).toMatchObject({
       gw: { apiKeyEnv: 'CUSTOM_KEY', displayName: '网关' },
     })
+  })
+
+  it('still refuses a multi-line form that names no baseURL', () => {
+    // Auto-discover needs an endpoint; an empty baseURL= line stays a
+    // synchronous refusal so the apply layer never reaches the network.
+    expect(() => parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'name=my-gw\nbaseURL=\nmodels=',
+      [],
+    )).toThrow('请填写 baseURL=')
+  })
+
+  it('still refuses a multi-line form with an invalid name when auto-discovering', () => {
+    expect(() => parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'name=My-GW\nbaseURL=https://gw/v1\nmodels=',
+      [],
+    )).toThrow('以小写字母开头')
+  })
+
+  it('parseCustomProviderDraft returns an auto-discover sentinel for two tokens', () => {
+    const draft = parseCustomProviderDraft('my-gw https://gw.example/v1')
+    expect(isAutoDiscoverProviderDraft(draft)).toBe(true)
+    expect(draft).toMatchObject({
+      name: 'my-gw',
+      api: 'openai-completions',
+      baseURL: 'https://gw.example/v1',
+      apiKeyEnv: 'MY_GW_API_KEY',
+      displayName: 'my-gw',
+    })
+  })
+
+  it('parseProviderFormDraft returns an auto-discover sentinel when models= is empty or auto', () => {
+    const empty = parseProviderFormDraft('name=gw\nbaseURL=https://gw/v1\nmodels=\napi=openai-completions')
+    expect(isAutoDiscoverProviderDraft(empty)).toBe(true)
+    expect(empty).toMatchObject({
+      name: 'gw',
+      api: 'openai-completions',
+      baseURL: 'https://gw/v1',
+      apiKeyEnv: 'GW_API_KEY',
+      displayName: 'gw',
+    })
+    const auto = parseProviderFormDraft('name=gw\nbaseURL=https://gw/v1\nmodels=auto')
+    expect(isAutoDiscoverProviderDraft(auto)).toBe(true)
+  })
+
+  it('returns an auto-discover sentinel when providers.<route>.models is typed as auto', () => {
+    const sentinel = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers.siliconflow.models',
+      [{ id: 'deepseek-v3' }],
+      'auto',
+      [],
+    )
+    expect(isAutoDiscoverProviderDraft(sentinel)).toBe(true)
+    // The sentinel carries only the route name; api, baseURL, and credential
+    // reference are filled by the apply layer from the stored profile.
+    expect(sentinel).toMatchObject({
+      name: 'siliconflow',
+      api: '',
+      baseURL: '',
+      apiKeyEnv: '',
+      displayName: '',
+    })
+    // A capitalised `AUTO` is treated the same; spaces around the token are
+    // tolerated so a user who backspaces into the field does not lose the
+    // auto behaviour to a stray whitespace.
+    expect(isAutoDiscoverProviderDraft(parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers.siliconflow.models',
+      [],
+      '  AUTO  ',
+      [],
+    ))).toBe(true)
+    // The empty value is not auto-discover: it parses to an empty models list,
+    // matching the manual clear-the-list path.
+    expect(parseSettingsFieldValue('llm-pi-ai', 'providers.siliconflow.models', [], ''))
+      .toEqual([])
   })
 
   it('validates required fields for provider configuration', () => {

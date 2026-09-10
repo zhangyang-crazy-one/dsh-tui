@@ -54,6 +54,7 @@ import { credentialRef, isCredentialRefName } from '@deepseek-ai/dsh-credentials
 import type {} from '@deepseek-ai/dsh-settings'
 import {
   createUserMessage,
+  type LlmDiscoveredModel,
   type ToolCallId,
   type ContentBlock,
   type LlmModelInfo,
@@ -277,7 +278,14 @@ import type {} from '@deepseek-ai/dsh-workflow'
 import { assertInteractiveTerminal } from './terminal-guard.ts'
 import { installSignalHooks } from './signal-semantics.ts'
 import { exportSessionMarkdown } from './export.ts'
-import { parseSettingsFieldValue, settingsRowsFromDescribe } from './settings-rows.ts'
+import {
+  customProviderProfileFrom,
+  isAutoDiscoverProviderDraft,
+  parseSettingsFieldValue,
+  settingsRowsFromDescribe,
+} from './settings-rows.ts'
+import type { AutoDiscoverProviderDraft } from './settings-rows.ts'
+import { credentialEnvName } from './settings-rows.ts'
 
 /** Feedback row lifetime: cleared on the next key or after this bound (K8/S4). */
 export const FEEDBACK_MS = 2000
@@ -776,6 +784,9 @@ function errorReason(error: unknown): string {
 
 type SettingsFieldValue = string | number | boolean | object | null | undefined
 
+/** Shape the apply layer passes through the auto-discover pipeline. */
+type AutoDiscoverDraftForApply = AutoDiscoverProviderDraft
+
 /**
  * Read one field from a settings section object.
  * @param section - `ctx.settings.get` result.
@@ -1103,6 +1114,8 @@ export class RuntimeController implements TuiController {
   private settingsEditing = false
   private settingsOnboarding = false
   private settingsUpdateError: string | undefined
+  /** True while an auto-discover round-trip is in flight; the overlay stays open. */
+  private settingsBusy = false
   /** K2 overlay flags: Agent Hub, workspace, feedback, workflow. */
   private agentHubOpen = false
   private agentHubRows: AgentHubRow[] = []
@@ -1703,6 +1716,7 @@ export class RuntimeController implements TuiController {
         selectedIndex: this.settingsSelectedIndex,
         editing: this.settingsEditing,
         ...(this.settingsOnboarding ? { onboarding: true } : {}),
+        ...(this.settingsBusy ? { busy: true } : {}),
         ...(this.settingsUpdateError === undefined
           ? {}
           : { updateError: this.settingsUpdateError }),
@@ -2462,6 +2476,7 @@ export class RuntimeController implements TuiController {
     this.settingsOpen = false
     this.settingsEditing = false
     this.settingsOnboarding = false
+    this.settingsBusy = false
     this.settingsUpdateError = undefined
     this.agentHubOpen = false
     this.resetAgentHub()
@@ -2987,12 +3002,14 @@ export class RuntimeController implements TuiController {
           this.settingsOnboarding = false
           this.settingsOpen = false
           this.settingsEditing = false
+          this.settingsBusy = false
           this.settingsUpdateError = undefined
           this.setFeedback('✓ 已跳过引导')
           return
         }
         this.settingsOpen = false
         this.settingsEditing = false
+        this.settingsBusy = false
         this.settingsUpdateError = undefined
         this.emit()
         return
@@ -3017,11 +3034,13 @@ export class RuntimeController implements TuiController {
           this.settingsOnboarding = false
           this.settingsOpen = false
           this.settingsEditing = false
+          this.settingsBusy = false
           this.settingsUpdateError = undefined
           this.setFeedback('✓ 已跳过引导')
           return
         }
         this.settingsEditing = false
+        this.settingsBusy = false
         this.emit()
         return
       case 'settings-apply':
@@ -4542,6 +4561,7 @@ export class RuntimeController implements TuiController {
   private openSettingsPane(): void {
     this.closeOtherPanels()
     this.settingsEditing = false
+    this.settingsBusy = false
     this.settingsUpdateError = undefined
     this.settingsRows = this.readSettingsRows()
     this.settingsSelectedIndex = 0
@@ -4600,6 +4620,12 @@ export class RuntimeController implements TuiController {
    * `ctx.credentials.set` and never logs the value. Success closes the overlay
    * and writes the status-row confirmation; failure stays on the overlay with
    * the ✗ pair. Does not write environment variables.
+   *
+   * A draft the parser marked with {@link AUTO_DISCOVER} defers profile
+   * assembly until `ctx.llm.discoverModels` answers. The overlay stays open
+   * with a busy indicator while the request is in flight; a refusal or empty
+   * reply keeps the overlay open and surfaces the failure reason without
+   * mutating settings.
    * @param value - composer draft captured by the key reducer.
    */
   private applySettingsValue(value: string): void {
@@ -4637,6 +4663,10 @@ export class RuntimeController implements TuiController {
       this.emit()
       return
     }
+    if (isAutoDiscoverProviderDraft(parsed)) {
+      this.applyAutoDiscoverProvider(row.namespace, row.field, parsed)
+      return
+    }
     this.ownWork((async () => {
       try {
         await settings.update(row.namespace, createSettingsPatch(row.field, parsed))
@@ -4644,6 +4674,7 @@ export class RuntimeController implements TuiController {
         this.settingsOpen = false
         this.settingsEditing = false
         this.settingsOnboarding = false
+        this.settingsBusy = false
         this.settingsUpdateError = undefined
         this.setFeedback(`✓ 已更新 ${row.field}`)
       } catch (error: unknown) {
@@ -4653,6 +4684,239 @@ export class RuntimeController implements TuiController {
         this.emit()
       }
     })(), 'settings update')
+  }
+
+  /**
+   * Run an auto-discover cycle: read the apiKey from the configured
+   * credential, call `ctx.llm.discoverModels`, and persist the discovered
+   * models under the route key. The overlay stays open with a busy state for
+   * the duration; a refusal or empty reply keeps the overlay open without
+   * writing anything to settings.
+   * @param namespace - the settings namespace holding the route (always
+   *   `llm-pi-ai` today, but the parser already passed the namespace through).
+   * @param field - the row whose draft produced the sentinel.
+   * @param draft - the parser sentinel carrying name, api, baseURL, and so on.
+   */
+  private applyAutoDiscoverProvider(
+    namespace: string,
+    field: string,
+    draft: AutoDiscoverDraftForApply,
+  ): void {
+    this.settingsBusy = true
+    this.settingsUpdateError = undefined
+    this.emit()
+    this.ownWork(this.runProviderAutoDiscover(namespace, field, draft), 'provider auto-discover')
+  }
+
+  /**
+   * Implementation of the auto-discover cycle: resolve the credential,
+   * interrogate the endpoint, assemble the profile, and persist it.
+   * @param namespace - settings namespace holding the route.
+   * @param field - the row whose draft produced the sentinel.
+   * @param draft - the parser sentinel carrying name, api, baseURL, etc.
+   * @returns a settled promise; the caller forwards ownership to `ownWork`.
+   */
+  private async runProviderAutoDiscover(
+    namespace: string,
+    field: string,
+    draft: AutoDiscoverDraftForApply,
+  ): Promise<void> {
+    const llm = this.ctx.get('llm')
+    const settings = this.ctx.get('settings')
+    if (llm === undefined) {
+      this.settleAutoDiscoverFailure('llm 服务不可用，无法探测模型列表')
+      return
+    }
+    if (settings === undefined) {
+      this.settleAutoDiscoverFailure('无可用设置')
+      return
+    }
+    // Edit-form drafts carry only the route name; fill in the rest from the
+    // stored user-layer profile so a refresh reads the same endpoint that was
+    // just configured. Reading the raw user layer keeps schema-defaulted
+    // fields from being materialized on a profile that only stores models.
+    const seed = await this.resolveAutoDiscoverSeed(namespace, draft)
+    if (seed === undefined) return
+    let apiKey: string | undefined
+    try {
+      apiKey = await this.resolveApiKeyForProvider(seed.apiKeyEnv)
+    } catch (error: unknown) {
+      this.settleAutoDiscoverFailure(errorReason(error))
+      return
+    }
+    if (this.closed) return
+    let discovered: readonly LlmDiscoveredModel[]
+    try {
+      discovered = await llm.discoverModels(namespace, {
+        ...(seed.provider === undefined ? {} : { provider: seed.name }),
+        baseURL: seed.baseURL,
+        api: seed.api,
+        ...(apiKey === undefined ? {} : { apiKey }),
+      })
+    } catch (error: unknown) {
+      this.settleAutoDiscoverFailure(this.friendlyDiscoveryError(error, apiKey))
+      return
+    }
+    if (this.closed) return
+    if (discovered.length === 0) {
+      this.settleAutoDiscoverFailure('端点未返回任何模型')
+      return
+    }
+    const profile = customProviderProfileFrom(
+      {
+        name: seed.name,
+        api: seed.api,
+        baseURL: seed.baseURL,
+        apiKeyEnv: seed.apiKeyEnv,
+        displayName: seed.displayName,
+      },
+      discovered.map(model => ({
+        id: model.id,
+        ...(model.name === undefined ? {} : { name: model.name }),
+        ...(model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow }),
+        ...(model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens }),
+      })),
+    )
+    try {
+      // The user-layer providers dict is the merge base for both forms: an
+      // add-form field rewrites the whole `providers` dict, while an edit-
+      // form field (`providers.<route>.models`) only swaps the models entry,
+      // so the existing profile fields are preserved by spreading it.
+      const existingProviders = (this.rawUserProviders(namespace) ?? {}) as Record<string, unknown>
+      const newProviders = field === 'providers'
+        ? { ...existingProviders, [seed.name]: profile }
+        : {
+          ...existingProviders,
+          [seed.name]: { ...(existingProviders[seed.name] as Record<string, unknown> | undefined ?? {}), ...profile },
+        }
+      await settings.update(namespace, { providers: newProviders })
+    } catch (error: unknown) {
+      this.settleAutoDiscoverFailure(errorReason(error))
+      return
+    }
+    if (this.closed) return
+    this.settingsBusy = false
+    this.settingsOpen = false
+    this.settingsEditing = false
+    this.settingsOnboarding = false
+    this.settingsUpdateError = undefined
+    this.setFeedback(`✓ 已写入 ${String(discovered.length)} 个模型`)
+  }
+
+  /** Surface a discovery refusal on the overlay; nothing was written. */
+  private settleAutoDiscoverFailure(message: string): void {
+    if (this.closed) return
+    this.settingsBusy = false
+    this.settingsUpdateError = message
+    this.settingsRows = this.readSettingsRows()
+    this.emit()
+  }
+
+  /**
+   * Map a discovery-side error into the overlay's user vocabulary. A 401 or
+   * 403 the endpoint answered is reported as a missing credential because
+   * the apiKeyEnv the form carried is the only thing the user can change
+   * without leaving the panel.
+   * @param error - the caught failure.
+   * @param apiKey - the credential passed to discovery, when any.
+   * @returns a user-visible failure reason.
+   */
+  private friendlyDiscoveryError(error: unknown, apiKey: string | undefined): string {
+    const reason = errorReason(error)
+    if (apiKey === undefined
+      && (reason.includes('401') || reason.includes('403'))) {
+      return `${reason} · 请先使用 /key 配置 API key`
+    }
+    return reason
+  }
+
+  /**
+   * Read the existing user-layer profile for an auto-discover seed that the
+   * parser could not fully describe (the edit-form case where the user typed
+   * `auto` on the `providers.<route>.models` row).
+   * @param namespace - the settings namespace holding the route.
+   * @param draft - the parser sentinel; absent fields are filled from storage.
+   * @returns the merged discovery seed, or undefined when the route is absent.
+   */
+  private resolveAutoDiscoverSeed(
+    namespace: string,
+    draft: { readonly name: string; readonly api?: string; readonly baseURL?: string; readonly apiKeyEnv?: string; readonly displayName?: string },
+  ): Promise<{
+    readonly name: string
+    readonly api: string
+    readonly baseURL: string
+    readonly apiKeyEnv: string
+    readonly displayName: string
+    readonly provider?: string
+  } | undefined> {
+    const requireProfile = (): {
+      readonly name: string
+      readonly api: string
+      readonly baseURL: string
+      readonly apiKeyEnv: string
+      readonly displayName: string
+    } => {
+      // Empty strings are sentinel "fill from existing profile" markers the
+      // edit-form parser emits; an absent key on a route the catalog already
+      // describes means we must read it back from the stored profile rather
+      // than re-asking the user to re-type the endpoint.
+      const seedApi = draft.api ?? ''
+      const seedBaseURL = draft.baseURL ?? ''
+      const seedApiKeyEnv = draft.apiKeyEnv ?? ''
+      const seedDisplayName = draft.displayName ?? ''
+      if (seedApi === '' || seedBaseURL === ''
+        || seedApiKeyEnv === '' || seedDisplayName === '') {
+        const stored = this.rawUserProviders(namespace) as Record<string, unknown> | undefined
+        const existing = stored?.[draft.name] as Record<string, unknown> | undefined
+        if (existing === undefined) {
+          throw new TypeError(`未找到 Provider "${draft.name}"，请先在表单中填写端点`)
+        }
+        return {
+          name: draft.name,
+          api: seedApi !== '' ? seedApi : String(existing['api'] ?? 'openai-completions'),
+          baseURL: seedBaseURL !== '' ? seedBaseURL : String(existing['baseURL'] ?? ''),
+          apiKeyEnv: seedApiKeyEnv !== '' ? seedApiKeyEnv : String(existing['apiKeyEnv'] ?? credentialEnvName(draft.name)),
+          displayName: seedDisplayName !== '' ? seedDisplayName : String(existing['displayName'] ?? draft.name),
+        }
+      }
+      return {
+        name: draft.name,
+        api: seedApi,
+        baseURL: seedBaseURL,
+        apiKeyEnv: seedApiKeyEnv,
+        displayName: seedDisplayName,
+      }
+    }
+    return Promise.resolve().then(() => {
+      try {
+        const profile = requireProfile()
+        if (profile.baseURL === '') {
+          throw new TypeError(`Provider "${profile.name}" 缺少 baseURL，无法自动探测`)
+        }
+        return { ...profile, provider: profile.name }
+      } catch (error: unknown) {
+        this.settleAutoDiscoverFailure(errorReason(error))
+        return undefined
+      }
+    })
+  }
+
+  /**
+   * Resolve a stored credential by its reference name. Unconfigured refs
+   * resolve to undefined, so the discovery call proceeds without a key and an
+   * authenticated endpoint answers 401, which the friendly-error mapper
+   * reports as a missing key.
+   * @param ref - the credential reference name stored on the profile.
+   * @returns the resolved key, or undefined when unconfigured.
+   */
+  private async resolveApiKeyForProvider(ref: string): Promise<string | undefined> {
+    if (!isCredentialRefName(ref)) return undefined
+    const credentials = this.ctx.get('credentials') as
+      | { resolve(ref: ReturnType<typeof credentialRef>): Promise<{ value: string } | undefined> }
+      | undefined
+    if (credentials === undefined) return undefined
+    const resolved = await credentials.resolve(credentialRef(ref))
+    return resolved?.value
   }
 
   /**

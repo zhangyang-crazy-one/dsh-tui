@@ -9712,6 +9712,7 @@ var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
 var FOOTNOTE2 = "\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED";
 var EDIT_FOOTNOTE = "Enter \u5E94\u7528 \xB7 Esc \u53D6\u6D88";
 var ONBOARDING_FOOTNOTE = "Enter \u4FDD\u5B58 \xB7 Esc \u8DF3\u8FC7";
+var DISCOVERY_BUSY = "\u6B63\u5728\u83B7\u53D6\u6A21\u578B\u5217\u8868\u2026";
 var SETTINGS_WINDOW = 8;
 var MARKER_COLS = 2;
 var VALUE_GAP = 2;
@@ -9754,15 +9755,15 @@ function fieldRow(label, value, selected, columns, required = false) {
     ...fittedValue === "" ? [] : [styled(fittedValue, selected ? "fg" : "fgDim")]
   ];
 }
-function computeSettingsWindow(maxRows, totalRows, errorReason) {
-  if (maxRows === void 0) return SETTINGS_WINDOW;
+function computeSettingsWindow(maxRows, totalRows, errorReason, busy = false) {
+  if (maxRows === void 0) return busy ? Math.max(1, SETTINGS_WINDOW - 1) : SETTINGS_WINDOW;
   let errorLines = 0;
   if (errorReason === EMPTY_TABLE_REASON2) {
     errorLines = 1;
   } else if (errorReason !== void 0) {
     errorLines = 2;
   }
-  const fixedOverhead = 2 + errorLines;
+  const fixedOverhead = 2 + errorLines + (busy ? 1 : 0);
   const available = Math.max(1, maxRows - fixedOverhead);
   if (totalRows <= available) {
     return totalRows;
@@ -9775,6 +9776,7 @@ function SettingsPane({
   editing,
   onboarding,
   updateError,
+  busy,
   locale,
   maxRows
 }) {
@@ -9787,7 +9789,7 @@ function SettingsPane({
   } else if (editing) {
     footnote = EDIT_FOOTNOTE;
   }
-  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason);
+  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason, busy === true);
   const size = Math.min(windowLimit, rows.length);
   const start = rows.length <= size ? 0 : Math.min(
     Math.max(0, selectedIndex - Math.floor(size / 2)),
@@ -9822,6 +9824,7 @@ function SettingsPane({
       ),
       errorReason === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim")
     ] }),
+    busy === true ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
     renderLine(footnote, "fgDim")
   ] });
 }

@@ -21,6 +21,8 @@ const FOOTNOTE = '↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Es
 const EDIT_FOOTNOTE = 'Enter 应用 · Esc 取消'
 /** Exact key footnote while collecting the first API key. */
 const ONBOARDING_FOOTNOTE = 'Enter 保存 · Esc 跳过'
+/** Exact busy line for an in-flight auto-discover; the overlay stays open. */
+const DISCOVERY_BUSY = '正在获取模型列表…'
 /** Visible field rows; each field is one table row. */
 export const SETTINGS_WINDOW = 8
 /** Marker plus trailing space (`› ` or two spaces). */
@@ -64,6 +66,8 @@ export interface SettingsPaneProps {
   onboarding?: boolean
   /** Update-failure reason; when set, paints the ✗ pair. */
   updateError?: string
+  /** An async auto-discover is in flight; the overlay stays open with a busy line. */
+  busy?: boolean
   /** Available row budget; when omitted, defaults to {@link SETTINGS_WINDOW}. */
   maxRows?: number
 }
@@ -82,6 +86,8 @@ export interface SettingsPaneState {
   onboarding?: boolean
   /** Update-failure reason, when the last apply did not land. */
   updateError?: string
+  /** An async auto-discover is in flight; the overlay stays open with a busy line. */
+  busy?: boolean
 }
 
 /** Closed snapshot: TuiLoop keeps StreamView in children. */
@@ -156,21 +162,23 @@ function fieldRow(
  * @param maxRows - available vertical row budget, or undefined for default window.
  * @param totalRows - total settings field rows count.
  * @param errorReason - failure copy or empty table reason if present.
+ * @param busy - whether the in-flight discovery line reserves a row.
  * @returns number of item rows visible in the window.
  */
 export function computeSettingsWindow(
   maxRows: number | undefined,
   totalRows: number,
   errorReason: string | undefined,
+  busy = false,
 ): number {
-  if (maxRows === undefined) return SETTINGS_WINDOW
+  if (maxRows === undefined) return busy ? Math.max(1, SETTINGS_WINDOW - 1) : SETTINGS_WINDOW
   let errorLines = 0
   if (errorReason === EMPTY_TABLE_REASON) {
     errorLines = 1
   } else if (errorReason !== undefined) {
     errorLines = 2
   }
-  const fixedOverhead = 2 + errorLines
+  const fixedOverhead = 2 + errorLines + (busy ? 1 : 0)
   const available = Math.max(1, maxRows - fixedOverhead)
   if (totalRows <= available) {
     return totalRows
@@ -191,6 +199,7 @@ export function SettingsPane({
   editing,
   onboarding,
   updateError,
+  busy,
   locale,
   maxRows,
 }: SettingsPaneProps): ReactNode {
@@ -203,7 +212,7 @@ export function SettingsPane({
   } else if (editing) {
     footnote = EDIT_FOOTNOTE
   }
-  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason)
+  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason, busy === true)
   const size = Math.min(windowLimit, rows.length)
   const start = rows.length <= size
     ? 0
@@ -263,6 +272,7 @@ export function SettingsPane({
           {errorReason === EMPTY_TABLE_REASON ? null : renderLine(FAIL_NEXT, 'fgDim')}
         </Box>
       )}
+      {busy === true ? renderLine(DISCOVERY_BUSY, 'fgDim') : null}
       {renderLine(footnote, 'fgDim')}
     </Box>
   )

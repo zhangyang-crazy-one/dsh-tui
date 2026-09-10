@@ -41,7 +41,7 @@ export interface ProviderTemplate {
  * @param routeKey - the provider route key (for example `openai-codex`).
  * @returns the upper-snake credential reference name (for example `OPENAI_CODEX_API_KEY`).
  */
-function credentialEnvName(routeKey: string): string {
+export function credentialEnvName(routeKey: string): string {
   return `${routeKey.toUpperCase().replace(/[^A-Z0-9]+/gu, '_')}_API_KEY`
 }
 
@@ -65,25 +65,79 @@ export interface CustomProviderDraft {
 }
 
 /**
- * Parse the one-line custom-provider form `name endpoint model[,model]…`, plus an
- * optional `api=<protocol>` token. Endpoint and at least one model are required
- * because the settings validator refuses a route the installed catalog does not
- * describe without them, so a name alone cannot become a serviceable profile.
+ * Symbol-tagged marker on a parser result that signals "the synchronous parse
+ * succeeded, but profile assembly needs a model-list interrogation before
+ * settings can be persisted". The apply layer resolves the marker into one
+ * `ctx.llm.discoverModels` call, then materializes the profile.
+ */
+export const AUTO_DISCOVER: unique symbol = Symbol('@deepseek-ai/dsh-tui/settings-rows.auto-discover')
+
+/**
+ * Parser result that defers model-list assembly to an async discovery call.
+ * Add-form drafts carry every discovery input because the form supplied them;
+ * edit-form drafts (the `providers.<route>.models` row typed as `auto`) carry
+ * only the route name so the apply layer can read the existing profile.
+ */
+export interface AutoDiscoverProviderDraft {
+  readonly [AUTO_DISCOVER]: true
+  /** Route key the apply layer adds or refreshes. */
+  readonly name: string
+  /** Wire protocol; `openai-completions` when the form omitted `api=`. Undefined means the apply layer reads it from the existing profile. */
+  readonly api?: string
+  /** Endpoint to interrogate; undefined means the apply layer reads it from the existing profile. */
+  readonly baseURL?: string
+  /** Credential reference; undefined means the apply layer reads it from the existing profile. */
+  readonly apiKeyEnv?: string
+  /** Display name; undefined means the apply layer reads it from the existing profile. */
+  readonly displayName?: string
+}
+
+/**
+ * Whether a parser result is an {@link AutoDiscoverProviderDraft}.
+ * @param value - the value returned by a parser.
+ * @returns true when the value carries the {@link AUTO_DISCOVER} marker.
+ */
+export function isAutoDiscoverProviderDraft(value: unknown): value is AutoDiscoverProviderDraft {
+  return typeof value === 'object'
+    && value !== null
+    && !Array.isArray(value)
+    && (value as Record<symbol, unknown>)[AUTO_DISCOVER] === true
+}
+
+/**
+ * Parse the one-line custom-provider form `name endpoint [model[,model]…]`,
+ * plus an optional `api=<protocol>` token. A two-token input (name + endpoint)
+ * is treated as a request to auto-discover the model list at apply time, so
+ * the user does not have to enumerate models the endpoint already advertises.
+ * A literal `auto` model token is the explicit form of the same request.
  * @param draft - trimmed composer text.
- * @returns the draft, or undefined when the text is not that form.
+ * @returns the draft, the auto-discover sentinel, or undefined when the text
+ *   is not that form.
  * @throws {TypeError} when the shape matches but a field cannot be served.
  */
-export function parseCustomProviderDraft(draft: string): CustomProviderDraft | undefined {
+export function parseCustomProviderDraft(
+  draft: string,
+): CustomProviderDraft | AutoDiscoverProviderDraft | undefined {
   const tokens = draft.split(/\s+/u).filter(token => token !== '')
   if (tokens.length < 2) return undefined
-  if (tokens.length < 3) {
-    // Name and endpoint alone cannot describe a route the catalog does not ship.
-    throw new TypeError('自定义 Provider 需要至少一个模型（跟在端点后，用逗号分隔）')
-  }
   const name = tokens[0] as string
   const endpoint = tokens[1] as string
+  if (tokens.length === 2) {
+    // Two tokens — name plus endpoint — defer model assembly to a discovery
+    // call. The protocol default and the credential-name stem match the
+    // hand-declared defaults so the discovered profile is indistinguishable
+    // from one the user typed by hand.
+    return buildAutoDiscoverDraft({
+      name,
+      api: 'openai-completions',
+      baseURL: endpoint,
+      apiKeyEnv: credentialEnvName(name),
+      displayName: name,
+    })
+  }
   let api = 'openai-completions'
   const models: string[] = []
+  let explicitAuto = false
   for (const token of tokens.slice(2)) {
     const apiMatch = /^api=(.+)$/u.exec(token)
     if (apiMatch?.[1] !== undefined) {
@@ -92,8 +146,25 @@ export function parseCustomProviderDraft(draft: string): CustomProviderDraft | u
     }
     for (const id of token.split(',')) {
       const trimmedId = id.trim()
-      if (trimmedId !== '') models.push(trimmedId)
+      if (trimmedId === '') continue
+      if (trimmedId.toLowerCase() === 'auto') {
+        explicitAuto = true
+        continue
+      }
+      models.push(trimmedId)
     }
+  }
+  if (explicitAuto && models.length === 0) {
+    return buildAutoDiscoverDraft({
+      name,
+      api,
+      baseURL: endpoint,
+      apiKeyEnv: credentialEnvName(name),
+      displayName: name,
+    })
+  }
+  if (models.length === 0) {
+    throw new TypeError('自定义 Provider 需要至少一个模型（跟在端点后，用逗号分隔）')
   }
   return normalizeCustomProvider({ name, api, baseURL: endpoint, models })
 }
@@ -104,13 +175,32 @@ export function parseCustomProviderDraft(draft: string): CustomProviderDraft | u
  */
 export const PROVIDER_FORM_TEMPLATE = 'name=\nbaseURL=\nmodels=\napi=openai-completions'
 
+/** Construct an auto-discover sentinel from form-supplied fields. */
+function buildAutoDiscoverDraft(input: {
+  name: string
+  api: string
+  baseURL: string
+  apiKeyEnv: string
+  displayName: string
+}): AutoDiscoverProviderDraft {
+  return {
+    [AUTO_DISCOVER]: true,
+    name: input.name,
+    api: input.api,
+    baseURL: input.baseURL,
+    apiKeyEnv: input.apiKeyEnv,
+    displayName: input.displayName,
+  }
+}
+
 /**
  * Validate the fields a hand-declared route must supply before it can be served.
- * The endpoint and at least one model are required because the settings
- * validator refuses a route the installed catalog does not describe without
- * them, so a name alone cannot become a serviceable profile.
+ * The endpoint is required because the settings validator refuses a route the
+ * installed catalog does not describe without it, so a name alone cannot become
+ * a serviceable profile. Models may be absent: an empty form, the literal
+ * `auto`, or an omitted `models=` line defers model assembly to discovery.
  * @param input - parsed fields; `apiKeyEnv` and `displayName` are optional.
- * @returns the normalized draft.
+ * @returns the normalized draft, or an auto-discover sentinel when models are absent.
  * @throws {TypeError} naming the field that cannot be served.
  */
 function normalizeCustomProvider(input: {
@@ -120,7 +210,7 @@ function normalizeCustomProvider(input: {
   models: readonly string[]
   apiKeyEnv?: string
   displayName?: string
-}): CustomProviderDraft {
+}): CustomProviderDraft | AutoDiscoverProviderDraft {
   if (!ROUTE_ID_PATTERN.test(input.name)) {
     throw new TypeError(
       `Provider 名称 "${input.name}" 需以小写字母开头，仅含小写字母、数字与连字符`,
@@ -129,33 +219,46 @@ function normalizeCustomProvider(input: {
   if (!/^https?:\/\/\S+$/u.test(input.baseURL)) {
     throw new TypeError(`端点 "${input.baseURL}" 需以 http:// 或 https:// 开头`)
   }
-  if (input.models.length === 0) {
-    throw new TypeError('自定义 Provider 需要至少一个模型（models= 逗号分隔）')
-  }
   const api = input.api === '' ? 'openai-completions' : input.api
+  const apiKeyEnv = input.apiKeyEnv === undefined || input.apiKeyEnv === ''
+    ? credentialEnvName(input.name)
+    : input.apiKeyEnv
+  const displayName = input.displayName === undefined || input.displayName === ''
+    ? input.name
+    : input.displayName
+  if (input.models.length === 0) {
+    return buildAutoDiscoverDraft({
+      name: input.name,
+      api,
+      baseURL: input.baseURL,
+      apiKeyEnv,
+      displayName,
+    })
+  }
   return {
     name: input.name,
     api,
     baseURL: input.baseURL,
     models: input.models,
-    ...(input.apiKeyEnv === undefined || input.apiKeyEnv === ''
-      ? {}
-      : { apiKeyEnv: input.apiKeyEnv }),
-    ...(input.displayName === undefined || input.displayName === ''
-      ? {}
-      : { displayName: input.displayName }),
+    apiKeyEnv,
+    displayName,
   }
 }
 
 /**
  * Parse the multi-line `key=value` provider form (`name=`, `baseURL=`,
  * `models=`, optional `api=`/`apiKeyEnv=`/`displayName=`). Lines starting with
- * `#` and blank lines are ignored, so the seeded template stays editable.
+ * `#` and blank lines are ignored, so the seeded template stays editable. An
+ * empty `models=` line, or the literal token `auto`, defers model assembly to
+ * a discovery call instead of failing the parse.
  * @param draft - raw composer text; must span more than one line.
- * @returns the draft, or undefined when the text is not that form.
+ * @returns the draft, the auto-discover sentinel, or undefined when the text
+ *   is not that form.
  * @throws {TypeError} naming the first field that is missing or unserviceable.
  */
-export function parseProviderFormDraft(draft: string): CustomProviderDraft | undefined {
+export function parseProviderFormDraft(
+  draft: string,
+): CustomProviderDraft | AutoDiscoverProviderDraft | undefined {
   if (!draft.includes('\n')) return undefined
   const fields = new Map<string, string>()
   for (const rawLine of draft.split('\n')) {
@@ -172,11 +275,14 @@ export function parseProviderFormDraft(draft: string): CustomProviderDraft | und
   if (name === '') throw new TypeError('请填写 name=（Provider 名称）')
   const baseURL = fields.get('baseurl') ?? fields.get('url') ?? ''
   if (baseURL === '') throw new TypeError('请填写 baseURL=（接口地址，含 http:// 或 https://）')
-  const models = (fields.get('models') ?? '')
+  const modelsRaw = fields.get('models') ?? ''
+  const models = modelsRaw
     .split(',')
     .map(id => id.trim())
-    .filter(id => id !== '')
-  if (models.length === 0) throw new TypeError('请填写 models=（至少一个模型，逗号分隔）')
+    .filter(id => id !== '' && id.toLowerCase() !== 'auto')
+  if (models.length === 0 && modelsRaw.trim() !== '' && modelsRaw.trim().toLowerCase() !== 'auto') {
+    throw new TypeError('请填写 models=（至少一个模型，逗号分隔；或留空自动探测）')
+  }
   return normalizeCustomProvider({
     name,
     baseURL,
@@ -187,15 +293,59 @@ export function parseProviderFormDraft(draft: string): CustomProviderDraft | und
   })
 }
 
+/**
+ * One model entry to be persisted on a hand-declared profile. The id is the
+ * only field the runtime needs to dispatch; the rest are capacities the
+ * endpoint disclosed during discovery and are kept verbatim so the schema
+ * does not lose information that arrived with the model.
+ */
+export interface ProfileModelEntry {
+  readonly id: string
+  readonly name?: string
+  readonly contextWindow?: number
+  readonly maxTokens?: number
+}
+
+/** Detach one model entry into the JSON-compatible shape the profile stores. */
+function profileModelEntryFor(entry: ProfileModelEntry): Record<string, unknown> {
+  return {
+    id: entry.id,
+    ...(entry.name === undefined ? {} : { name: entry.name }),
+    ...(entry.contextWindow === undefined ? {} : { contextWindow: entry.contextWindow }),
+    ...(entry.maxTokens === undefined ? {} : { maxTokens: entry.maxTokens }),
+  }
+}
+
+/**
+ * Compose the shared shape that a hand-declared profile stores. The auto-
+ * discover path consumes the same helper so the JSON shape does not diverge
+ * between the user-typed and the endpoint-discovered models.
+ * @param head - the static fields a route declares (`api`, `baseURL`, etc.).
+ * @param models - the model list to persist under `models`.
+ * @returns the persisted profile object.
+ */
+export function customProviderProfileFrom(
+  head: {
+    readonly name: string
+    readonly api: string
+    readonly baseURL: string
+    readonly apiKeyEnv?: string
+    readonly displayName?: string
+  },
+  models: readonly ProfileModelEntry[],
+): Record<string, unknown> {
+  return {
+    api: head.api,
+    baseURL: head.baseURL,
+    apiKeyEnv: head.apiKeyEnv ?? credentialEnvName(head.name),
+    displayName: head.displayName ?? head.name,
+    models: models.map(profileModelEntryFor),
+  }
+}
+
 /** Build the stored profile for one hand-declared provider draft. */
 function customProviderProfile(draft: CustomProviderDraft): Record<string, unknown> {
-  return {
-    api: draft.api,
-    baseURL: draft.baseURL,
-    apiKeyEnv: draft.apiKeyEnv ?? credentialEnvName(draft.name),
-    displayName: draft.displayName ?? draft.name,
-    models: draft.models.map(id => ({ id })),
-  }
+  return customProviderProfileFrom(draft, draft.models.map(id => ({ id })))
 }
 
 /** Standard provider templates available for instant configuration. */
@@ -383,6 +533,22 @@ export function parseSettingsFieldValue(
     throw new TypeError('需要 自动、开启 或 关闭')
   }
   if (field === 'models' || field.endsWith('.models')) {
+    // A `providers.<route>.models` row typed as `auto` requests that the
+    // apply layer re-interrogate the existing route's endpoint. The sentinel
+    // carries only the route name; the apply layer reads the profile fields.
+    if (field.startsWith('providers.') && field.endsWith('.models')
+      && draft.trim().toLowerCase() === 'auto') {
+      const routeName = field.slice('providers.'.length, -'.models'.length)
+      if (ROUTE_ID_PATTERN.test(routeName)) {
+        return buildAutoDiscoverDraft({
+          name: routeName,
+          api: '',
+          baseURL: '',
+          apiKeyEnv: '',
+          displayName: '',
+        })
+      }
+    }
     return parseModelsList(draft)
   }
   if (field === 'providers' && (isPlainObject(current) || current === undefined)) {
@@ -396,6 +562,9 @@ export function parseSettingsFieldValue(
     const existing = isPlainObject(current) ? current : {}
     const form = parseProviderFormDraft(draft)
     if (form !== undefined) {
+      if (isAutoDiscoverProviderDraft(form)) {
+        return form
+      }
       return { ...existing, [form.name]: customProviderProfile(form) }
     }
     const query = trimmed.toLowerCase()
@@ -427,6 +596,9 @@ export function parseSettingsFieldValue(
     }
     const custom = parseCustomProviderDraft(trimmed)
     if (custom !== undefined) {
+      if (isAutoDiscoverProviderDraft(custom)) {
+        return custom
+      }
       return { ...existing, [custom.name]: customProviderProfile(custom) }
     }
     throw new TypeError(
