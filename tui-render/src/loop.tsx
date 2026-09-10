@@ -1264,10 +1264,13 @@ export function mapKeyEvent(
       renaming: state.renaming,
     }
   }
-  if (commandMode && (key === 'j' || keyInfo.downArrow || key === 'k' || keyInfo.upArrow)) {
+  // The command list navigates by arrow keys only; j/k stay ordinary letters
+  // once the query starts, so commands like /key remain typeable (K4 contract: a
+  // non-empty composer inserts j/k).
+  if (commandMode && (keyInfo.downArrow || keyInfo.upArrow)) {
     const query = state.commandQuery ?? state.text.slice(1)
     const count = filterCommands(commands, query).length
-    const delta = key === 'j' || keyInfo.downArrow ? 1 : -1
+    const delta = keyInfo.downArrow ? 1 : -1
     return {
       kind: 'dispatch',
       action: { kind: 'none' as never },

@@ -11835,10 +11835,10 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search, timeline = { o
       renaming: state.renaming
     };
   }
-  if (commandMode && (key === "j" || keyInfo.downArrow || key === "k" || keyInfo.upArrow)) {
+  if (commandMode && (keyInfo.downArrow || keyInfo.upArrow)) {
     const query = state.commandQuery ?? state.text.slice(1);
     const count = filterCommands(commands, query).length;
-    const delta = key === "j" || keyInfo.downArrow ? 1 : -1;
+    const delta = keyInfo.downArrow ? 1 : -1;
     return {
       kind: "dispatch",
       action: { kind: "none" },

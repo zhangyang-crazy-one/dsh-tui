@@ -490,10 +490,8 @@ describe('TuiLoop real input path', () => {
     }
   })
 
-  it.each([
-    ['Down', '\x1b[B'],
-    ['j', 'j'],
-  ])('routes command selection through %s without sending chat text', async (_name, key) => {
+
+  it('routes command selection through Down without sending chat text', async () => {
     const dispatch = vi.fn()
     const controller = {
       ...stubController(dispatch, []),
@@ -506,7 +504,7 @@ describe('TuiLoop real input path', () => {
     try {
       await instance.waitUntilRenderFlush()
       await press(stdin, '/')
-      await press(stdin, key)
+      await press(stdin, '\x1b[B')
       await press(stdin, '\r')
       await instance.waitUntilRenderFlush()
       expect(dispatch).toHaveBeenCalledWith({ kind: 'command', query: 'settings' })
@@ -514,6 +512,39 @@ describe('TuiLoop real input path', () => {
         const action = call[0] as { kind?: string } | null | undefined
         return typeof action === 'object' && action !== null && action.kind === 'send'
       })).toBe(false)
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('inserts j/k as letters inside a slash command instead of navigating', async () => {
+    const dispatch = vi.fn()
+    const controller = {
+      ...stubController(dispatch, []),
+      commands: [
+        { name: 'help', description: 'Show help' },
+        { name: 'permission', description: 'Switch the permission preset' },
+        { name: 'settings', description: 'Open settings' },
+      ],
+    }
+    const { instance, stdin } = mount(controller, true)
+    try {
+      await instance.waitUntilRenderFlush()
+      await press(stdin, '/')
+      await press(stdin, 'k')
+      await press(stdin, 'e')
+      await press(stdin, 'y')
+      await press(stdin, '\r')
+      await instance.waitUntilRenderFlush()
+      // The letters reach the query; j/k never behave as command-list
+      // navigation, so /key stays typeable and is not sent as chat text.
+      expect(dispatch).not.toHaveBeenCalledWith({ kind: 'command', query: 'help' })
+      expect(dispatch.mock.calls.some((call) => {
+        const action = call[0] as { kind?: string } | null | undefined
+        return typeof action === 'object' && action !== null && action.kind === 'send'
+      })).toBe(false)
+      const commands = dispatch.mock.calls.map(call => call[0] as { kind: string; query?: string | undefined })
+      expect(commands.some(c => c.kind === 'command' && c.query === 'key')).toBe(true)
     } finally {
       instance.unmount()
     }
