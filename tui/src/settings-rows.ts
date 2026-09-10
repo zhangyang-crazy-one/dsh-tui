@@ -45,6 +45,60 @@ function credentialEnvName(routeKey: string): string {
   return `${routeKey.toUpperCase().replace(/[^A-Z0-9]+/gu, '_')}_API_KEY`
 }
 
+/** Route ids a hand-declared provider may use: a settings key and a credential-name stem. */
+const ROUTE_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u
+
+/** One hand-declared provider parsed from the composer's single-line form. */
+export interface CustomProviderDraft {
+  /** Chosen route key, also the display name and credential-name stem. */
+  readonly name: string
+  /** Wire protocol; `openai-completions` when the draft omits `api=`. */
+  readonly api: string
+  /** Endpoint the route serves. */
+  readonly baseURL: string
+  /** At least one model id, in draft order. */
+  readonly models: readonly string[]
+}
+
+/**
+ * Parse the one-line custom-provider form `name endpoint model[,model]…`, plus an
+ * optional `api=<protocol>` token. Endpoint and at least one model are required
+ * because the settings validator refuses a route the installed catalog does not
+ * describe without them, so a name alone cannot become a serviceable profile.
+ * @param draft - trimmed composer text.
+ * @returns the draft, or undefined when the text is not that form.
+ * @throws {TypeError} when the shape matches but a field cannot be served.
+ */
+export function parseCustomProviderDraft(draft: string): CustomProviderDraft | undefined {
+  const tokens = draft.split(/\s+/u).filter(token => token !== '')
+  if (tokens.length < 3) return undefined
+  const name = tokens[0] as string
+  const endpoint = tokens[1] as string
+  if (!ROUTE_ID_PATTERN.test(name)) {
+    throw new TypeError(
+      `Provider 名称 "${name}" 需以小写字母开头，仅含小写字母、数字与连字符`,
+    )
+  }
+  if (!/^https?:\/\/\S+$/u.test(endpoint)) {
+    throw new TypeError(`端点 "${endpoint}" 需以 http:// 或 https:// 开头`)
+  }
+  let api = 'openai-completions'
+  const models: string[] = []
+  for (const token of tokens.slice(2)) {
+    const apiMatch = /^api=(.+)$/u.exec(token)
+    if (apiMatch?.[1] !== undefined) {
+      api = apiMatch[1]
+      continue
+    }
+    for (const id of token.split(',')) {
+      const trimmedId = id.trim()
+      if (trimmedId !== '') models.push(trimmedId)
+    }
+  }
+  if (models.length === 0) return undefined
+  return { name, api, baseURL: endpoint, models }
+}
+
 /** Standard provider templates available for instant configuration. */
 export const PROVIDER_TEMPLATES: readonly ProviderTemplate[] = [
   {
@@ -268,9 +322,22 @@ export function parseSettingsFieldValue(
     if (catalog !== undefined) {
       return { ...existing, [catalog]: { apiKeyEnv: credentialEnvName(catalog) } }
     }
+    const custom = parseCustomProviderDraft(trimmed)
+    if (custom !== undefined) {
+      return {
+        ...existing,
+        [custom.name]: {
+          api: custom.api,
+          baseURL: custom.baseURL,
+          apiKeyEnv: credentialEnvName(custom.name),
+          displayName: custom.name,
+          models: custom.models.map(id => ({ id })),
+        },
+      }
+    }
     throw new TypeError(
-      `未知 Provider "${trimmed}"；可用模板 ${PROVIDER_TEMPLATES.map((t, i) => `${String(i + 1)}.${t.displayName}`).join('、')}`
-        + '；也可输入目录内 provider 名称或完整 JSON',
+      `未知 Provider "${trimmed}"；可输入目录名（如 openai、anthropic、google）、模板序号 1-4，`
+        + '或自定义形式 "名称 端点 模型"（如 my-gw https://gw.example/v1 gpt-4o,gpt-4o-mini）',
     )
   }
   if (field === 'api' || field.endsWith('.api')) {
@@ -330,8 +397,8 @@ export function settingsRowsFromDescribe(
           rows.push({
             namespace: 'llm-pi-ai',
             field: 'providers',
-            value: stringifySettingsFieldValue('llm-pi-ai', 'providers', providersObj),
-            label: 'providers · 预置模板添加 (按 Enter)',
+            value: 'Enter 添加：目录名 / 模板序号 1-4 / 自定义「名称 端点 模型」',
+            label: 'providers · [+ 添加 Provider]',
             editValue: '',
           })
         } else {
@@ -339,7 +406,7 @@ export function settingsRowsFromDescribe(
             namespace: 'llm-pi-ai',
             field: 'providers',
             value: stringifySettingsFieldValue('llm-pi-ai', 'providers', providersObj),
-            label: 'providers · 提供商列表 (按 Enter 追加模板)',
+            label: 'providers · 提供商列表 (Enter 追加)',
             editValue: '',
           })
           for (const pId of providerIds) {
@@ -383,8 +450,8 @@ export function settingsRowsFromDescribe(
           rows.push({
             namespace: 'llm-pi-ai',
             field: 'providers',
-            value: '按 Enter 追加新 Provider 模板',
-            label: 'providers · [+ 添加新 Provider 模板]',
+            value: 'Enter 添加：目录名 / 模板序号 1-4 / 自定义「名称 端点 模型」',
+            label: 'providers · [+ 添加 Provider]',
             editValue: '',
           })
         }

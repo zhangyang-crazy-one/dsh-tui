@@ -209,6 +209,40 @@ describe('settingsRowsFromDescribe', () => {
       .toThrow('请输入 Provider 名称或模板序号')
   })
 
+  it('declares a custom provider from the one-line name/endpoint/model form', () => {
+    const declared = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      { siliconflow: { api: 'openai-completions', baseURL: 'https://x' } },
+      'my-gw https://gw.example/v1 gpt-4o,gpt-4o-mini',
+      [],
+    ) as Record<string, unknown>
+    expect(declared['my-gw']).toEqual({
+      api: 'openai-completions',
+      baseURL: 'https://gw.example/v1',
+      apiKeyEnv: 'MY_GW_API_KEY',
+      displayName: 'my-gw',
+      models: [{ id: 'gpt-4o' }, { id: 'gpt-4o-mini' }],
+    })
+    // The protocol token overrides the OpenAI-compatible default.
+    const anthropic = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      {},
+      'gw2 https://gw/v1 m1 api=anthropic',
+      [],
+    ) as Record<string, unknown>
+    expect(anthropic['gw2']).toMatchObject({ api: 'anthropic', models: [{ id: 'm1' }] })
+    // A route the catalog does not describe cannot default its endpoint or models,
+    // and each refusal names the field while the user is still looking at it.
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw https://gw.example/v1', []))
+      .toThrow('自定义形式')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'My-GW https://gw/v1 m1', []))
+      .toThrow('以小写字母开头')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gw gw.example/v1 m1', []))
+      .toThrow('需以 http:// 或 https:// 开头')
+  })
+
   it('validates required fields for provider configuration', () => {
     expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers.custom.api', 'openai-completions', '  '))
       .toThrow('api 协议为必填项，不可为空')
