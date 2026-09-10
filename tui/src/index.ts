@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process'
 import { rebuildReloadArgv, relaunchProcess } from './reload-argv.ts'
 import type { RelaunchHost } from './reload-argv.ts'
 import { editDraftExternally, resolveEditorCommand } from './external-editor.ts'
-import type { EditorSpawn } from './external-editor.ts'
+import type { EditorCommand, EditorSpawn } from './external-editor.ts'
 import { DEFAULT_NOTIFY_QUIET_INPUT_SECONDS, decideNotify } from './notify.ts'
 import type { NotifyDecision, NotifyMode, NotifySettings } from './notify.ts'
 import { constants } from 'node:fs'
@@ -85,23 +85,19 @@ interface LegacySessionTarget {
  * earlier `@deepseek-ai/dsh-session` releases (such as 0.1.2-rc.1) where the
  * event log was exposed via `session.snapshotEvents()` instead of `session.events`.
  */
-function installSessionEventsCompat(): void {
-  try {
-    if (typeof Session === 'function' && !('events' in Session.prototype)) {
-      Object.defineProperty(Session.prototype, 'events', {
-        get(this: LegacySessionTarget) {
-          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
-        },
-        configurable: true,
-        enumerable: false,
-      })
-    }
-  } catch {
-    // Swallow defineProperty errors in sealed environments
+try {
+  if (typeof Session === 'function' && !('events' in Session.prototype)) {
+    Object.defineProperty(Session.prototype, 'events', {
+      get(this: LegacySessionTarget) {
+        return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+      },
+      configurable: true,
+      enumerable: false,
+    })
   }
+} catch {
+  // Swallow defineProperty errors in sealed environments
 }
-installSessionEventsCompat()
-
 
 /**
  * Ensure `session.events` getter exists on the Session prototype or instance.
@@ -370,8 +366,6 @@ export interface Config {
   cwd?: string
   /** Frame-stats JSON output path, if given on the command line. */
   frameStats?: string
-  /** Model id override, if given on the command line or patch config. */
-  model?: string
   /** Resolved render policy the host hands the renderer; absent falls back to defaults. */
   renderPolicy?: RenderPolicy
 }
@@ -381,7 +375,6 @@ export const Config: z<Config> = z.object({
   resume: z.string(),
   cwd: z.string(),
   frameStats: z.string(),
-  model: z.string(),
   renderPolicy: z.transform(
     z.object({
       transcriptOverscan: z.number().min(0).max(RENDER_POLICY_MAX_OVERSCAN)
@@ -793,7 +786,41 @@ function fieldOf(section: unknown, field: string): SettingsFieldValue {
   if (typeof section !== 'object' || section === null || Array.isArray(section)) {
     return undefined
   }
-  return (section as Record<string, SettingsFieldValue>)[field]
+  const parts = field.split('.')
+  let current: unknown = section
+  for (const part of parts) {
+    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
+      return undefined
+    }
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current as SettingsFieldValue
+}
+
+/** Build a nested object patch from a dot-separated field path (e.g. `providers.sf.api`). */
+function createSettingsPatch(field: string, value: unknown): object {
+  const parts = field.split('.')
+  const root: Record<string, unknown> = {}
+  let current = root
+  for (let i = 0; i < parts.length - 1; i++) {
+    const next: Record<string, unknown> = {}
+    current[parts[i] as string] = next
+    current = next
+  }
+  current[parts[parts.length - 1] as string] = value
+  return root
+}
+
+/** Whether an optional persistence service exposes the open-handle primitive. */
+function persistenceHasOpen(persistence: unknown): boolean {
+  // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
+  return typeof (persistence as { open?: unknown } | undefined)?.open === 'function'
+}
+
+/** Whether an optional persistence service exposes the borrowSession primitive. */
+function persistenceHasBorrowSession(persistence: unknown): boolean {
+  // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
+  return typeof (persistence as { borrowSession?: unknown } | undefined)?.borrowSession === 'function'
 }
 
 /** Hub table row for one `child` listing entry; diagnostics are omitted. */
@@ -997,7 +1024,7 @@ export class RuntimeController implements TuiController {
   private readonly ownedWork = new Set<Promise<unknown>>()
   /** Idempotent quiescent controller teardown. */
   private disposeInFlight: Promise<void> | undefined
-  private closed = false
+  private closed: boolean = false
   private machine: InteractionState = 'idle'
   /** Durable retry wait currently visible in the footer. */
   private retryFooter: RetryFooterState | undefined
@@ -1795,7 +1822,18 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the launch cwd and load its first level (stale-guarded). */
   private async loadWorkspaceRoot(seq: number): Promise<void> {
-    await this.resolveAndCommitWorkspaceRoot(this.config.cwd ?? '.', seq)
+    const fs = this.ctx.get('fs')
+    if (fs === undefined) return
+    try {
+      const root = await fs.resolve(this.config.cwd ?? '.')
+      const children = await fs.listDir(root)
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+      this.commitResolvedWorkspaceRoot(root, children)
+    } catch (error: unknown) {
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+      this.workspaceResolveError = errorReason(error)
+    }
+    this.emit()
   }
 
   /** Expand (loading on first open) or collapse the selected directory. */
@@ -1826,19 +1864,10 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the typed path draft; failure keeps the previous root (D-09). */
   private async applyWorkspacePath(value: string, seq: number): Promise<void> {
-    await this.resolveAndCommitWorkspaceRoot(value, seq)
-  }
-
-  /**
-   * Resolve a workspace target directory and commit its listing if still current.
-   * @param targetPath - relative or absolute directory path to resolve.
-   * @param seq - workspace sequence token.
-   */
-  private async resolveAndCommitWorkspaceRoot(targetPath: string, seq: number): Promise<void> {
     const fs = this.ctx.get('fs')
     if (fs === undefined) return
     try {
-      const root = await fs.resolve(targetPath)
+      const root = await fs.resolve(value)
       const children = await fs.listDir(root)
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       this.commitResolvedWorkspaceRoot(root, children)
@@ -2270,11 +2299,11 @@ export class RuntimeController implements TuiController {
       }
       if (this.closed) return
       if (this.presentationOverrides.get(field) === override) this.presentationOverrides.delete(field)
-      if (failure !== undefined) {
+      if (failure === undefined) {
+        this.emit()
+      } else {
         this.ctx.logger.warn(`display setting ${field} failed: ${errorReason(failure.reason)}`)
         this.setFeedback(tuiCopy('settingsSaveFailed', this.getLocale()))
-      } else {
-        this.emit()
       }
     })
     this.presentationWrites = operation
@@ -2379,6 +2408,7 @@ export class RuntimeController implements TuiController {
 
   /** Whether the backend exposes the delete primitive (K6/S3 capability probe). */
   private deleteCapable(): boolean {
+    // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
     const persistence = this.ctx.get('sessionPersistence') as unknown as { delete?: (id: SessionId) => Promise<void> } | undefined
     return persistence !== undefined && typeof persistence.delete === 'function'
   }
@@ -2574,6 +2604,7 @@ export class RuntimeController implements TuiController {
       try {
         const items = await persistence.list({ signal })
         for (const item of items) {
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
           coldHeaders.set(header.id, header)
         }
@@ -2592,7 +2623,8 @@ export class RuntimeController implements TuiController {
         try {
           snapshot = cache.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS)
           if (snapshot === undefined) {
-            if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+            if (persistenceHasOpen(persistence)) {
+              // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
               const handle = await (persistence as unknown as {
                 open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
                   header: SessionHeader
@@ -2607,7 +2639,8 @@ export class RuntimeController implements TuiController {
               } finally {
                 await handle.close()
               }
-            } else if (typeof (persistence as unknown as { borrowSession?: unknown }).borrowSession === 'function') {
+            } else if (persistenceHasBorrowSession(persistence)) {
+              // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
               const borrowed = await (persistence as unknown as {
                 borrowSession(id: SessionId, signal?: AbortSignal): Promise<{
                   inspection: { meta: SessionHeader; inheritedEventCount?: number; events: readonly SessionEvent[] }
@@ -2659,7 +2692,8 @@ export class RuntimeController implements TuiController {
     }
     try {
       let events: readonly SessionEvent[]
-      if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+      if (persistenceHasOpen(persistence)) {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const handle = await (persistence as unknown as {
           open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
             read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<readonly SessionEvent[]>
@@ -2673,6 +2707,7 @@ export class RuntimeController implements TuiController {
           await handle.close()
         }
       } else {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const inspected = await (persistence as unknown as {
           inspect(id: SessionId, signal?: AbortSignal): Promise<{ events: readonly SessionEvent[] }>
         }).inspect(SessionId(childId), signal)
@@ -2738,7 +2773,13 @@ export class RuntimeController implements TuiController {
         this.emit()
         return
       case 'cycle-mode':
-        this.mode = this.mode === 'agent' ? 'plan' : this.mode === 'plan' ? 'focus' : 'agent'
+        if (this.mode === 'agent') {
+          this.mode = 'plan'
+        } else if (this.mode === 'plan') {
+          this.mode = 'focus'
+        } else {
+          this.mode = 'agent'
+        }
         this.setFeedback(`模式：${this.mode}`)
         this.emit()
         return
@@ -3463,6 +3504,7 @@ export class RuntimeController implements TuiController {
         || (candidate.startsWith("'") && candidate.endsWith("'")))) {
       candidate = candidate.slice(1, -1).trim()
     }
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control-character guard for pasted paths
     if (candidate === '' || /[\u0000-\u001f]/.test(candidate)) {
       return { ok: false, reason: '不是可用的图片路径' }
     }
@@ -3941,13 +3983,13 @@ export class RuntimeController implements TuiController {
         this.selectedIndex = 0
       }
       this.setTransition(IDLE_TRANSITION)
-      if (!startup) {
+      if (startup) {
+        this.ownWork(this.refreshList(this.session?.id), 'session list refresh')
+      } else {
         this.setFeedback(
           request.intent === 'create' ? '✓ 已新建会话' : '✓ 已切换会话',
         )
         await this.refreshList(this.session?.id)
-      } else {
-        this.ownWork(this.refreshList(this.session?.id), 'session list refresh')
       }
     } finally {
       if (this.transitionState.phase !== 'idle') {
@@ -3968,19 +4010,6 @@ export class RuntimeController implements TuiController {
       )
     }
     const selection = defaultModel.currentSelection()
-    if (this.config.model) {
-      const trimmed = this.config.model.trim()
-      if (trimmed.length > 0) {
-        const colon = trimmed.indexOf(':')
-        if (colon > 0 && colon < trimmed.length - 1) {
-          selection.provider = trimmed.slice(0, colon)
-          selection.model = trimmed.slice(colon + 1)
-        } else {
-          selection.model = trimmed
-        }
-        await defaultModel.saveSelection(selection).catch(() => {})
-      }
-    }
     const ref: ModelSelectionRef = {
       current: selection,
       assembled: undefined,
@@ -4133,12 +4162,14 @@ export class RuntimeController implements TuiController {
       : undefined
     try {
       if (live === undefined) {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const persistTitle = (titles as unknown as {
           renamePersisted?: (id: SessionId, title: string, signal?: AbortSignal) => Promise<void>
         }).renamePersisted
         if (typeof persistTitle === 'function') {
           await persistTitle(id, title, this.lifecycleAbort.signal)
         } else {
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           const maxBytes = (titles as unknown as { config?: { maxTitleBytes?: number } }).config?.maxTitleBytes ?? 80
           const normalized = normalizeSessionTitle(title, maxBytes)
           if (normalized.length === 0) {
@@ -4150,7 +4181,7 @@ export class RuntimeController implements TuiController {
             try {
               const events = await handle.read(0, undefined, { signal: this.lifecycleAbort.signal })
               const lastSeq = events.at(-1)?.seq
-              const nextSeq = lastSeq !== undefined ? lastSeq + 1 : 0
+              const nextSeq = lastSeq === undefined ? 0 : lastSeq + 1
               await handle.append([{
                 type: 'session/title',
                 seq: SessionSeq(nextSeq),
@@ -4202,6 +4233,7 @@ export class RuntimeController implements TuiController {
     const persistence = this.ctx.get('sessionPersistence')
     try {
       // deleteCapable() above guarantees both the service and the primitive.
+      // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
       await (persistence as unknown as { delete: (id: SessionId) => Promise<void> }).delete(SessionId(row.id))
       this.sessionRowCache.delete(SessionId(row.id))
       await this.refreshList()
@@ -4528,7 +4560,39 @@ export class RuntimeController implements TuiController {
     return settingsRowsFromDescribe(
       settings.describe({ redactSecrets: true }),
       ns => settings.get(ns),
+      { expandProviders: true },
     )
+  }
+
+  /**
+   * Route keys the llm directory exposes for one settings namespace, so the
+   * provider composer can accept a catalog provider by name.
+   * @param namespace - settings namespace whose profiles are being edited.
+   * @returns declared provider route keys, or an empty list without the service.
+   */
+  private catalogProviderIds(namespace: string): string[] {
+    const llm = this.ctx.get('llm')
+    if (llm === undefined) return []
+    return llm.listConfigurableProviders()
+      .filter(entry => entry.settingsNs === namespace)
+      .map(entry => entry.provider)
+  }
+
+  /**
+   * Raw user-layer provider dict for one namespace. Reading the resolved value
+   * instead would rewrite every previously added provider with the schema's
+   * materialized defaults on each edit.
+   * @param namespace - settings namespace holding a `providers` dict.
+   * @returns the stored user `providers` dict, or undefined without one.
+   */
+  private rawUserProviders(namespace: string): SettingsFieldValue {
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) return undefined
+    const entry = settings.describe({ redactSecrets: true })
+      .find(item => String(item.ns) === namespace)
+    const user = entry?.user
+    if (typeof user !== 'object' || user === null || Array.isArray(user)) return undefined
+    return (user as Record<string, SettingsFieldValue>)['providers']
   }
 
   /**
@@ -4562,8 +4626,11 @@ export class RuntimeController implements TuiController {
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
-        fieldOf(settings.get(row.namespace), row.field),
+        row.field === 'providers'
+          ? this.rawUserProviders(row.namespace) ?? {}
+          : fieldOf(settings.get(row.namespace), row.field),
         value,
+        this.catalogProviderIds(row.namespace),
       )
     } catch (error: unknown) {
       this.settingsUpdateError = errorReason(error)
@@ -4572,7 +4639,7 @@ export class RuntimeController implements TuiController {
     }
     this.ownWork((async () => {
       try {
-        await settings.update(row.namespace, { [row.field]: parsed })
+        await settings.update(row.namespace, createSettingsPatch(row.field, parsed))
         if (this.closed) return
         this.settingsOpen = false
         this.settingsEditing = false
@@ -4829,7 +4896,7 @@ export class RuntimeController implements TuiController {
     }
     this.modelStatus = 'loading'
     this.emit()
-    const current = this.modelSelectionRef?.current ?? defaultModel.currentSelection()
+    const current = defaultModel.currentSelection()
     try {
       const providers = llm.listProviders()
       const groups = await Promise.all(providers.map(async (provider) => {
@@ -5078,8 +5145,11 @@ export class RuntimeController implements TuiController {
       // Exclude delegated subagent child sessions: they belong to the agent hub,
       // not the interactive session manager directory.
       const interactiveItems = items.filter((item) => {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         return (header as unknown as { origin?: string }).origin !== 'subagent'
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           && (header as unknown as { parentSession?: unknown }).parentSession === undefined
       })
 
@@ -5087,12 +5157,14 @@ export class RuntimeController implements TuiController {
       const uncached: Array<{ id: SessionId; revision?: unknown }> = []
 
       for (const item of interactiveItems) {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
         const id = header.id
         listedIds.add(id)
         if (liveSession !== undefined && liveSession.id === id) {
           continue
         }
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const revision = (item as unknown as { revision?: unknown }).revision
         const cached = this.sessionRowCache.get(id)
         if (cached !== undefined && (revision === undefined || cached.revision === revision)) {
@@ -5111,20 +5183,21 @@ export class RuntimeController implements TuiController {
       // so the session pane opens instantly without waiting for log parsing.
       const initialRows: SessionRow[] = []
       for (const item of interactiveItems) {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
         const id = header.id
         if (liveSession !== undefined && liveSession.id === id) {
           initialRows.push(this.rowForLiveSession(liveSession))
         } else {
           const cached = this.sessionRowCache.get(id)
-          if (cached !== undefined) {
-            initialRows.push(cached.row)
-          } else {
+          if (cached === undefined) {
             initialRows.push({
               id,
               title: id,
               updatedAt: header.createdAt,
             })
+          } else {
+            initialRows.push(cached.row)
           }
         }
       }
@@ -5151,6 +5224,8 @@ export class RuntimeController implements TuiController {
       if (uncached.length > 0) {
         const BATCH_SIZE = 16
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
+          if (this.closed) return
           const batch = uncached.slice(i, i + BATCH_SIZE)
           const fetched = await Promise.all(
             batch.map(async ({ id, revision }) => {
@@ -5158,49 +5233,51 @@ export class RuntimeController implements TuiController {
               return { id, row, revision }
             }),
           )
-          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
-          if (this.closed) return
           for (const entry of fetched) {
             this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision })
           }
 
           // Progressively update the session list after each batch settles.
-          const updatedRows: SessionRow[] = []
-          for (const item of interactiveItems) {
-            const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
-            const id = header.id
-            if (liveSession !== undefined && liveSession.id === id) {
-              updatedRows.push(this.rowForLiveSession(liveSession))
-            } else {
-              const cached = this.sessionRowCache.get(id)
-              if (cached !== undefined) {
-                updatedRows.push(cached.row)
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
+          if (!this.closed) {
+            const updatedRows: SessionRow[] = []
+            for (const item of interactiveItems) {
+              // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
+              const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
+              const id = header.id
+              if (liveSession !== undefined && liveSession.id === id) {
+                updatedRows.push(this.rowForLiveSession(liveSession))
               } else {
-                updatedRows.push({
-                  id,
-                  title: id,
-                  updatedAt: header.createdAt,
-                })
+                const cached = this.sessionRowCache.get(id)
+                if (cached === undefined) {
+                  updatedRows.push({
+                    id,
+                    title: id,
+                    updatedAt: header.createdAt,
+                  })
+                } else {
+                  updatedRows.push(cached.row)
+                }
               }
             }
-          }
-          if (
-            this.session !== undefined
-            && !updatedRows.some(row => row.id === this.session?.id)
-          ) {
-            updatedRows.push(this.rowForLiveSession(this.session))
-          }
-          updatedRows.sort((a, b) => b.updatedAt - a.updatedAt)
-          this.sessionList = updatedRows
-          if (preferredId !== undefined) {
-            const preferredIndex = updatedRows.findIndex(row => row.id === preferredId)
-            if (preferredIndex >= 0) {
-              this.selectedIndex = preferredIndex
+            if (
+              this.session !== undefined
+              && !updatedRows.some(row => row.id === this.session?.id)
+            ) {
+              updatedRows.push(this.rowForLiveSession(this.session))
             }
-          } else if (this.selectedIndex >= updatedRows.length) {
-            this.selectedIndex = Math.max(0, updatedRows.length - 1)
+            updatedRows.sort((a, b) => b.updatedAt - a.updatedAt)
+            this.sessionList = updatedRows
+            if (preferredId !== undefined) {
+              const preferredIndex = updatedRows.findIndex(row => row.id === preferredId)
+              if (preferredIndex >= 0) {
+                this.selectedIndex = preferredIndex
+              }
+            } else if (this.selectedIndex >= updatedRows.length) {
+              this.selectedIndex = Math.max(0, updatedRows.length - 1)
+            }
+            this.emit()
           }
-          this.emit()
         }
       }
 
@@ -5240,7 +5317,8 @@ export class RuntimeController implements TuiController {
     try {
       let events: readonly SessionEvent[]
       let createdAt = 0
-      if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+      if (persistenceHasOpen(persistence)) {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const handle = await (persistence as unknown as {
           open(id: SessionId, access: string): Promise<{
             header: SessionHeader
@@ -5255,6 +5333,7 @@ export class RuntimeController implements TuiController {
           await handle.close()
         }
       } else {
+        // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const inspection = await (persistence as unknown as {
           inspect(id: SessionId): Promise<{ meta: SessionHeader; events: readonly SessionEvent[] }>
         }).inspect(id)
@@ -5346,7 +5425,8 @@ export class RuntimeController implements TuiController {
     if (persistence !== undefined) {
       try {
         let events: readonly SessionEvent[]
-        if (typeof (persistence as unknown as { open?: unknown }).open === 'function') {
+        if (persistenceHasOpen(persistence)) {
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           const handle = await (persistence as unknown as {
             open(id: SessionId, access: string): Promise<{
               read(offset?: number, length?: number): Promise<readonly SessionEvent[]>
@@ -5359,6 +5439,7 @@ export class RuntimeController implements TuiController {
             await handle.close()
           }
         } else {
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           const inspection = await (persistence as unknown as {
             inspect(id: SessionId): Promise<{ events: readonly SessionEvent[] }>
           }).inspect(hit.header.id)
@@ -6027,6 +6108,7 @@ async function run(
     throw new Error('tui-runtime: session store is unavailable after loader settlement')
   }
 
+  // SAFETY: optional host value; TypeScript cannot see the launcher-provided signal-release factory
   const releaseSignals = ctx.get('releaseSignals') as (() => (() => void) | undefined) | undefined
   const lifecycle = createRuntimeLifecycle(
     releaseSignals === undefined ? 'unavailable' : 'generic-owned',
@@ -6080,7 +6162,7 @@ async function run(
     if (processExitRequested || externalEditorWork !== undefined) {
       return false
     }
-    let command
+    let command: EditorCommand | undefined
     try {
       command = resolveEditorCommand(internals.editorEnv)
     } catch (error: unknown) {
@@ -6144,6 +6226,7 @@ async function run(
       try {
         await sessions.flush(liveSession)
       } catch (error: unknown) {
+        // A failed flush is logged and the reload continues: durability must not truncate it.
         ctx.logger.warn(`session flush before reload failed: ${String(error)}`)
       }
       if (frameStatsPath !== undefined && frameProbe !== undefined) {
@@ -6312,7 +6395,19 @@ async function run(
  * @param config - validated startup task, resume, cwd, and frame-stats values.
  */
 export function apply(ctx: Context, config: Config): void {
-  installSessionEventsCompat()
+  try {
+    if (typeof Session === 'function' && !('events' in Session.prototype)) {
+      Object.defineProperty(Session.prototype, 'events', {
+        get(this: LegacySessionTarget) {
+          return typeof this.snapshotEvents === 'function' ? this.snapshotEvents() : []
+        },
+        configurable: true,
+        enumerable: false,
+      })
+    }
+  } catch {
+    // Swallow compat polyfill errors in sealed environments
+  }
   // Read through the global service store, not the property proxy: appExit is
   // an optional host value, never an injected dependency.
   const exit = ctx.get('appExit')

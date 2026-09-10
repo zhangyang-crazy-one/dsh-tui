@@ -35,6 +35,16 @@ export interface ProviderTemplate {
   readonly models: readonly string[]
 }
 
+/**
+ * Derive the conventional credential-reference name a catalog provider reads,
+ * so an added route has a sensible value to edit rather than an empty slot.
+ * @param routeKey - the provider route key (for example `openai-codex`).
+ * @returns the upper-snake credential reference name (for example `OPENAI_CODEX_API_KEY`).
+ */
+function credentialEnvName(routeKey: string): string {
+  return `${routeKey.toUpperCase().replace(/[^A-Z0-9]+/gu, '_')}_API_KEY`
+}
+
 /** Standard provider templates available for instant configuration. */
 export const PROVIDER_TEMPLATES: readonly ProviderTemplate[] = [
   {
@@ -201,7 +211,8 @@ export function stringifySettingsFieldValue(
  * @param namespace - settings namespace.
  * @param field - top-level field name.
  * @param current - resolved field value used by generic parsers.
- * @param draft - composer text.
+ * @param knownProviders - route keys the llm directory exposes for this namespace, so a
+ *   catalog provider can be added by name; absence only narrows that suggestion.
  * @returns the JSON-compatible persisted value.
  */
 export function parseSettingsFieldValue(
@@ -209,6 +220,7 @@ export function parseSettingsFieldValue(
   field: string,
   current: unknown,
   draft: string,
+  knownProviders: readonly string[] = [],
 ): ParsedSettingValue {
   if (namespace === 'tui' && field === 'brandAnimation') {
     const match = (Object.entries(BRAND_ANIMATION_LABELS) as [BrandAnimationSetting, string][])
@@ -222,29 +234,44 @@ export function parseSettingsFieldValue(
   }
   if (field === 'providers' && (isPlainObject(current) || current === undefined)) {
     const trimmed = draft.trim()
+    if (trimmed === '') {
+      throw new TypeError('请输入 Provider 名称或模板序号')
+    }
     if (trimmed.startsWith('{')) {
       return parseSettingValue(current, draft)
     }
     const query = trimmed.toLowerCase()
+    const existing = isPlainObject(current) ? current : {}
     const matched = PROVIDER_TEMPLATES.find(
       (t, idx) => query === String(idx + 1)
         || query === t.id
         || query.includes(t.id)
         || query.includes(t.displayName.toLowerCase())
-        || (t.name && query.includes(t.name.toLowerCase())),
-    ) ?? PROVIDER_TEMPLATES[0]
-    const existing = isPlainObject(current) ? current : {}
-    if (matched === undefined) return existing
-    return {
-      ...existing,
-      [matched.id]: {
-        api: matched.api,
-        baseURL: matched.baseURL,
-        apiKeyEnv: matched.apiKeyEnv,
-        displayName: matched.displayName,
-        models: matched.models.map(id => ({ id })),
-      },
+        || query.includes(t.name.toLowerCase()),
+    )
+    if (matched !== undefined) {
+      return {
+        ...existing,
+        [matched.id]: {
+          api: matched.api,
+          baseURL: matched.baseURL,
+          apiKeyEnv: matched.apiKeyEnv,
+          displayName: matched.displayName,
+          models: matched.models.map(id => ({ id })),
+        },
+      }
     }
+    // A catalog provider needs only its credential reference: the installed
+    // catalog supplies the endpoint, protocol, and models. Any other name needs a
+    // full profile, which this single-line composer cannot collect field by field.
+    const catalog = knownProviders.find(id => id.toLowerCase() === query)
+    if (catalog !== undefined) {
+      return { ...existing, [catalog]: { apiKeyEnv: credentialEnvName(catalog) } }
+    }
+    throw new TypeError(
+      `未知 Provider "${trimmed}"；可用模板 ${PROVIDER_TEMPLATES.map((t, i) => `${String(i + 1)}.${t.displayName}`).join('、')}`
+        + '；也可输入目录内 provider 名称或完整 JSON',
+    )
   }
   if (field === 'api' || field.endsWith('.api')) {
     const trimmed = draft.trim()

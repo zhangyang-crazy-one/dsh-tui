@@ -183,6 +183,30 @@ describe('settingsRowsFromDescribe', () => {
       apiKeyEnv: 'SILICONFLOW_API_KEY',
       displayName: '硅基流动',
     })
+    const byIndex = parseSettingsFieldValue('llm-pi-ai', 'providers', {}, '2') as Record<string, unknown>
+    expect(Object.keys(byIndex)).toEqual(['deepseek-api'])
+  })
+
+  it('adds a catalog provider by name and refuses an unknown one instead of silently substituting', () => {
+    const known = ['openai', 'anthropic', 'deepseek', 'openai-codex']
+    const added = parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers',
+      { siliconflow: { api: 'openai-completions', baseURL: 'https://x' } },
+      'openai',
+      known,
+    ) as Record<string, unknown>
+    expect(added['openai']).toEqual({ apiKeyEnv: 'OPENAI_API_KEY' })
+    expect(added['siliconflow']).toEqual({ api: 'openai-completions', baseURL: 'https://x' })
+    const hyphenated = parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'openai-codex', known) as Record<string, unknown>
+    expect(hyphenated['openai-codex']).toEqual({ apiKeyEnv: 'OPENAI_CODEX_API_KEY' })
+    // Unknown names and blank input must be visible refusals: an earlier silent
+    // fallback made every unrecognized name re-add the first template, which read
+    // as "adding a provider does nothing".
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, 'my-gateway', known))
+      .toThrow('未知 Provider "my-gateway"')
+    expect(() => parseSettingsFieldValue('llm-pi-ai', 'providers', {}, '   ', known))
+      .toThrow('请输入 Provider 名称或模板序号')
   })
 
   it('validates required fields for provider configuration', () => {
