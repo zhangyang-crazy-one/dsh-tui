@@ -32,6 +32,7 @@ function model(overrides: Partial<ViewModel> = {}): ViewModel {
 async function timedActiveFrame(input: {
   readonly activeTurn: NonNullable<ViewModel['activeTurn']>
   readonly advanceMs: number
+  readonly reasoningExpanded?: boolean
 }): Promise<{
   readonly output: string
   readonly activeTimerCount: number
@@ -45,7 +46,11 @@ async function timedActiveFrame(input: {
   stdout.on('data', (chunk: string) => chunks.push(chunk))
   const instance = render(
     createElement(StreamView, {
-      model: model({ activeTurn: input.activeTurn, status: 'generating', reasoningExpanded: true }),
+      model: model({
+        activeTurn: input.activeTurn,
+        status: 'generating',
+        reasoningExpanded: input.reasoningExpanded ?? true,
+      }),
     }),
     {
       stdout,
@@ -80,6 +85,7 @@ async function timedActiveFrame(input: {
 
 /** Strip SGR sequences so content-level assertions ignore tier bytes. */
 function stripAnsi(text: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI CSI escape is the subject of the strip
   return text.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
 }
 
@@ -447,6 +453,7 @@ describe('StreamView', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const afterLines = screen().split('\n')
+      if (beforeAnchor === undefined) throw new Error('expected an anchor row')
       expect(afterLines[beforeRow].slice(0, 78).trimEnd()).toBe(beforeAnchor.slice(0, 78).trimEnd())
       expect(afterLines[beforeRow]).toContain('ROW_')
       expect(screen()).toContain('↓ 最新消息 · 3')
@@ -845,57 +852,45 @@ describe('StreamView', () => {
     expect(plain).not.toContain('▌')
   })
 
-  it('renders tail placeholder after completed tool calls while generating', () => {
-    const plain = stripAnsi(
-      renderToString(
-        createElement(StreamView, {
-          model: model({
-            activeTurn: {
-              turn: 1,
-              assistantText: 'Let me check',
-              reasoningText: '',
-              toolCalls: [{ callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' }],
-              content: [
-                { kind: 'text', text: 'Let me check' },
-                { kind: 'tool-call', callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' },
-                { kind: 'tool-result', callId: ToolCallId('c1'), result: 'file.txt', isError: false },
-              ],
-              reasoningDurationMs: 1200,
-            },
-            status: 'generating',
-          }),
-        }),
-      ),
-    )
-    expect(plain).toContain('Let me check')
-    expect(plain).toContain('bash')
-    expect(plain).toContain('✓')
-    expect(plain).toContain('● 正在处理… (1.2s)')
+  it('renders tail placeholder after completed tool calls while generating', async () => {
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: 'Let me check',
+        reasoningText: '',
+        toolCalls: [{ callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' }],
+        content: [
+          { kind: 'text', text: 'Let me check' },
+          { kind: 'tool-call', callId: ToolCallId('c1'), name: 'bash', arguments: '{"cmd":"ls"}' },
+          { kind: 'tool-result', callId: ToolCallId('c1'), text: 'file.txt', isError: false },
+        ],
+        reasoningDurationMs: 1200,
+      },
+      advanceMs: 0,
+    })
+    expect(result.output).toContain('Let me check')
+    expect(result.output).toContain('bash')
+    expect(result.output).toContain('✓')
+    expect(result.output).toContain('● 正在处理… (1.2s)')
   })
 
-  it('renders tail thinking placeholder when reasoning is active but collapsed', () => {
-    const plain = stripAnsi(
-      renderToString(
-        createElement(StreamView, {
-          model: model({
-            reasoningExpanded: false,
-            activeTurn: {
-              turn: 1,
-              assistantText: '',
-              reasoningText: 'investigating problem',
-              toolCalls: [],
-              content: [
-                { kind: 'reasoning', text: 'investigating problem', durationMs: 2500 },
-              ],
-              reasoningDurationMs: 2500,
-            },
-            status: 'generating',
-          }),
-        }),
-      ),
-    )
-    expect(plain).toContain('● 思考中… (2.5s)')
-    expect(plain).not.toContain('investigating problem')
+  it('renders tail thinking placeholder when reasoning is active but collapsed', async () => {
+    const result = await timedActiveFrame({
+      activeTurn: {
+        turn: 1,
+        assistantText: '',
+        reasoningText: 'investigating problem',
+        toolCalls: [],
+        content: [
+          { kind: 'reasoning', text: 'investigating problem', durationMs: 2500 },
+        ],
+        reasoningDurationMs: 2500,
+      },
+      advanceMs: 0,
+      reasoningExpanded: false,
+    })
+    expect(result.output).toContain('● 思考中… (2.5s)')
+    expect(result.output).not.toContain('investigating problem')
   })
 
   it('renders a table live once its delimiter row completes', () => {
@@ -2382,7 +2377,12 @@ describe('StreamView physical-row virtualization', () => {
     })))
     const elapsed = performance.now() - start
     // 20 turns with ~50k chars of reasoning should render efficiently (tolerating CI CPU contention)
-    expect(elapsed).toBeLessThan(2000)
+    // Slow or contended hosts opt into the doubled budget with PERF_CI_SLOW=1 (same convention as apps/cli/tests/tui-perf).
+    // The test program is built without node types, so the env read goes
+    // through the typed globalThis surface instead of the ambient `process`.
+    const hostEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    const slowHost = hostEnv?.PERF_CI_SLOW === '1'
+    expect(elapsed).toBeLessThan(slowHost ? 4000 : 2000)
     expect(output).toContain('用户提问 19')
     expect(output).toContain('助手回答 19')
   })

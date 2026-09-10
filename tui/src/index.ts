@@ -279,6 +279,7 @@ import { assertInteractiveTerminal } from './terminal-guard.ts'
 import { installSignalHooks } from './signal-semantics.ts'
 import { exportSessionMarkdown } from './export.ts'
 import {
+  credentialSettingRows,
   customProviderProfileFrom,
   isAutoDiscoverProviderDraft,
   parseSettingsFieldValue,
@@ -1116,6 +1117,8 @@ export class RuntimeController implements TuiController {
   private settingsUpdateError: string | undefined
   /** True while an auto-discover round-trip is in flight; the overlay stays open. */
   private settingsBusy = false
+  /** Configured state per credential reference name, refreshed from the service. */
+  private configuredCredentials = new Map<string, boolean>()
   /** K2 overlay flags: Agent Hub, workspace, feedback, workflow. */
   private agentHubOpen = false
   private agentHubRows: AgentHubRow[] = []
@@ -4565,8 +4568,12 @@ export class RuntimeController implements TuiController {
     this.settingsUpdateError = undefined
     this.settingsRows = this.readSettingsRows()
     this.settingsSelectedIndex = 0
+    // This pane is the settings list, not the /key onboarding overlay, so a
+    // credential row here stores a secret without leaving the pane.
+    this.settingsOnboarding = false
     this.settingsOpen = true
     this.emit()
+    this.refreshConfiguredCredentials()
   }
 
   /**
@@ -4577,11 +4584,71 @@ export class RuntimeController implements TuiController {
   private readSettingsRows(): SettingsFieldRow[] {
     const settings = this.ctx.get('settings')
     if (settings === undefined) return []
-    return settingsRowsFromDescribe(
+    const rows = settingsRowsFromDescribe(
       settings.describe({ redactSecrets: true }),
       ns => settings.get(ns),
       { expandProviders: true },
     )
+    return [...rows, ...credentialSettingRows(
+      this.referencedCredentialNames(),
+      name => this.configuredCredentials.get(name),
+    )]
+  }
+
+  /**
+   * Credential reference names this configuration asks for: the DeepSeek key
+   * first, then the remaining names by route key.
+   * @returns names that pass the credential reference grammar.
+   */
+  private referencedCredentialNames(): string[] {
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) return []
+    const names = new Set<string>()
+    const collect = (profile: unknown): void => {
+      if (typeof profile !== 'object' || profile === null || Array.isArray(profile)) return
+      const ref = (profile as Record<string, unknown>)['apiKeyEnv']
+      if (typeof ref === 'string' && isCredentialRefName(ref)) names.add(ref)
+    }
+    collect(settings.get('llm-deepseek'))
+    const piAi = settings.get('llm-pi-ai')
+    if (typeof piAi === 'object' && piAi !== null && !Array.isArray(piAi)) {
+      const providers = (piAi as Record<string, unknown>)['providers']
+      if (typeof providers === 'object' && providers !== null && !Array.isArray(providers)) {
+        for (const profile of Object.values(providers)) collect(profile)
+      }
+    }
+    const ordered = [...names].sort((left, right) => left.localeCompare(right))
+    const preferred = ordered.indexOf(ONBOARDING_KEY)
+    if (preferred > 0) {
+      ordered.splice(preferred, 1)
+      ordered.unshift(ONBOARDING_KEY)
+    }
+    return ordered
+  }
+
+  /**
+   * Refresh the configured-state cache the credential rows read. The probe runs
+   * off the key path, so a slow credential store never blocks a pane.
+   */
+  private refreshConfiguredCredentials(): void {
+    const credentials = this.ctx.get('credentials')
+    if (credentials === undefined) return
+    const names = this.referencedCredentialNames()
+    if (names.length === 0) return
+    this.ownWork((async () => {
+      for (const name of names) {
+        try {
+          const info = await credentials.describe(credentialRef(name))
+          this.configuredCredentials.set(name, info.configured)
+        } catch {
+          // A failed probe leaves the row's state unknown rather than wrong.
+          this.configuredCredentials.delete(name)
+        }
+      }
+      if (this.closed || !this.settingsOpen) return
+      this.settingsRows = this.readSettingsRows()
+      this.emit()
+    })(), 'credential state refresh')
   }
 
   /**
@@ -4638,6 +4705,7 @@ export class RuntimeController implements TuiController {
       return
     }
     if (row.namespace === 'credentials') {
+      // A credential row stores a secret rather than a setting.
       this.applyOnboardingKey(row.field, value)
       return
     }
@@ -4744,7 +4812,7 @@ export class RuntimeController implements TuiController {
       this.settleAutoDiscoverFailure(errorReason(error))
       return
     }
-    if (this.closed) return
+    if (this.isDisposed()) return
     let discovered: readonly LlmDiscoveredModel[]
     try {
       discovered = await llm.discoverModels(namespace, {
@@ -4757,7 +4825,7 @@ export class RuntimeController implements TuiController {
       this.settleAutoDiscoverFailure(this.friendlyDiscoveryError(error, apiKey))
       return
     }
-    if (this.closed) return
+    if (this.isDisposed()) return
     if (discovered.length === 0) {
       this.settleAutoDiscoverFailure('端点未返回任何模型')
       return
@@ -4794,7 +4862,7 @@ export class RuntimeController implements TuiController {
       this.settleAutoDiscoverFailure(errorReason(error))
       return
     }
-    if (this.closed) return
+    if (this.isDisposed()) return
     this.settingsBusy = false
     this.settingsOpen = false
     this.settingsEditing = false
@@ -4831,6 +4899,15 @@ export class RuntimeController implements TuiController {
   }
 
   /**
+   * Whether disposal has run. Reading through a call keeps the guard live
+   * after an await, where control-flow narrowing of the field is stale.
+   * @returns true once this runtime is disposed.
+   */
+  private isDisposed(): boolean {
+    return this.closed
+  }
+
+  /**
    * Read the existing user-layer profile for an auto-discover seed that the
    * parser could not fully describe (the edit-form case where the user typed
    * `auto` on the `providers.<route>.models` row).
@@ -4840,7 +4917,7 @@ export class RuntimeController implements TuiController {
    */
   private resolveAutoDiscoverSeed(
     namespace: string,
-    draft: { readonly name: string; readonly api?: string; readonly baseURL?: string; readonly apiKeyEnv?: string; readonly displayName?: string },
+    draft: AutoDiscoverDraftForApply,
   ): Promise<{
     readonly name: string
     readonly api: string
@@ -4871,12 +4948,19 @@ export class RuntimeController implements TuiController {
         if (existing === undefined) {
           throw new TypeError(`未找到 Provider "${draft.name}"，请先在表单中填写端点`)
         }
+        /** Stored profile field as text; other value kinds are not profiles. */
+        const storedText = (value: unknown): string | undefined =>
+          typeof value === 'string' ? value : undefined
         return {
           name: draft.name,
-          api: seedApi !== '' ? seedApi : String(existing['api'] ?? 'openai-completions'),
-          baseURL: seedBaseURL !== '' ? seedBaseURL : String(existing['baseURL'] ?? ''),
-          apiKeyEnv: seedApiKeyEnv !== '' ? seedApiKeyEnv : String(existing['apiKeyEnv'] ?? credentialEnvName(draft.name)),
-          displayName: seedDisplayName !== '' ? seedDisplayName : String(existing['displayName'] ?? draft.name),
+          api: seedApi === '' ? storedText(existing['api']) ?? 'openai-completions' : seedApi,
+          baseURL: seedBaseURL === '' ? storedText(existing['baseURL']) ?? '' : seedBaseURL,
+          apiKeyEnv: seedApiKeyEnv === ''
+            ? storedText(existing['apiKeyEnv']) ?? credentialEnvName(draft.name)
+            : seedApiKeyEnv,
+          displayName: seedDisplayName === ''
+            ? storedText(existing['displayName']) ?? draft.name
+            : seedDisplayName,
         }
       }
       return {
@@ -4926,6 +5010,7 @@ export class RuntimeController implements TuiController {
    * @param value - composer draft.
    */
   private applyOnboardingKey(field: string, value: string): void {
+    const firstRun = this.settingsOnboarding
     const credentials = this.ctx.get('credentials')
     if (credentials === undefined) {
       this.settingsUpdateError = '无可用设置'
@@ -4948,12 +5033,21 @@ export class RuntimeController implements TuiController {
             await settings.update('llm-deepseek', { apiKeyEnv: 'DEEPSEEK_API_KEY' })
           }
         }
+        this.configuredCredentials.set(field, true)
         this.settingsOnboarding = false
-        this.settingsOpen = false
-        this.settingsEditing = false
         this.settingsUpdateError = undefined
         this.setFeedback(field === ONBOARDING_KEY ? '✓ 已保存 API key' : `✓ 已保存 ${field}`)
-        this.openModelPane()
+        if (firstRun) {
+          this.settingsOpen = false
+          this.settingsEditing = false
+          this.openModelPane()
+          return
+        }
+        // Keeping the pane open lets the credential row show its new state
+        // instead of sending a provider key's owner to the model list.
+        this.settingsEditing = false
+        this.settingsRows = this.readSettingsRows()
+        this.emit()
       } catch (error: unknown) {
         if (this.closed) return
         this.settingsUpdateError = errorReason(error)
@@ -4998,6 +5092,7 @@ export class RuntimeController implements TuiController {
     }
     this.settingsUpdateError = undefined
     this.setFeedback('✓ 已重载设置')
+    this.refreshConfiguredCredentials()
   }
 
   /**

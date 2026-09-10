@@ -26,9 +26,8 @@ import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { FileSettingsProvider } from '@deepseek-ai/dsh-settings-file'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { RuntimeController } from '../src/index.ts'
-import type { TuiIo } from '../src/index.ts'
 
 /** One scripted agent whose idle inbox accepts anything without dispatching. */
 function scriptedAgent(ownerCtx: Context, session: Session): Agent {
@@ -95,7 +94,9 @@ async function probeServer(): Promise<ProbeServer> {
     setNext(next) {
       behavior = { status: next.status ?? 200, body: next.body ?? '{}' }
     },
-    close: () => new Promise<void>(resolve => server.close(() => resolve())),
+    close: () => new Promise<void>(resolve => server.close(() => {
+      resolve()
+    })),
   }
 }
 
@@ -177,7 +178,7 @@ async function harnessInDir(
       const session = ctx.sessions.create(createOptions.sessionId)
       const agent = scriptedAgent(ownerCtx, session)
       ctx.agents.register(agent)
-      return { agent: agent as unknown as AgentHandle['agent'], dispose: () => Promise.resolve() }
+      return { agent, dispose: () => Promise.resolve() }
     },
     resume: () => Promise.reject(new Error('not used')),
   })
@@ -188,7 +189,7 @@ async function harnessInDir(
       stdout: { write: () => true },
       stderr: { write: () => true },
       exit: () => {},
-    } as unknown as TuiIo,
+    },
     { task: '' },
     () => {},
   )
@@ -244,7 +245,7 @@ describe('TUI provider auto-discover apply path', () => {
       expect(controller.getSettingsPane().editing).toBe(true)
       controller.dispatch({ kind: 'settings-apply', value: draft })
 
-      await waitFor(() => controller.getSettingsPane().open === false, 2_000)
+      await waitFor(() => !controller.getSettingsPane().open, 2_000)
       expect(controller.getSettingsPane().updateError).toBeUndefined()
 
       // The user-layer providers dict now carries the discovered profile,
@@ -398,7 +399,7 @@ describe('TUI provider auto-discover apply path', () => {
       controller.dispatch({ kind: 'settings-edit' })
       controller.dispatch({ kind: 'settings-apply', value: 'auto' })
 
-      await waitFor(() => controller.getSettingsPane().open === false, 2_000)
+      await waitFor(() => !controller.getSettingsPane().open, 2_000)
       const yaml = await readFile(yamlAfter, 'utf8')
       expect(yaml).toContain('id: gamma')
       expect(yaml).toContain('id: delta')
@@ -414,8 +415,14 @@ function waitFor(predicate: () => boolean, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs
     const tick = (): void => {
-      if (predicate()) return resolve()
-      if (Date.now() > deadline) return reject(new Error('waitFor timeout'))
+      if (predicate()) {
+        resolve()
+        return
+      }
+      if (Date.now() > deadline) {
+        reject(new Error('waitFor timeout'))
+        return
+      }
       setTimeout(tick, 10)
     }
     tick()

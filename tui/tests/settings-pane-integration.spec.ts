@@ -65,6 +65,8 @@ async function bench(options?: {
   readonly rejectUpdate?: string
   readonly credentials?: { readonly configured: boolean }
   readonly registerTui?: boolean
+  /** Stored `llm-pi-ai` section, so a provider's credential reference resolves. */
+  readonly piAi?: unknown
 }): Promise<Bench> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
@@ -75,7 +77,7 @@ async function bench(options?: {
   })
   await ctx.plugin(CommandRuntime)
   const stored: Stored = { baseURL: 'https://api.deepseek.com' }
-  const update = vi.fn(async (_ns: unknown, patch: object) => {
+  const update = vi.fn(async (_ns: unknown, patch: Record<string, unknown>) => {
     if (options?.rejectUpdate !== undefined) {
       throw new Error(options.rejectUpdate)
     }
@@ -91,7 +93,10 @@ async function bench(options?: {
     }
     ctx.provide('settings', {
       describe: () => [{ ns: NS }],
-      get: (ns: unknown) => ns === NS ? stored : undefined,
+      get: (ns: unknown) => {
+        if (ns === NS) return stored
+        return ns === 'llm-pi-ai' ? options?.piAi : undefined
+      },
       update,
       ...(options?.registerTui === true
         ? {
@@ -168,7 +173,7 @@ describe('SettingsPane intercept', () => {
     const writes: { patch: object; resolve(): void }[] = []
     const settings = ctx.get('settings')!
     settings.get = () => stored
-    settings.update = vi.fn((_ns: string, patch: object) => new Promise<void>((resolve) => {
+    settings.update = vi.fn((_ns: string, patch: Record<string, unknown>) => new Promise<void>((resolve) => {
       writes.push({ patch, resolve: () => { Object.assign(stored, patch); resolve() } })
     }))
     try {
@@ -354,7 +359,7 @@ describe('SettingsPane intercept', () => {
   it('paints a non-Error update rejection', async () => {
     const { ctx, controller } = await bench()
     const settings = ctx.get('settings') as {
-      update: (ns: unknown, patch: object) => Promise<void>
+      update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     settings.update = async () => {
       throw 'unreadable-string'
@@ -371,7 +376,7 @@ describe('SettingsPane intercept', () => {
   it('ignores a settings write that settles after dispose', async () => {
     const { ctx, controller } = await bench()
     const settings = ctx.get('settings') as {
-      update: (ns: unknown, patch: object) => Promise<void>
+      update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     let settle!: (error?: Error) => void
     settings.update = () => new Promise((resolve, reject) => {
@@ -450,7 +455,7 @@ describe('SettingsPane intercept', () => {
   it('ignores a settings write rejection that settles after dispose', async () => {
     const { ctx, controller } = await bench()
     const settings = ctx.get('settings') as {
-      update: (ns: unknown, patch: object) => Promise<void>
+      update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     let settle!: (error?: Error) => void
     settings.update = () => new Promise((resolve, reject) => {
@@ -617,6 +622,31 @@ describe('SettingsPane intercept', () => {
     expect(setCredential).toHaveBeenCalled()
     expect(controller.getFeedback()).toBe('✓ 已保存 API key')
     expect(controller.getModelPane().open).toBe(true)
+    await ctx.fiber.dispose()
+  })
+
+  it('stores a provider credential from its settings row without leaving the pane', async () => {
+    const { ctx, controller, setCredential } = await bench({
+      credentials: { configured: true },
+      piAi: { providers: { goat: { apiKeyEnv: 'GOAT_API_KEY', baseURL: 'https://goat.example/v1' } } },
+    })
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    const pane = controller.getSettingsPane()
+    const index = pane.rows.findIndex(row => row.namespace === 'credentials' && row.field === 'GOAT_API_KEY')
+    expect(pane.open).toBe(true)
+    expect(index).toBeGreaterThanOrEqual(0)
+    controller.dispatch({ kind: 'settings-move', delta: index })
+    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-apply', value: 'goat-secret' })
+    await vi.waitFor(() => {
+      expect(setCredential).toHaveBeenCalled()
+    })
+    expect(setCredential.mock.calls[0]?.[0]).toBe('GOAT_API_KEY')
+    expect(setCredential.mock.calls[0]?.[1]).toBe('goat-secret')
+    // The pane survives so the row can report its state instead of sending a
+    // provider key's owner to the model list.
+    expect(controller.getSettingsPane().open).toBe(true)
+    expect(controller.getFeedback()).toBe('✓ 已保存 GOAT_API_KEY')
     await ctx.fiber.dispose()
   })
 

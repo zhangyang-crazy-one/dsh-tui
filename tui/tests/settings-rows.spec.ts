@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SettingsDescriptor } from '@deepseek-ai/dsh-settings'
 import {
+  credentialSettingRows,
   isAutoDiscoverProviderDraft,
   parseCustomProviderDraft,
   parseProviderFormDraft,
@@ -68,7 +69,7 @@ describe('brandAnimation setting vocabulary', () => {
 describe('credential-ref field defense', () => {
   it('rejects literal API keys in apiKeyEnv', () => {
     expect(() => parseSettingsFieldValue('llm-deepseek', 'apiKeyEnv', 'DEEPSEEK_API_KEY', 'sk-abcdef123456'))
-      .toThrow('apiKeyEnv 是环境变量名（如 DEEPSEEK_API_KEY），请勿输入真实密钥。请使用 /key 配置密钥')
+      .toThrow('apiKeyEnv 是环境变量名（如 DEEPSEEK_API_KEY），请勿输入真实密钥；请用 /key DEEPSEEK_API_KEY <密钥> 配置该变量')
   })
 
   it('rejects invalid environment variable identifiers in apiKeyEnv', () => {
@@ -451,5 +452,47 @@ describe('settingsRowsFromDescribe', () => {
     expect(rows[3]?.required).toBe(true)
     expect(rows[4]?.required).toBe(false)
     expect(rows[5]?.value).toBe('deepseek-v3')
+  })
+
+  it('lists one credential row per referenced name with its configured state', () => {
+    const state = new Map<string, boolean>([['GOAT_API_KEY', false], ['MY_GW_API_KEY', true]])
+    const rows = credentialSettingRows(
+      ['DEEPSEEK_API_KEY', 'GOAT_API_KEY', 'MY_GW_API_KEY', 'GOAT_API_KEY'],
+      name => state.get(name),
+    )
+    // The duplicate name collapses, an unprobed name stays actionable rather
+    // than claiming the secret is missing, and no row carries a secret value.
+    expect(rows).toEqual([
+      {
+        namespace: 'credentials',
+        field: 'DEEPSEEK_API_KEY',
+        value: 'Enter 设置密钥',
+        label: '凭据 · DEEPSEEK_API_KEY',
+      },
+      {
+        namespace: 'credentials',
+        field: 'GOAT_API_KEY',
+        value: '未配置',
+        label: '凭据 · GOAT_API_KEY',
+      },
+      {
+        namespace: 'credentials',
+        field: 'MY_GW_API_KEY',
+        value: '已配置',
+        label: '凭据 · MY_GW_API_KEY',
+      },
+    ])
+  })
+
+  it('names the exact /key command when a secret is typed into apiKeyEnv', () => {
+    expect(() => parseSettingsFieldValue(
+      'llm-pi-ai',
+      'providers.goat.apiKeyEnv',
+      'GOAT_API_KEY',
+      'sk-live-123456',
+    )).toThrow('请用 /key GOAT_API_KEY <密钥> 配置该变量')
+    // Without a route segment the refusal names the key the onboarding pane edits.
+    expect(() => parseSettingsFieldValue('llm-deepseek', 'apiKeyEnv', undefined, 'sk-live-123456'))
+      .toThrow('请用 /key DEEPSEEK_API_KEY <密钥> 配置该变量')
   })
 })

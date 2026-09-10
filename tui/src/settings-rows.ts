@@ -45,6 +45,18 @@ export function credentialEnvName(routeKey: string): string {
   return `${routeKey.toUpperCase().replace(/[^A-Z0-9]+/gu, '_')}_API_KEY`
 }
 
+/**
+ * Credential name a refusal should tell the user to store the secret under.
+ * @param field - settings field that was filled with a secret.
+ * @param current - its current value, when that value is already a name.
+ * @returns the credential reference name for the user's own provider.
+ */
+function suggestedCredentialName(field: string, current: unknown): string {
+  if (typeof current === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/u.test(current)) return current
+  const route = /^providers\.([^.]+)\.apiKeyEnv$/u.exec(field)?.[1]
+  return route === undefined ? 'DEEPSEEK_API_KEY' : credentialEnvName(route)
+}
+
 /** Route ids a hand-declared provider may use: a settings key and a credential-name stem. */
 const ROUTE_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u
 
@@ -82,7 +94,10 @@ export interface AutoDiscoverProviderDraft {
   readonly [AUTO_DISCOVER]: true
   /** Route key the apply layer adds or refreshes. */
   readonly name: string
-  /** Wire protocol; `openai-completions` when the form omitted `api=`. Undefined means the apply layer reads it from the existing profile. */
+  /**
+   * Wire protocol; `openai-completions` when the form omitted `api=`.
+   * Undefined means the apply layer reads it from the existing profile.
+   */
   readonly api?: string
   /** Endpoint to interrogate; undefined means the apply layer reads it from the existing profile. */
   readonly baseURL?: string
@@ -622,7 +637,11 @@ export function parseSettingsFieldValue(
       throw new TypeError(`${field} 环境变量名为必填项，不可为空`)
     }
     if (trimmed.startsWith('sk-') || trimmed.startsWith('ghp_') || trimmed.startsWith('Bearer ') || trimmed.length > 50) {
-      throw new TypeError(`${field} 是环境变量名（如 DEEPSEEK_API_KEY），请勿输入真实密钥。请使用 /key 配置密钥`)
+      const suggested = suggestedCredentialName(field, current)
+      throw new TypeError(
+        `${field} 是环境变量名（如 ${suggested}），请勿输入真实密钥；`
+          + `请用 /key ${suggested} <密钥> 配置该变量`,
+      )
     }
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
       throw new TypeError(`${field} 需要合法的环境变量名（例如 DEEPSEEK_API_KEY）`)
@@ -751,4 +770,43 @@ export function settingsRowsFromDescribe(
     return ns === 0 ? left.field.localeCompare(right.field) : ns
   })
   return [...ordered, ...rest]
+}
+
+/**
+ * Row value for one credential reference name. An unknown state stays
+ * actionable instead of claiming the secret is missing.
+ * @param configured - cached state, or undefined before the probe answers.
+ * @returns the row value.
+ */
+function credentialRowValue(configured: boolean | undefined): string {
+  if (configured === undefined) return 'Enter 设置密钥'
+  return configured ? '已配置' : '未配置'
+}
+
+/**
+ * Rows that store one credential reference's secret. The overlay writes them
+ * through the credentials service, so a row reports only whether the name is
+ * already configured.
+ * @param names - credential reference names the settings file references, in display order.
+ * @param configured - per-name state; `undefined` reports no state yet.
+ * @returns one row per distinct name, in input order.
+ */
+export function credentialSettingRows(
+  names: readonly string[],
+  configured: (name: string) => boolean | undefined,
+): SettingsFieldRow[] {
+  const rows: SettingsFieldRow[] = []
+  const seen = new Set<string>()
+  for (const name of names) {
+    if (seen.has(name)) continue
+    seen.add(name)
+    const state = configured(name)
+    rows.push({
+      namespace: 'credentials',
+      field: name,
+      value: credentialRowValue(state),
+      label: `凭据 · ${name}`,
+    })
+  }
+  return rows
 }

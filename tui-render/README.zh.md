@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`@deepseek-ai/dsh-tui-render` 让终端运行时通过 Ink 投影有界会话历史、面板、Markdown、工具卡与输入。调用方提供控制器快照，并获得终端渲染与输入动作，无需让本库拥有 agent 或持久化。本包不注册 Cordis 服务，也不发起模型请求。
+`@deepseek-ai/dsh-tui-render` 让终端运行时通过 Ink 投影有界会话历史、面板、Markdown、工具卡与输入。调用方提供控制器快照，并获得终端渲染与输入动作，无需让本库拥有 agent 或持久化。本包不注册 Cordis 服务，也不发起模型请求。不发布运行时不变式伴生入口；渲染层是基于会话事件的纯消费方，其可观察约定由测试断言。
 
 ## 目录
 
@@ -23,6 +23,7 @@ kind: "package-library"
 -----
 
 <a id="use-this-package"></a>
+
 ## 使用本包
 
 `dsh-tui` 运行时已拥有终端生命周期与 `TuiController` 时导入本库。使用 [`mountTuiRender`](src/index.ts) 挂载 Ink 树，并在运行时拆卸期间处置返回的句柄；所有者测试与其他终端宿主可使用纯投影与布局导出。
@@ -32,6 +33,7 @@ kind: "package-library"
 -----
 
 <a id="understand-the-implementation"></a>
+
 ## 理解实现
 
 <details>
@@ -39,7 +41,7 @@ kind: "package-library"
 
 ### 约定
 
-- `TuiLoop` 观察 `TuiController` 快照并分发输入动作，不访问 agent 或持久化服务。顶栏标题来自 `controller.getTitle()`：已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外（那是目录行标签）。在出现 provider 或重命名标题之前，循环显示紧凑挂载标题 `DeepSeek · deepseek-tui`；大型生成 FishLogo 留在空闲首页，而不进入顶栏。仅当多行具有相同折叠标题时，`SessionPane` 才追加最短唯一 session-id 提示，使不同会话无需新增专用身份行即可辨认。`getApprovalPane().open` 为真时组合器槽是 `ApprovalPane`（行内权限问题、`[Y] 允许 · [n] 拒绝 · [a] 本会话总是` 以及可选详情）；`getAskUserPane().open` 为真时是 `AskUserPane`（编号选项，脚注 `↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问`）。两种情况下 StreamView 都仍在 `children`；`g s`（组合器缓冲恰好为 `g`）/ Ctrl+K / Ctrl+T / `/help` / 空 `/permission` / 空 `/settings` 不打开浏览面板。`getSettingsPane().open` 为真时对话列是 `SettingsPane`（`设置`，`onboarding` 时为 `首次设置`；`namespace · field` 行，例如 `llm-deepseek · baseURL`）；浏览态组合器为空（`↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭`），编辑态使用 `InputBar`。`getSubmitOnEnter()` 为 false 时 Enter 插入换行。`InputBar` 将普通文本、斜杠命令、`@` 提及和持久 `[图片 #N]` 占位符分割为精确且无损的片段；样式只改变展示，`none` 颜色档位保留相同的字面文本。`CommandMenu` 画在它下方，两列（左 `/{name}`、右描述），两侧都转义；命令与提及菜单共用 Up/Down 与 j/k 选择，选中行用 accent `›` 和 `fg` 名称。非空 `/` 查询上按 Enter 执行高亮的名称前缀匹配并保留尾随参数；空 `/` 再 Enter 不会触发目录项。
+- `TuiLoop` 观察 `TuiController` 快照并分发输入动作，不访问 agent 或持久化服务。顶栏标题来自 `controller.getTitle()`：已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外（那是目录行标签）。在出现 provider 或重命名标题之前，循环显示紧凑挂载标题 `DeepSeek · deepseek-tui`；大型生成 FishLogo 留在空闲首页，而不进入顶栏。仅当多行具有相同折叠标题时，`SessionPane` 才追加最短唯一 session-id 提示，使不同会话无需新增专用身份行即可辨认。`getApprovalPane().open` 为真时组合器槽是 `ApprovalPane`（行内权限问题、竖列选项 `[Y] 允许` / `[n] 拒绝` / `[a] 本会话总是` 以及可选详情）；`getAskUserPane().open` 为真时是 `AskUserPane`（编号选项，脚注 `↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问`）。两种情况下 StreamView 都仍在 `children`；`g s`（组合器缓冲恰好为 `g`）/ Ctrl+K / Ctrl+T / `/help` / 空 `/permission` / 空 `/settings` 不打开浏览面板。`getSettingsPane().open` 为真时对话列是 `SettingsPane`（`设置`，`onboarding` 时为 `首次设置`；`namespace · field` 行，例如 `llm-deepseek · baseURL`）；浏览态组合器为空（`↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭`），编辑态使用 `InputBar`。`getSubmitOnEnter()` 为 false 时 Enter 插入换行。`InputBar` 将普通文本、斜杠命令、`@` 提及和持久 `[图片 #N]` 占位符分割为精确且无损的片段；样式只改变展示，`none` 颜色档位保留相同的字面文本。`CommandMenu` 画在它下方，两列（左 `/{name}`、右描述），两侧都转义；命令与提及菜单共用 Up/Down 与 j/k 选择，选中行用 accent `›` 和 `fg` 名称。非空 `/` 查询上按 Enter 执行高亮的名称前缀匹配并保留尾随参数；空 `/` 再 Enter 不会触发目录项。
 - `createProjector()` 只把 `source.kind === 'user'` 的 `user/message` 事件视为人类 transcript（文本记录）行。agent 指令、插件上下文、skill 目录以及未来的非用户来源仍会持久化且对模型可见，但不会作为用户撰写的终端消息出现。
 - `SessionPane` 渲染传入的会话行、选择和删除确认状态；持久化读取与变更仍由运行时拥有。
 - **AppShell / StreamView 布局** — 顶栏下方有一条全宽细线 `─` 分隔；不使用粗线 `═ ║` 铬。`layoutTitleBar` 把标题和徽标装进窗口宽度（标题仍能放下时先截断徽标；截断用一列 `…`；不切开宽字形）。`conversationWidth` 在小于 40 列时使用完整宽度，其他宽度左右各保留 2 列安全留白；生成的官方 FishLogo、`DeepSeek` 字标与问候语则独立居中。Transcript、推理、Markdown 表格、工具卡和相关 HUD 使用这块近全宽阅读区，结构化输出不再被压进 88 列上限。Todo、Jobs、Workflow、composer 或 queue HUD 行存在时，共享会话容器会填满 AppShell 的固定内容槽，StreamView 获得 HUD 之外的全部剩余行；单行 HUD 不能再把 transcript 压成零高度。Markdown 表格在可容纳时保持自然宽度，只有超过行预算时才缩小列宽或换行。受限表格比较换行数量收益，保留紧凑状态列和标识符可读下限；只有不等列宽能降低记录高度时才偏离均衡分配。多行记录之间增加细分隔线。单元格换行保留能容纳的完整单词，并按终端显示宽度拆分超长标识符与中日韩文本。助手 Markdown 在换行前为正文左右预留相同缩进，保持表格对称，并防止 Ink 截断删除文本。`InputBar` 是独立的全宽 `inputBg` 工作区，包含 accent 左竖线、标题提示行和 draft 行；其下的全宽状态区默认只显示一行简洁状态，活动目标进度优先于通用提示；主动开启指标详情后，才按高度最多展示三行。输入区标签是默认唯一的模型名称。Resize 会重排两个区域，低高度会先省略低优先级状态行并选择更小的品牌档位，不能挤出组合器。StreamView 裁切一个固定内容槽，并在换行后的终端物理行上拥有唯一 transcript 滚动坐标。↑/k 与 ↓/j 移动一个物理行，PageUp/PageDown 移动视口减一行，Home 到达最旧行，End 或空组合器下的 `G` 原子地重新跟随最新行。普通向下导航或轨道跳到 live 端也会恢复 follow 并清除未见行。脱离态在流式追加、活动回合冻结、工具完成、compaction、缓存重建或 resize 改变周边布局时保持 `{blockId,rowWithinBlock,viewportRow}`。脱离底部时，固定在右下的控制层提示显示 `↓ 底部 · End/G`；有物理行追加时，它还会显示 `最新消息 · {n}`；仅溢出时出现的轨道会在每个 Ink 帧之后用绝对终端坐标绘制到最右控制列，因此 emoji 宽度差异不会移动某一条轨道行。`scrollbar` 属性同时关闭轨道绘制与鼠标命中，不改变阅读宽度或脱离提示。可见单元与鼠标区域共享同一几何，左键点击或拖动会在文本选择开始前把轨道映射到最旧至 live 的范围。完整历史仍以 block/source 描述符为 canonical source（权威源）；`TranscriptRenderStore` 只挂载与已配置 overscan 相交的精确物理行。已结算行数组保持稳定身份，当前视口、活动块与锚点块会被固定，已配置的行数/字节 LRU 上限只淘汰可重建的派生行。用户与助手行在阅读区内靠左；整行 `messageBg` 区分用户行，助手正文保留在画面背景上，`>` / `●` 在不使用左右对贴的情况下保留说话方身份。助手回合按时间顺序绘制推理、正文和工具卡。关闭的工具堆栈最多保留三张代表性卡片，把更早调用放进一张 `工具记录` 卡片，并可通过 Ctrl+E 显示每张卡的有界预览；非零终端退出与 signal 仍显示为失败。相邻卡片之间不插入 transcript 空行。思考默认隐藏，不显示折叠标题。Ctrl+O 在共享 transcript 中显示完整的淡化思考正文，流式生成和结束后均保留；最终 Markdown 仍最突出，TurnTail 与完成元数据保持 dim。段落换行和完整围栏代码块均可继续浏览，不再设置局部 500 行上限。解析后的 Markdown 顶层块之间保留一个物理空行，使标题、段落、列表、表格和代码块在视觉上彼此分开。StreamView 绝不在助手正文内绘制光标字形；硬件 caret 只属于组合器。物理行投影只在思考、工具堆栈和正文之间保留一个空行。等待开始和最后可见思考的耗时会在模型事件之间每 0.1 秒前进；正文或工具成为最后可见部分后，计时器停止。提供方没有返回 reasoning 文本时，TUI 只显示动态进度标签，不合成隐藏思维链。消息块之间保留两个空行，活动回合内部保留一个空行。彩色 tier 下，`frame-fill` 会在每次完整 Ink 字符串写入期间保持 `bg` 令牌，并在 SGR reset 后重新应用。输入与状态区使用 Ink 的全宽 Box 几何，`paintBackgroundRow` 则在 reset 结束的内容片段之间恢复所属背景 token，并输出剩余实测背景单元；因此每个布局单元都由背景覆盖，不依赖 Text 内嵌行尾清除、终端 BCE 或 Ink 保留 Box 末尾空格。可见屏幕与行清除继承页面背景；scrollback 清除会临时恢复终端默认背景，写入结束时也恢复默认值。`none` tier 不增加背景 ANSI。
@@ -51,7 +53,6 @@ kind: "package-library"
 - `FrameProbe` 为每次子树提交记录 React Profiler 的 `actualDuration`。每个时长通道保留最近 120 个精确样本，以及固定存储的全程直方图，包含数量、均值、p95、p99 和最大值。直方图分位数使用微秒桶与三位有效数字；`beginMeasurement()` 只丢弃一次启动/恢复样本，之后重置窗口不会删除全程分布。根节点与品牌渲染成本不包含 Ink diff/commit、stdout drain 或实体显示延迟。`frameMetrics` 分别记录 drain、滚动、完成写出间隔、输入/合并计数、队列深度和缓存工作量。挂载期间会在观察者收到 React 开发模式 User Timing 记录后消费这些记录，不把组件属性保留整个会话，也不清除无关测量。
 - **性能边界** — 每个流式 Markdown 块推进仅追加的完整行 collector，保留稳定 parsed block 与物理行引用，并只重新解析仍有歧义的后缀；引用定义、可视化指令、渲染 scope 变化以及无法证明局部性的结构走显式安全全量重算。fence-aware 表格 scanner 只从表头开始 holdback 当前活动表格；自适应布局保留紧凑值，依次收缩 token-heavy 与 narrative 列，并在必要时选择键值记录。`TranscriptRenderStore`、projector 缓存与语法 token 缓存均有界，且都能从 canonical source 重建。共享帧仲裁器让滚动优先于有界展示队列，并发布每次变化的物理偏移，包括最后一帧。Overscan 限制缓存行数，不限制绘制频率。反向输入从当前显示位置替换待完成的移动。滚动突发会保持已选追赶速度直到最后一步。变化的滚动偏移也会在布局阶段发布实测快照，无需等待 Ink 的独立输出节流。Ink 的最高帧率跟随配置中较快的流式/滚动节奏。在 Ink 增量输出之后，`VisibleFrameSnapshot` 会按终端坐标重绘变化的可见行，并清除缩短或不再占用的范围；未变化的物理行 identity 不产生 overlay 写出。Ink 完成一帧输出后，变化的几何或已结束轮次标识只清理当前 transcript 区域。正文、轨道和绝对光标在同一个 synchronized-output 结束标记之前提交。仅布局变化的轨道更新使用与 transcript 绘制相同的 synchronized-output 帧。浏览面板替换 transcript 时，会在布局清理阶段、替代面板绘制前释放正文快照、轨道和指针区域。`pnpm run test:tui:perf` 拥有严格的真实 PTY 长 Markdown、增长表格、10,000 行滚动、resize 与 slow-sink 目标。
 - **工具检查** — Ctrl+E 显示有界预览，不预先格式化全文。`/tools` 列出全部调用；Enter 打开分页原文，n/p 翻页，d 主动显示原始元数据，y 复制完整文本，e 导出。失败摘要独立于流水线成功状态保留退出码或 signal。`ToolRowCache` 只在已验证的条目/行数预算内生成实际请求的行；展示转换器结果和思考换行索引可复用、可重建。紧凑显示版本号引用权威数据，不把完整回答嵌入每个帧标识。新增设置、状态与详情文案使用类型化 zh-CN/en-US 字典。
-
 
 ### 高级交互约定
 
@@ -66,6 +67,7 @@ kind: "package-library"
 -----
 
 <a id="further-exploration"></a>
+
 ## 进一步探索
 
 - [TUI 包映射](../README.zh.md) — 终端运行时与渲染器所有权。
@@ -77,6 +79,7 @@ kind: "package-library"
 -----
 
 <a id="model-experience"></a>
+
 ## 模型体验
 
 ### 终端对话展示
@@ -104,6 +107,7 @@ kind: "package-library"
 - **被淘汰行在展示前重建** — 缓存淘汰只删除派生物理行；再次访问被淘汰 block 时会同步从 canonical source 重新投影，因此这次导航可能比缓存命中更慢，但不会改变轨道几何或已锚定的阅读行。
 
 <a id="dev-note"></a>
+
 ### 开发备注
 
 <details>
