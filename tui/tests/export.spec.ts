@@ -17,17 +17,20 @@ import type {
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import {
   Session as SessionValue,
   SessionId,
+  SessionSeq,
 } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import {
   ToolCallId,
   createAssistantMessage,
+  createSystemMessage,
   createToolResultMessage,
   createUserMessage,
 } from '@deepseek-ai/dsh-llm'
@@ -72,6 +75,7 @@ function appendRound(session: Session, turn: number, keyword: string): void {
         ],
         source: { provider: 'test-provider', model: 'test-model' },
       }),
+      stream: [],
     },
     { surfaceOp: 'append' },
   )
@@ -86,6 +90,7 @@ function scriptedAgent(ownerCtx: Context, session: Session): Agent {
     id: session.id,
     options: {},
     session,
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -123,7 +128,7 @@ async function bench(root: string): Promise<Bench> {
         ...(options.meta === undefined ? {} : { meta: options.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -148,7 +153,7 @@ describe('renderSessionMarkdown', () => {
     const callId = ToolCallId('call-default-error')
     const events: SessionEvent[] = [
       {
-        type: 'user/message', seq: 0, time: 0,
+        type: 'user/message', seq: SessionSeq(0), time: 0,
         data: createUserMessage({
           content: [
             { type: 'text', text: '' },
@@ -156,9 +161,10 @@ describe('renderSessionMarkdown', () => {
           ],
           source: { kind: 'user' },
         }),
+        surfaceOp: 'append',
       },
       {
-        type: 'assistant/message', seq: 1, time: 1,
+        type: 'assistant/message', seq: SessionSeq(1), time: 1,
         data: {
           turn: 1,
           step: 1,
@@ -166,10 +172,12 @@ describe('renderSessionMarkdown', () => {
             content: [{ type: 'text', text: '' }, { type: 'reasoning', text: 'hidden' }],
             source: { provider: 'test', model: 'test' },
           }),
+          stream: [],
         },
+        surfaceOp: 'append',
       },
       {
-        type: 'tool/result', seq: 2, time: 2,
+        type: 'tool/result', seq: SessionSeq(2), time: 2,
         data: {
           turn: 1,
           step: 1,
@@ -184,6 +192,7 @@ describe('renderSessionMarkdown', () => {
             }],
           },
         },
+        surfaceOp: 'append',
       },
     ]
     const markdown = renderSessionMarkdown(events)
@@ -195,7 +204,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'user/message',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 500,
         data: createUserMessage({
           content: [{ type: 'text', text: 'INTERNAL-CONTEXT-SENTINEL' }],
@@ -210,7 +219,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'user/message',
-        seq: 1,
+        seq: SessionSeq(1),
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'visible human prompt' }],
@@ -220,7 +229,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'assistant/message',
-        seq: 2,
+        seq: SessionSeq(2),
         time: 2_000,
         data: {
           turn: 1,
@@ -235,12 +244,13 @@ describe('renderSessionMarkdown', () => {
               model: 'test-model',
             },
           }),
+          stream: [],
         },
         surfaceOp: 'append',
       },
       {
         type: 'tool/call',
-        seq: 3,
+        seq: SessionSeq(3),
         time: 3_000,
         data: {
           turn: 1,
@@ -252,7 +262,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'tool/result',
-        seq: 4,
+        seq: SessionSeq(4),
         time: 4_000,
         data: {
           turn: 1,
@@ -298,7 +308,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'user/message',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'hello' }],
@@ -308,7 +318,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'assistant/message',
-        seq: 1,
+        seq: SessionSeq(1),
         time: 2_000,
         data: {
           turn: 1,
@@ -317,6 +327,7 @@ describe('renderSessionMarkdown', () => {
             content: [{ type: 'text', text: 'hi there' }],
             source: { provider: 'test-provider', model: 'test-model' },
           }),
+          stream: [],
         },
         surfaceOp: 'append',
       },
@@ -342,7 +353,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'user/message',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: payload }],
@@ -352,7 +363,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'assistant/message',
-        seq: 1,
+        seq: SessionSeq(1),
         time: 2_000,
         data: {
           turn: 1,
@@ -361,6 +372,7 @@ describe('renderSessionMarkdown', () => {
             content: [{ type: 'text', text: payload }],
             source: { provider: 'test-provider', model: 'test-model' },
           }),
+          stream: [],
         },
         surfaceOp: 'append',
       },
@@ -383,7 +395,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'tool/call',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 1_000,
         data: {
           turn: 1,
@@ -395,7 +407,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'tool/result',
-        seq: 1,
+        seq: SessionSeq(1),
         time: 2_000,
         data: {
           turn: 1,
@@ -429,7 +441,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'assistant/message',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 1_000,
         data: {
           turn: 1,
@@ -443,6 +455,7 @@ describe('renderSessionMarkdown', () => {
             ],
             source: { provider: 'test-provider', model: 'test-model' },
           }),
+          stream: [],
         },
         surfaceOp: 'append',
       },
@@ -460,7 +473,7 @@ describe('renderSessionMarkdown', () => {
     const events: SessionEvent[] = [
       {
         type: 'user/message',
-        seq: 0,
+        seq: SessionSeq(0),
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'internal runtime context' }],
@@ -470,7 +483,7 @@ describe('renderSessionMarkdown', () => {
       },
       {
         type: 'user/message',
-        seq: 1,
+        seq: SessionSeq(1),
         time: 2_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'visible human prompt' }],
@@ -484,6 +497,53 @@ describe('renderSessionMarkdown', () => {
     expect(markdown).toContain('visible human prompt')
     expect(markdown).not.toContain('internal runtime context')
     expect(markdown.match(/^## User/mgu)).toHaveLength(1)
+  })
+
+  it('omits v3 system/message surface events from the exported Markdown', () => {
+    // The JSONL exporter allowlists user/assistant/tool events. v3's
+    // `system/message` surface event (the rendered system prompt, surface
+    // node 0) must not bleed through into the transcript — the upstream web
+    // chat target renders system prompts through a separate system-prompt
+    // card, never as a transcript bubble.
+    const events: SessionEvent[] = [
+      {
+        type: 'system/message', seq: SessionSeq(0), time: 0,
+        data: {
+          turn: 1,
+          step: 1,
+          message: createSystemMessage('# System Prompt', '@deepseek-ai/dsh-test'),
+        },
+        surfaceOp: 'append',
+      },
+      {
+        type: 'user/message', seq: SessionSeq(1), time: 1,
+        data: createUserMessage({
+          content: [{ type: 'text', text: 'hello' }],
+          source: { kind: 'user' },
+        }),
+        surfaceOp: 'append',
+      },
+      {
+        type: 'assistant/message', seq: SessionSeq(2), time: 2,
+        data: {
+          turn: 1,
+          step: 1,
+          message: createAssistantMessage({
+            content: [{ type: 'text', text: 'world' }],
+            source: { provider: 'test', model: 'test' },
+          }),
+          stream: [],
+        },
+        surfaceOp: 'append',
+      },
+    ]
+    const markdown = renderSessionMarkdown(events)
+    expect(markdown).not.toContain('# System Prompt')
+    expect(markdown).toContain('hello')
+    expect(markdown).toContain('world')
+    expect(markdown).not.toMatch(/^## System/mgu)
+    expect(markdown).toMatch(/^## User/mgu)
+    expect(markdown).toMatch(/^## Assistant/mgu)
   })
 })
 

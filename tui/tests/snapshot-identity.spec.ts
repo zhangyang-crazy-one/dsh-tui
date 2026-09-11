@@ -12,16 +12,17 @@ import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
   ResumeAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
-import SessionStore from '@deepseek-ai/dsh-session'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
+import SessionStore, { SessionLogOffset } from '@deepseek-ai/dsh-session'
+import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
@@ -42,11 +43,7 @@ function scriptedAgent(ownerCtx: Context, session: Session): Agent {
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      discarded: () => {},
-      claimed: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -84,7 +81,7 @@ async function bench(root: string): Promise<Bench> {
         ...(options.meta === undefined ? {} : { meta: options.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -92,12 +89,18 @@ async function bench(root: string): Promise<Bench> {
       ownerCtx: Context,
       options: ResumeAgentOptions,
     ): Promise<AgentHandle> {
-      const loaded = await ctx.sessionPersistence.load(options.resumeSessionId)
+      const handle = await ctx.sessionPersistence.open(options.resumeSessionId, 'read')
+      let events: readonly SessionEvent[]
+      try {
+        events = (await handle.read(SessionLogOffset(0))).events
+      } finally {
+        await handle.close()
+      }
       const session = ctx.sessions.create(options.resumeSessionId, {
-        seed: loaded.events.map(event => structuredClone(event)),
+        seed: events.map(event => structuredClone(event)),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },

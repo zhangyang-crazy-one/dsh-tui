@@ -2507,13 +2507,13 @@ export function StreamView({
     const token = status === 'error' ? 'error' : status === 'running' ? 'accentText' : 'fgDim'
     const text = toolSummaryText(part.summary, contentWidth)
     const match = text.match(/^(▸\s*)([^\s·]+)(.*)$/)
-    const parts = match !== null
-      ? [
+    const parts = match === null
+      ? [styled(escapeContent(text), token)]
+      : [
         styled(match[1] as string, 'fgDim'),
         styled(match[2] as string, 'fgSoft'),
         styled(escapeContent(match[3] as string), token),
       ]
-      : [styled(escapeContent(text), token)]
     return (
       <Box
         key={key}
@@ -2883,7 +2883,7 @@ export function StreamView({
             {trailingRows > 0 ? <Box height={trailingRows} flexShrink={0} /> : null}
           </Box>
         )}
-      {!viewport.follow ? (
+      {viewport.follow ? null : (
         <Box position="absolute" right={2} bottom={0}>
           <Text>{styled(
             viewport.unseenRows > 0
@@ -2892,7 +2892,7 @@ export function StreamView({
             'accentText',
           )}</Text>
         </Box>
-      ) : null}
+      )}
     </Box>
   )
 

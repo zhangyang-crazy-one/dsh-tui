@@ -6,19 +6,20 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import { createAssistantMessage } from '@deepseek-ai/dsh-llm'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session'
 import type { Projector } from '@deepseek-ai/dsh-tui-render'
-import { apply, internals, RuntimeController } from '../src/index.ts'
+import { apply, internals, type RuntimeController } from '../src/index.ts'
 
 const originalInternals = { ...internals }
 const originalSignals: Record<string, NodeJS.SignalsListener[]> = {
@@ -81,6 +82,7 @@ function appendTurn(
           content: [{ type: 'text', text }],
           source: { provider: 'test-provider', model: 'test-model' },
         }),
+        stream: [],
       },
       { surfaceOp: 'append' },
     )
@@ -166,11 +168,7 @@ async function bench(
         id: session.id,
         options: options.agentOptions ?? {},
         session,
-        inbox: new Inbox(session, {
-          inserted: () => {},
-          discarded: () => {},
-          claimed: () => {},
-        }),
+        inbox: createInboxStub(),
         status: 'idle',
         ctx: agentCtx,
         cancel: () => {
@@ -192,7 +190,7 @@ async function bench(
         inject: () => {},
         whenIdle: () => idle,
       } satisfies Partial<Agent>)
-      await options.setup?.(agentCtx)
+      await options.setup?.(agentCtx, agent)
       ctx.agents.register(agent)
       const dispose = vi.fn(() => Promise.resolve())
       handles.push({ id: session.id, dispose })

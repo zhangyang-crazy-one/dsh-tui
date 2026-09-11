@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox, type Agent } from '@deepseek-ai/dsh-agent'
+import AgentRegistry, { type Agent, type Inbox, type InboxTarget } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
+import SessionStore, { SessionId, type Session, type UserMessage } from '@deepseek-ai/dsh-session'
 import { createProjector } from '@deepseek-ai/dsh-tui-render'
 import { RuntimeController } from '../src/index.ts'
 
@@ -12,7 +12,7 @@ interface Fixture {
   controller: RuntimeController
   agent: Agent
   session: Session
-  inbox: Inbox
+  inbox: Inbox & { claim(target: InboxTarget, turn: number): UserMessage[] }
   followup: ReturnType<typeof vi.fn>
   steer: ReturnType<typeof vi.fn>
   dispose(): Promise<void>
@@ -26,11 +26,60 @@ async function fixture(): Promise<Fixture> {
   const followup = vi.fn()
   const steer = vi.fn()
   const agent = {} as Agent
-  const inbox = new Inbox(session, {
-    inserted: (message) => { ctx.emit('agent/inbox/inserted', { agent, message }) },
-    claimed: (message, turn) => { ctx.emit('agent/inbox/claimed', { agent, message, turn }) },
-    discarded: (message) => { ctx.emit('agent/inbox/discarded', { agent, message }) },
-  })
+  const pending: Record<InboxTarget, UserMessage[]> = { 'next-turn': [], 'next-step': [] }
+  const locate = (messageId: string): { target: InboxTarget; index: number } | undefined => {
+    for (const target of ['next-turn', 'next-step'] as const) {
+      const index = pending[target].findIndex(message => message.id === messageId)
+      if (index >= 0) return { target, index }
+    }
+    return undefined
+  }
+  const inbox: Inbox & { claim(target: InboxTarget, turn: number): UserMessage[] } = {
+    get nextTurn() { return pending['next-turn'] },
+    get nextStep() { return pending['next-step'] },
+    clear() {
+      pending['next-step'].splice(0)
+      pending['next-turn'].splice(0)
+    },
+    append(target, message) {
+      pending[target].push(message)
+      ctx.emit('agent/inbox/inserted', { agent, message })
+    },
+    prepend(target, message) {
+      pending[target].unshift(message)
+      ctx.emit('agent/inbox/inserted', { agent, message })
+    },
+    replace(messageId, message) {
+      const location = locate(messageId)
+      if (location === undefined) return false
+      pending[location.target].splice(location.index, 1, message)
+      ctx.emit('agent/inbox/inserted', { agent, message })
+      return true
+    },
+    remove(messageId) {
+      const location = locate(messageId)
+      if (location === undefined) return false
+      const [removed] = pending[location.target].splice(location.index, 1)
+      if (removed !== undefined) {
+        ctx.emit('agent/inbox/discarded', { agent, message: removed })
+      }
+      return true
+    },
+    splice(target, start, deleteCount, inserted) {
+      const removed = pending[target].splice(start, deleteCount, ...inserted)
+      for (const message of inserted) ctx.emit('agent/inbox/inserted', { agent, message })
+      return removed
+    },
+    claim(target, turn) {
+      const claimed = pending['next-step'].splice(0)
+      if (target === 'next-turn') {
+        const head = pending['next-turn'].splice(0, 1)
+        claimed.push(...head)
+      }
+      for (const message of claimed) ctx.emit('agent/inbox/claimed', { agent, message, turn })
+      return claimed
+    },
+  }
   Object.assign(agent, {
     id: session.id,
     options: {},

@@ -16,10 +16,11 @@ import type {
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
-import { apply, internals, RuntimeController } from '../src/index.ts'
+import { apply, internals, type RuntimeController } from '../src/index.ts'
 
 const originalInternals = { ...internals }
 type EditorOptions = Parameters<typeof internals.editDraftExternally>[2]
@@ -88,6 +89,7 @@ async function bench(options: {
         id: session.id,
         options: create.agentOptions ?? {},
         session,
+        inbox: createInboxStub(),
         status: 'idle',
         ctx: agentCtx,
         cancel: () => {},
@@ -98,7 +100,7 @@ async function bench(options: {
         inject: () => {},
         whenIdle: () => Promise.resolve(),
       } satisfies Partial<Agent>)
-      await create.setup?.(agentCtx)
+      await create.setup?.(agentCtx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: handleDispose }
     },

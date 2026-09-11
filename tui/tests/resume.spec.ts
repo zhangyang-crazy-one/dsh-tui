@@ -10,15 +10,16 @@ import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
   ResumeAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
-import SessionStore, { type Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import SessionStore, { type Session, SessionId, SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type {
   SessionEvent,
   UserMessage,
@@ -48,10 +49,10 @@ function round(
 ): SessionEvent[] {
   const seq = (turn - 1) * 4
   return [
-    { type: 'turn/start', seq, time: base, data: { turn } },
+    { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
       type: 'user/message',
-      seq: seq + 1,
+      seq: SessionSeq(seq + 1),
       time: base + 1,
       data: createUserMessage({
         content: [{ type: 'text', text: userText }],
@@ -61,7 +62,7 @@ function round(
     },
     {
       type: 'assistant/message',
-      seq: seq + 2,
+      seq: SessionSeq(seq + 2),
       time: base + 2,
       data: {
         turn,
@@ -76,7 +77,7 @@ function round(
     },
     {
       type: 'turn/end',
-      seq: seq + 3,
+      seq: SessionSeq(seq + 3),
       time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },
@@ -145,11 +146,7 @@ function scriptedAgent(
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      discarded: () => {},
-      claimed: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -242,7 +239,7 @@ async function transitionBench(): Promise<TransitionBench> {
     const session = ctx.sessions.create(id)
     const followupTexts: string[] = []
     const agent = scriptedAgent(ownerCtx, session, followupTexts)
-    await setup?.(agent.ctx)
+    await setup?.(agent.ctx, agent)
     const dispose = vi.fn(async () => {
       if (disposeError !== undefined) throw disposeError
     })
@@ -325,7 +322,7 @@ async function bench(root: string, resume: string): Promise<Bench> {
         ...(options.meta === undefined ? {} : { meta: options.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session, followupTexts)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -337,7 +334,7 @@ async function bench(root: string, resume: string): Promise<Bench> {
     ): Promise<AgentHandle> {
       resumeCalls(options.resumeSessionId)
       const handle = await ctx.sessionPersistence.open(options.resumeSessionId, 'write')
-      const events = await handle.read()
+      const events = (await handle.read()).events
       const session = ctx.sessions.create(options.resumeSessionId, {
         seed: events.map(event => structuredClone(event)),
       })
@@ -346,7 +343,7 @@ async function bench(root: string, resume: string): Promise<Bench> {
         await handle.append(suffix)
       }
       const agent = scriptedAgent(ownerCtx, session, followupTexts)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return {
         agent,
@@ -582,6 +579,7 @@ describe('session resume', () => {
           id: session.id,
           options: {},
           session,
+          inbox: createInboxStub(),
           status: 'idle',
           ctx: ownerCtx.extend({ agent }),
           cancel: () => {},
@@ -592,7 +590,7 @@ describe('session resume', () => {
           inject: () => {},
           whenIdle: () => Promise.resolve(),
         } satisfies Partial<Agent>)
-        await options.setup?.(agent.ctx)
+        await options.setup?.(agent.ctx, agent)
         ctx.agents.register(agent)
         return { agent, dispose: () => Promise.resolve() }
       },
@@ -743,6 +741,7 @@ describe('session resume', () => {
           content: [{ type: 'text', text: '第三轮回答' }],
           source: { provider: 'test-provider', model: 'test-model' },
         }),
+        stream: [],
       },
       { surfaceOp: 'append' },
     )
@@ -757,7 +756,7 @@ describe('session resume', () => {
       const handle = await reader.sessionPersistence.open(SessionId('session-1'), 'read')
       let events: readonly SessionEvent[]
       try {
-        events = await handle.read()
+        events = (await handle.read()).events
       } finally {
         await handle.close()
         await reader.fiber.dispose()

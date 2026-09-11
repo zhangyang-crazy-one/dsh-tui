@@ -72,8 +72,8 @@ export function AskUserPane({
   const footnote = FOOTNOTE
   return (
     <Box flexDirection="column" width="100%">
-      {header !== '' ? line(header, 'fg', true) : null}
-      <Box flexDirection="column" marginTop={header !== '' ? 1 : 0} width="100%">
+      {header === '' ? null : line(header, 'fg', true)}
+      <Box flexDirection="column" marginTop={header === '' ? 0 : 1} width="100%">
         {options.map((label, index) => {
           const selected = index === selectedIndex
           const numbered = `${index + 1} ${label}`

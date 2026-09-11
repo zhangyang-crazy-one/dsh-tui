@@ -18,9 +18,14 @@ describe('parseTuiArgs', () => {
     expect(values.cwd).toBeUndefined()
   })
 
-  it('parses --resume and --cwd options', () => {
-    const values = parseTuiArgs(['--resume', 's1', '--cwd', '/tmp/x', 'hello'])
-    expect(values).toEqual({ task: 'hello', resume: 's1', cwd: '/tmp/x' })
+  it('parses --resume, --cwd, and --model options', () => {
+    const values = parseTuiArgs(['--resume', 's1', '--cwd', '/tmp/x', '--model', 'deepseek-v4.1-flash-expires-on-0910', 'hello'])
+    expect(values).toEqual({
+      task: 'hello',
+      resume: 's1',
+      cwd: '/tmp/x',
+      model: 'deepseek-v4.1-flash-expires-on-0910',
+    })
   })
 
   it('parses --frame-stats and leaves it undefined when absent', () => {
@@ -80,6 +85,7 @@ describe('startup plugin through the cmdline seam', () => {
       '--resume', 's-42',
       '--cwd', '/tmp/work',
       '--frame-stats', 'stats/frames.json',
+      '--model', 'deepseek-v4.1-flash-expires-on-0910',
       '说 hi', 'again',
     ])
     expect(values).toEqual({
@@ -87,6 +93,7 @@ describe('startup plugin through the cmdline seam', () => {
       resume: 's-42',
       cwd: '/tmp/work',
       frameStats: 'stats/frames.json',
+      model: 'deepseek-v4.1-flash-expires-on-0910',
     })
     expect(observed.exits).toEqual([])
   })

@@ -82,7 +82,7 @@ describe('long-session fixture (SC4 prep)', () => {
     const handle = await reader.sessionPersistence.open(SessionId(fixture.id), 'read')
     let loadedEvents: readonly SessionEvent[]
     try {
-      loadedEvents = await handle.read()
+      loadedEvents = (await handle.read()).events
     } finally {
       await handle.close()
     }

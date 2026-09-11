@@ -116,12 +116,12 @@ export function PermissionPane({
           </Box>
         )
       })}
-      {errorReason !== undefined ? (
+      {errorReason === undefined ? null : (
         <Box flexDirection="column" width="100%">
           {line(`✗ 切换权限失败：${errorReason}`, 'error')}
           {line(FAIL_NEXT, 'fgDim')}
         </Box>
-      ) : null}
+      )}
       {line(FOOTNOTE, 'fgDim')}
     </Box>
   )

@@ -3,6 +3,24 @@
  * Historical messages retain stable event-sequence ids, assistant reasoning,
  * and ordered tool records; only the active turn changes between pushes.
  *
+ * Session-format v3 semantics:
+ * - `system/message` surface events (surface node 0 and any in-history prompt
+ *   updates) are intentionally dropped from the transcript. The system prompt
+ *   is derived history and is rendered through `dsh-client-ui-conversation`'s
+ *   system-prompt Definition, not as a transcript bubble. Dropping here keeps
+ *   the TUI transcript projection consistent with the upstream web chat
+ *   target (`packages/client/ui-chat` — "never renders a system/message as a
+ *   transcript bubble") and lets the JSONL export stay allowlist-driven.
+ * - The `default:` branch is the documented fall-through for the
+ *   merge-extensible `SessionEventMap`; new event members (added since v3 or
+ *   by future plugins) are silently skipped without throwing, mirroring
+ *   `export.ts`'s "Extension and lifecycle events are intentionally absent"
+ *   stance.
+ * - `eventState` from `SessionHandle.read` is irrelevant to a read-only
+ *   projection: events are already deeply frozen by upstream producers and
+ *   this module never mutates them, so `'detached'` vs `'shared-frozen'`
+ *   carries no behavioural difference for the TUI.
+ *
  * Caller precondition: a global event consumer must admit events by authoritative
  * Session identity before calling this module. The projection API receives no
  * Session object and therefore cannot verify Session identity.
@@ -611,6 +629,10 @@ export function createProjector(): Projector {
         return
       }
       default:
+        // SessionEventMap is merge-extensible; the v3-only `system/message`
+        // surface event lands here so the transcript stays free of system
+        // prompts. Future event types added by upstream or plugins fall
+        // through the same branch.
         return
     }
   }

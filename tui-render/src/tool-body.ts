@@ -220,8 +220,8 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
           newLinesCount ??= newSplit.length
         }
 
-        const oldHunk = `${oldStart}${oldLinesCount !== 1 ? `,${oldLinesCount}` : ''}`
-        const newHunk = `${newStart}${newLinesCount !== 1 ? `,${newLinesCount}` : ''}`
+        const oldHunk = `${oldStart}${oldLinesCount === 1 ? '' : `,${oldLinesCount}`}`
+        const newHunk = `${newStart}${newLinesCount === 1 ? '' : `,${newLinesCount}`}`
         source.push({ text: `@@ -${oldHunk} +${newHunk} @@`, token: 'codeBg', diffKind: 'hunk' })
 
         const maxLine = Math.max(oldStart + oldLinesCount, newStart + newLinesCount, 1)
@@ -290,7 +290,10 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
     default: {
       const isSubagent = card.name === 'subagent' || card.name.startsWith('subagent_') || card.name === 'delegate'
       const subInfo = isSubagent ? parseSubagentArguments(card.arguments) : undefined
-      if (subInfo !== undefined) {
+      if (subInfo === undefined) {
+        // Unknown presenter tags retain the generic argument/result document.
+        args()
+      } else {
         if (subInfo.description !== undefined) {
           section(options.locale === 'zh-CN' ? '任务目标' : 'Task', textLines(subInfo.description))
         }
@@ -306,9 +309,6 @@ export function createToolBodyDocument(card: ToolBodyCard, options: ToolBodyOpti
         if (subInfo.prompt !== undefined) {
           section(options.locale === 'zh-CN' ? '任务指令' : 'Prompt', textLines(subInfo.prompt))
         }
-      } else {
-        // Unknown presenter tags retain the generic argument/result document.
-        args()
       }
       if (card.resultText !== undefined) section(tuiCopy('result', options.locale), textLines(card.resultText))
       break
@@ -374,7 +374,7 @@ export function materializeToolBodyRow(document: RowSource<ToolBodyLine>, fragme
   return {
     text: escapeToolText(source.text.slice(fragment.start, fragment.end)),
     token: source.token,
-    ...(source.diffKind !== undefined ? { diffKind: source.diffKind } : {}),
+    ...(source.diffKind === undefined ? {} : { diffKind: source.diffKind }),
   }
 }
 

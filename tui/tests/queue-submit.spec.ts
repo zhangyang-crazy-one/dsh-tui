@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { RuntimeController, type StructuredDraft } from '../src/index.ts'
 import { CompactionId } from '@deepseek-ai/dsh-compaction'
+import { SessionSeq } from '@deepseek-ai/dsh-session'
 import { createProjector } from '@deepseek-ai/dsh-tui-render'
 
 type UserMessage = ReturnType<typeof createUserMessage>
@@ -152,11 +153,11 @@ describe('RuntimeController structured draft submit', () => {
 
     const projector = createProjector()
     projector.push({
-      type: 'compaction/start', seq: 1, time: 1,
+      type: 'compaction/start', seq: SessionSeq(1), time: 1,
       data: { compactionId: CompactionId('first'), turn: null },
     })
     projector.push({
-      type: 'compaction/start', seq: 2, time: 2,
+      type: 'compaction/start', seq: SessionSeq(2), time: 2,
       data: { compactionId: CompactionId('latest'), turn: null },
     })
     ;(state as unknown as { projector: ReturnType<typeof createProjector> }).projector = projector

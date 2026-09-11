@@ -14,7 +14,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import SessionStore from '@deepseek-ai/dsh-session'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { MessageId } from '@deepseek-ai/dsh-llm'
@@ -85,10 +85,10 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
     const seq = (turn - 1) * 4
     const time = base + (turn - 1) * 4000
     const userIndex = (turn - 1) * 2
-    events.push({ type: 'turn/start', seq, time, data: { turn } })
+    events.push({ type: 'turn/start', seq: SessionSeq(seq), time, data: { turn } })
     events.push({
       type: 'user/message',
-      seq: seq + 1,
+      seq: SessionSeq(seq + 1),
       time: time + 1,
       data: {
         role: 'user',
@@ -104,7 +104,7 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
     })
     events.push({
       type: 'assistant/message',
-      seq: seq + 2,
+      seq: SessionSeq(seq + 2),
       time: time + 2,
       data: {
         turn,
@@ -130,7 +130,7 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
     })
     events.push({
       type: 'turn/end',
-      seq: seq + 3,
+      seq: SessionSeq(seq + 3),
       time: time + 3,
       data: { turn, reason: { kind: 'completed' } },
     })

@@ -6,12 +6,13 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import { ToolCallId, createAssistantMessage } from '@deepseek-ai/dsh-llm'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -35,11 +36,7 @@ function scriptedAgent(
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      discarded: () => {},
-      claimed: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -80,7 +77,7 @@ async function bench(policy: 'ask' | 'never' = 'ask'): Promise<Bench> {
       })
       const agent = scriptedAgent(ownerCtx, session, () => {})
       liveAgent = agent
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -281,6 +278,7 @@ describe('live-agent approval answerer', () => {
         content: [{ type: 'text', text: 'ok' }],
         source: { provider: 'test-provider', model: 'test-model' },
       }),
+      stream: [],
     }, { surfaceOp: 'append' })
     liveAgent.session.append('step/end', { turn: 1, step: 1 })
     liveAgent.session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -422,8 +420,8 @@ describe('live-agent approval answerer', () => {
     })).resolves.toBe('rejected')
     expect(consulted).not.toHaveBeenCalled()
     expect(controller.getApprovalPane().open).toBe(false)
-    expect(liveAgent.session.events.filter(e => e.type === 'approval/asked')).toHaveLength(1)
-    expect(liveAgent.session.events.filter(e => e.type === 'approval/decided')).toHaveLength(1)
+    expect(liveAgent.session.snapshotEvents().filter(e => e.type === 'approval/asked')).toHaveLength(1)
+    expect(liveAgent.session.snapshotEvents().filter(e => e.type === 'approval/decided')).toHaveLength(1)
   })
 
   it('does not prompt when danger-full-access has no wider sandbox mode', async () => {

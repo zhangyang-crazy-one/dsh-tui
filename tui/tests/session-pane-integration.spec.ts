@@ -11,21 +11,21 @@ import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, open, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
   ResumeAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import SessionStore from '@deepseek-ai/dsh-session'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type {
   Session,
   SessionEvent,
-  SessionHeader,
   UserMessage,
 } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
@@ -33,7 +33,7 @@ import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SessionTitleService, { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
 import { escapeContent } from '@deepseek-ai/dsh-tui-render'
-import { logPath, sessionDir } from '../../../session/session-persistence-jsonl/src/format.ts'
+import { logPath } from '../../../session/session-persistence-jsonl/src/format.ts'
 import { FEEDBACK_MS, RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
@@ -117,16 +117,16 @@ async function injectColdRenameFailure(root: string, id: ReturnType<typeof Sessi
 /** One balanced completed turn with a logged title — the smallest resumable log. */
 function seedLog(title: string, base: number): SessionEvent[] {
   return [
-    { type: 'turn/start', seq: 0, time: base + 1, data: { turn: 1 } },
+    { type: 'turn/start', seq: SessionSeq(0), time: base + 1, data: { turn: 1 } },
     {
       type: 'session/title',
-      seq: 1,
+      seq: SessionSeq(1),
       time: base + 2,
       data: { title, messageSeqs: [], source: { kind: 'fallback' } },
     },
     {
       type: 'turn/end',
-      seq: 2,
+      seq: SessionSeq(2),
       time: base + 3,
       data: { turn: 1, reason: { kind: 'completed' } },
     },
@@ -136,7 +136,7 @@ function seedLog(title: string, base: number): SessionEvent[] {
 async function loadStoredEvents(persistence: SessionPersistence, id: SessionId): Promise<readonly SessionEvent[]> {
   const handle = await persistence.open(id, 'read')
   try {
-    return await handle.read()
+    return (await handle.read()).events
   } finally {
     await handle.close()
   }
@@ -165,11 +165,7 @@ function scriptedAgent(ownerCtx: Context, session: Session): Agent {
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      discarded: () => {},
-      claimed: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -202,9 +198,9 @@ function persistenceStub(
   deleteImpl?: () => Promise<void>,
 ) {
   return {
-    list: async () => [{ header: { id: SessionId('session-stub'), version: 2, createdAt: 0, isSeeded: false, delegationDepth: 0 } }],
+    list: async () => [{ header: { id: SessionId('session-stub'), version: 3, createdAt: 0, isSeeded: false, delegationDepth: 0 } }],
     open: async (id: SessionId) => ({
-      header: { id, version: 2, createdAt: 0, isSeeded: false, delegationDepth: 0 },
+      header: { id, version: 3, createdAt: 0, isSeeded: false, delegationDepth: 0 },
       read: async () => [],
       close: async () => {},
     }),
@@ -225,10 +221,6 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
   })
   if (options.stubPersistence === undefined) {
     await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
-    ;(ctx.sessionPersistence as unknown as { delete: (id: SessionId) => Promise<void> }).delete = async (id: SessionId) => {
-      const dir = sessionDir(root, undefined, id)
-      await rm(dir, { recursive: true, force: true })
-    }
   } else {
     ctx.provide(
       'sessionPersistence',
@@ -252,7 +244,7 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
         ...(factoryOptions.meta === undefined ? {} : { meta: factoryOptions.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await factoryOptions.setup?.(agent.ctx)
+      await factoryOptions.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -268,7 +260,7 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
         seed: events.map(event => structuredClone(event)),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -551,6 +543,7 @@ describe('session directory controller', () => {
     selectRow(controller, 'session-1')
     await vi.waitFor(() => {
       expect(resumeCalls).toHaveBeenCalledWith('session-1')
+      expect(controller.session?.id).toBe('session-1')
     })
     controller.dispatch({ kind: 'session-pane' })
     controller.dispatch({ kind: 'delete-session' })
@@ -806,9 +799,9 @@ describe('session directory controller', () => {
       source: { kind: 'user' },
     }, { surfaceOp: 'append' })
     await vi.waitFor(() => {
-      expect(foldSessionTitle(live.events)?.source).toEqual({ kind: 'fallback' })
+      expect(foldSessionTitle(live.snapshotEvents())?.source).toEqual({ kind: 'fallback' })
     })
-    expect(foldSessionTitle(live.events)?.title).toBe('你好')
+    expect(foldSessionTitle(live.snapshotEvents())?.title).toBe('你好')
     expect(controller.getTitle()).toBe('')
     await ctx.fiber.dispose()
   })

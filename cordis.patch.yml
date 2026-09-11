@@ -82,6 +82,16 @@
     - id: tui-startup
       name: "@deepseek-ai/dsh-tui/startup"
 
+    # Zero-config official OpenAI/Anthropic routes. They register
+    # openai-official / anthropic-official so they do not collide with the
+    # dormant llm-pi-ai catalog keys openai / anthropic that the Web Models
+    # page already owns.
+    - id: llm-openai
+      name: "@deepseek-ai/dsh-llm-openai"
+
+    - id: llm-anthropic
+      name: "@deepseek-ai/dsh-llm-anthropic"
+
     # Reads its task from the ordinary tuiStartup provider.
     - id: tui-runtime
       name: "@deepseek-ai/dsh-tui"

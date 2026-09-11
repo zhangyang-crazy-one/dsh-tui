@@ -210,9 +210,9 @@ function usageSegments(view: AdaptiveInfoFooterView): Segment[] {
 function metricsSegments(view: AdaptiveInfoFooterView, columns: number): Segment[] {
   const effortText = view.effort !== undefined && view.effort !== ''
     ? `${tuiCopy('effort', view.locale)} ${escapeContent(view.effort)}`
-    : view.reasoningVisible !== undefined
-      ? `${tuiCopy('reasoning', view.locale)} ${tuiCopy(view.reasoningVisible ? 'on' : 'off', view.locale)}`
-      : undefined
+    : view.reasoningVisible === undefined
+      ? undefined
+      : `${tuiCopy('reasoning', view.locale)} ${tuiCopy(view.reasoningVisible ? 'on' : 'off', view.locale)}`
   const effort = effortText === undefined
     ? undefined
     : segment(effortText, 'fgDim')

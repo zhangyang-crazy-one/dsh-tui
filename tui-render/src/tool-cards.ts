@@ -73,11 +73,11 @@ function collapsedResultTail(text: string | undefined): string | undefined {
 /** Failure identity and result detail shown before any call-argument fallback. */
 function collapsedFailureSummary(card: CollapsedToolCard): string | undefined {
   const terminal = card.resultView?.card === 'terminal' ? card.resultView : undefined
-  const identity = terminal?.exitCode !== undefined
-    ? `exitCode ${String(terminal.exitCode)}`
-    : terminal?.signal !== undefined
-      ? `signal ${terminal.signal}`
-      : card.error?.code
+  const identity = terminal?.exitCode === undefined
+    ? terminal?.signal === undefined
+      ? card.error?.code
+      : `signal ${terminal.signal}`
+    : `exitCode ${String(terminal.exitCode)}`
   const detail = collapsedResultTail(terminal?.output ?? card.resultText)
   if (identity === undefined) return detail
   return detail === undefined || detail === identity ? identity : `${identity} · ${detail}`
@@ -543,19 +543,19 @@ export function tokenizeToolHeading(heading: string): readonly CommandHeadingTok
 
   if (rest !== '') {
     const inIndex = rest.indexOf(' in ')
-    if (inIndex !== -1) {
-      const param = rest.slice(0, inIndex)
-      const afterIn = rest.slice(inIndex + 4)
-      if (param !== '') tokens.push({ text: param, token: 'fgSoft' })
-      tokens.push({ text: ' in ', token: 'fgDim' })
-      if (afterIn !== '') tokens.push({ text: afterIn, token: 'codeKeyword' })
-    } else {
+    if (inIndex === -1) {
       const lower = tool.toLowerCase()
       if (lower === 'read' || lower === 'write' || lower === 'edit' || lower === 'view') {
         tokens.push({ text: rest, token: 'codeKeyword' })
       } else {
         tokens.push({ text: rest, token: 'fgSoft' })
       }
+    } else {
+      const param = rest.slice(0, inIndex)
+      const afterIn = rest.slice(inIndex + 4)
+      if (param !== '') tokens.push({ text: param, token: 'fgSoft' })
+      tokens.push({ text: ' in ', token: 'fgDim' })
+      if (afterIn !== '') tokens.push({ text: afterIn, token: 'codeKeyword' })
     }
   }
 

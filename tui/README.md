@@ -23,6 +23,7 @@ The deepseek-tui profile bundle and runtime plugin lets a user run the interacti
 -----
 
 <a id="use-this-package"></a>
+
 ## Use this package
 
 ### Configuration
@@ -67,6 +68,7 @@ Reasoning is hidden by default. Ctrl+O or `/reasoning` shows the complete dim re
 -----
 
 <a id="understand-the-implementation"></a>
+
 ## Understand the implementation
 
 <details>
@@ -79,6 +81,7 @@ Reasoning is hidden by default. Ctrl+O or `/reasoning` shows the complete dim re
 -----
 
 <a id="further-exploration"></a>
+
 ## Further Exploration
 
 - [TUI package map](../README.md) — terminal runtime and renderer ownership.
@@ -89,6 +92,7 @@ Reasoning is hidden by default. Ctrl+O or `/reasoning` shows the complete dim re
 -----
 
 <a id="model-experience"></a>
+
 ## Model Experience
 
 ### Terminal application request
@@ -117,6 +121,7 @@ New turns append through the Agent's normal request construction; resuming recon
 - **Draft FIFO is process-local** — later-turn drafts are not crash-recovered; only messages handed to the Agent inbox or appended to the session log have durable ownership.
 
 <a id="dev-note"></a>
+
 ### Dev Note
 
 <details>

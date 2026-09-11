@@ -23,6 +23,7 @@ deepseek-tui 的 profile bundle（配置包）与运行时插件让用户在 `ds
 -----
 
 <a id="use-this-package"></a>
+
 ## 使用本包
 
 ### 配置
@@ -67,6 +68,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 -----
 
 <a id="understand-the-implementation"></a>
+
 ## 理解实现
 
 <details>
@@ -79,6 +81,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 -----
 
 <a id="further-exploration"></a>
+
 ## 进一步探索
 
 - [TUI 包映射](../README.zh.md) — 终端运行时与渲染器所有权。
@@ -89,6 +92,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 -----
 
 <a id="model-experience"></a>
+
 ## 模型体验
 
 ### 终端应用请求
@@ -117,6 +121,7 @@ profile 的系统提示词标识终端界面，运行时通过常规 Agent API �
 - **Draft FIFO 仅在进程内存在** — 后续轮次 draft 不参与崩溃恢复；只有已移交 Agent inbox 或已追加到会话日志的消息具有持久所有权。
 
 <a id="dev-note"></a>
+
 ### 开发备注
 
 <details>

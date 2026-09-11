@@ -783,4 +783,62 @@ describe('createProjector', () => {
     expect(row?.text).toContain('配置错误')
     expect(row?.text).toContain('apiKeyEnv')
   })
+
+  it('drops v3 system/message surface events from the transcript without throwing', () => {
+    // v3 introduces `system/message` carrying the rendered system prompt
+    // (surface node 0) and any in-history prompt updates. Upstream renders
+    // these through the system-prompt Definition, never as a transcript
+    // bubble (see packages/client/ui-chat/tests/conversation-node-definitions.client.spec.ts
+    // "never renders a system/message as a transcript bubble"). The TUI
+    // projection must therefore swallow the event silently without disturbing
+    // user/assistant rows, no matter where in the fold it appears.
+    const projector = createProjector()
+    expect(() => {
+      projector.seed([
+        event(1, 'turn/start', { turn: 1 }),
+        event(2, 'step/start', { turn: 1, step: 1 }),
+        // Surface node 0 — the initial system prompt.
+        event(3, 'system/message', {
+          turn: 1,
+          step: 1,
+          message: { source: { kind: 'system' }, content: [{ type: 'text', text: '# System' }] },
+        }),
+        event(4, 'user/message', {
+          content: [{ type: 'text', text: 'hello' }],
+          source: { kind: 'user' },
+        }),
+        event(5, 'assistant/message', {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'reply-1',
+            role: 'assistant',
+            source: { kind: 'model', provider: 'test', model: 'test' },
+            content: [{ type: 'text', text: 'world' }],
+          },
+        }),
+        // Mid-stream in-history prompt update — must also be dropped.
+        event(6, 'system/message', {
+          turn: 1,
+          step: 1,
+          message: { source: { kind: 'system' }, content: [{ type: 'text', text: '# System Updated' }] },
+        }),
+        event(7, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+      ])
+    }).not.toThrow()
+    const model = projector.snapshot()
+    // One user row + one assistant row, no system row.
+    expect(model.history).toHaveLength(2)
+    expect(model.history[0]?.kind).toBe('user')
+    expect(model.history[0]?.text).toBe('hello')
+    expect(model.history[1]?.kind).toBe('assistant')
+    expect(model.history[1]?.text).toBe('world')
+    expect(model.activeTurn).toBeUndefined()
+    expect(model.status).toBe('idle')
+    // No transcript row carries any system-prompt text.
+    for (const row of model.history) {
+      expect(row.text).not.toContain('# System')
+      expect(row.text).not.toContain('# System Updated')
+    }
+  })
 })

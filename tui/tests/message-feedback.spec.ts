@@ -7,12 +7,13 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
@@ -96,11 +97,7 @@ async function bench(setup?: (ctx: Context) => void): Promise<Bench> {
         id: session.id,
         options: {},
         session,
-        inbox: new Inbox(session, {
-          inserted: () => {},
-          discarded: () => {},
-          claimed: () => {},
-        }),
+        inbox: createInboxStub(),
         status: 'idle',
         ctx: ownerCtx.extend({ agent }),
         cancel: () => {},
@@ -111,7 +108,7 @@ async function bench(setup?: (ctx: Context) => void): Promise<Bench> {
         inject: () => {},
         whenIdle: () => Promise.resolve(),
       } satisfies Partial<Agent>)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -139,6 +136,7 @@ function appendAssistant(session: Session, text: string): MessageId {
     turn: 1,
     step: 1,
     message,
+    stream: [],
   }, { surfaceOp: 'append' })
   return message.id
 }
@@ -220,13 +218,13 @@ describe('feedback overlay', () => {
       fake = provideFeedback(ctx, () => undefined)
     })
     appendAssistant(session, '回答')
-    const before = session.events.map(event => event.type)
+    const before = session.snapshotEvents().map(event => event.type)
     controller.dispatch({ kind: 'feedback-pane' })
     controller.dispatch({ kind: 'feedback-rate', rating: 'negative' })
     await vi.waitFor(() => {
       expect(fake?.puts.length).toBe(1)
     })
-    expect(session.events.map(event => event.type)).toEqual(before)
+    expect(session.snapshotEvents().map(event => event.type)).toEqual(before)
     await ctx.fiber.dispose()
   })
 

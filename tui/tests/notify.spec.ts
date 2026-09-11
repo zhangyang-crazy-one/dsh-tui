@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import type { createUserMessage } from '@deepseek-ai/dsh-llm'
-import AgentRegistry, { Inbox, type Agent } from '@deepseek-ai/dsh-agent'
+import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import { createProjector } from '@deepseek-ai/dsh-tui-render'
 import { decideNotify, DEFAULT_NOTIFY_QUIET_INPUT_SECONDS } from '../src/notify.ts'
@@ -304,11 +305,7 @@ async function bench(): Promise<{
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      claimed: () => {},
-      discarded: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'running',
     ctx,
     cancel: (): void => {},

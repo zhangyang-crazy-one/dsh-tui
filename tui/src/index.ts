@@ -2646,13 +2646,13 @@ export class RuntimeController implements TuiController {
               const handle = await (persistence as unknown as {
                 open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
                   header: SessionHeader
-                  read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<readonly SessionEvent[]>
+                  read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<{ readonly events: readonly SessionEvent[] }>
                   close(): Promise<void>
                 }>
               }).open(row.id, 'read', { signal })
               try {
                 signal.throwIfAborted()
-                const events = await handle.read(0, undefined, { signal })
+                const events = (await handle.read(0, undefined, { signal })).events
                 snapshot = cache.coldSnapshot(handle.header, SessionLogOffset(0), events)
               } finally {
                 await handle.close()
@@ -2714,13 +2714,13 @@ export class RuntimeController implements TuiController {
         // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const handle = await (persistence as unknown as {
           open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
-            read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<readonly SessionEvent[]>
+            read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<{ readonly events: readonly SessionEvent[] }>
             close(): Promise<void>
           }>
         }).open(SessionId(childId), 'read', { signal })
         try {
           signal.throwIfAborted()
-          events = await handle.read(0, undefined, { signal })
+          events = (await handle.read(0, undefined, { signal })).events
         } finally {
           await handle.close()
         }
@@ -4201,7 +4201,7 @@ export class RuntimeController implements TuiController {
           if (persistence !== undefined) {
             const handle = await persistence.open(id, 'write', { signal: this.lifecycleAbort.signal })
             try {
-              const events = await handle.read(0, undefined, { signal: this.lifecycleAbort.signal })
+              const events = (await handle.read(0, undefined, { signal: this.lifecycleAbort.signal })).events
               const lastSeq = events.at(-1)?.seq
               const nextSeq = lastSeq === undefined ? 0 : lastSeq + 1
               await handle.append([{
@@ -5681,13 +5681,13 @@ export class RuntimeController implements TuiController {
         const handle = await (persistence as unknown as {
           open(id: SessionId, access: string): Promise<{
             header: SessionHeader
-            read(offset?: number, length?: number): Promise<readonly SessionEvent[]>
+            read(offset?: number, length?: number): Promise<{ readonly events: readonly SessionEvent[] }>
             close(): Promise<void>
           }>
         }).open(id, 'read')
         try {
           createdAt = handle.header.createdAt
-          events = await handle.read(0, undefined)
+          events = (await handle.read(0, undefined)).events
         } finally {
           await handle.close()
         }
@@ -5788,12 +5788,12 @@ export class RuntimeController implements TuiController {
           // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           const handle = await (persistence as unknown as {
             open(id: SessionId, access: string): Promise<{
-              read(offset?: number, length?: number): Promise<readonly SessionEvent[]>
+              read(offset?: number, length?: number): Promise<{ readonly events: readonly SessionEvent[] }>
               close(): Promise<void>
             }>
           }).open(hit.header.id, 'read')
           try {
-            events = await handle.read(0, undefined)
+            events = (await handle.read(0, undefined)).events
           } finally {
             await handle.close()
           }

@@ -13,26 +13,34 @@ import type {
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionHeader, UserMessage } from '@deepseek-ai/dsh-session'
+import { SessionSeq, type Session, type SessionEvent, type SessionHeader, type UserMessage } from '@deepseek-ai/dsh-session'
 import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent'
 import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
 import {
   SessionPersistenceRevision,
-  type BorrowedSessionSource,
 } from '@deepseek-ai/dsh-session-persistence'
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
+
+interface BorrowedSessionSource {
+  source?: 'live' | 'prepared'
+  inspection: { meta: SessionHeader; inheritedEventCount?: number; events: readonly SessionEvent[] }
+  revision?: SessionPersistenceRevision
+  preparedSession?: Session
+  [Symbol.dispose](): void
+}
 
 const roots: string[] = []
 
 /** Minimal persisted lifecycle header for one cold Hub child. */
 function header(id: SessionId, createdAt = 1): SessionHeader {
-  return { version: 0, id, createdAt }
+  return { version: 3, id, createdAt, isSeeded: false }
 }
 
 afterEach(async () => {
@@ -49,6 +57,7 @@ function scriptedAgent(ownerCtx: Context, session: Session): Agent {
     id: session.id,
     options: {},
     session,
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -117,7 +126,7 @@ async function bench(options: {
         ...(options.meta === undefined ? {} : { meta: options.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -141,7 +150,7 @@ describe('Agent Hub controller', () => {
   it('enriches live and cold children without widening their identity entries', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(20_000)
     const liveSnapshot = vi.fn((_session: Session): ProjectionSnapshot => ({
-      asOfSeq: 8,
+      asOfSeq: SessionSeq(8),
       values: {
         tokenUsage: {
           uncachedInputTokens: 12_000,
@@ -157,7 +166,7 @@ describe('Agent Hub controller', () => {
       },
     }))
     const cachedSnapshot = vi.fn((_meta: SessionHeader): ProjectionSnapshot => ({
-      asOfSeq: 12,
+      asOfSeq: SessionSeq(12),
       values: {
         tokenUsage: {
           uncachedInputTokens: 3_000,
@@ -253,7 +262,7 @@ describe('Agent Hub controller', () => {
         }
       const borrowSession = vi.fn(async (): Promise<BorrowedSessionSource> => borrowed)
       const coldSnapshot = vi.fn((): ProjectionSnapshot => ({
-        asOfSeq: 0,
+        asOfSeq: SessionSeq(0),
         values: {
           tokenUsage: {
             uncachedInputTokens: 4,
@@ -328,7 +337,7 @@ describe('Agent Hub controller', () => {
     const dispose = vi.fn()
     const gate = Promise.withResolvers<BorrowedSessionSource>()
     const started = Promise.withResolvers<undefined>()
-    const coldSnapshot = vi.fn((): ProjectionSnapshot => ({ asOfSeq: 0, values: {} }))
+    const coldSnapshot = vi.fn((): ProjectionSnapshot => ({ asOfSeq: SessionSeq(0), values: {} }))
     const { ctx, controller } = await bench({
       listHeaders: async () => [childHeader],
       cachedSnapshot: () => undefined,
@@ -446,19 +455,22 @@ describe('Agent Hub controller', () => {
   it('renders a successful child transcript with only human-visible text', async () => {
     const events: SessionEvent[] = [
       {
-        type: 'user/message', seq: 0, time: 0,
+        type: 'user/message', seq: SessionSeq(0), time: 0,
         data: createUserMessage({ content: [{ type: 'text', text: '' }], source: { kind: 'user' } }),
+        surfaceOp: 'append',
       },
       {
-        type: 'user/message', seq: 1, time: 1,
+        type: 'user/message', seq: SessionSeq(1), time: 1,
         data: createUserMessage({ content: [{ type: 'text', text: 'hello' }], source: { kind: 'user' } }),
+        surfaceOp: 'append',
       },
       {
-        type: 'user/message', seq: 2, time: 2,
+        type: 'user/message', seq: SessionSeq(2), time: 2,
         data: createUserMessage({ content: [{ type: 'text', text: 'hidden' }], source: { kind: 'plugin', plugin: 'x', form: 'instructions' } }),
+        surfaceOp: 'append',
       },
       {
-        type: 'assistant/message', seq: 3, time: 3,
+        type: 'assistant/message', seq: SessionSeq(3), time: 3,
         data: {
           turn: 1, step: 1,
           message: createAssistantMessage({
@@ -467,9 +479,10 @@ describe('Agent Hub controller', () => {
           }),
           stream: [],
         },
+        surfaceOp: 'append',
       },
       {
-        type: 'assistant/message', seq: 4, time: 4,
+        type: 'assistant/message', seq: SessionSeq(4), time: 4,
         data: {
           turn: 1, step: 2,
           message: createAssistantMessage({
@@ -478,8 +491,9 @@ describe('Agent Hub controller', () => {
           }),
           stream: [],
         },
+        surfaceOp: 'append',
       },
-      { type: 'turn/end', seq: 5, time: 5, data: { turn: 1, reason: { kind: 'completed' } } },
+      { type: 'turn/end', seq: SessionSeq(5), time: 5, data: { turn: 1, reason: { kind: 'completed' } } },
     ]
     const { ctx, controller } = await bench({
       listChildren: async () => [{

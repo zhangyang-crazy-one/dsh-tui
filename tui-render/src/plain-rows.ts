@@ -85,7 +85,7 @@ export class PlainTextRowCache {
         sourceEnd: -1,
         rawTail: false,
         background,
-        ...(backgroundColumns !== undefined ? { backgroundColumns } : {}),
+        ...(backgroundColumns === undefined ? {} : { backgroundColumns }),
       }
       materialized.set(index, row)
       return row
@@ -96,7 +96,7 @@ export class PlainTextRowCache {
       naturalWidth,
       width,
       bytes: Buffer.byteLength(source) + wrapped.length * 128,
-      ...(backgroundColumns !== undefined ? { backgroundColumns } : {}),
+      ...(backgroundColumns === undefined ? {} : { backgroundColumns }),
       background,
     })
     return rows

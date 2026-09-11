@@ -10,16 +10,17 @@ import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
   ResumeAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type {
   Session,
   SessionEvent,
@@ -70,10 +71,10 @@ function deferred<T>(): {
 function round(turn: number, keyword: string, base: number): SessionEvent[] {
   const seq = (turn - 1) * 4
   return [
-    { type: 'turn/start', seq, time: base, data: { turn } },
+    { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
       type: 'user/message',
-      seq: seq + 1,
+      seq: SessionSeq(seq + 1),
       time: base + 1,
       data: createUserMessage({
         content: [{ type: 'text', text: `please buy ${keyword}` }],
@@ -83,7 +84,7 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
     },
     {
       type: 'assistant/message',
-      seq: seq + 2,
+      seq: SessionSeq(seq + 2),
       time: base + 2,
       data: {
         turn,
@@ -98,7 +99,7 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
     },
     {
       type: 'turn/end',
-      seq: seq + 3,
+      seq: SessionSeq(seq + 3),
       time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },
@@ -128,11 +129,7 @@ function scriptedAgent(ownerCtx: Context, session: Session): Agent {
     id: session.id,
     options: {},
     session,
-    inbox: new Inbox(session, {
-      inserted: () => {},
-      discarded: () => {},
-      claimed: () => {},
-    }),
+    inbox: createInboxStub(),
     status: 'idle',
     ctx: agentCtx,
     cancel: () => {},
@@ -213,7 +210,7 @@ async function bench(
         ...(options.meta === undefined ? {} : { meta: options.meta }),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },
@@ -225,7 +222,7 @@ async function bench(
       const handle = await ctx.sessionPersistence.open(options.resumeSessionId, 'read')
       let events: readonly SessionEvent[]
       try {
-        events = await handle.read()
+        events = (await handle.read()).events
       } finally {
         await handle.close()
       }
@@ -233,7 +230,7 @@ async function bench(
         seed: events.map(event => structuredClone(event)),
       })
       const agent = scriptedAgent(ownerCtx, session)
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },

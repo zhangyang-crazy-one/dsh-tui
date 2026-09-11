@@ -34,7 +34,7 @@ function thinkingHeader(durationMs: number, expanded: boolean, live = false, wid
   const mark = expanded ? '▾ ' : ''
   const icon = live ? getBrailleSpinnerFrame(durationMs) : '✻'
   const parts = [
-    ...(mark !== '' ? [styled(mark, 'accentText')] : []),
+    ...(mark === '' ? [] : [styled(mark, 'accentText')]),
     styled(`${icon} 思考`, 'accentText'),
     styled(` (${formatSeconds(durationMs)}s)`, 'fgDim'),
   ]

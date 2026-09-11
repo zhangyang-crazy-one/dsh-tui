@@ -728,7 +728,7 @@ function projectReasoningEntry(
   const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : '✻'
   const prefix = live ? '' : '▾ '
   const headerLine = surfaceLine([
-    ...(prefix !== '' ? [{ text: prefix, token: 'accentText' as const, bold: false }] : []),
+    ...(prefix === '' ? [] : [{ text: prefix, token: 'accentText' as const, bold: false }]),
     { text: `${icon} 思考`, token: 'accentText' as const, bold: false },
     { text: ` (${secondsLabel}s)`, token: 'fgDim' as const, bold: false },
   ], 0, 'toolBg', scope.width)

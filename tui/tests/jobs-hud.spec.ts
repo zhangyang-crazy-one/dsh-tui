@@ -6,12 +6,13 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
   AgentHandle,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { JobId } from '@deepseek-ai/dsh-jobs'
@@ -61,11 +62,7 @@ async function bench(setup?: (ctx: Context) => void): Promise<Bench> {
         id: session.id,
         options: {},
         session,
-        inbox: new Inbox(session, {
-          inserted: () => {},
-          discarded: () => {},
-          claimed: () => {},
-        }),
+        inbox: createInboxStub(),
         status: 'idle',
         ctx: ownerCtx.extend({ agent }),
         cancel: () => {},
@@ -77,7 +74,7 @@ async function bench(setup?: (ctx: Context) => void): Promise<Bench> {
         whenIdle: () => Promise.resolve(),
       } satisfies Partial<Agent>)
       liveAgent = agent
-      await options.setup?.(agent.ctx)
+      await options.setup?.(agent.ctx, agent)
       ctx.agents.register(agent)
       return { agent, dispose: () => Promise.resolve() }
     },

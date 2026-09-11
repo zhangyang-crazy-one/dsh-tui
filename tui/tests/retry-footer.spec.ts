@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { Inbox, type Agent } from '@deepseek-ai/dsh-agent'
+import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
+import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { RetryId } from '@deepseek-ai/dsh-llm-retry'
 import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
 import { createProjector } from '@deepseek-ai/dsh-tui-render'
@@ -39,13 +40,13 @@ async function fixture(): Promise<Fixture> {
   state.readTuiSettings = () => ({ notify: 'off' })
   const bind = (session: Session): void => {
     const projector = createProjector()
-    projector.seed(session.events)
+    projector.seed(session.snapshotEvents())
     const agent = {} as Agent
     Object.assign(agent, {
       id: session.id,
       options: {},
       session,
-      inbox: new Inbox(session, { inserted: () => {}, claimed: () => {}, discarded: () => {} }),
+      inbox: createInboxStub(),
       status: 'running',
       ctx,
       cancel: () => {},
