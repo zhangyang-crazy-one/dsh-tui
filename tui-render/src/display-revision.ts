@@ -1,5 +1,8 @@
 /** Compact display revisions retain source references without copying source into frame identifiers. */
 
+/** Owner object keyed by weak reference in the revision index. */
+export type DisplayOwner = object
+
 /** Weakly owned revisions for immutable rows or explicit mutable-view fields. */
 export class DisplayRevisionIndex {
   private next = 0
@@ -11,12 +14,12 @@ export class DisplayRevisionIndex {
    * @param fields - primitive values and immutable object references; no serialized transcript text.
    * @returns stable process-local revision until these fields change.
    */
-  revision(owner: object, fields: readonly unknown[] = []): string {
+  revision(owner: DisplayOwner, fields: readonly unknown[] = []): string {
     const previous = this.entries.get(owner)
     if (previous !== undefined && fields.length === previous.fields.length
       && fields.every((field, index) => Object.is(field, previous.fields[index]))) return previous.version
     const version = String(++this.next)
-    this.entries.set(owner, { fields: fields.slice(), version })
+    this.entries.set(owner, { fields: [...fields], version })
     return version
   }
 }

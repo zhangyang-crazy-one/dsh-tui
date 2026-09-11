@@ -149,6 +149,7 @@ export async function exportSessionMarkdown(
     throw new Error('session export target must be a direct child of the export directory')
   }
   await mkdir(resolvedDir, { recursive: true })
+  // SAFETY: duck-typed backward compatibility across Session version boundaries
   const legacy = session as unknown as { snapshotEvents?: () => readonly SessionEvent[]; events?: readonly SessionEvent[] }
   const events = typeof legacy.snapshotEvents === 'function'
     ? legacy.snapshotEvents()

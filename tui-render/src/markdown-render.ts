@@ -170,6 +170,7 @@ function inlineToSegments(
     case 'break':
       return [{ text: '\n', token: 'fg', bold: false }]
     default: {
+      // SAFETY: container nodes in mdast PhrasingContent carry children
       const children = (node as unknown as { children?: readonly PhrasingContent[] }).children
       if (children === undefined) return []
       return children.flatMap(child => inlineToSegments(child, hyperlinks))

@@ -31,7 +31,7 @@ export const environment: TerminalEnvironment = {
  */
 export function assertInteractiveTerminal(
   env: TerminalEnvironment = environment,
-  stderr: { write(chunk: string): unknown } = process.stderr,
+  stderr: { write(chunk: string): boolean | void } = process.stderr,
   exit: (code: number) => void = code => process.exit(code),
 ): void {
   if (env.isTTY && env.term !== 'dumb') return

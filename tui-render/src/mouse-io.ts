@@ -353,7 +353,7 @@ function wrapStdin(
   onMouse: (event: SgrMouseEvent) => void,
   wheelRows: number,
 ): { stdin: NodeJS.ReadStream; dispose: () => void } {
-  // PassThrough supplies the readable surface Ink uses; the TTY-only members
+  // SAFETY: PassThrough supplies the readable surface Ink uses; the TTY-only members
   // below are assigned here, so the widening cast goes through unknown.
   const stream = new PassThrough() as unknown as NodeJS.ReadStream & {
     isTTY: boolean

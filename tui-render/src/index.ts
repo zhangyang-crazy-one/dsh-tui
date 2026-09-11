@@ -8,9 +8,10 @@
 
 import { render, renderToString, Text } from 'ink'
 import React, { createElement } from 'react'
-
-if (typeof (globalThis as unknown as { React?: typeof React }).React === 'undefined') {
-  ;(globalThis as unknown as { React: typeof React }).React = React
+// SAFETY: global React binding required by Ink JSX runtime in dual-CJS/ESM contexts
+const globalReact = globalThis as unknown as { React?: typeof React }
+if (typeof globalReact.React === 'undefined') {
+  globalReact.React = React
 }
 import type { ReactNode } from 'react'
 import { AppShell } from './app-shell.tsx'
