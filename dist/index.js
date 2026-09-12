@@ -81501,6 +81501,7 @@ function customProviderProfileFrom(head, models) {
     baseURL: head.baseURL.replace(/\/+$/, ""),
     apiKeyEnv: head.apiKeyEnv ?? credentialEnvName(head.name),
     displayName: head.displayName ?? head.name,
+    ...head.defaultInput === void 0 ? {} : { defaultInput: head.defaultInput },
     models: models.map(profileModelEntryFor)
   };
 }
@@ -81615,6 +81616,12 @@ function stringifySettingsFieldValue(namespace, field, value) {
     }
     return `${String(keys.length)} \u4E2A Provider (${keys.join(", ")})`;
   }
+  if (field === "defaultInput" || field.endsWith(".defaultInput")) {
+    if (Array.isArray(value)) {
+      return value.includes("image") ? "text, image (\u652F\u6301\u89C6\u89C9)" : "text (\u4EC5\u6587\u672C)";
+    }
+    return "text, image (\u9ED8\u8BA4)";
+  }
   return stringifySettingValue(value);
 }
 function parseSettingsFieldValue(namespace, field, current, draft, knownProviders = []) {
@@ -81712,6 +81719,25 @@ function parseSettingsFieldValue(namespace, field, current, draft, knownProvider
     }
     return trimmed;
   }
+  if (field === "defaultInput" || field.endsWith(".defaultInput")) {
+    const trimmed = draft.trim().toLowerCase();
+    if (trimmed === "") return ["text", "image"];
+    const tokens = trimmed.split(/[,\s]+/).filter((t) => t !== "");
+    const result = [];
+    for (const token of tokens) {
+      if (token === "text" || token === "\u6587\u672C") {
+        if (!result.includes("text")) result.push("text");
+      } else if (token === "image" || token === "vision" || token === "\u89C6\u89C9" || token === "\u56FE\u7247") {
+        if (!result.includes("text")) result.push("text");
+        if (!result.includes("image")) result.push("image");
+      } else if (token === "all" || token === "\u5168\u90E8") {
+        return ["text", "image"];
+      } else {
+        throw new TypeError(`\u672A\u77E5\u8F93\u5165\u6A21\u6001 "${token}"\uFF1B\u53EF\u9009 text\uFF08\u4EC5\u6587\u672C\uFF09\u6216 text, image\uFF08\u652F\u6301\u89C6\u89C9\uFF09`);
+      }
+    }
+    return result.length > 0 ? result : ["text"];
+  }
   return parseSettingValue(current, draft);
 }
 function settingsRowsFromDescribe(descriptors, read, options) {
@@ -81768,6 +81794,14 @@ function settingsRowsFromDescribe(descriptors, read, options) {
               value: stringifySettingValue(profile.apiKeyEnv ?? ""),
               required: true,
               label: `providers \xB7 ${pId} \xB7 \u51ED\u636E\u53D8\u91CF (apiKeyEnv)`
+            });
+            rows.push({
+              namespace: "llm-pi-ai",
+              field: `providers.${pId}.defaultInput`,
+              value: stringifySettingsFieldValue("llm-pi-ai", `providers.${pId}.defaultInput`, profile.defaultInput),
+              required: false,
+              label: `providers \xB7 ${pId} \xB7 \u8F93\u5165\u6A21\u6001 (defaultInput: text/image)`,
+              editValue: Array.isArray(profile.defaultInput) ? profile.defaultInput.join(", ") : "text, image"
             });
             rows.push({
               namespace: "llm-pi-ai",

@@ -523,6 +523,12 @@ export function stringifySettingsFieldValue(
     }
     return `${String(keys.length)} 个 Provider (${keys.join(', ')})`
   }
+  if (field === 'defaultInput' || field.endsWith('.defaultInput')) {
+    if (Array.isArray(value)) {
+      return value.includes('image') ? 'text, image (支持视觉)' : 'text (仅文本)'
+    }
+    return 'text, image (默认)'
+  }
   return stringifySettingValue(value)
 }
 
@@ -650,6 +656,25 @@ export function parseSettingsFieldValue(
     }
     return trimmed
   }
+  if (field === 'defaultInput' || field.endsWith('.defaultInput')) {
+    const trimmed = draft.trim().toLowerCase()
+    if (trimmed === '') return ['text', 'image']
+    const tokens = trimmed.split(/[,\s]+/).filter(t => t !== '')
+    const result: ('text' | 'image')[] = []
+    for (const token of tokens) {
+      if (token === 'text' || token === '文本') {
+        if (!result.includes('text')) result.push('text')
+      } else if (token === 'image' || token === 'vision' || token === '视觉' || token === '图片') {
+        if (!result.includes('text')) result.push('text')
+        if (!result.includes('image')) result.push('image')
+      } else if (token === 'all' || token === '全部') {
+        return ['text', 'image']
+      } else {
+        throw new TypeError(`未知输入模态 "${token}"；可选 text（仅文本）或 text, image（支持视觉）`)
+      }
+    }
+    return result.length > 0 ? result : ['text']
+  }
   return parseSettingValue(current, draft)
 }
 
@@ -718,6 +743,14 @@ export function settingsRowsFromDescribe(
               value: stringifySettingValue(profile.apiKeyEnv ?? ''),
               required: true,
               label: `providers · ${pId} · 凭据变量 (apiKeyEnv)`,
+            })
+            rows.push({
+              namespace: 'llm-pi-ai',
+              field: `providers.${pId}.defaultInput`,
+              value: stringifySettingsFieldValue('llm-pi-ai', `providers.${pId}.defaultInput`, profile.defaultInput),
+              required: false,
+              label: `providers · ${pId} · 输入模态 (defaultInput: text/image)`,
+              editValue: Array.isArray(profile.defaultInput) ? profile.defaultInput.join(', ') : 'text, image',
             })
             rows.push({
               namespace: 'llm-pi-ai',

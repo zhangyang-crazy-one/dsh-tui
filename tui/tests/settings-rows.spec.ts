@@ -443,6 +443,7 @@ describe('settingsRowsFromDescribe', () => {
       'providers.sf.api',
       'providers.sf.baseURL',
       'providers.sf.apiKeyEnv',
+      'providers.sf.defaultInput',
       'providers.sf.displayName',
       'providers.sf.models',
       'providers',
@@ -451,7 +452,8 @@ describe('settingsRowsFromDescribe', () => {
     expect(rows[2]?.required).toBe(true)
     expect(rows[3]?.required).toBe(true)
     expect(rows[4]?.required).toBe(false)
-    expect(rows[5]?.value).toBe('deepseek-v3')
+    expect(rows[5]?.required).toBe(false)
+    expect(rows[6]?.value).toBe('deepseek-v3')
   })
 
   it('lists one credential row per referenced name with its configured state', () => {
