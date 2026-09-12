@@ -58695,7 +58695,7 @@ var import_react40 = __toESM(require_react(), 1);
 // packages/tui/tui-render/src/content.ts
 var GRAPHEME = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function escapeContent(text4) {
-  return text4.replace(
+  return text4.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(
     /[\u0000-\u0008\u000B-\u001F\u007F]/g,
     (char) => `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`
   ).replace(/\u001B/g, "\\x1b");

@@ -27,7 +27,8 @@ describe('escapeContent', () => {
     expect(escapeContent('\u000b\u000c')).toBe('\\x0b\\x0c')
     expect(escapeContent('\u000e\u001f')).toBe('\\x0e\\x1f')
     expect(escapeContent('\u007f')).toBe('\\x7f')
-    expect(escapeContent('a\tb\nc\rd')).toBe('a\tb\nc\\x0dd')
+    expect(escapeContent('a\tb\nc\rd')).toBe('a\tb\nc\nd')
+    expect(escapeContent('a\tb\nc\r\nd')).toBe('a\tb\nc\nd')
   })
 
   it('leaves plain text untouched', () => {

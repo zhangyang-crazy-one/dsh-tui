@@ -26,6 +26,8 @@ const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
  */
 export function escapeContent(text: string): string {
   return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
     .replace(
       /[\u0000-\u0008\u000B-\u001F\u007F]/g,
       char => `\\x${char.charCodeAt(0).toString(16).padStart(2, '0')}`,
