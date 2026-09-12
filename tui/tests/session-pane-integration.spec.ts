@@ -157,6 +157,30 @@ async function preCreateSessions(root: string): Promise<void> {
   await writer.fiber.dispose()
 }
 
+/** Persist one bootstrap-only probe and one preset fixture to test filtering. */
+async function preCreateProbeAndPreset(root: string): Promise<void> {
+  const writer = new Context()
+  await writer.plugin(SessionStore)
+  await writer.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+
+  const emptyId = SessionId('session-empty-probe')
+  const detachedEmpty = writer.sessions.prepare(emptyId)
+  const emptyHandle = await writer.sessionPersistence.create(detachedEmpty.header)
+  await emptyHandle.append([
+    { type: 'permission/preset', seq: SessionSeq(0), time: 1000, data: { preset: 'workspace-write' } },
+    { type: 'sandbox/mode', seq: SessionSeq(1), time: 1001, data: { mode: 'workspace-write' } },
+    { type: 'approval/policy', seq: SessionSeq(2), time: 1002, data: { policy: 'ask' } },
+  ])
+  await emptyHandle.close()
+
+  const presetId = SessionId('preset-minimal-test')
+  const detachedPreset = writer.sessions.prepare(presetId)
+  const presetHandle = await writer.sessionPersistence.create(detachedPreset.header)
+  await presetHandle.append(seedLog('preset test', 2000))
+  await presetHandle.close()
+  await writer.fiber.dispose()
+}
+
 /** Scripted agent whose followup resolves immediately and appends nothing. */
 function scriptedAgent(ownerCtx: Context, session: Session): Agent {
   const agent = {} as Agent
@@ -191,6 +215,8 @@ interface BenchOptions {
   stubPersistence?: { delete?: () => Promise<void> }
   /** Reject agents.create on the nth call (K8 new-session failure). */
   failCreateOn?: number
+  /** Expected persisted session count at bench startup (default 3). */
+  expectedListLength?: number
 }
 
 /** A scripted persistence stub: list/open, delete optional (K6). */
@@ -266,7 +292,7 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
     },
   })
   if (options.stubPersistence === undefined) {
-    expect((await ctx.sessionPersistence.list()).length).toBe(3)
+    expect((await ctx.sessionPersistence.list()).length).toBe(options.expectedListLength ?? 3)
   }
   const out: { text: string } = { text: '' }
   const io: TuiIo = {
@@ -846,6 +872,25 @@ describe('session directory controller', () => {
     controller.dispatch({ kind: 'rename-session', title: 'ignored' })
     await Promise.resolve()
     ctx.get = get as never
+    await ctx.fiber.dispose()
+  })
+  it('excludes cold bootstrap-only empty probe sessions and preset fixtures from the directory list', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-sessions-'))
+    roots.push(root)
+    await preCreateSessions(root)
+
+    await preCreateProbeAndPreset(root)
+
+    const { ctx, controller } = await bench(root, { expectedListLength: 5 })
+    await controller.start()
+
+    await vi.waitFor(() => {
+      const rows = controller.getSessionPane().rows
+      expect(rows).toHaveLength(4)
+      expect(rows.some(r => r.id === 'session-empty-probe')).toBe(false)
+      expect(rows.some(r => r.id === 'preset-minimal-test')).toBe(false)
+    })
+
     await ctx.fiber.dispose()
   })
 })

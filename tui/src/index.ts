@@ -1072,7 +1072,7 @@ export class RuntimeController implements TuiController {
   private listOpen = false
   private confirmDelete = false
   /** Cold session row cache keyed by session id, guarded by persistence snapshot revision. */
-  private readonly sessionRowCache = new Map<SessionId, { row: SessionRow; revision?: unknown }>()
+  private readonly sessionRowCache = new Map<SessionId, { row: SessionRow; revision?: unknown; isEmpty?: boolean }>()
   /** In-flight list refresh promise to deduplicate concurrent refresh runs. */
   private refreshListInFlight: Promise<void> | undefined
   /** Full-text search panel state, driven by the session-query service. */
@@ -2646,7 +2646,11 @@ export class RuntimeController implements TuiController {
               const handle = await (persistence as unknown as {
                 open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
                   header: SessionHeader
-                  read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<{ readonly events: readonly SessionEvent[] }>
+                  read(
+                    offset?: number,
+                    length?: number,
+                    options?: { signal?: AbortSignal },
+                  ): Promise<{ readonly events: readonly SessionEvent[] }>
                   close(): Promise<void>
                 }>
               }).open(row.id, 'read', { signal })
@@ -2714,7 +2718,11 @@ export class RuntimeController implements TuiController {
         // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const handle = await (persistence as unknown as {
           open(id: SessionId, access: string, options?: { signal?: AbortSignal }): Promise<{
-            read(offset?: number, length?: number, options?: { signal?: AbortSignal }): Promise<{ readonly events: readonly SessionEvent[] }>
+            read(
+              offset?: number,
+              length?: number,
+              options?: { signal?: AbortSignal },
+            ): Promise<{ readonly events: readonly SessionEvent[] }>
             close(): Promise<void>
           }>
         }).open(SessionId(childId), 'read', { signal })
@@ -3992,6 +4000,18 @@ export class RuntimeController implements TuiController {
         }
       }
       if (previous.session !== undefined) {
+        const events = getSessionEvents(previous.session)
+        if (isSessionEmpty(events)) {
+          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
+          const persistence = this.ctx.get('sessionPersistence') as unknown as { delete?: (id: SessionId) => Promise<void> } | undefined
+          if (persistence !== undefined && typeof persistence.delete === 'function') {
+            try {
+              await persistence.delete(previous.session.id)
+            } catch (error: unknown) {
+              this.ctx.logger.warn(`failed to delete empty session "${previous.session.id}": ${errorReason(error)}`)
+            }
+          }
+        }
         this.sessionRowCache.delete(previous.session.id)
       }
       if (this.session !== undefined) {
@@ -5501,8 +5521,8 @@ export class RuntimeController implements TuiController {
       const items = await persistence.list()
       const liveSession = this.session
 
-      // Exclude delegated subagent child sessions: they belong to the agent hub,
-      // not the interactive session manager directory.
+      // Exclude delegated subagent child sessions and preset test fixtures:
+      // they belong to the agent hub or internal test runs, not the interactive directory.
       const interactiveItems = items.filter((item) => {
         // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
         const header = (item as unknown as { header?: SessionHeader; id?: SessionId }).header ?? (item as unknown as SessionHeader)
@@ -5510,6 +5530,7 @@ export class RuntimeController implements TuiController {
         return (header as unknown as { origin?: string }).origin !== 'subagent'
           // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
           && (header as unknown as { parentSession?: unknown }).parentSession === undefined
+          && !header.id.startsWith('preset-')
       })
 
       const listedIds = new Set<string>()
@@ -5549,6 +5570,9 @@ export class RuntimeController implements TuiController {
           initialRows.push(this.rowForLiveSession(liveSession))
         } else {
           const cached = this.sessionRowCache.get(id)
+          if (cached?.isEmpty) {
+            continue
+          }
           if (cached === undefined) {
             initialRows.push({
               id,
@@ -5589,11 +5613,11 @@ export class RuntimeController implements TuiController {
           const fetched = await Promise.all(
             batch.map(async ({ id, revision }) => {
               const row = await this.rowFor(id)
-              return { id, row, revision }
+              return { id, row, revision, isEmpty: row.isEmpty ?? false }
             }),
           )
           for (const entry of fetched) {
-            this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision })
+            this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision, isEmpty: entry.isEmpty })
           }
 
           // Progressively update the session list after each batch settles.
@@ -5608,6 +5632,9 @@ export class RuntimeController implements TuiController {
                 updatedRows.push(this.rowForLiveSession(liveSession))
               } else {
                 const cached = this.sessionRowCache.get(id)
+                if (cached?.isEmpty) {
+                  continue
+                }
                 if (cached === undefined) {
                   updatedRows.push({
                     id,
@@ -5668,10 +5695,10 @@ export class RuntimeController implements TuiController {
   }
 
   /** Fold one listed session into a directory row; corrupt logs degrade to the id. */
-  private async rowFor(id: SessionId): Promise<SessionRow> {
+  private async rowFor(id: SessionId): Promise<SessionRow & { isEmpty?: boolean }> {
     const persistence = this.ctx.get('sessionPersistence')
     if (persistence === undefined) {
-      return { id, title: id, updatedAt: 0 }
+      return { id, title: id, updatedAt: 0, isEmpty: false }
     }
     try {
       let events: readonly SessionEvent[]
@@ -5703,9 +5730,10 @@ export class RuntimeController implements TuiController {
         id,
         title: listTitleOf(events),
         updatedAt: events.at(-1)?.time ?? createdAt,
+        isEmpty: isSessionEmpty(events),
       }
     } catch {
-      return { id, title: id, updatedAt: 0 }
+      return { id, title: id, updatedAt: 0, isEmpty: false }
     }
   }
 
@@ -6165,8 +6193,12 @@ export class RuntimeController implements TuiController {
   }
 
   private statusOf(): ViewModel['status'] {
-    if (this.machine === 'generating') return 'generating'
-    if (this.machine === 'stopped') return 'stopped'
+    if (this.machine === 'generating') {
+      return 'generating'
+    }
+    if (this.machine === 'stopped') {
+      return 'stopped'
+    }
     return 'idle'
   }
 
@@ -6291,6 +6323,43 @@ function foldTitle(events?: readonly SessionEvent[]): string | undefined {
 function listTitleOf(events?: readonly SessionEvent[]): string {
   if (!Array.isArray(events)) return '未命名会话'
   return foldTitle(events) ?? '未命名会话'
+}
+
+/**
+ * Event types written during process/storage bootstrap before any turn starts.
+ * A session containing solely these types has no user message, no turn, and
+ * no title — an abandoned probe that should be filtered from directory lists
+ * and cleanly removed on exit.
+ */
+const BOOTSTRAP_ONLY_TYPES = new Set([
+  'session',
+  'permission/preset',
+  'sandbox/mode',
+  'approval/policy',
+  'session/end-seed',
+])
+
+/**
+ * Return true when the event log contains only system bootstrap events.
+ * Empty arrays return false (preserving test stubs).
+ * @param events - the session event stream.
+ * @returns true if every event is a bootstrap event.
+ */
+function isBootstrapOnlySession(events?: readonly SessionEvent[]): boolean {
+  if (!Array.isArray(events) || events.length === 0) return false
+  return events.every((event: { type?: string }) => typeof event.type === 'string' && BOOTSTRAP_ONLY_TYPES.has(event.type))
+}
+
+/**
+ * Return true when a historical session has no user messages and no folded title.
+ * Used to filter out abandoned probes and unprompted command runs from the directory.
+ * @param events - the session event stream.
+ * @returns true if the session contains no user dialogue and no title.
+ */
+function isSessionEmpty(events?: readonly SessionEvent[]): boolean {
+  if (!Array.isArray(events) || events.length === 0) return false
+  if (isBootstrapOnlySession(events)) return true
+  return !events.some(isHumanUserMessage) && foldTitle(events) === undefined
 }
 
 /**
@@ -6644,7 +6713,21 @@ async function run(
       // is logged and the exit continues: durability must not truncate it.
       try {
         if (controller?.session !== undefined) {
-          await sessions.flush(controller.session)
+          const live = controller.session
+          const events = getSessionEvents(live)
+          if (isSessionEmpty(events)) {
+            // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
+            const persistence = ctx.get('sessionPersistence') as unknown as { delete?: (id: SessionId) => Promise<void> } | undefined
+            if (persistence !== undefined && typeof persistence.delete === 'function') {
+              try {
+                await persistence.delete(live.id)
+              } catch (error: unknown) {
+                ctx.logger.warn(`session cleanup before exit failed: ${errorReason(error)}`)
+              }
+            }
+          } else {
+            await sessions.flush(live)
+          }
         }
       } catch (error: unknown) {
         ctx.logger.warn(`session flush before exit failed: ${String(error)}`)
