@@ -1,4 +1,4 @@
-// tui/src/startup.ts
+// packages/tui/tui/src/startup.ts
 import { Command } from "commander";
 import { parseCmdline } from "@deepseek-ai/dsh-cmdline";
 var name = "tui-startup";
