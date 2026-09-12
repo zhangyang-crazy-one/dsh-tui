@@ -4910,7 +4910,17 @@ export class RuntimeController implements TuiController {
    * @returns a user-visible failure reason.
    */
   private friendlyDiscoveryError(error: unknown, apiKey: string | undefined): string {
-    const reason = errorReason(error)
+    let reason = errorReason(error)
+    if (typeof error === 'object' && error !== null && 'cause' in error) {
+      const cause = (error as { cause?: unknown }).cause
+      const causeMsg = errorReason(cause)
+      if (causeMsg && !reason.includes(causeMsg)) {
+        reason = `${reason} (${causeMsg})`
+      }
+    }
+    if (reason.includes('could not reach') || reason.includes('fetch failed')) {
+      return `${reason} · 请检查网络或代理，或直接输入 "名称 端点 模型1,模型2" 手动指定模型`
+    }
     if (apiKey === undefined
       && (reason.includes('401') || reason.includes('403'))) {
       return `${reason} · 请先使用 /key 配置 API key`

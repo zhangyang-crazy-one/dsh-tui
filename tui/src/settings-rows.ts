@@ -351,7 +351,7 @@ export function customProviderProfileFrom(
 ): Record<string, unknown> {
   return {
     api: head.api,
-    baseURL: head.baseURL,
+    baseURL: head.baseURL.replace(/\/+$/, ''),
     apiKeyEnv: head.apiKeyEnv ?? credentialEnvName(head.name),
     displayName: head.displayName ?? head.name,
     models: models.map(profileModelEntryFor),
@@ -629,7 +629,7 @@ export function parseSettingsFieldValue(
   if (field === 'baseURL' || field.endsWith('.baseURL')) {
     const trimmed = draft.trim()
     if (trimmed === '') throw new TypeError('baseURL 接口地址为必填项，不可为空')
-    return trimmed
+    return trimmed.replace(/\/+$/, '')
   }
   if (field === 'apiKeyEnv' || field === 'secretEnv' || field.endsWith('Env') || field.endsWith('Ref')) {
     const trimmed = draft.trim()

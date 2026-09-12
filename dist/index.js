@@ -81498,7 +81498,7 @@ function profileModelEntryFor(entry) {
 function customProviderProfileFrom(head, models) {
   return {
     api: head.api,
-    baseURL: head.baseURL,
+    baseURL: head.baseURL.replace(/\/+$/, ""),
     apiKeyEnv: head.apiKeyEnv ?? credentialEnvName(head.name),
     displayName: head.displayName ?? head.name,
     models: models.map(profileModelEntryFor)
@@ -81694,7 +81694,7 @@ function parseSettingsFieldValue(namespace, field, current, draft, knownProvider
   if (field === "baseURL" || field.endsWith(".baseURL")) {
     const trimmed = draft.trim();
     if (trimmed === "") throw new TypeError("baseURL \u63A5\u53E3\u5730\u5740\u4E3A\u5FC5\u586B\u9879\uFF0C\u4E0D\u53EF\u4E3A\u7A7A");
-    return trimmed;
+    return trimmed.replace(/\/+$/, "");
   }
   if (field === "apiKeyEnv" || field === "secretEnv" || field.endsWith("Env") || field.endsWith("Ref")) {
     const trimmed = draft.trim();
@@ -85735,7 +85735,17 @@ var RuntimeController = class _RuntimeController {
    * @returns a user-visible failure reason.
    */
   friendlyDiscoveryError(error51, apiKey) {
-    const reason = errorReason(error51);
+    let reason = errorReason(error51);
+    if (typeof error51 === "object" && error51 !== null && "cause" in error51) {
+      const cause = error51.cause;
+      const causeMsg = errorReason(cause);
+      if (causeMsg && !reason.includes(causeMsg)) {
+        reason = `${reason} (${causeMsg})`;
+      }
+    }
+    if (reason.includes("could not reach") || reason.includes("fetch failed")) {
+      return `${reason} \xB7 \u8BF7\u68C0\u67E5\u7F51\u7EDC\u6216\u4EE3\u7406\uFF0C\u6216\u76F4\u63A5\u8F93\u5165 "\u540D\u79F0 \u7AEF\u70B9 \u6A21\u578B1,\u6A21\u578B2" \u624B\u52A8\u6307\u5B9A\u6A21\u578B`;
+    }
     if (apiKey === void 0 && (reason.includes("401") || reason.includes("403"))) {
       return `${reason} \xB7 \u8BF7\u5148\u4F7F\u7528 /key \u914D\u7F6E API key`;
     }
