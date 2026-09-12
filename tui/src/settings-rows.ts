@@ -346,6 +346,7 @@ export function customProviderProfileFrom(
     readonly baseURL: string
     readonly apiKeyEnv?: string
     readonly displayName?: string
+    readonly defaultInput?: readonly string[]
   },
   models: readonly ProfileModelEntry[],
 ): Record<string, unknown> {
@@ -354,6 +355,7 @@ export function customProviderProfileFrom(
     baseURL: head.baseURL.replace(/\/+$/, ''),
     apiKeyEnv: head.apiKeyEnv ?? credentialEnvName(head.name),
     displayName: head.displayName ?? head.name,
+    ...(head.defaultInput === undefined ? {} : { defaultInput: head.defaultInput }),
     models: models.map(profileModelEntryFor),
   }
 }
