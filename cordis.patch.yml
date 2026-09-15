@@ -64,6 +64,17 @@
     - id: tool-ask-user
       name: "@deepseek-ai/dsh-tool-ask-user"
 
+    # In-process OpenCode Zen header proxy (vendored from
+    # zhangyang-crazy-one/dsh-zen-proxy, MIT). Listens on localhost
+    # only; point an opencode provider baseURL at
+    # http://127.0.0.1:4097/v1 to reach the Zen free tier.
+    # Remove this row to disable the listener.
+    - id: zen-proxy
+      name: "./dist/zen-proxy.js"
+      config:
+        host: 127.0.0.1
+        port: 4097
+
     - id: tui-startup
       name: "./dist/startup.js"
 

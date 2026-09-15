@@ -138,6 +138,30 @@ TUI 是 DSH profile 层，而不是独立的 agent 运行时：
 
 集成源码位于 private [`feat/deepseek-tui` DSH 分支](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui)。影响 DSH 服务、profile 组合、组装后 CLI snapshot 或 Agent Note 的变更归该 monorepo 所有，并遵循其中的架构、测试与文档规则。
 
+### OpenCode Zen 免费模型
+
+打包后的 patch 挂载了 `zen-proxy`（vendored 自
+[zhangyang-crazy-one/dsh-zen-proxy](https://github.com/zhangyang-crazy-one/dsh-zen-proxy)，
+fork 自 [Yee-h/dsh-zen-proxy](https://github.com/Yee-h/dsh-zen-proxy)）：进程内 localhost
+代理，注入 Zen 要求的 OpenCode 官方客户端头（`User-Agent`、
+`x-opencode-client/session/request/project`）。没有它，Zen 会返回
+`400 MissingSessionID` / `429 FreeUsageLimitError`，因为 dsh 始终发送自己的
+attribution `User-Agent`。
+
+使用方法：在 `settings.yaml`（或 TUI `/settings` provider 表单）中把 provider
+指向该代理，并把密钥放在 credentials 中：
+
+```yaml
+llm-pi-ai:
+  providers:
+    opencode:
+      api: openai-completions
+      baseURL: http://127.0.0.1:4097/v1
+      apiKeyEnv: OPENCODE_API_KEY
+```
+
+代理只监听 `127.0.0.1:4097`；从 `cordis.patch.yml` 删除 `zen-proxy` 行即可禁用。
+
 -----
 
 <a id="packages"></a>
@@ -146,6 +170,7 @@ TUI 是 DSH profile 层，而不是独立的 agent 运行时：
 | 包 | DSH 形态 | 职责 |
 |---|---|---|
 | [`tui/`](tui/README.zh.md) | Profile bundle 与运行时插件 | 在 `dsh-base` 上组合终端层、拥有 live 终端会话，并将用户动作映射到 DSH 服务 |
+| [`plugins/zen-proxy/`](https://github.com/zhangyang-crazy-one/dsh-zen-proxy) | Vendored 插件（打包为 `dist/zen-proxy.js`） | 进程内 OpenAI 兼容代理，注入 OpenCode Zen 客户端头；在 `cordis.patch.yml` 中挂载 |
 | [`tui-render/`](tui-render/README.zh.md) | Library | 通过 Ink 投影控制器状态，但不拥有 agent、持久化或模型请求 |
 
 -----

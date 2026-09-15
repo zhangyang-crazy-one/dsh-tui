@@ -138,6 +138,31 @@ The TUI is a DSH profile layer, not a separate agent runtime:
 
 The integration source lives on the private [`feat/deepseek-tui` DSH branch](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui). Changes that affect DSH services, profile composition, assembled CLI snapshots, or Agent Notes belong in that monorepo and follow its architecture, testing, and documentation rules.
 
+### OpenCode Zen free models
+
+The bundled patch mounts `zen-proxy` (vendored from
+[zhangyang-crazy-one/dsh-zen-proxy](https://github.com/zhangyang-crazy-one/dsh-zen-proxy),
+fork of [Yee-h/dsh-zen-proxy](https://github.com/Yee-h/dsh-zen-proxy)): an in-process
+localhost proxy that injects the official OpenCode client headers Zen requires
+(`User-Agent`, `x-opencode-client/session/request/project`). Without it Zen answers
+`400 MissingSessionID` / `429 FreeUsageLimitError` because dsh always sends its
+own attribution `User-Agent`.
+
+To use it, point the provider at the proxy in `settings.yaml` (or the TUI
+`/settings` provider form) and keep the key in credentials:
+
+```yaml
+llm-pi-ai:
+  providers:
+    opencode:
+      api: openai-completions
+      baseURL: http://127.0.0.1:4097/v1
+      apiKeyEnv: OPENCODE_API_KEY
+```
+
+The proxy listens on `127.0.0.1:4097` only; remove the `zen-proxy` row from
+`cordis.patch.yml` to disable it.
+
 -----
 
 <a id="packages"></a>
@@ -146,6 +171,7 @@ The integration source lives on the private [`feat/deepseek-tui` DSH branch](htt
 | Package | DSH shape | Responsibility |
 |---|---|---|
 | [`tui/`](tui/README.md) | Profile bundle plus runtime plugin | Composes the terminal layer over `dsh-base`, owns the live terminal session, and maps user actions to DSH services |
+| [`plugins/zen-proxy/`](https://github.com/zhangyang-crazy-one/dsh-zen-proxy) | Vendored plugin (bundled as `dist/zen-proxy.js`) | In-process OpenAI-compatible proxy injecting OpenCode Zen client headers; mounted in `cordis.patch.yml` |
 | [`tui-render/`](tui-render/README.md) | Library | Projects controller state through Ink without owning agents, persistence, or model requests |
 
 -----
