@@ -28013,16 +28013,13 @@ var init_devtools_window_polyfill = __esm({
   }
 });
 
-// ../../../../tmp/react-devtools-core-stub.js
+// node_modules/.cache/react-devtools-core-stub.js
 var react_devtools_core_stub_default;
 var init_react_devtools_core_stub = __esm({
-  "../../../../tmp/react-devtools-core-stub.js"() {
-    react_devtools_core_stub_default = {
-      initialize() {
-      },
-      connectToDevTools() {
-      }
-    };
+  "node_modules/.cache/react-devtools-core-stub.js"() {
+    react_devtools_core_stub_default = { initialize() {
+    }, connectToDevTools() {
+    } };
   }
 });
 
@@ -31691,10 +31688,6 @@ var Service = class _Service {
   }
 };
 
-// packages/core/agent/src/index.ts
-import { AsyncLocalStorage } from "node:async_hooks";
-import { isPromise } from "node:util/types";
-
 // packages/typert/protocol/src/remote-error.ts
 var RemoteError = class extends Error {
   /**
@@ -33994,6 +33987,8 @@ var Session = class _Session {
   eventsSnapshot;
   /**
    * Return the immutable event stored at one exact sequence number.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
    * @param seq - event sequence number.
    * @returns the accepted event, or undefined when the log does not contain it.
    */
@@ -34004,6 +33999,8 @@ var Session = class _Session {
    * Materialize an immutable snapshot of a half-open event sequence range.
    * A full current snapshot is reused until the next append; every previously
    * returned snapshot remains stable after later appends.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
    * @param fromSeq - non-negative inclusive sequence number; defaults to the log start.
    * @param toSeqExclusive - non-negative exclusive sequence number; defaults to the current end.
    * @returns a frozen array of the selected deeply frozen events.
@@ -34017,6 +34014,8 @@ var Session = class _Session {
   }
   /**
    * Return this Session's events after its fork-inherited prefix.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
    * @returns a fresh array containing child-owned events in log order.
    */
   ownEvents() {
@@ -51361,10 +51360,10 @@ function eastAsianWidth(codePoint, { ambiguousAsWide = false } = {}) {
 
 // node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js
 var segmenter = new Intl.Segmenter();
-var zeroWidthClusterRegex = /^(?:\p{Default_Ignorable_Code_Point}|\p{Control}|\p{Format}|\p{Nonspacing_Mark}|\p{Enclosing_Mark}|\p{Surrogate})+$/v;
-var leadingNonPrintingRegex = /^[\p{Default_Ignorable_Code_Point}\p{Control}\p{Format}\p{Nonspacing_Mark}\p{Enclosing_Mark}\p{Surrogate}]+/v;
-var spacingMarkRegex = /\p{Spacing_Mark}/v;
-var rgiEmojiRegex = /^\p{RGI_Emoji}$/v;
+var zeroWidthClusterRegex = new RegExp("^(?:\\p{Default_Ignorable_Code_Point}|\\p{Control}|\\p{Format}|\\p{Nonspacing_Mark}|\\p{Enclosing_Mark}|\\p{Surrogate})+$", "v");
+var leadingNonPrintingRegex = new RegExp("^[\\p{Default_Ignorable_Code_Point}\\p{Control}\\p{Format}\\p{Nonspacing_Mark}\\p{Enclosing_Mark}\\p{Surrogate}]+", "v");
+var spacingMarkRegex = new RegExp("\\p{Spacing_Mark}", "v");
+var rgiEmojiRegex = new RegExp("^\\p{RGI_Emoji}$", "v");
 var unqualifiedKeycapRegex = /^[\d#*]\u20E3$/;
 var extendedPictographicRegex = /\p{Extended_Pictographic}/gu;
 function isDoubleWidthNonRgiEmojiSequence(segment2) {
@@ -52375,7 +52374,7 @@ var SGR_ANSI_256_LAST_PARAMETER_OFFSET = 2;
 var SGR_TRUECOLOR_LAST_PARAMETER_OFFSET = 4;
 var VARIATION_SELECTOR_16_CODE_POINT = 65039;
 var COMBINING_ENCLOSING_KEYCAP_CODE_POINT = 8419;
-var EMOJI_PRESENTATION_GRAPHEME_REGEX = /\p{Emoji_Presentation}/v;
+var EMOJI_PRESENTATION_GRAPHEME_REGEX = new RegExp("\\p{Emoji_Presentation}", "v");
 var GRAPHEME_SEGMENTER = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 var endCodeNumbers = /* @__PURE__ */ new Set();
 for (const [, end] of ansi_styles_default.codes) {
