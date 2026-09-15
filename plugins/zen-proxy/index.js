@@ -1,8 +1,8 @@
 // Vendored from https://github.com/zhangyang-crazy-one/dsh-zen-proxy
-// (fork of https://github.com/Yee-h/dsh-zen-proxy, MIT) at d818076.
-// dsh-tui bundles this file as dist/zen-proxy.js via
-// deepseek-harness/scripts/build-dsh-tui-bundle.ts; edit upstream
-// and re-vendor rather than editing this copy.
+// (fork of https://github.com/Yee-h/dsh-zen-proxy, MIT).
+// Source of truth for TUI compositions (source + lightweight modes);
+// dsh-tui/plugins/zen-proxy is synced FROM this copy. Edit the fork and
+// re-vendor rather than editing here.
 
 // dsh-zen-proxy — Cordis plugin: in-process OpenAI-compatible proxy that
 // injects OpenCode Zen official client headers on upstream requests.
@@ -122,7 +122,7 @@ export function apply(ctx, config) {
       res.writeHead(502);
       res.end(String(e));
     });
-    if (body !== null) out.end(body);
-    else out.end();
+    if (body === null) out.end();
+    else out.end(body);
   }
 }
