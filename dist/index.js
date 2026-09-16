@@ -69421,25 +69421,44 @@ function renderCode(value, width, rowOffset, sourceStart) {
   const lines = value.split("\n");
   const out = [];
   let row = rowOffset;
+  const digits = Math.max(2, String(lines.length).length);
+  const gutterWidth = digits + 4;
+  const codeWidth = Math.max(1, width - gutterWidth);
   for (const [index2, line5] of lines.entries()) {
-    const wrapped = wrapDisplayLines(escapeContent(line5), Math.max(1, width - 2));
+    const lineNum = index2 + 1;
+    const gutterPrefix = ` ${String(lineNum).padStart(digits, " ")} \u2502 `;
+    const continuationGutter = ` ${" ".repeat(digits)} \u2502 `;
+    const wrapped = wrapDisplayLines(escapeContent(line5), codeWidth);
     if (wrapped.length === 0) {
-      out.push(freezeEmpty(row, index2 === 0 ? sourceStart : -1));
+      const buffer = makeBuffer();
+      appendSegment(buffer, { text: gutterPrefix, token: "fgDim", bold: false });
+      const emptyLine2 = freezeLine(buffer, row, index2 === 0 ? sourceStart : -1);
+      out.push({
+        ...emptyLine2,
+        background: "codeBg",
+        backgroundColumns: Math.max(width, emptyLine2.displayWidth)
+      });
       row += 1;
       continue;
     }
     for (const [partIndex, part] of wrapped.entries()) {
       const buffer = makeBuffer();
-      const tokens = tokenizeCodeLine(`  ${part}`);
+      const gutter = partIndex === 0 ? gutterPrefix : continuationGutter;
+      appendSegment(buffer, { text: gutter, token: "fgDim", bold: false });
+      const tokens = tokenizeCodeLine(part);
       for (const tk of tokens) {
         appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold });
       }
-      const line6 = freezeLine(
+      const codeLine = freezeLine(
         buffer,
         row,
         index2 === 0 && partIndex === 0 ? sourceStart : -1
       );
-      out.push({ ...line6, background: "codeBg" });
+      out.push({
+        ...codeLine,
+        background: "codeBg",
+        backgroundColumns: Math.max(width, codeLine.displayWidth)
+      });
       row += 1;
     }
   }
@@ -82205,6 +82224,7 @@ var LOCAL_COMMANDS = [
   { name: "key", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
   { name: "login", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
   { name: "model", description: "Switch the active model" },
+  { name: "new", description: "Start a new session" },
   { name: "reload", description: "Relaunch this process and resume the session" },
   { name: "resume", description: "Switch or resume a session" },
   { name: "settings", description: "Edit settings, catalogs, and General" }
@@ -85271,6 +85291,12 @@ var RuntimeController = class _RuntimeController {
       this.ownWork(this.exportLive(), "session export");
       return;
     }
+    if (query === "new" || query === "new ") {
+      if (this.blockingHead() !== void 0) return;
+      this.closeOtherPanels();
+      this.dispatch({ kind: "new-session" });
+      return;
+    }
     if (query === "reload") {
       this.requestReload();
       return;
@@ -86030,7 +86056,7 @@ var RuntimeController = class _RuntimeController {
       "\u2191\u2193/jk \u6EDA\u52A8 \xB7 g s \u4F1A\u8BDD\u5217\u8868 \xB7 Tab \u8865\u5168 \xB7 Esc \u5173\u95ED \xB7 / \u547D\u4EE4 \xB7 @ \u63D0\u53CA",
       "\u6EDA\u8F6E\u6EDA\u52A8 \xB7 \u70B9\u51FB\u6253\u5F00\u94FE\u63A5 \xB7 \u62D6\u9009\u590D\u5236",
       "/plan \u8BA1\u5212 \xB7 /goal \u76EE\u6807 \xB7 /compact \u538B\u7F29",
-      "/model \u6A21\u578B\u9009\u62E9 \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D"
+      "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D"
     ];
   }
   /**

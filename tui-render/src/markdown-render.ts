@@ -310,9 +310,10 @@ function renderList(
   return lines
 }
 
-/** Render a code block as token-highlighted lines. Each source line is
- * walked through the lightweight tokenizer; spans carry fg/fgDim tokens
- * and the keyword bold tier. The line is wrapped in codeBg by the bridge.
+/**
+ * Render a code block as Vim-style token-highlighted lines with a line-number
+ * gutter and a full-width codeBg background card. Each source line is walked
+ * through the lightweight tokenizer; spans carry fg/fgDim/codeKeyword tokens.
  */
 function renderCode(
   value: string,
@@ -323,25 +324,44 @@ function renderCode(
   const lines = value.split('\n')
   const out: MarkdownRenderLine[] = []
   let row = rowOffset
+  const digits = Math.max(2, String(lines.length).length)
+  const gutterWidth = digits + 4
+  const codeWidth = Math.max(1, width - gutterWidth)
   for (const [index, line] of lines.entries()) {
-    const wrapped = wrapDisplayLines(escapeContent(line), Math.max(1, width - 2))
+    const lineNum = index + 1
+    const gutterPrefix = ` ${String(lineNum).padStart(digits, ' ')} │ `
+    const continuationGutter = ` ${' '.repeat(digits)} │ `
+    const wrapped = wrapDisplayLines(escapeContent(line), codeWidth)
     if (wrapped.length === 0) {
-      out.push(freezeEmpty(row, index === 0 ? sourceStart : -1))
+      const buffer = makeBuffer()
+      appendSegment(buffer, { text: gutterPrefix, token: 'fgDim', bold: false })
+      const emptyLine = freezeLine(buffer, row, index === 0 ? sourceStart : -1)
+      out.push({
+        ...emptyLine,
+        background: 'codeBg',
+        backgroundColumns: Math.max(width, emptyLine.displayWidth),
+      })
       row += 1
       continue
     }
     for (const [partIndex, part] of wrapped.entries()) {
       const buffer = makeBuffer()
-      const tokens = tokenizeCodeLine(`  ${part}`)
+      const gutter = partIndex === 0 ? gutterPrefix : continuationGutter
+      appendSegment(buffer, { text: gutter, token: 'fgDim', bold: false })
+      const tokens = tokenizeCodeLine(part)
       for (const tk of tokens) {
         appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold })
       }
-      const line = freezeLine(
+      const codeLine = freezeLine(
         buffer,
         row,
         index === 0 && partIndex === 0 ? sourceStart : -1,
       )
-      out.push({ ...line, background: 'codeBg' })
+      out.push({
+        ...codeLine,
+        background: 'codeBg',
+        backgroundColumns: Math.max(width, codeLine.displayWidth),
+      })
       row += 1
     }
   }

@@ -150,6 +150,7 @@ describe('command directory', () => {
       'key',
       'login',
       'model',
+      'new',
       'permission',
       'reasoning',
       'reload',
@@ -170,6 +171,10 @@ describe('command directory', () => {
     expect(controller.commands.find(command => command.name === 'settings')).toEqual({
       name: 'settings',
       description: 'Edit settings, catalogs, and General',
+    })
+    expect(controller.commands.find(command => command.name === 'new')).toEqual({
+      name: 'new',
+      description: 'Start a new session',
     })
     expect(controller.commands.find(command => command.name === 'reload')).toEqual({
       name: 'reload',
@@ -265,6 +270,17 @@ describe('command dispatch', () => {
     await vi.waitFor(() => {
       expect(controller.getFeedback()).toBe('✗ 未知命令')
     })
+    await ctx.fiber.dispose()
+  })
+
+  it('dispatches a new session transition from /new', async () => {
+    const { ctx, controller } = await bench()
+    await controller.start()
+    const dispatchSpy = vi.spyOn(controller, 'dispatch')
+    controller.dispatch({ kind: 'command', query: 'new' })
+    expect(dispatchSpy).toHaveBeenCalledWith({ kind: 'new-session' })
+    controller.dispatch({ kind: 'command', query: 'new ' })
+    expect(dispatchSpy).toHaveBeenCalledWith({ kind: 'new-session' })
     await ctx.fiber.dispose()
   })
 

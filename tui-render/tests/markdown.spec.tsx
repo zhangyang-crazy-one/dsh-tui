@@ -363,13 +363,13 @@ describe('tier-mapped code and inline tokens', () => {
     expect(out).toContain('const x = 1')
   })
 
-  it('indents code blocks two columns (T4)', () => {
+  it('renders code blocks with Vim-style line-number gutter', () => {
     const out = renderText('```\nz\n```')
     const codeLine = out.split('\n').find(line => line.includes('z'))
-    // The indent is painted inside the codeBg strip so the two columns are
-    // never unstyled gap cells; strip SGR before measuring the columns.
+    // The gutter and line number are painted inside the codeBg strip;
+    // strip SGR before measuring the columns.
     const plain = codeLine?.replace(/\x1b\[[0-9;]*m/g, '')
-    expect(plain?.startsWith('  z')).toBe(true)
+    expect(plain?.startsWith('  1 │ z')).toBe(true)
   })
 
   it('retains a huge fence through its last highlighted line', () => {

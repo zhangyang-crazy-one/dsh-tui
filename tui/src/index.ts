@@ -962,6 +962,7 @@ const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
   { name: 'key', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
   { name: 'login', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
   { name: 'model', description: 'Switch the active model' },
+  { name: 'new', description: 'Start a new session' },
   { name: 'reload', description: 'Relaunch this process and resume the session' },
   { name: 'resume', description: 'Switch or resume a session' },
   { name: 'settings', description: 'Edit settings, catalogs, and General' },
@@ -4357,6 +4358,12 @@ export class RuntimeController implements TuiController {
       this.ownWork(this.exportLive(), 'session export')
       return
     }
+    if (query === 'new' || query === 'new ') {
+      if (this.blockingHead() !== undefined) return
+      this.closeOtherPanels()
+      this.dispatch({ kind: 'new-session' })
+      return
+    }
     if (query === 'reload') {
       // Process replacement (flush/unmount/dispose/respawn) owns itself.
       this.requestReload()
@@ -5225,7 +5232,7 @@ export class RuntimeController implements TuiController {
       '↑↓/jk 滚动 · g s 会话列表 · Tab 补全 · Esc 关闭 · / 命令 · @ 提及',
       '滚轮滚动 · 点击打开链接 · 拖选复制',
       '/plan 计划 · /goal 目标 · /compact 压缩',
-      '/model 模型选择 · /help 帮助 · /export 导出会话 · /settings 设置 · /resume 会话 · /reload 重载',
+      '/model 模型选择 · /new 新会话 · /help 帮助 · /export 导出会话 · /settings 设置 · /resume 会话 · /reload 重载',
     ]
   }
 

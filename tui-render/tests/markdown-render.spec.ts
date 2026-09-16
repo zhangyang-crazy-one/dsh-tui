@@ -122,14 +122,15 @@ describe('createStyledMarkdownBlockRenderer', () => {
     })
   })
 
-  it('paints a single-line code block with the two-column indent and codeBg background', () => {
+  it('paints a single-line code block with Vim-style line-number gutter and full codeBg background', () => {
     const lines = render('```\nconst x = 1\n```')
     expect(lines.length).toBe(1)
-    // The two-column indent lives inside the line text so the codeBg strip
-    // covers it; the strip itself rides on the line-level background flag.
-    expect(lines[0]?.text).toBe('  const x = 1')
+    // Vim-style line number gutter and full width codeBg background.
+    expect(lines[0]?.text).toBe('  1 │ const x = 1')
     expect(lines[0]?.background).toBe('codeBg')
+    expect(lines[0]?.backgroundColumns).toBe(80)
     expect(lines[0]?.spans.some(span => span.token === 'codeKeyword')).toBe(true)
+    expect(lines[0]?.spans[0]?.token).toBe('fgDim')
   })
 
   it('emits fgDim spans for blockquotes', () => {
@@ -168,8 +169,9 @@ describe('createStyledMarkdownBlockRenderer', () => {
     const source = Array.from({ length: 5001 }, (_, index) => `const row${index} = ${index}`).join('\n')
     const lines = render(`\`\`\`ts\n${source}\n\`\`\``)
     expect(lines).toHaveLength(5001)
-    expect(lines.at(-1)?.text).toBe('  const row5000 = 5000')
+    expect(lines.at(-1)?.text).toBe(' 5001 │ const row5000 = 5000')
     expect(lines.every(line => line.background === 'codeBg')).toBe(true)
+    expect(lines.every(line => line.backgroundColumns === 80)).toBe(true)
   })
 
   it('does not drop buffered text when the next styled segment needs multiple rows', () => {
