@@ -2569,7 +2569,13 @@ export function TuiLoop({
   let status: ReactNode
   let statusRowCount: number
   if (feedback !== undefined) {
-    statusRowCount = 1
+    const rawLines = feedback.split('\n')
+    const maxBudget = Math.max(1, Math.min(rawLines.length, Math.max(4, Math.floor((rows - 8) / 2))))
+    const visibleLines = rawLines.slice(0, maxBudget)
+    if (rawLines.length > maxBudget) {
+      visibleLines[visibleLines.length - 1] = `${visibleLines[visibleLines.length - 1]} … (+${rawLines.length - maxBudget} 行)`
+    }
+    statusRowCount = visibleLines.length
     status = createElement(
       Box,
       {
@@ -2577,11 +2583,16 @@ export function TuiLoop({
         width: '100%',
         backgroundColor: inkColor('bg'),
       },
-      createElement(
-        Text,
-        null,
-        paintBackgroundRow([feedbackLine(feedback) as string], 'bg', columns),
-      ),
+      ...visibleLines.map((line, index) => {
+        const painted = index === 0
+          ? (feedbackLine(line) as string)
+          : paintRow([styled(escapeContent(line), line.includes('*') || line.includes('活跃') ? 'accentText' : 'fg')])
+        return createElement(
+          Text,
+          { key: index },
+          paintBackgroundRow([painted], 'bg', columns),
+        )
+      }),
     )
   } else if (adaptiveRows.length > 0) {
     const goalLine = goalRuns === undefined

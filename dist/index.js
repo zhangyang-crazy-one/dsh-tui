@@ -80160,7 +80160,13 @@ function TuiLoop({
   let status;
   let statusRowCount;
   if (feedback !== void 0) {
-    statusRowCount = 1;
+    const rawLines = feedback.split("\n");
+    const maxBudget = Math.max(1, Math.min(rawLines.length, Math.max(4, Math.floor((rows - 8) / 2))));
+    const visibleLines = rawLines.slice(0, maxBudget);
+    if (rawLines.length > maxBudget) {
+      visibleLines[visibleLines.length - 1] = `${visibleLines[visibleLines.length - 1]} \u2026 (+${rawLines.length - maxBudget} \u884C)`;
+    }
+    statusRowCount = visibleLines.length;
     status = (0, import_react39.createElement)(
       Box_default,
       {
@@ -80168,11 +80174,14 @@ function TuiLoop({
         width: "100%",
         backgroundColor: inkColor("bg")
       },
-      (0, import_react39.createElement)(
-        Text,
-        null,
-        paintBackgroundRow([feedbackLine(feedback)], "bg", columns)
-      )
+      ...visibleLines.map((line5, index2) => {
+        const painted = index2 === 0 ? feedbackLine(line5) : paintRow([styled(escapeContent(line5), line5.includes("*") || line5.includes("\u6D3B\u8DC3") ? "accentText" : "fg")]);
+        return (0, import_react39.createElement)(
+          Text,
+          { key: index2 },
+          paintBackgroundRow([painted], "bg", columns)
+        );
+      })
     );
   } else if (adaptiveRows.length > 0) {
     const goalLine = goalRuns === void 0 ? void 0 : `${goalRuns.head} \xB7 ${goalRuns.objective}`;
@@ -85378,7 +85387,7 @@ var RuntimeController = class _RuntimeController {
           return;
         }
         if (execution.result.kind !== "success") {
-          this.reportCommandFailure(firstLine2(execution.result.text));
+          this.reportCommandFailure(execution.result.text.trim());
           return;
         }
         const text4 = execution.result.text;
@@ -85398,7 +85407,7 @@ var RuntimeController = class _RuntimeController {
           if (wasPermission || wasPlanDirectory) this.emit();
           return;
         }
-        this.setFeedback(`\u2713 ${firstLine2(text4)}`);
+        this.setFeedback(`\u2713 ${text4.trim()}`);
       },
       (error51) => {
         if (seq !== this.commandSeq) return;
@@ -87011,10 +87020,6 @@ function isSessionEmpty(events) {
   if (!Array.isArray(events) || events.length === 0) return false;
   if (isBootstrapOnlySession(events)) return true;
   return !events.some(isHumanUserMessage) && foldTitle(events) === void 0;
-}
-function firstLine2(text4) {
-  const line5 = text4.split("\n", 1)[0];
-  return line5.trimEnd();
 }
 function planReviewOf(questions) {
   if (questions.length !== 1) return void 0;

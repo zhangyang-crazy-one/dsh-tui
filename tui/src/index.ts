@@ -4458,7 +4458,7 @@ export class RuntimeController implements TuiController {
           return
         }
         if (execution.result.kind !== 'success') {
-          this.reportCommandFailure(firstLine(execution.result.text))
+          this.reportCommandFailure(execution.result.text.trim())
           return
         }
         const text = execution.result.text
@@ -4478,7 +4478,7 @@ export class RuntimeController implements TuiController {
           if (wasPermission || wasPlanDirectory) this.emit()
           return
         }
-        this.setFeedback(`✓ ${firstLine(text)}`)
+        this.setFeedback(`✓ ${text.trim()}`)
       },
       (error: unknown) => {
         if (seq !== this.commandSeq) return
@@ -6398,16 +6398,6 @@ function isSessionEmpty(events?: readonly SessionEvent[]): boolean {
   return !events.some(isHumanUserMessage) && foldTitle(events) === undefined
 }
 
-/**
- * Fold a command result to one feedback row: the first line with trailing
- * whitespace trimmed. The full result stays in the session log (`command/done`).
- * @param text - the handler's verbatim result text.
- * @returns the single feedback line.
- */
-function firstLine(text: string): string {
-  const line = text.split('\n', 1)[0]
-  return (line as string).trimEnd()
-}
 
 /**
  * Narrow an ask-user batch to a plan-review decision: one question whose
