@@ -846,7 +846,8 @@ function apply(ctx, config) {
       body += c;
     });
     req.on("end", () => {
-      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}/chat/completions`, body });
+      const upstreamPath = url === "/v1/responses" ? "/responses" : "/chat/completions";
+      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${upstreamPath}`, body });
     });
   });
   server.on("error", (error) => {
