@@ -62,16 +62,25 @@ export function apply(ctx, config) {
       return;
     }
 
-    if (method !== "POST" || url !== "/v1/chat/completions") {
+    // muse-spark (and other responses-only models) are served by the Zen
+    // gateway at /v1/responses instead of /v1/chat/completions (oh-my-pi
+    // #8957); forwarding both lets pi-ai's openai-responses protocol work.
+    const forwardablePost = url === "/v1/chat/completions" || url === "/v1/responses";
+    if (method !== "POST" || !forwardablePost) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { type: "not_found", message: `zen-proxy: unsupported ${method} ${url}` } }));
       return;
     }
 
     let body = "";
-    req.on("data", (c) => (body += c));
+    req.on("data", (c) => { body += c; });
     req.on("end", () => {
-      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}/chat/completions`, body });
+      // Forward each route to its matching upstream path: /v1/responses
+      // hits /zen/v1/responses, /v1/chat/completions hits
+      // /zen/v1/chat/completions. Forwarding everything to
+      // chat/completions breaks responses-only models (muse-spark, 500).
+      const upstreamPath = url === "/v1/responses" ? "/responses" : "/chat/completions";
+      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${upstreamPath}`, body });
     });
   });
 
@@ -94,15 +103,19 @@ export function apply(ctx, config) {
   function forward(req, res, { method, path, body }) {
     const headers = {
       "content-type": "application/json",
-      // Pass through the caller's Authorization if present; nothing else.
-      ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}),
       "user-agent": config.userAgent,
       "x-opencode-client": config.clientHeader,
       "x-opencode-project": config.projectHeader,
       "x-opencode-session": rnd("ses_"),
       "x-opencode-request": rnd("msg_"),
     };
-    if (body !== null) headers["content-length"] = Buffer.byteLength(body);
+    // Pass through the caller's Authorization if present; nothing else.
+    if (req.headers.authorization !== undefined) {
+      headers.authorization = req.headers.authorization;
+    }
+    if (body !== null) {
+      headers["content-length"] = Buffer.byteLength(body);
+    }
 
     const out = https.request(
       {
@@ -122,7 +135,10 @@ export function apply(ctx, config) {
       res.writeHead(502);
       res.end(String(e));
     });
-    if (body === null) out.end();
-    else out.end(body);
+    if (body === null) {
+      out.end();
+    } else {
+      out.end(body);
+    }
   }
 }

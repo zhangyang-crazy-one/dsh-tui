@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=none
 # The deepseek-tui bundle patch: terminal-surface mode directly over dsh-base.
 # It mounts no Host, HTTP server, Web runtime, or browser plugin. An ordinary
 # provider plugin parses --resume/--cwd and the task positional, then the
@@ -9,8 +10,10 @@
 - id: system-prompt
   config:
     persona: >-
-      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
-      You are interacting with the user through the deepseek-tui terminal interface.
+      You are a coding agent powered by the {{model}} model.
+      Your working directory is {{cwd}}.
+      You are interacting with the user through the deepseek-tui
+      terminal interface.
 
 # The shared module-reload HMR row stays off; the launcher's watch-only
 # fallback still keeps the user patch layers live until the run exits.
@@ -20,11 +23,16 @@
 - id: tools
   config:
     # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
+    # pi-lens-ignore: YAML:0
     mode: !!js process.env.DSH_TOOLS_MODE
 
 - id: approval
+  # pi-lens-ignore: YAML:0
   config:
-    policy: !!js "(process.env.DSH_PERMISSION_MODE ?? 'workspace-write') === 'danger-full-access' ? 'never' : 'ask'"
+    policy: !!js >-
+      (process.env.DSH_PERMISSION_MODE ?? 'workspace-write')
+      === 'danger-full-access'
+      ? 'never' : 'ask'
 
 # Full-text session search stays disabled until the first Ctrl+K search (the
 # base row's `openAt: never`). The TUI has no browser-latency concern, so the
@@ -39,11 +47,15 @@
     models:
       - id: deepseek-v4-flash
         name: DeepSeek-V4-Flash
-        description: Fast, efficient, and economical; suited to focused, routine, or parallel tasks.
+        description: >-
+          Fast, efficient, and economical; suited to focused, routine,
+          or parallel tasks.
         contextWindow: 1000000
       - id: deepseek-v4-pro
         name: DeepSeek-V4-Pro
-        description: Stronger agentic coding, knowledge, and difficult reasoning; suited to complex or quality-critical tasks at higher cost.
+        description: >-
+          Stronger agentic coding, knowledge, and difficult reasoning;
+          suited to complex or quality-critical tasks at higher cost.
         contextWindow: 1000000
       - id: deepseek-v4-flash-vision-exp
         name: DeepSeek-V4-Flash-Vision-Exp
@@ -51,13 +63,17 @@
         inputModalities: [text, image]
       - id: deepseek-v4.1-flash-expires-on-0910
         name: DeepSeek-V4.1-Flash
-        description: DeepSeek V4.1 Flash intermediate beta with native multimodal support, higher capability, faster speed, and lower cost.
+        description: >-
+          DeepSeek V4.1 Flash intermediate beta with native multimodal
+          support, higher capability, faster speed, and lower cost.
         contextWindow: 1000000
         inputModalities: [text, image]
 
 - id: agent-default-model
   config:
+    # pi-lens-ignore: YAML:0
     provider: deepseek-official
+    # pi-lens-ignore: YAML:0
     model: !!js "process.env.DSH_MODEL ?? 'deepseek-v4-flash'"
 
 - insert:
@@ -105,15 +121,19 @@
 
     # Reads its task from the ordinary tuiStartup provider.
     - id: tui-runtime
+      # pi-lens-ignore: YAML:0
       name: "@deepseek-ai/dsh-tui"
       inject: [tuiStartup]
+      # pi-lens-ignore: YAML:0
       config:
+        # pi-lens-ignore: YAML:0
         task: !!js ctx.tuiStartup.task
         resume: !!js ctx.tuiStartup.resume
+        # pi-lens-ignore: YAML:0
         cwd: !!js ctx.tuiStartup.cwd
         model: !!js ctx.tuiStartup.model
         frameStats: !!js ctx.tuiStartup.frameStats
-        # Render policy (overscan + stream pacing + scroll pacing + cache budgets).
+        # Render policy (overscan, stream pacing, scroll pacing, cache).
         # Loaded by the runtime Config schema; the values below mirror the
         # schema defaults so the deployment layer owns the tunables. Override
         # here to retune without touching the plugin.

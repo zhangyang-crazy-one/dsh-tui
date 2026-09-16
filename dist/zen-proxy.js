@@ -835,13 +835,16 @@ function apply(ctx, config) {
       forward(req, res, { method: "GET", path: `${config.upstreamBasePath}/models`, body: null });
       return;
     }
-    if (method !== "POST" || url !== "/v1/chat/completions") {
+    const forwardablePost = url === "/v1/chat/completions" || url === "/v1/responses";
+    if (method !== "POST" || !forwardablePost) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { type: "not_found", message: `zen-proxy: unsupported ${method} ${url}` } }));
       return;
     }
     let body = "";
-    req.on("data", (c) => body += c);
+    req.on("data", (c) => {
+      body += c;
+    });
     req.on("end", () => {
       forward(req, res, { method: "POST", path: `${config.upstreamBasePath}/chat/completions`, body });
     });
@@ -862,15 +865,18 @@ function apply(ctx, config) {
   function forward(req, res, { method, path, body }) {
     const headers = {
       "content-type": "application/json",
-      // Pass through the caller's Authorization if present; nothing else.
-      ...req.headers.authorization ? { authorization: req.headers.authorization } : {},
       "user-agent": config.userAgent,
       "x-opencode-client": config.clientHeader,
       "x-opencode-project": config.projectHeader,
       "x-opencode-session": rnd("ses_"),
       "x-opencode-request": rnd("msg_")
     };
-    if (body !== null) headers["content-length"] = Buffer.byteLength(body);
+    if (req.headers.authorization !== void 0) {
+      headers.authorization = req.headers.authorization;
+    }
+    if (body !== null) {
+      headers["content-length"] = Buffer.byteLength(body);
+    }
     const out = https.request(
       {
         host: config.upstreamHost,
@@ -889,8 +895,11 @@ function apply(ctx, config) {
       res.writeHead(502);
       res.end(String(e));
     });
-    if (body !== null) out.end(body);
-    else out.end();
+    if (body === null) {
+      out.end();
+    } else {
+      out.end(body);
+    }
   }
 }
 export {
