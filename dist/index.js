@@ -82457,6 +82457,7 @@ var RuntimeController = class _RuntimeController {
   modelOpen = false;
   modelFilter = "";
   modelRows = [];
+  cachedModelRows;
   modelSelectedIndex = 0;
   modelStatus = "idle";
   modelError;
@@ -86074,11 +86075,21 @@ var RuntimeController = class _RuntimeController {
    * the panel transients, then load the provider/model catalog concurrently.
    */
   openModelPane() {
-    this.resetModelState();
     this.closeOtherPanels();
+    this.modelFilter = "";
+    this.modelSelectedIndex = 0;
     this.modelOpen = true;
+    if (this.cachedModelRows !== void 0 && this.cachedModelRows.length > 0) {
+      this.modelRows = [...this.cachedModelRows];
+      this.modelStatus = "idle";
+      this.emit();
+      this.ownWork(this.loadModelCatalog(true), "model catalog background refresh");
+      return;
+    }
+    this.modelRows = [];
+    this.modelStatus = "loading";
     this.emit();
-    this.ownWork(this.loadModelCatalog(), "model catalog load");
+    this.ownWork(this.loadModelCatalog(false), "model catalog load");
   }
   /**
    * The catalog rows narrowed by the live filter: case-insensitive substring
@@ -86100,18 +86111,22 @@ var RuntimeController = class _RuntimeController {
    * degrades to a single `provider 当前默认` row carrying the live default
    * model when the provider is the current one.
    */
-  async loadModelCatalog() {
+  async loadModelCatalog(isBackground = false) {
     const seq = ++this.modelSeq;
     const llm = this.ctx.get("llm");
     const defaultModel = this.ctx.get("agentDefaultModel");
     if (llm === void 0 || defaultModel === void 0) {
-      this.modelStatus = "error";
-      this.modelError = "\u6A21\u578B\u670D\u52A1\u4E0D\u53EF\u7528";
-      this.emit();
+      if (!isBackground) {
+        this.modelStatus = "error";
+        this.modelError = "\u6A21\u578B\u670D\u52A1\u4E0D\u53EF\u7528";
+        this.emit();
+      }
       return;
     }
-    this.modelStatus = "loading";
-    this.emit();
+    if (!isBackground) {
+      this.modelStatus = "loading";
+      this.emit();
+    }
     const current = defaultModel.currentSelection();
     try {
       const providers = llm.listProviders();
@@ -86133,7 +86148,9 @@ var RuntimeController = class _RuntimeController {
         );
       }));
       if (seq !== this.modelSeq) return;
-      this.modelRows = groups.flat();
+      const rows = groups.flat();
+      this.cachedModelRows = rows;
+      this.modelRows = [...rows];
       if (this.modelSelectedIndex >= this.modelRows.length) {
         this.modelSelectedIndex = Math.max(0, this.modelRows.length - 1);
       }
@@ -86142,10 +86159,12 @@ var RuntimeController = class _RuntimeController {
     } catch (error51) {
       if (seq !== this.modelSeq) return;
       this.ctx.logger.warn(`model catalog load failed: ${String(error51)}`);
-      this.modelRows = [];
-      this.modelStatus = "error";
-      this.modelError = error51 instanceof Error ? error51.message : String(error51);
-      this.emit();
+      if (!isBackground) {
+        this.modelRows = [];
+        this.modelStatus = "error";
+        this.modelError = error51 instanceof Error ? error51.message : String(error51);
+        this.emit();
+      }
     }
   }
   /** Fold one advertised model into a catalog row. */

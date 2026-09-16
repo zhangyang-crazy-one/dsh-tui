@@ -1093,6 +1093,7 @@ export class RuntimeController implements TuiController {
   private modelOpen = false
   private modelFilter = ''
   private modelRows: ModelRow[] = []
+  private cachedModelRows: readonly ModelRow[] | undefined
   private modelSelectedIndex = 0
   private modelStatus: ModelPaneStatus = 'idle'
   private modelError: string | undefined
@@ -5252,11 +5253,21 @@ export class RuntimeController implements TuiController {
    * the panel transients, then load the provider/model catalog concurrently.
    */
   private openModelPane(): void {
-    this.resetModelState()
     this.closeOtherPanels()
+    this.modelFilter = ''
+    this.modelSelectedIndex = 0
     this.modelOpen = true
+    if (this.cachedModelRows !== undefined && this.cachedModelRows.length > 0) {
+      this.modelRows = [...this.cachedModelRows]
+      this.modelStatus = 'idle'
+      this.emit()
+      this.ownWork(this.loadModelCatalog(true), 'model catalog background refresh')
+      return
+    }
+    this.modelRows = []
+    this.modelStatus = 'loading'
     this.emit()
-    this.ownWork(this.loadModelCatalog(), 'model catalog load')
+    this.ownWork(this.loadModelCatalog(false), 'model catalog load')
   }
 
   /**
@@ -5280,18 +5291,22 @@ export class RuntimeController implements TuiController {
    * degrades to a single `provider 当前默认` row carrying the live default
    * model when the provider is the current one.
    */
-  private async loadModelCatalog(): Promise<void> {
+  private async loadModelCatalog(isBackground = false): Promise<void> {
     const seq = ++this.modelSeq
     const llm = this.ctx.get('llm')
     const defaultModel = this.ctx.get('agentDefaultModel')
     if (llm === undefined || defaultModel === undefined) {
-      this.modelStatus = 'error'
-      this.modelError = '模型服务不可用'
-      this.emit()
+      if (!isBackground) {
+        this.modelStatus = 'error'
+        this.modelError = '模型服务不可用'
+        this.emit()
+      }
       return
     }
-    this.modelStatus = 'loading'
-    this.emit()
+    if (!isBackground) {
+      this.modelStatus = 'loading'
+      this.emit()
+    }
     const current = defaultModel.currentSelection()
     try {
       const providers = llm.listProviders()
@@ -5314,7 +5329,9 @@ export class RuntimeController implements TuiController {
         )
       }))
       if (seq !== this.modelSeq) return
-      this.modelRows = groups.flat()
+      const rows = groups.flat()
+      this.cachedModelRows = rows
+      this.modelRows = [...rows]
       if (this.modelSelectedIndex >= this.modelRows.length) {
         this.modelSelectedIndex = Math.max(0, this.modelRows.length - 1)
       }
@@ -5323,11 +5340,13 @@ export class RuntimeController implements TuiController {
     } catch (error: unknown) {
       if (seq !== this.modelSeq) return
       this.ctx.logger.warn(`model catalog load failed: ${String(error)}`)
-      this.modelRows = []
-      this.modelStatus = 'error'
-      this.modelError =
-        error instanceof Error ? error.message : String(error)
-      this.emit()
+      if (!isBackground) {
+        this.modelRows = []
+        this.modelStatus = 'error'
+        this.modelError =
+          error instanceof Error ? error.message : String(error)
+        this.emit()
+      }
     }
   }
 
