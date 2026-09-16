@@ -79815,18 +79815,18 @@ function TuiLoop({
   helpLinesRef.current = helpPane.lines;
   const historyLengthRef = (0, import_react39.useRef)(model.history.length);
   historyLengthRef.current = model.history.length;
-  const sentHistoryRef = (0, import_react39.useRef)([]);
+  const [sentHistory, setSentHistory] = (0, import_react39.useState)([]);
   const inputHistory = (0, import_react39.useMemo)(() => {
     const fromModel = model.history.filter((m) => m.kind === "user" && typeof m.text === "string" && m.text.trim().length > 0).map((m) => m.text);
     const combined = [];
-    for (const item of [...fromModel, ...sentHistoryRef.current]) {
+    for (const item of [...fromModel, ...sentHistory]) {
       const trimmed = item.trim();
       if (trimmed.length > 0 && combined.at(-1) !== trimmed) {
         combined.push(trimmed);
       }
     }
     return combined;
-  }, [model.history]);
+  }, [model.history, sentHistory]);
   const chordTimerRef = (0, import_react39.useRef)(
     void 0
   );
@@ -79980,19 +79980,19 @@ function TuiLoop({
         issueViewportCommand({ kind: "edge", edge: action.edge });
       } else if (action.kind === "send") {
         const trimmed = action.text.trim();
-        if (trimmed.length > 0 && sentHistoryRef.current.at(-1) !== trimmed) {
-          sentHistoryRef.current.push(trimmed);
+        if (trimmed.length > 0) {
+          setSentHistory((prev) => prev.at(-1) === trimmed ? prev : [...prev, trimmed]);
         }
         issueViewportCommand({ kind: "reset" });
         controller.dispatch(action);
       } else if (action.kind === "command") {
         const queryText = action.query.trim().startsWith("/") ? action.query.trim() : `/${action.query.trim()}`;
-        if (queryText.length > 0 && sentHistoryRef.current.at(-1) !== queryText) {
-          sentHistoryRef.current.push(queryText);
+        if (queryText.length > 0) {
+          setSentHistory((prev) => prev.at(-1) === queryText ? prev : [...prev, queryText]);
         }
         controller.dispatch(action);
       } else if (action.kind === "new-session" || action.kind === "select-session") {
-        sentHistoryRef.current = [];
+        setSentHistory([]);
         issueViewportCommand({ kind: "reset" });
         controller.dispatch(action);
       } else if (action.kind === "intake-clipboard-image") {
