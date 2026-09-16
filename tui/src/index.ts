@@ -5769,7 +5769,9 @@ export class RuntimeController implements TuiController {
         isEmpty: isSessionEmpty(events),
       }
     } catch {
-      return { id, title: id, updatedAt: 0, isEmpty: false }
+      // Unreadable or incompatible-generation logs are excluded from the
+      // interactive directory instead of surfacing as epoch-0 id rows.
+      return { id, title: id, updatedAt: 0, isEmpty: true }
     }
   }
 

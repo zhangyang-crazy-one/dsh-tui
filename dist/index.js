@@ -86518,7 +86518,7 @@ var RuntimeController = class _RuntimeController {
         isEmpty: isSessionEmpty(events)
       };
     } catch {
-      return { id, title: id, updatedAt: 0, isEmpty: false };
+      return { id, title: id, updatedAt: 0, isEmpty: true };
     }
   }
   /** Queue the newest query and enter loading before its debounce delay. */
