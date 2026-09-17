@@ -26,6 +26,7 @@
 //       port: 4097
 
 import z from "@deepseek-ai/schemastery";
+import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 
@@ -38,15 +39,15 @@ export const Config = z.object({
   upstreamBasePath: z.string().default("/zen/v1"),
   userAgent: z
     .string()
-    .default("opencode/1.15.5 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14"),
+    .default("opencode/1.18.30"),
   clientHeader: z.string().default("cli"),
   projectHeader: z.string().default("global"),
 });
 
 export const inject = [];
 
-/** Deterministic per-request random id: `ses_` / `msg_` + 10 chars. */
-const rnd = (p) => `${p}${Math.random().toString(36).slice(2, 12)}`;
+/** Deterministic per-request random id: `ses_` / `msg_` + 26 hex chars. */
+const rnd = (p) => `${p}${crypto.randomBytes(13).toString("hex")}`;
 
 /**
  * @param {import("@deepseek-ai/cordis").Context} ctx
@@ -55,18 +56,31 @@ const rnd = (p) => `${p}${Math.random().toString(36).slice(2, 12)}`;
 export function apply(ctx, config) {
   const server = http.createServer((req, res) => {
     const { method, url } = req;
+    const parsed = new URL(url, "http://127.0.0.1");
+    // Normalize repeated /v1 prefixes (e.g. /v1/v1/messages -> /v1/messages)
+    // and strip trailing slashes.
+    const pathname = parsed.pathname.replace(/^(\/v1)+/, "/v1").replace(/\/+$/, "") || "/";
 
     // GET /v1/models — model-list discovery passthrough.
-    if (method === "GET" && url === "/v1/models") {
+    if (method === "GET" && (pathname === "/v1/models" || pathname === "/models")) {
       forward(req, res, { method: "GET", path: `${config.upstreamBasePath}/models`, body: null });
       return;
     }
 
     // muse-spark (and other responses-only models) are served by the Zen
     // gateway at /v1/responses instead of /v1/chat/completions (oh-my-pi
-    // #8957); forwarding both lets pi-ai's openai-responses protocol work.
-    const forwardablePost = url === "/v1/chat/completions" || url === "/v1/responses";
-    if (method !== "POST" || !forwardablePost) {
+    // #8957); union-alpha and other Claude models are served natively at
+    // /v1/messages (Anthropic Messages protocol).
+    let targetRoute = null;
+    if (pathname === "/v1/chat/completions" || pathname === "/chat/completions") {
+      targetRoute = "/chat/completions";
+    } else if (pathname === "/v1/responses" || pathname === "/responses") {
+      targetRoute = "/responses";
+    } else if (pathname === "/v1/messages" || pathname === "/messages") {
+      targetRoute = "/messages";
+    }
+
+    if (method !== "POST" || !targetRoute) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { type: "not_found", message: `zen-proxy: unsupported ${method} ${url}` } }));
       return;
@@ -75,12 +89,9 @@ export function apply(ctx, config) {
     let body = "";
     req.on("data", (c) => { body += c; });
     req.on("end", () => {
-      // Forward each route to its matching upstream path: /v1/responses
-      // hits /zen/v1/responses, /v1/chat/completions hits
-      // /zen/v1/chat/completions. Forwarding everything to
-      // chat/completions breaks responses-only models (muse-spark, 500).
-      const upstreamPath = url === "/v1/responses" ? "/responses" : "/chat/completions";
-      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${upstreamPath}`, body });
+      // Forward each route to its matching upstream path without client query
+      // params like ?beta=true (which Zen gateway rejects with 500/Endpoint unavailable).
+      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${targetRoute}`, body });
     });
   });
 
@@ -101,17 +112,27 @@ export function apply(ctx, config) {
 
   /** Forward one request to the Zen upstream with official headers injected. */
   function forward(req, res, { method, path, body }) {
+    const sessionId = rnd("ses_");
     const headers = {
       "content-type": "application/json",
       "user-agent": config.userAgent,
       "x-opencode-client": config.clientHeader,
       "x-opencode-project": config.projectHeader,
-      "x-opencode-session": rnd("ses_"),
+      "x-opencode-session": sessionId,
+      "x-session-id": sessionId,
       "x-opencode-request": rnd("msg_"),
     };
     // Pass through the caller's Authorization if present; nothing else.
     if (req.headers.authorization !== undefined) {
       headers.authorization = req.headers.authorization;
+    }
+    if (req.headers["anthropic-version"] !== undefined) {
+      headers["anthropic-version"] = req.headers["anthropic-version"];
+    } else if (path.endsWith("/messages")) {
+      headers["anthropic-version"] = "2023-06-01";
+    }
+    if (req.headers["anthropic-beta"] !== undefined) {
+      headers["anthropic-beta"] = req.headers["anthropic-beta"];
     }
     if (body !== null) {
       headers["content-length"] = Buffer.byteLength(body);

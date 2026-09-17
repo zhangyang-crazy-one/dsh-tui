@@ -84527,7 +84527,8 @@ var RuntimeController = class _RuntimeController {
       turnEndReason: last.kind,
       ...last.abortCause === void 0 ? {} : { abortCause: last.abortCause },
       ...last.errorText === void 0 ? {} : { errorText: last.errorText },
-      sessionTitle: this.notifySessionTitle()
+      sessionTitle: this.notifySessionTitle(),
+      currentPrompt: this.currentPromptText()
     }));
   }
   /**
@@ -84542,7 +84543,8 @@ var RuntimeController = class _RuntimeController {
       secondsSinceLastInput: this.secondsSinceLastInput(),
       toolName: input.toolName,
       questionText: input.questionText,
-      sessionTitle: this.notifySessionTitle()
+      sessionTitle: this.notifySessionTitle(),
+      currentPrompt: this.currentPromptText()
     }));
   }
   /**
@@ -84591,6 +84593,15 @@ var RuntimeController = class _RuntimeController {
    */
   notifySessionTitle() {
     return this.session === void 0 ? void 0 : notifySessionTitle(getSessionEvents(this.session));
+  }
+  currentPromptText() {
+    if (this.session === void 0) return void 0;
+    const events = getSessionEvents(this.session);
+    if (!Array.isArray(events)) return void 0;
+    const lastUser = events.findLast(isHumanUserMessage);
+    if (lastUser === void 0) return void 0;
+    const text4 = joinTextBlocks(lastUser.data.content, " ").trim();
+    return text4.length > 0 ? text4 : void 0;
   }
   /** Record local user input for the notification quiet window. */
   noteUserActivity() {
@@ -87068,9 +87079,16 @@ function foldTitle(events) {
   if (!Array.isArray(events)) return void 0;
   const folded = foldSessionTitle(events);
   if (folded !== void 0) return folded.title;
-  const firstUser = events.find(isHumanUserMessage);
-  if (firstUser !== void 0) {
-    const text4 = joinTextBlocks(firstUser.data.content, " ");
+  const userMessages = events.filter(isHumanUserMessage);
+  if (userMessages.length > 0) {
+    const nonGreeting = userMessages.find((m) => {
+      const text5 = joinTextBlocks(m.data.content, " ").trim().toLowerCase();
+      return !["\u4F60\u597D", "hello", "hi", "hey", "\u60A8\u597D", "test", "say hi"].includes(text5) && text5.length > 2;
+    });
+    const firstUser = userMessages[0];
+    if (firstUser === void 0) return void 0;
+    const chosenUser = nonGreeting ?? firstUser;
+    const text4 = joinTextBlocks(chosenUser.data.content, " ");
     const fallback = fallbackSessionTitle(
       text4,
       LIST_TITLE_MAX_WORDS,

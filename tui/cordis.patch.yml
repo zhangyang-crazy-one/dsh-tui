@@ -76,6 +76,16 @@
     # pi-lens-ignore: YAML:0
     model: !!js "process.env.DSH_MODEL ?? 'deepseek-v4-flash'"
 
+# pi-lens-ignore: YAML:0
+- id: session-title-llm
+  name: "@deepseek-ai/dsh-session-title-all-prompts-llm"
+  config:
+    targetWords: 5
+    targetCjkCharacters: 10
+    maxInputBytes: 16384
+    maxOutputTokens: 64
+    timeoutMs: 60000
+
 - insert:
     # Code Mode is a core execution capability, not a Web component.
     - id: code-runtime

@@ -107,7 +107,7 @@ test('vendored source carries the official identity headers and dynamic ids', ()
   assert.ok(source.includes('rnd("ses_")'), 'session ids must be generated per request')
   assert.ok(source.includes('rnd("msg_")'), 'request ids must be generated per request')
   assert.ok(
-    source.includes('opencode/1.15.5 ai-sdk/provider-utils'),
+    source.includes('opencode/1.18.30'),
     'default User-Agent must impersonate the official CLI',
   )
 })

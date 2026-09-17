@@ -3415,6 +3415,7 @@ export class RuntimeController implements TuiController {
       ...(last.abortCause === undefined ? {} : { abortCause: last.abortCause }),
       ...(last.errorText === undefined ? {} : { errorText: last.errorText }),
       sessionTitle: this.notifySessionTitle(),
+      currentPrompt: this.currentPromptText(),
     }))
   }
 
@@ -3431,6 +3432,7 @@ export class RuntimeController implements TuiController {
       toolName: input.toolName,
       questionText: input.questionText,
       sessionTitle: this.notifySessionTitle(),
+      currentPrompt: this.currentPromptText(),
     }))
   }
 
@@ -3485,6 +3487,16 @@ export class RuntimeController implements TuiController {
    */
   private notifySessionTitle(): string | undefined {
     return this.session === undefined ? undefined : notifySessionTitle(getSessionEvents(this.session))
+  }
+
+  private currentPromptText(): string | undefined {
+    if (this.session === undefined) return undefined
+    const events = getSessionEvents(this.session)
+    if (!Array.isArray(events)) return undefined
+    const lastUser = events.findLast(isHumanUserMessage)
+    if (lastUser === undefined) return undefined
+    const text = joinTextBlocks(lastUser.data.content, ' ').trim()
+    return text.length > 0 ? text : undefined
   }
 
   /** Record local user input for the notification quiet window. */
@@ -6340,9 +6352,16 @@ function foldTitle(events?: readonly SessionEvent[]): string | undefined {
   if (!Array.isArray(events)) return undefined
   const folded = foldSessionTitle(events)
   if (folded !== undefined) return folded.title
-  const firstUser = events.find(isHumanUserMessage)
-  if (firstUser !== undefined) {
-    const text = joinTextBlocks(firstUser.data.content, ' ')
+  const userMessages = events.filter(isHumanUserMessage)
+  if (userMessages.length > 0) {
+    const nonGreeting = userMessages.find((m) => {
+      const text = joinTextBlocks(m.data.content, ' ').trim().toLowerCase()
+      return !['你好', 'hello', 'hi', 'hey', '您好', 'test', 'say hi'].includes(text) && text.length > 2
+    })
+    const firstUser = userMessages[0]
+    if (firstUser === undefined) return undefined
+    const chosenUser = nonGreeting ?? firstUser
+    const text = joinTextBlocks(chosenUser.data.content, ' ')
     const fallback = fallbackSessionTitle(
       text,
       LIST_TITLE_MAX_WORDS,

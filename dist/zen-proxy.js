@@ -814,6 +814,7 @@ defineMethod("transform", [
 ], ({ inner }, isInner) => inner.toString(isInner));
 
 // ../dsh-tui/plugins/zen-proxy/index.js
+import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 var name = "zen-proxy";
@@ -822,21 +823,30 @@ var Config = Schema.object({
   port: Schema.number().default(4097),
   upstreamHost: Schema.string().default("opencode.ai"),
   upstreamBasePath: Schema.string().default("/zen/v1"),
-  userAgent: Schema.string().default("opencode/1.15.5 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14"),
+  userAgent: Schema.string().default("opencode/1.18.30"),
   clientHeader: Schema.string().default("cli"),
   projectHeader: Schema.string().default("global")
 });
 var inject = [];
-var rnd = (p) => `${p}${Math.random().toString(36).slice(2, 12)}`;
+var rnd = (p) => `${p}${crypto.randomBytes(13).toString("hex")}`;
 function apply(ctx, config) {
   const server = http.createServer((req, res) => {
     const { method, url } = req;
-    if (method === "GET" && url === "/v1/models") {
+    const parsed = new URL(url, "http://127.0.0.1");
+    const pathname = parsed.pathname.replace(/^(\/v1)+/, "/v1").replace(/\/+$/, "") || "/";
+    if (method === "GET" && (pathname === "/v1/models" || pathname === "/models")) {
       forward(req, res, { method: "GET", path: `${config.upstreamBasePath}/models`, body: null });
       return;
     }
-    const forwardablePost = url === "/v1/chat/completions" || url === "/v1/responses";
-    if (method !== "POST" || !forwardablePost) {
+    let targetRoute = null;
+    if (pathname === "/v1/chat/completions" || pathname === "/chat/completions") {
+      targetRoute = "/chat/completions";
+    } else if (pathname === "/v1/responses" || pathname === "/responses") {
+      targetRoute = "/responses";
+    } else if (pathname === "/v1/messages" || pathname === "/messages") {
+      targetRoute = "/messages";
+    }
+    if (method !== "POST" || !targetRoute) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { type: "not_found", message: `zen-proxy: unsupported ${method} ${url}` } }));
       return;
@@ -846,8 +856,7 @@ function apply(ctx, config) {
       body += c;
     });
     req.on("end", () => {
-      const upstreamPath = url === "/v1/responses" ? "/responses" : "/chat/completions";
-      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${upstreamPath}`, body });
+      forward(req, res, { method: "POST", path: `${config.upstreamBasePath}${targetRoute}`, body });
     });
   });
   server.on("error", (error) => {
@@ -864,16 +873,26 @@ function apply(ctx, config) {
     };
   }, "zen-proxy.server");
   function forward(req, res, { method, path, body }) {
+    const sessionId = rnd("ses_");
     const headers = {
       "content-type": "application/json",
       "user-agent": config.userAgent,
       "x-opencode-client": config.clientHeader,
       "x-opencode-project": config.projectHeader,
-      "x-opencode-session": rnd("ses_"),
+      "x-opencode-session": sessionId,
+      "x-session-id": sessionId,
       "x-opencode-request": rnd("msg_")
     };
     if (req.headers.authorization !== void 0) {
       headers.authorization = req.headers.authorization;
+    }
+    if (req.headers["anthropic-version"] !== void 0) {
+      headers["anthropic-version"] = req.headers["anthropic-version"];
+    } else if (path.endsWith("/messages")) {
+      headers["anthropic-version"] = "2023-06-01";
+    }
+    if (req.headers["anthropic-beta"] !== void 0) {
+      headers["anthropic-beta"] = req.headers["anthropic-beta"];
     }
     if (body !== null) {
       headers["content-length"] = Buffer.byteLength(body);

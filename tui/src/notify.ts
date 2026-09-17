@@ -84,6 +84,8 @@ export interface NotifyDecisionInput {
   readonly questionText?: string | undefined
   /** Live session display title appended as ` · title`; empty or absent omits the suffix. */
   readonly sessionTitle?: string | undefined
+  /** Current prompt or task summary for the active turn to ensure content coherence. */
+  readonly currentPrompt?: string | undefined
 }
 
 /** Application name used as the notification title on every transport. */
