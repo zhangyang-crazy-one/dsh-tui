@@ -412,4 +412,16 @@ describe('attachMouseIo', () => {
     expect(forwarded.join('')).toBe('plain')
     attached.dispose()
   })
+
+  it('preserves the lower lines when dragging upwards causes edge scrolling', () => {
+    const copy = vi.fn()
+    const session = new MouseSession({ columns: 20, rows: 10, copyText: copy })
+    session.feedStdout('\x1b[1;1Hline1\x1b[2;1Hline2\x1b[3;1Hline3\x1b[4;1Hline4\x1b[5;1Hline5\x1b[6;1Hline6\x1b[7;1Hline7\x1b[8;1Hline8\x1b[9;1Hline9\x1b[10;1Hline10')
+    session.handle({ kind: 'press', button: 'left', col: 1, row: 8 })
+    session.handle({ kind: 'drag', button: 'left', col: 1, row: 1 })
+    session.handle({ kind: 'release', button: 'left', col: 1, row: 1 })
+    expect(copy).toHaveBeenCalled()
+    const copiedText = copy.mock.calls[0]?.[0] as string
+    expect(copiedText).toContain('line8')
+  })
 })

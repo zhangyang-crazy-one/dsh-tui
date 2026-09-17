@@ -8,7 +8,7 @@
  */
 
 import { displayWidth } from './content.ts'
-import type { FrameSnapshotRow, VisibleFrameSnapshot } from './frame-snapshot.ts'
+import type { FrameGeometry, FrameSnapshotRow, VisibleFrameSnapshot } from './frame-snapshot.ts'
 import { hyperlinksEnabled, wrapOsc8 } from './hyperlink.ts'
 import type { PhysicalLine } from './physical-line.ts'
 import { paintBackgroundRow, paintRow, styled } from './theme.ts'
@@ -84,6 +84,7 @@ export class ScreenAtlas {
   private snapshotRanges: { row: number; col: number; width: number }[] = []
   private snapshotRows = new Map<number, FrameSnapshotRow>()
   private snapshotRail: VisibleFrameSnapshot['geometry']['rail']
+  private snapshotGeometry: FrameGeometry | undefined
 
   /**
    * @param width - terminal columns.
@@ -282,6 +283,7 @@ export class ScreenAtlas {
     this.snapshotRanges = []
     this.snapshotRows.clear()
     this.snapshotRail = snapshot.geometry.rail
+    this.snapshotGeometry = snapshot.geometry
     const saved = {
       col: this.cursorCol,
       row: this.cursorRow,
@@ -355,6 +357,37 @@ export class ScreenAtlas {
     return this.cells[(row - 1) * this.width + (col - 1)]
   }
 
+  /** Bounding terminal rows for the transcript content area. */
+  get transcriptBounds(): { top: number; bottom: number } {
+    if (this.snapshotGeometry !== undefined && this.snapshotGeometry.rows >= 10) {
+      const top = this.snapshotGeometry.transcriptTop
+      const rows = this.snapshotGeometry.transcriptRows
+      return { top, bottom: Math.max(top, top + rows - 1) }
+    }
+    return { top: 1, bottom: this.height }
+  }
+
+  /** Clamp screen point to selectable transcript rows and valid columns. */
+  clampToTranscript(point: ScreenPoint): ScreenPoint {
+    const { top, bottom } = this.transcriptBounds
+    return {
+      col: Math.max(1, Math.min(this.width, point.col)),
+      row: Math.max(top, Math.min(bottom, point.row)),
+    }
+  }
+
+  /** Plain text for a horizontal slice of one row with rail excluded. */
+  extractRowText(row: number, fromCol: number = 1, toCol: number = this.width): string {
+    let line = ''
+    for (let col = fromCol; col <= toCol; col++) {
+      if (this.isSnapshotRailControlCell(col, row)) continue
+      const cell = this.cellAt(col, row)
+      if (cell === undefined || cell.ch === '') continue
+      line += cell.ch
+    }
+    return line.replace(/ +$/u, '')
+  }
+
   /**
    * Reading-order plain text between two inclusive endpoints. Published rail
    * cells are excluded, trailing spaces are trimmed, and rows join with `\n`.
@@ -368,14 +401,7 @@ export class ScreenAtlas {
     for (let row = start.row; row <= end.row; row++) {
       const from = row === start.row ? start.col : 1
       const to = row === end.row ? end.col : this.width
-      let line = ''
-      for (let col = from; col <= to; col++) {
-        if (this.isSnapshotRailControlCell(col, row)) continue
-        const cell = this.cellAt(col, row)
-        if (cell === undefined || cell.ch === '') continue
-        line += cell.ch
-      }
-      lines.push(line.replace(/ +$/u, ''))
+      lines.push(this.extractRowText(row, from, to))
     }
     return lines.join('\n')
   }

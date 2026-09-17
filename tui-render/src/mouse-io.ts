@@ -102,6 +102,9 @@ export class MouseSession {
     | { start: ScreenPoint; end: ScreenPoint }
     | undefined
   private railDrag: MouseRailRegion | undefined
+  private dragVirtualStartRow = 0
+  private scrolledOffAbove: string[] = []
+  private scrolledOffBelow: string[] = []
   private edgeTimer: ReturnType<typeof setInterval> | undefined
   private readonly openHref: (href: string) => void
   private readonly copy: (text: string) => void
@@ -141,7 +144,7 @@ export class MouseSession {
    */
   handle(event: SgrMouseEvent): string {
     if (event.kind === 'wheel' && event.delta !== undefined) {
-      this.onScroll(event.delta)
+      this.scroll(event.delta)
       return ''
     }
     const point: ScreenPoint = { col: event.col, row: event.row }
@@ -155,8 +158,12 @@ export class MouseSession {
         this.onRail(railFraction(region, event.row))
         return this.repaintSelection()
       }
-      this.drag = { start: point, moved: false }
-      this.selection = { start: point, end: point }
+      const clampedPoint = this.atlas.clampToTranscript(point)
+      this.drag = { start: clampedPoint, moved: false }
+      this.dragVirtualStartRow = clampedPoint.row
+      this.scrolledOffAbove = []
+      this.scrolledOffBelow = []
+      this.selection = { start: clampedPoint, end: clampedPoint }
       return ''
     }
     if (event.kind === 'drag' && this.railDrag !== undefined && event.button === 'left') {
@@ -169,28 +176,53 @@ export class MouseSession {
       return ''
     }
     if (event.kind === 'drag' && this.drag !== undefined && event.button === 'left') {
-      if (event.col !== this.drag.start.col || event.row !== this.drag.start.row) {
+      const clampedPoint = this.atlas.clampToTranscript(point)
+      if (clampedPoint.col !== this.drag.start.col || clampedPoint.row !== this.drag.start.row) {
         this.drag.moved = true
       }
-      this.selection = { start: this.drag.start, end: point }
+      const { top, bottom } = this.atlas.transcriptBounds
+      const visualStartRow = Math.max(top, Math.min(bottom, this.dragVirtualStartRow))
+      this.selection = {
+        start: { col: this.drag.start.col, row: visualStartRow },
+        end: clampedPoint,
+      }
       this.syncEdge(event.row)
       return this.repaintSelection()
     }
     if (event.kind === 'release' && this.drag !== undefined) {
       this.stopEdge()
-      if (event.col !== this.drag.start.col || event.row !== this.drag.start.row) {
+      const clampedPoint = this.atlas.clampToTranscript(point)
+      if (clampedPoint.col !== this.drag.start.col || clampedPoint.row !== this.drag.start.row) {
         this.drag.moved = true
-        this.selection = { start: this.drag.start, end: point }
+      }
+      const { top, bottom } = this.atlas.transcriptBounds
+      const visualStartRow = Math.max(top, Math.min(bottom, this.dragVirtualStartRow))
+      this.selection = {
+        start: { col: this.drag.start.col, row: visualStartRow },
+        end: clampedPoint,
       }
       if (this.drag.moved) {
         // A drag creates and copies one reading-order range on release.
-        const range = this.selection as { start: ScreenPoint; end: ScreenPoint }
-        this.copy(this.atlas.extract(range.start, range.end))
+        const range = this.selection
+        if (this.scrolledOffAbove.length === 0 && this.scrolledOffBelow.length === 0) {
+          this.copy(this.atlas.extract(range.start, range.end))
+        } else {
+          const visibleText = this.atlas.extract(range.start, range.end)
+          const parts: string[] = []
+          if (this.scrolledOffAbove.length > 0) parts.push(...this.scrolledOffAbove)
+          if (visibleText.length > 0) parts.push(visibleText)
+          if (this.scrolledOffBelow.length > 0) parts.push(...this.scrolledOffBelow)
+          const textToCopy = parts.join('\n')
+          if (textToCopy.length > 0) this.copy(textToCopy)
+        }
       } else {
         const href = this.atlas.urlAt(event.col, event.row)
         if (href !== undefined) this.openHref(href)
       }
       this.drag = undefined
+      this.dragVirtualStartRow = 0
+      this.scrolledOffAbove = []
+      this.scrolledOffBelow = []
       this.selection = undefined
       return this.repaintSelection()
     }
@@ -236,18 +268,41 @@ export class MouseSession {
   }
 
   private syncEdge(row: number): void {
-    const top = row <= 2
-    const bottom = row >= this.atlas.height - 1
-    if (!top && !bottom) {
+    if (this.atlas.height < 6) return
+    const top = 2
+    const bottom = this.atlas.height - 1
+    const atTop = row <= top
+    const atBottom = row >= bottom
+    if (!atTop && !atBottom) {
       this.stopEdge()
       return
     }
-    const delta: 1 | -1 = top ? 1 : -1
+    const delta: 1 | -1 = atTop ? 1 : -1
     if (this.edgeTimer !== undefined) return
-    this.onScroll(delta)
+    this.scroll(delta)
     this.edgeTimer = this.startInterval(() => {
-      this.onScroll(delta)
+      this.scroll(delta)
     }, 80)
+  }
+
+  private scroll(delta: number): void {
+    if (this.drag !== undefined && this.drag.moved) {
+      const { top, bottom } = this.atlas.transcriptBounds
+      if (delta > 0) {
+        if (this.dragVirtualStartRow > bottom) {
+          const text = this.atlas.extractRowText(bottom)
+          if (text.length > 0) this.scrolledOffBelow.unshift(text)
+        }
+        this.dragVirtualStartRow += delta
+      } else if (delta < 0) {
+        if (this.dragVirtualStartRow < top) {
+          const text = this.atlas.extractRowText(top)
+          if (text.length > 0) this.scrolledOffAbove.push(text)
+        }
+        this.dragVirtualStartRow += delta
+      }
+    }
+    this.onScroll(delta)
   }
 
   private stopEdge(): void {
