@@ -315,6 +315,50 @@ describe('text input delivery', () => {
     })
   })
 
+  it('navigates history past slash commands without trapping in command-mode menu', () => {
+    const history = ['first prompt', '/anti accounts', '/anti login']
+    const historyArgs = [
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, history,
+    ] as const
+
+    const up1 = mapKeyEvent(EMPTY, '', keyInfo({ upArrow: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...historyArgs)
+    expect(up1).toMatchObject({
+      kind: 'dispatch',
+      text: '/anti login',
+      historyIndex: 2,
+      commandDismissed: true,
+    })
+
+    const state1: LoopInputState = { ...EMPTY, text: '/anti login', historyIndex: 2, historyDraft: '' }
+    const up2 = mapKeyEvent(state1, '', keyInfo({ upArrow: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...historyArgs)
+    expect(up2).toMatchObject({
+      kind: 'dispatch',
+      text: '/anti accounts',
+      historyIndex: 1,
+      commandDismissed: true,
+    })
+
+    const state2: LoopInputState = { ...EMPTY, text: '/anti accounts', historyIndex: 1, historyDraft: '' }
+    const up3 = mapKeyEvent(state2, '', keyInfo({ upArrow: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...historyArgs)
+    expect(up3).toMatchObject({
+      kind: 'dispatch',
+      text: 'first prompt',
+      historyIndex: 0,
+      commandDismissed: true,
+    })
+
+    const state3: LoopInputState = { ...EMPTY, text: 'first prompt', historyIndex: 0, historyDraft: '' }
+    const down1 = mapKeyEvent(state3, '', keyInfo({ downArrow: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...historyArgs)
+    expect(down1).toMatchObject({
+      kind: 'dispatch',
+      text: '/anti accounts',
+      historyIndex: 1,
+      commandDismissed: true,
+    })
+  })
+
   it('routes page and edge navigation through explicit scroll actions', () => {
     const cases = [
       [keyInfo({ pageUp: true }), { kind: 'scroll-page', delta: 1 }],

@@ -79138,7 +79138,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       renaming: state.renaming
     };
   }
-  if (commandMode && (keyInfo.downArrow || keyInfo.upArrow)) {
+  if (commandMode && state.historyIndex === void 0 && (keyInfo.downArrow || keyInfo.upArrow)) {
     const query = state.commandQuery ?? state.text.slice(1);
     const count = filterCommands(commands, query).length;
     const delta = keyInfo.downArrow ? 1 : -1;
@@ -79416,6 +79416,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
         commandQuery: void 0,
         prefixG: false,
         renaming: state.renaming,
+        commandDismissed: true,
         caretIndex: nextText.length,
         historyIndex: nextIndex,
         historyDraft: savedDraft
@@ -79442,6 +79443,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
           commandQuery: void 0,
           prefixG: false,
           renaming: state.renaming,
+          commandDismissed: true,
           caretIndex: nextText.length,
           historyIndex: nextIndex,
           historyDraft: state.historyDraft
