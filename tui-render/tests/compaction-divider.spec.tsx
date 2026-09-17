@@ -50,21 +50,22 @@ describe('compaction divider projection and rendering', () => {
       id: 2,
       compactionId: COMPACTION_ID,
       shadowedCount: 120,
+      shadowedTokenCount: 400,
       summary: 'summary\u001b[2J content',
     }])
     expect(compactionDividerLabel(model.compactionDividers[0], false)).toBe(
-      '──── ✂ 已压缩 120 条 · Ctrl+K 展开 ────',
+      '──── ✂ 已压缩 120 条 · ~400 tok · Ctrl+K 展开 ────',
     )
     installTheme({ COLORTERM: 'truecolor' })
     const collapsed = renderToString(createElement(StreamView, { model }))
-    expect(collapsed).toContain('已压缩 120 条 · Ctrl+K 展开')
+    expect(collapsed).toContain('已压缩 120 条 · ~400 tok · Ctrl+K 展开')
     expect(collapsed).not.toContain('summary')
     expect(collapsed).not.toContain('\u001b[38;2;77;107;254m')
 
     const expanded = renderToString(createElement(StreamView, {
       model: { ...model, expandedCompactionId: COMPACTION_ID },
     }))
-    expect(expanded).toContain('已压缩 120 条 · Ctrl+K 折叠')
+    expect(expanded).toContain('已压缩 120 条 · ~400 tok · Ctrl+K 折叠')
     expect(expanded).toContain('summary\\x1b[2J content')
   })
 

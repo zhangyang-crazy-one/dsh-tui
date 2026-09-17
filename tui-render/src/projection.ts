@@ -137,6 +137,8 @@ export interface CompactionDivider {
   readonly compactionId: string
   /** Replaced surface event count, once the summary lands. */
   readonly shadowedCount?: number | undefined
+  /** Replaced token estimate, once the summary lands. */
+  readonly shadowedTokenCount?: number | undefined
   /** Plain summary text, once the summary lands. */
   readonly summary: string
 }
@@ -535,6 +537,7 @@ export function createProjector(): Projector {
         compactionDividers[index] = deepFreeze({
           ...current,
           shadowedCount: event.data.shadowedSeqs.length,
+          shadowedTokenCount: event.data.shadowedTokenCount,
           summary: event.data.summary
             .filter(block => block.type === 'text')
             .map(block => block.text)

@@ -76,11 +76,11 @@ async function bench(): Promise<Bench> {
       liveAgent = agent
       createdAgents.push(agent)
       await options.setup?.(agent.ctx, agent)
-      const unregister = ctx.agents.register(agent)
+      const unregister = await ctx.agents.register(agent)
       return {
         agent,
         dispose: async () => {
-          unregister()
+          await unregister()
         },
       }
     },
@@ -127,7 +127,7 @@ describe('userQuestions listener', () => {
       ctx.sessions.create(SessionId('session-foreign-root')),
       () => {},
     )
-    const disposeForeign = ctx.agents.register(foreign)
+    const disposeForeign = await ctx.agents.register(foreign)
     const disposeAnswerer = ctx.on('user-questions/request', (request, next) => {
       if (request.agent !== foreign) return next()
       return Promise.resolve({
@@ -158,7 +158,7 @@ describe('userQuestions listener', () => {
     expect(notify).not.toHaveBeenCalled()
     detachChild()
     disposeAnswerer()
-    disposeForeign()
+    await disposeForeign()
     await ctx.fiber.dispose()
   })
 

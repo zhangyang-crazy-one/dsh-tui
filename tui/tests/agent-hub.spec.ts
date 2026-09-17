@@ -658,6 +658,7 @@ describe('Agent Hub controller', () => {
       { kind: 'workspace-escape' },
       { kind: 'workspace-move', delta: 1 },
       { kind: 'workspace-enter' },
+      { kind: 'workspace-insert' },
       { kind: 'workspace-edit' },
       { kind: 'workspace-apply', value: '/x' },
       { kind: 'workspace-cancel-edit' },

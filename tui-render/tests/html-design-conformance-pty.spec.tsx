@@ -397,7 +397,7 @@ describe('HTML terminal design geometry', () => {
       instance.rerender(shell(columns, rows, renderModel(), FOOTER_VIEW))
       await flush()
       expect(frame()).toContain('▸ Write /workspace/out.ts · 运行中')
-      expect(frame()).not.toContain('✻ 思考')
+      expect(frame()).toContain('思考过程')
       expect(frame()).not.toContain('检查布局约束')
       reasoningExpanded = true
       instance.rerender(shell(columns, rows, renderModel(), FOOTER_VIEW))

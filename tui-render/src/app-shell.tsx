@@ -120,6 +120,8 @@ export interface AppShellProps {
   status?: ReactNode
   /** Fixed input area at the bottom. */
   input?: ReactNode
+  /** Optional sticky label displayed within the top divider bar. */
+  topDividerLabel?: string | undefined
 }
 
 /**
@@ -142,7 +144,30 @@ export interface AppShellProps {
  * @param props - slot content.
  * @returns the shell element tree.
  */
-export function AppShell({ title, badge, children, status, input }: AppShellProps): ReactNode {
+/** Paint the top divider line, optionally carrying a sticky block indicator. */
+function topDividerLine(columns: number, label?: string): string {
+  if (columns <= 0) return ''
+  if (!label || label.trim() === '') {
+    return paintRow([styled(escapeContent('─'.repeat(columns)), 'line')])
+  }
+  const escaped = escapeContent(label)
+  const labelLen = displayWidth(escaped)
+  const prefix = '─── '
+  const prefixLen = displayWidth(prefix)
+  const suffix = ' ───'
+  const suffixLen = displayWidth(suffix)
+  if (prefixLen + labelLen + suffixLen >= columns) {
+    return paintRow([styled(escapeContent('─'.repeat(columns)), 'line')])
+  }
+  const dashCount = Math.max(0, columns - prefixLen - labelLen - suffixLen)
+  return paintRow([
+    styled(prefix, 'line'),
+    styled(escaped, 'accentText'),
+    styled(`${suffix}${'─'.repeat(dashCount)}`, 'line'),
+  ])
+}
+
+export function AppShell({ title, badge, children, status, input, topDividerLabel }: AppShellProps): ReactNode {
   const { columns, rows } = useWindowSize()
   const fitted = layoutTitleBar(
     escapeContent(title),
@@ -160,7 +185,7 @@ export function AppShell({ title, badge, children, status, input }: AppShellProp
         </Text>
       </Box>
       <Box width="100%" flexShrink={0}>
-        <Text>{paintRow([styled(escapeContent('─'.repeat(columns)), 'line')])}</Text>
+        <Text wrap="truncate">{topDividerLine(columns, topDividerLabel)}</Text>
       </Box>
       <Box flexDirection="column" flexGrow={1} width="100%" overflow="hidden">
         {children}

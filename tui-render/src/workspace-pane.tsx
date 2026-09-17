@@ -8,7 +8,7 @@
  * @module @deepseek-ai/dsh-tui-render/workspace-pane
  */
 
-import { Text } from 'ink'
+import { Text, useWindowSize } from 'ink'
 import type { ReactNode } from 'react'
 import { OverlayShell } from './overlay-shell.tsx'
 import { escapeContent, displayWidth } from './content.ts'
@@ -17,7 +17,7 @@ import { truncateDisplay } from './tool-cards.ts'
 
 /** One visible workspace-tree row. */
 export interface WorkspaceNode {
-  /** The node target's displayPath (inserted into the composer on file Enter). */
+  /** The node target's displayPath (inserted into the composer on `i`). */
   readonly path: string
   /** Basename shown in the tree (untrusted). */
   readonly name: string
@@ -45,6 +45,16 @@ export interface WorkspacePaneState {
   readonly error?: string | undefined
   /** Path-resolve failure reason (paints `✗ 路径无效：{原因}`). */
   readonly resolveError?: string | undefined
+  /** Open file preview details when viewing file content. */
+  readonly preview?: WorkspaceFilePreview | undefined
+}
+
+/** Active file preview model for WorkspacePane. */
+export interface WorkspaceFilePreview {
+  readonly path: string
+  readonly name: string
+  readonly lines: readonly string[]
+  readonly scrollOffset: number
 }
 
 /** Closed overlay snapshot: TuiLoop keeps StreamView in children. */
@@ -74,9 +84,42 @@ export function WorkspacePane({
   /** Display-column budget per tree row. */
   maxCols: number
 }): ReactNode {
+  const { rows: windowRows } = useWindowSize()
   if (!state.open) return null
   if (state.error !== undefined) {
     return <OverlayShell title="工作区" error={state.error} footnote="Esc 关闭" />
+  }
+  if (state.preview !== undefined) {
+    const { name, lines: fileLines, scrollOffset } = state.preview
+    const pageSize = Math.max(1, windowRows - 6)
+    const total = fileLines.length
+    const start = Math.min(scrollOffset, Math.max(0, total - 1))
+    const slice = fileLines.slice(start, start + pageSize)
+    const gutterWidth = Math.max(3, String(start + slice.length).length)
+
+    const previewRows: ReactNode[] = slice.map((line, idx) => {
+      const lineNum = start + idx + 1
+      const lineStr = String(lineNum).padStart(gutterWidth, ' ')
+      return (
+        <Text key={lineNum} wrap="truncate">
+          {paintRow([
+            styled(`${lineStr} │ `, 'fgDim'),
+            styled(escapeContent(line), 'fg'),
+          ])}
+        </Text>
+      )
+    })
+
+    const title = `预览: ${name} (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)} 行)`
+    const footnote = 'j/k 滚动 · q/Esc 返回 · i 插入路径'
+    return (
+      <OverlayShell
+        title={title}
+        footnote={footnote}
+      >
+        {previewRows}
+      </OverlayShell>
+    )
   }
   const footnote = state.editing
     ? 'Enter 解析 · Esc 取消'

@@ -31027,8 +31027,8 @@ var Fiber = class {
    *
    * @param config — the new raw config; validated before anything restarts.
    * @param noSave — hint for persistence hooks not to write the change back.
-   * @returns the update waterfall result; the default restart returns a promise.
-   * @throws when validation, an update listener, or the restarted plugin fails.
+   * @returns nothing; the restart runs behind the `internal/update` waterfall.
+   * @throws {ValidationError} when the new config fails validation.
    */
   update(config2, noSave = false) {
     this.assertActive();
@@ -31040,7 +31040,7 @@ var Fiber = class {
       return;
     }
     config2 = this._resolveConfig(config2);
-    return this.context.waterfall(this, "internal/update", config2, noSave, () => {
+    this.context.waterfall(this, "internal/update", config2, noSave, () => {
       this.config = config2;
       this._error = void 0;
       return this.restart();
@@ -32201,13 +32201,15 @@ function failureSnapshot(value) {
     const status = candidate.status;
     const providerRetryAfterMs = candidate.providerRetryAfterMs;
     const requestId = candidate.requestId;
-    if (typeof message !== "string" || message.length === 0 || typeof code2 !== "string" || code2.length === 0 || status !== void 0 && (!Number.isInteger(status) || status < 100 || status > 599) || providerRetryAfterMs !== void 0 && (!Number.isFinite(providerRetryAfterMs) || providerRetryAfterMs <= 0) || requestId !== void 0 && (typeof requestId !== "string" || requestId.length === 0)) return void 0;
+    const offloadImages = candidate.offloadImages;
+    if (typeof message !== "string" || message.length === 0 || typeof code2 !== "string" || code2.length === 0 || status !== void 0 && (!Number.isInteger(status) || status < 100 || status > 599) || providerRetryAfterMs !== void 0 && (!Number.isFinite(providerRetryAfterMs) || providerRetryAfterMs <= 0) || requestId !== void 0 && (typeof requestId !== "string" || requestId.length === 0) || offloadImages !== void 0 && (!Number.isSafeInteger(offloadImages) || offloadImages <= 0)) return void 0;
     return Object.freeze({
       message,
       code: code2,
       ...status === void 0 ? {} : { status },
       ...providerRetryAfterMs === void 0 ? {} : { providerRetryAfterMs },
-      ...requestId === void 0 ? {} : { requestId }
+      ...requestId === void 0 ? {} : { requestId },
+      ...offloadImages === void 0 ? {} : { offloadImages }
     });
   } catch (_sdkFailureGetter) {
     return void 0;
@@ -32508,7 +32510,8 @@ var LlmError = class extends HarnessError {
       code: code2,
       ...options?.status === void 0 ? {} : { status: options.status },
       ...options?.providerRetryAfterMs === void 0 ? {} : { providerRetryAfterMs: options.providerRetryAfterMs },
-      ...options?.requestId === void 0 ? {} : { requestId: options.requestId }
+      ...options?.requestId === void 0 ? {} : { requestId: options.requestId },
+      ...options?.offloadImages === void 0 ? {} : { offloadImages: options.offloadImages }
     });
   }
 };
@@ -33274,6 +33277,7 @@ var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
   "goal/change",
   "hook/invoked",
   "hook/result",
+  "image/offload",
   "llm/retry",
   "llm/retry-started",
   "model/selection",
@@ -33311,6 +33315,9 @@ var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
   "user/message",
   "web/deepseek-search-llm-request"
 ]);
+var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "image/offload"
+]);
 
 // packages/core/session/src/surface.ts
 var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
@@ -33322,7 +33329,9 @@ var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
 function isSurfaceEligibleType(type) {
   return SURFACE_EVENT_TYPES.has(type);
 }
-function deriveEventMessage(event) {
+function deriveEventMessage(event, projectedMessages) {
+  const projected = projectedMessages?.get(event.seq);
+  if (projected !== void 0) return projected;
   switch (event.type) {
     // Ordinary prompts and injected context project in user role: the event's
     // model-facing content stays verbatim. Do NOT re-add per-type framing
@@ -33381,7 +33390,7 @@ function validateSessionEventData(event, subject) {
   }
 }
 function createFoldState() {
-  return { nodes: [], replaceGeneration: 0 };
+  return { nodes: [], replaceGeneration: 0, contentGeneration: 0, projectedMessages: /* @__PURE__ */ new Map(), projections: /* @__PURE__ */ new Set() };
 }
 function isEventSeq(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0);
@@ -33415,7 +33424,7 @@ function surfaceOpOf(event) {
   }
   return op;
 }
-function assertProvenance(event, shadowedSeqs) {
+function assertSourceEventReferences(event, shadowedSeqs) {
   const raw = event.sourceEventSeqs;
   if (event.type === "assistant/message" && raw !== void 0) {
     throw new Error("assistant/message embeds its source stream and cannot carry sourceEventSeqs");
@@ -33453,7 +33462,7 @@ function validateSurfaceMetadata(event) {
   if (op !== void 0 && op !== "append" && (op.startSeq >= event.seq || op.endSeq >= event.seq)) {
     throw new Error(`surface replace at seq ${event.seq}: startSeq and endSeq must reference earlier events`);
   }
-  if (op !== void 0) assertProvenance(event, []);
+  if (op !== void 0) assertSourceEventReferences(event, []);
   return op;
 }
 function replacementRange(state, op) {
@@ -33521,17 +33530,29 @@ function assertSystemHeadRewrite(event, state, startIdx, shadowedSeqs, events, b
     throw new Error("surface replace: node 0 holds the system prompt and may be rewritten only by a system/message over exactly that node");
   }
 }
-function planSurfaceEvent(state, event, expectedSeq, events, baseSeq) {
+function planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
   if (event.seq !== expectedSeq) {
     throw new Error(`session event seq ${event.seq} is not contiguous; expected ${expectedSeq}`);
   }
   const surfaceOp = validateSurfaceMetadata(event);
+  const projection = projections.find((item) => item.type === event.type);
+  if (projection !== void 0) {
+    return { kind: "project", projection, messages: projection.project(event, {
+      nodes: state.nodes,
+      events,
+      baseSeq,
+      messages: state.projectedMessages
+    }) };
+  }
+  if (MESSAGE_PROJECTION_EVENT_TYPES.has(event.type)) {
+    throw new Error(`session event "${event.type}" requires a message projection; load its owning plugin or supply its projection definition`);
+  }
   if (surfaceOp === void 0) return;
   if (surfaceOp === "append") {
     return { kind: "append", seq: event.seq };
   }
   const range = replacementRange(state, surfaceOp);
-  assertProvenance(event, range.shadowedSeqs);
+  assertSourceEventReferences(event, range.shadowedSeqs);
   assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq);
   assertSystemHeadRewrite(event, state, range.startIdx, range.shadowedSeqs, events, baseSeq);
   return {
@@ -33542,8 +33563,8 @@ function planSurfaceEvent(state, event, expectedSeq, events, baseSeq) {
     ...range
   };
 }
-function applySurfaceEvent(state, event, expectedSeq, events, baseSeq) {
-  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq);
+function applySurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
+  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections);
   return applySurfacePlan(state, plan);
 }
 function applySurfacePlan(state, plan) {
@@ -33552,6 +33573,11 @@ function applySurfacePlan(state, plan) {
   } else if (plan?.kind === "replace") {
     state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq);
     state.replaceGeneration += 1;
+    state.contentGeneration += 1;
+  } else if (plan?.kind === "project") {
+    for (const [seq, message] of plan.messages) state.projectedMessages.set(seq, message);
+    state.projections.add(plan.projection);
+    state.contentGeneration += 1;
   }
   if (plan?.kind !== "replace") return;
   return {
@@ -33565,14 +33591,17 @@ var SurfaceManager = class {
   /**
    * @param log - Contiguous complete log or loaded event window.
    * @param baseSeq - Absolute sequence of the window's first event.
+   * @param projections - live borrowed definitions; removing a used definition invalidates further reads.
    */
-  constructor(log, baseSeq = SessionLogOffset(0)) {
+  constructor(log, baseSeq = SessionLogOffset(0), projections = []) {
     this.log = log;
     this.baseSeq = baseSeq;
+    this.projections = projections;
     this._lastProcessedSeq = baseSeq === 0 ? -1 : SessionSeq(baseSeq - 1);
   }
   log;
   baseSeq;
+  projections;
   /** Shared transition state; replacement history is not retained. */
   _state = createFoldState();
   /** Last processed absolute seq. */
@@ -33584,21 +33613,40 @@ var SurfaceManager = class {
    * @param event - candidate event that has not entered the log yet.
    */
   validateNext(event) {
+    this._assertProjections();
     if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
     const expectedSeq = SessionSeq(this.baseSeq + this.log.length);
     this._pendingPlan = {
       event,
       expectedSeq,
-      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq)
+      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq, this.projections)
     };
   }
   /** Monotonic count of folded positional replacements. */
   get replaceGeneration() {
+    this._assertProjections();
     if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
     return this._state.replaceGeneration;
   }
+  /** Monotonic count of committed changes to existing model-visible content. */
+  get contentGeneration() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.contentGeneration;
+  }
+  /**
+   * Project one message with every committed message projection applied.
+   * @param event - message-producing or log-only event.
+   * @returns its immutable projected message, or null when it produces none.
+   */
+  deriveEventMessage(event) {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return deriveEventMessage(event, this._state.projectedMessages);
+  }
   /** Surface event sequences in model-visible order. */
   get nodes() {
+    this._assertProjections();
     if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
     return this._state.nodes;
   }
@@ -33612,10 +33660,21 @@ var SurfaceManager = class {
       if (pending?.event === event && pending.expectedSeq === seq) {
         applySurfacePlan(this._state, pending.plan);
       } else {
-        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq);
+        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq, this.projections);
       }
       if (pending !== void 0 && pending.expectedSeq <= seq) this._pendingPlan = void 0;
       this._lastProcessedSeq = SessionSeq(seq);
+    }
+  }
+  /** Cached messages cannot outlive the definitions that interpreted their log. */
+  _assertProjections() {
+    const candidate = this._pendingPlan;
+    const pending = candidate !== void 0 && this.log[candidate.expectedSeq - this.baseSeq] === candidate.event ? candidate.plan : void 0;
+    const required2 = pending?.kind === "project" ? [...this._state.projections, pending.projection] : this._state.projections;
+    for (const projection of required2) {
+      if (!this.projections.includes(projection)) {
+        throw new Error(`session message projection "${projection.type}" was removed or replaced; restore the session with its owning plugin`);
+      }
     }
   }
 };
@@ -33860,7 +33919,7 @@ var attachments = /* @__PURE__ */ new WeakMap();
 var Session = class _Session {
   log = [];
   /** Single incremental owner of surface acceptance and projection state. */
-  surfaceManager = new SurfaceManager(this.log);
+  surfaceManager;
   /** The ordered surface over this session's event log. */
   get surface() {
     return this.surfaceManager;
@@ -33911,10 +33970,12 @@ var Session = class _Session {
    * @param seed - optional borrowed replay or fork events.
    * @param header - optional borrowed storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
+   * @param projections - pure interpreters for plugin-owned message changes.
    * @returns a detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
    */
-  static create(id, seed, header, inheritedEventCount) {
-    return new _Session(id, seed, header, "snapshot", inheritedEventCount);
+  static create(id, seed, header, inheritedEventCount, projections) {
+    return new _Session(id, seed, header, "snapshot", inheritedEventCount, projections);
   }
   /**
    * Restore a detached session by adopting an independently owned or deeply frozen seed.
@@ -33927,18 +33988,22 @@ var Session = class _Session {
    * @param header - independently owned storage metadata.
    * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
    * @param eventState - aliasing state carried from the operation that produced the seed.
+   * @param projections - pure interpreters for plugin-owned message changes.
    * @returns a restored detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
    */
-  static fromRestore(id, seed, header, inheritedEventCount, eventState) {
+  static fromRestore(id, seed, header, inheritedEventCount, eventState, projections) {
     return new _Session(
       id,
       seed,
       header,
       eventState,
-      inheritedEventCount
+      inheritedEventCount,
+      projections
     );
   }
-  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount) {
+  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount, projections = []) {
+    this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
     const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
     if (seed !== void 0) {
       for (const [index2, source] of seed.entries()) {
@@ -34157,7 +34222,7 @@ var Session = class _Session {
   derived = [];
   /** Surface position (nodes projected) the cache has reached. */
   derivedNodes = 0;
-  /** {@link SurfaceManager.replaceGeneration} the cache was built under. */
+  /** {@link SurfaceManager.contentGeneration} the cache was built under. */
   derivedGeneration = 0;
   /**
    * Derive the LLM message history by walking the ordered sequences of
@@ -34166,21 +34231,21 @@ var Session = class _Session {
    * append records its `surfaceOp`, so a raw event with no marker (a chunk, a
    * turn boundary) is correctly absent, and a compaction `replace` deletes the
    * shadowed nodes from the derivation. The projection rules are
-   * {@link deriveEventMessage}, folded per node.
+   * {@link deriveEventMessage}, with logged message projections applied
+   * without changing node membership or message identity.
    *
-   * CACHED: each surface node is projected exactly once, when first seen — a
-   * call costs O(new nodes), and a surface rewrite (a `replace`;
-   * {@link SessionSurface.replaceGeneration}) rebuilds. The returned array is
+   * CACHED: pure tail growth costs O(new nodes); a replacement or message projection
+   * ({@link SessionSurface.contentGeneration}) rebuilds. The returned array is
    * a fresh snapshot per call (later appends never grow an array a caller
    * already holds); the `Message` objects in it are SHARED and **deep-frozen**.
-   * Their content reuses the already frozen durable event data, so the cache
-   * needs no second deep clone and consumers still cannot mutate the log.
+   * Unchanged content reuses frozen event data; projected blocks are frozen
+   * derived copies. Consumers cannot mutate the log through either form.
    * @returns a fresh array of the shared, frozen derived history.
    */
   deriveMessages() {
     const surface = this.surface;
     const nodes = surface.nodes;
-    const generation = surface.replaceGeneration;
+    const generation = surface.contentGeneration;
     if (generation !== this.derivedGeneration) {
       this.derived = [];
       this.derivedNodes = 0;
@@ -34194,13 +34259,13 @@ var Session = class _Session {
     return [...this.derived];
   }
   /**
-   * Instance face of the pure per-node `deriveEventMessage` export from
-   * `surface.ts`.
+   * Project one event with all committed message projections applied.
+   * The original durable event remains unchanged.
    * @param event - the event to project.
    * @returns the derived message, or null when the event produces none.
    */
   deriveEventMessage(event) {
-    return deriveEventMessage(event);
+    return this.surfaceManager.deriveEventMessage(event);
   }
 };
 
@@ -55243,7 +55308,7 @@ var renderNodeToOutput = (node2, output, options) => {
 };
 var render_node_to_output_default = renderNodeToOutput;
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/consts.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/consts.js
 var BEL2 = "\x07";
 var ESC2 = "\x1B";
 var BACKSLASH = "\\";
@@ -55267,13 +55332,16 @@ var linkEndCode = `${ESC2}${OSC2}8;;${BEL2}`;
 var linkEndCodeST = `${ESC2}${OSC2}8;;${ESC2}${BACKSLASH}`;
 var linkEndCodeC1ST = `${ESC2}${OSC2}8;;${C1_ST}`;
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js
 var endCodesSet = /* @__PURE__ */ new Set();
 var endCodesMap = /* @__PURE__ */ new Map();
 for (const [start, end] of ansi_styles_default.codes) {
   endCodesSet.add(ansi_styles_default.color.ansi(end));
   endCodesMap.set(ansi_styles_default.color.ansi(start), ansi_styles_default.color.ansi(end));
 }
+endCodesSet.add(linkEndCode);
+endCodesSet.add(linkEndCodeST);
+endCodesSet.add(linkEndCodeC1ST);
 function getEndCode(code2) {
   if (endCodesSet.has(code2))
     return code2;
@@ -55307,7 +55375,7 @@ function isIntensityCode(code2) {
   return code2.code === ansi_styles_default.bold.open || code2.code === ansi_styles_default.dim.open;
 }
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/reduce.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/reduce.js
 function reduceAnsiCodes(codes) {
   return reduceAnsiCodesIncremental([], codes);
 }
@@ -55332,7 +55400,7 @@ function reduceAnsiCodesIncremental(codes, newCodes) {
   return ret;
 }
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/undo.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/undo.js
 function undoAnsiCodes2(codes) {
   return reduceAnsiCodes(codes).reverse().map((code2) => ({
     ...code2,
@@ -55340,7 +55408,7 @@ function undoAnsiCodes2(codes) {
   }));
 }
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/diff.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/diff.js
 function diffAnsiCodes(from2, to) {
   const endCodesInTo = new Set(to.map((code2) => code2.endCode));
   const startCodesInTo = new Set(to.map((code2) => code2.code));
@@ -55359,7 +55427,7 @@ function diffAnsiCodes(from2, to) {
   ];
 }
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js
 function styledCharsFromTokens(tokens) {
   let codes = [];
   const ret = [];
@@ -55392,7 +55460,7 @@ function styledCharsToString(chars) {
   return ret;
 }
 
-// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.0/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js
+// node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js
 var segmenter3 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function isFullwidthGrapheme(grapheme, baseCodePoint) {
   if (isFullwidthCodePoint(baseCodePoint))
@@ -59298,7 +59366,28 @@ function titleRun(title) {
   }
   return [styled(title, "fg")];
 }
-function AppShell({ title, badge, children, status, input }) {
+function topDividerLine(columns, label) {
+  if (columns <= 0) return "";
+  if (!label || label.trim() === "") {
+    return paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]);
+  }
+  const escaped = escapeContent(label);
+  const labelLen = displayWidth(escaped);
+  const prefix = "\u2500\u2500\u2500 ";
+  const prefixLen = displayWidth(prefix);
+  const suffix = " \u2500\u2500\u2500";
+  const suffixLen = displayWidth(suffix);
+  if (prefixLen + labelLen + suffixLen >= columns) {
+    return paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]);
+  }
+  const dashCount = Math.max(0, columns - prefixLen - labelLen - suffixLen);
+  return paintRow([
+    styled(prefix, "line"),
+    styled(escaped, "accentText"),
+    styled(`${suffix}${"\u2500".repeat(dashCount)}`, "line")
+  ]);
+}
+function AppShell({ title, badge, children, status, input, topDividerLabel }) {
   const { columns, rows } = use_window_size_default();
   const fitted = layoutTitleBar(
     escapeContent(title),
@@ -59310,7 +59399,7 @@ function AppShell({ title, badge, children, status, input }) {
   if (fitted.badge !== "") titleParts.push(styled(fitted.badge, "fgDim"));
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Box_default, { flexDirection: "column", width: "100%", height: rows, children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow(titleParts) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { wrap: "truncate", children: topDividerLine(columns, topDividerLabel) }) }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "column", flexGrow: 1, width: "100%", overflow: "hidden", children }),
     input !== void 0 && input !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: input }) : null,
     status !== void 0 && status !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]) }) }) : null,
@@ -70475,10 +70564,21 @@ function ReasoningBlock({
   maxCols
 }) {
   const { columns } = use_window_size_default();
-  if (collapsed || text4 === "") return null;
+  if (text4 === "") return null;
   const width = maxCols ?? columns;
   const escaped = escapeContent(text4);
   const body = wrapDisplayLines(escaped, Math.max(1, width - 4));
+  if (collapsed) {
+    const lineCount = body.length;
+    const icon = live ? getBrailleSpinnerFrame(durationMs) : "\u273B";
+    const parts = [
+      styled("\u25B8 ", "accentText"),
+      styled(`${icon} \u601D\u8003\u8FC7\u7A0B`, "accentText"),
+      styled(` (\u5171 ${String(lineCount)} \u884C \xB7 ${formatSeconds(durationMs)}s)`, "fgDim"),
+      styled(" \xB7 Ctrl+O \u5C55\u5F00", "fgDim")
+    ];
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(parts, "toolBg", width > 0 ? width : 0) }) });
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Text, { wrap: "truncate", children: thinkingHeader(durationMs, !live, live, width) }),
     body.map((line5, index2) => bodyRow(line5, index2, width))
@@ -71960,6 +72060,44 @@ function physicalScrollRailGeometry(contentRows, viewportRows, offsetFromBottom)
     Math.max(0, Math.min(offsetFromBottom, available)) / available * travel
   );
   return { rows, thumbStart: travel - fromBottom, thumbRows };
+}
+
+// packages/tui/tui-render/src/sticky-header.ts
+function collapseStickyText(text4) {
+  return text4.replace(/\s+/gu, " ").trim();
+}
+function formatStickyThinkingLabel(range) {
+  return `\u{1F4AD} \u601D\u8003\u4E2D (\u7B2C ${String(range.turnOrdinal)} \u8F6E \xB7 ${(range.durationMs / 1e3).toFixed(1)}s) \xB7 [Ctrl+O \u6298\u53E0]`;
+}
+function formatStickyToolLabel(range) {
+  const title = collapseStickyText(range.title);
+  return title === "" ? "\u25B8" : `\u25B8 ${title}`;
+}
+function formatStickyUserLabel(range) {
+  const text4 = collapseStickyText(range.text);
+  return text4 === "" ? ">" : `> ${text4}`;
+}
+function resolveStickyThinkingHeader(viewportTop, ranges) {
+  for (const range of ranges) {
+    if (viewportTop > range.start && viewportTop < range.end) {
+      return formatStickyThinkingLabel(range);
+    }
+  }
+  return void 0;
+}
+function resolveStickyTranscriptHeader(viewportTop, ranges) {
+  const thinking = resolveStickyThinkingHeader(viewportTop, ranges.reasoning ?? []);
+  if (thinking !== void 0) return thinking;
+  for (const range of ranges.tools ?? []) {
+    if (viewportTop > range.start && viewportTop < range.end) {
+      return formatStickyToolLabel(range);
+    }
+  }
+  const latestUser = ranges.users?.at(-1);
+  if (latestUser !== void 0 && viewportTop >= latestUser.end) {
+    return formatStickyUserLabel(latestUser);
+  }
+  return void 0;
 }
 
 // packages/tui/tui-render/src/transcript-layout-cache.ts
@@ -73581,7 +73719,7 @@ function projectBlockRows(entry, scope, markdownState) {
     case "divider":
       return projectDividerEntry(entry, scope);
     case "compaction":
-      return projectCompactionEntry(entry);
+      return projectCompactionEntry(entry, scope);
     case "turn-tail":
       return projectTurnTailEntry(entry, scope);
     case "tool-summary":
@@ -73816,8 +73954,20 @@ function projectReasoningEntry(entry, scope) {
   const expanded = entry.meta?.reasoningExpanded === true;
   const live = entry.meta?.reasoningLive === true;
   const secondsLabel = (reasoningDurationMs / 1e3).toFixed(1);
-  if (!expanded || entry.source === "") {
+  if (entry.source === "") {
     return { revision: 0, sourceLength: entry.source.length, lines: [] };
+  }
+  const escaped = escapeContent(entry.source);
+  const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4));
+  if (!expanded) {
+    const icon2 = live ? getBrailleSpinnerFrame(reasoningDurationMs) : "\u273B";
+    const capsule = surfaceLine([
+      { text: "\u25B8 ", token: "accentText", bold: false },
+      { text: `${icon2} \u601D\u8003\u8FC7\u7A0B`, token: "accentText", bold: false },
+      { text: ` (\u5171 ${String(body.length)} \u884C \xB7 ${secondsLabel}s)`, token: "fgDim", bold: false },
+      { text: " \xB7 Ctrl+O \u5C55\u5F00", token: "fgDim", bold: false }
+    ], 0, "toolBg", scope.width);
+    return { revision: 0, sourceLength: entry.source.length, lines: [capsule] };
   }
   const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : "\u273B";
   const prefix = live ? "" : "\u25BE ";
@@ -73827,8 +73977,6 @@ function projectReasoningEntry(entry, scope) {
     { text: ` (${secondsLabel}s)`, token: "fgDim", bold: false }
   ], 0, "toolBg", scope.width);
   const lines = [headerLine];
-  const escaped = escapeContent(entry.source);
-  const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4));
   for (const row of body) {
     const text4 = `\u2502 ${row}`;
     const cols = displayWidth(text4);
@@ -73866,20 +74014,25 @@ function projectDividerEntry(entry, scope) {
   const line5 = lineForText(entry.source, "fgDim", false, 0);
   return { revision: 0, sourceLength: entry.source.length, lines: [line5] };
 }
-function projectCompactionEntry(entry) {
+function projectCompactionEntry(entry, scope) {
   const shadowed = entry.meta?.compactionShadowedCount;
   const countLabel = shadowed === void 0 ? "" : ` ${String(shadowed)} \u6761`;
+  const tokens = entry.meta?.compactionShadowedTokenCount;
+  const tokenLabel = tokens === void 0 ? "" : ` \xB7 ~${String(tokens)} tok`;
   const expanded = entry.meta?.compactionExpanded === true;
-  const marker = `\u2500\u2500\u2500\u2500 \u2702 \u5DF2\u538B\u7F29${countLabel} \xB7 Ctrl+K ${expanded ? "\u6298\u53E0" : "\u5C55\u5F00"} \u2500\u2500\u2500\u2500`;
+  const marker = `\u2500\u2500\u2500\u2500 \u2702 \u5DF2\u538B\u7F29${countLabel}${tokenLabel} \xB7 Ctrl+K ${expanded ? "\u6298\u53E0" : "\u5C55\u5F00"} \u2500\u2500\u2500\u2500`;
   const lines = [
     lineForText(marker, "fgDim", false, 0)
   ];
   const summary = entry.meta?.compactionSummary ?? "";
   if (expanded && summary !== "") {
-    lines.push(mixedLine([
-      { text: "\u6458\u8981 ", token: "fgDim", bold: false },
-      { text: escapeContent(summary), token: "fg", bold: false }
-    ], lines.length));
+    const wrapped = wrapDisplayLines(escapeContent(summary), Math.max(1, scope.width - 4));
+    for (const row of wrapped) {
+      lines.push(surfaceLine([
+        { text: "\u2502 ", token: "accentText", bold: false },
+        { text: row, token: "fg", bold: false }
+      ], lines.length, "toolBg", scope.width));
+    }
   }
   return { revision: 0, sourceLength: entry.source.length, lines };
 }
@@ -74759,8 +74912,8 @@ function isVisiblePart(part) {
   if (part.kind === "card" || part.kind === "tool-summary") return true;
   return part.text !== "";
 }
-function displayedParts(parts, reasoningExpanded) {
-  return parts.filter((part) => isVisiblePart(part) && (part.kind !== "reasoning" || reasoningExpanded));
+function displayedParts(parts, _reasoningExpanded) {
+  return parts.filter(isVisiblePart);
 }
 var COLLAPSED_TOOL_CARD_LIMIT = 3;
 function toolSummaryStatus(summary) {
@@ -74852,7 +75005,8 @@ function activeTurnVersion(turn, revisions) {
 }
 function compactionDividerLabel(divider, expanded) {
   const count = divider.shadowedCount === void 0 ? "" : ` ${String(divider.shadowedCount)} \u6761`;
-  return `\u2500\u2500\u2500\u2500 \u2702 \u5DF2\u538B\u7F29${count} \xB7 Ctrl+K ${expanded ? "\u6298\u53E0" : "\u5C55\u5F00"} \u2500\u2500\u2500\u2500`;
+  const tokens = divider.shadowedTokenCount === void 0 ? "" : ` \xB7 ~${String(divider.shadowedTokenCount)} tok`;
+  return `\u2500\u2500\u2500\u2500 \u2702 \u5DF2\u538B\u7F29${count}${tokens} \xB7 Ctrl+K ${expanded ? "\u6298\u53E0" : "\u5C55\u5F00"} \u2500\u2500\u2500\u2500`;
 }
 function partsFrom(content3) {
   const parts = [];
@@ -75191,6 +75345,16 @@ function projectorStateFor(cache4, blockId, scope, aliases = [], source) {
   cache4.set(key, state);
   return state;
 }
+function stickyToolTitle(card) {
+  return card.resultView?.title ?? card.callView?.title ?? card.name;
+}
+function recordToolSticky(map2, id, start, end, card) {
+  if (end - start <= 1) return;
+  const existing = map2.get(id);
+  const next = existing === void 0 ? [] : existing;
+  next.push({ start, end, title: stickyToolTitle(card) });
+  map2.set(id, next);
+}
 var EMPTY_TEXT_RANGES = [];
 var GAP_LINE = Object.freeze({
   text: " ",
@@ -75370,7 +75534,8 @@ function StreamView({
   motionPaused = false,
   mode = "agent",
   layoutKey,
-  locale = "zh-CN"
+  locale = "zh-CN",
+  onStickyHeaderChange
 }) {
   const policy = renderPolicy ?? renderPolicyDefaults();
   const toolRows = (0, import_react37.useMemo)(() => new ToolRowCache(policy.tools), [
@@ -75591,6 +75756,9 @@ function StreamView({
     const map2 = /* @__PURE__ */ new Map();
     const textRanges = /* @__PURE__ */ new Map();
     const storeBlocks = /* @__PURE__ */ new Map();
+    const reasoningSticky = /* @__PURE__ */ new Map();
+    const toolSticky = /* @__PURE__ */ new Map();
+    const userSticky = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
     const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks);
     const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
@@ -75600,7 +75768,8 @@ function StreamView({
         const meta3 = {
           compactionSummary: row.divider.summary,
           compactionExpanded: expandedCompactionId === row.divider.compactionId,
-          ...row.divider.shadowedCount === void 0 ? {} : { compactionShadowedCount: row.divider.shadowedCount }
+          ...row.divider.shadowedCount === void 0 ? {} : { compactionShadowedCount: row.divider.shadowedCount },
+          ...row.divider.shadowedTokenCount === void 0 ? {} : { compactionShadowedTokenCount: row.divider.shadowedTokenCount }
         };
         const projection = project(id, {
           id,
@@ -75620,6 +75789,7 @@ function StreamView({
           ...hasSubsequent ? { meta: { userMessageGap: true } } : {}
         }, settledBlockRowsScope, void 0, false);
         map2.set(id, projection.lines);
+        userSticky.set(id, { start: 0, end: projection.lines.length, text: row.message.text });
         continue;
       }
       const parts = displayedParts(
@@ -75632,6 +75802,7 @@ function StreamView({
       for (const [partIndex, part] of parts.entries()) {
         if (turnPartGap(parts, partIndex) > 0) rows2.push(GAP_LINE);
         if (part.kind === "reasoning") {
+          const stickyStart = rows2.length;
           rows2.append(project(id, {
             id: `${id}-r-${String(partIndex)}`,
             kind: "reasoning",
@@ -75642,6 +75813,17 @@ function StreamView({
               reasoningLive: false
             }
           }, settledBlockRowsScope, void 0, false).lines);
+          if (reasoningExpanded && rows2.length - stickyStart > 1) {
+            const existing = reasoningSticky.get(id);
+            const next = existing === void 0 ? [] : [...existing];
+            next.push({
+              start: stickyStart,
+              end: rows2.length,
+              turnOrdinal: row.message.turnOrdinal ?? 1,
+              durationMs: part.durationMs
+            });
+            reasoningSticky.set(id, next);
+          }
           continue;
         }
         if (part.kind === "tool-summary") {
@@ -75655,6 +75837,7 @@ function StreamView({
           continue;
         }
         if (part.kind === "card") {
+          const stickyStart = rows2.length;
           rows2.append(project(
             id,
             makeToolCardBlockEntry(id, part.card),
@@ -75662,6 +75845,7 @@ function StreamView({
             void 0,
             false
           ).lines);
+          recordToolSticky(toolSticky, id, stickyStart, rows2.length, part.card);
           continue;
         }
         const start = rows2.length;
@@ -75710,7 +75894,7 @@ function StreamView({
       map2.set(id, rows2.build());
       if (ranges.length > 0) textRanges.set(id, ranges);
     }
-    return { rows: map2, textRanges, storeBlocks };
+    return { rows: map2, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky };
   }, [
     contentWidth,
     expandedCompactionId,
@@ -75755,7 +75939,7 @@ function StreamView({
           )}s)`
         }
       }, blockRowsScope, void 0, true).lines;
-      return { id, lines, ranges: [], storeBlocks };
+      return { id, lines, ranges: [], storeBlocks, reasoningSticky: [], toolSticky: [] };
     }
     const parts = displayedParts(
       compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache),
@@ -75763,6 +75947,8 @@ function StreamView({
     );
     const rows2 = new RowSequence();
     const ranges = [];
+    const sticky = [];
+    const toolSticky = [];
     let textIndex = 0;
     let lastVisiblePart = -1;
     for (const [partIndex, part] of parts.entries()) {
@@ -75772,16 +75958,26 @@ function StreamView({
       if (turnPartGap(parts, partIndex) > 0) rows2.push(GAP_LINE);
       if (part.kind === "reasoning") {
         const live = status === "generating" && partIndex === lastVisiblePart;
+        const durationMs = live ? liveDurationMs ?? part.durationMs : part.durationMs;
+        const stickyStart = rows2.length;
         rows2.append(project(id, {
           id: `${id}-r-${String(partIndex)}`,
           kind: "reasoning",
           source: part.text,
           meta: {
-            reasoningDurationMs: live ? liveDurationMs ?? part.durationMs : part.durationMs,
+            reasoningDurationMs: durationMs,
             reasoningExpanded,
             reasoningLive: live
           }
         }, blockRowsScope, void 0, status === "generating").lines);
+        if (reasoningExpanded && rows2.length - stickyStart > 1) {
+          sticky.push({
+            start: stickyStart,
+            end: rows2.length,
+            turnOrdinal: activeTurn.turn,
+            durationMs
+          });
+        }
         continue;
       }
       if (part.kind === "tool-summary") {
@@ -75795,6 +75991,7 @@ function StreamView({
         continue;
       }
       if (part.kind === "card") {
+        const stickyStart = rows2.length;
         rows2.append(project(
           id,
           makeToolCardBlockEntry(id, part.card),
@@ -75802,6 +75999,13 @@ function StreamView({
           void 0,
           status === "generating"
         ).lines);
+        if (rows2.length - stickyStart > 1) {
+          toolSticky.push({
+            start: stickyStart,
+            end: rows2.length,
+            title: stickyToolTitle(part.card)
+          });
+        }
         continue;
       }
       const start = rows2.length;
@@ -75822,7 +76026,7 @@ function StreamView({
       const lastVisible = parts[parts.length - 1];
       const isReasoningActive = lastRaw?.kind === "reasoning";
       const isToolCompleted = lastVisible?.kind === "card" && lastVisible.card.status !== "running" || lastVisible?.kind === "tool-summary" && lastVisible.summary.runningCount === 0;
-      if (isReasoningActive && !reasoningExpanded || isToolCompleted) {
+      if (isToolCompleted && !(isReasoningActive && !reasoningExpanded)) {
         const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
         const spinner = getBrailleSpinnerFrame(liveMs);
         const label = isReasoningActive ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
@@ -75837,7 +76041,7 @@ function StreamView({
         }, blockRowsScope, void 0, true).lines);
       }
     }
-    return { id, lines: rows2.build(), ranges, storeBlocks };
+    return { id, lines: rows2.build(), ranges, storeBlocks, reasoningSticky: sticky, toolSticky };
   }, [
     activeTurn,
     activeVersion,
@@ -75867,7 +76071,15 @@ function StreamView({
     for (const [key, val] of activeTurnRows.storeBlocks) {
       storeBlocks.set(key, val);
     }
-    return { rows: map2, textRanges, storeBlocks };
+    const reasoningSticky = new Map(settledEntryRows.reasoningSticky);
+    if (activeTurnRows.reasoningSticky.length > 0) {
+      reasoningSticky.set(activeTurnRows.id, activeTurnRows.reasoningSticky);
+    }
+    const toolSticky = new Map(settledEntryRows.toolSticky);
+    if (activeTurnRows.toolSticky.length > 0) {
+      toolSticky.set(activeTurnRows.id, activeTurnRows.toolSticky);
+    }
+    return { rows: map2, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky: settledEntryRows.userSticky };
   }, [settledEntryRows, activeTurnRows]);
   const [presentedEntryRows, setPresentedEntryRows] = (0, import_react37.useState)(entryRows);
   const activeEntryRows = status === "generating" ? presentedEntryRows : entryRows;
@@ -76103,6 +76315,58 @@ function StreamView({
     virtualContentRows - effectiveViewportRows - effectiveOffset
   );
   const visibleBottom = visibleTop + effectiveViewportRows;
+  const stickyRanges = (0, import_react37.useMemo)(() => {
+    const reasoning = [];
+    const tools = [];
+    const users = [];
+    for (const layout of virtualLayouts) {
+      if (reasoningExpanded) {
+        const relative = activeEntryRows.reasoningSticky.get(layout.id);
+        if (relative !== void 0) {
+          for (const range of relative) {
+            reasoning.push({
+              start: layout.top + range.start,
+              end: layout.top + range.end,
+              turnOrdinal: range.turnOrdinal,
+              durationMs: range.durationMs
+            });
+          }
+        }
+      }
+      const toolRelative = activeEntryRows.toolSticky.get(layout.id);
+      if (toolRelative !== void 0) {
+        for (const range of toolRelative) {
+          tools.push({
+            start: layout.top + range.start,
+            end: layout.top + range.end,
+            title: range.title
+          });
+        }
+      }
+      const userRelative = activeEntryRows.userSticky.get(layout.id);
+      if (userRelative !== void 0) {
+        users.push({
+          start: layout.top + userRelative.start,
+          end: layout.top + userRelative.end,
+          text: userRelative.text
+        });
+      }
+    }
+    return { reasoning, tools, users };
+  }, [
+    activeEntryRows.reasoningSticky,
+    activeEntryRows.toolSticky,
+    activeEntryRows.userSticky,
+    reasoningExpanded,
+    virtualLayouts
+  ]);
+  const stickyLabel = resolveStickyTranscriptHeader(visibleTop, stickyRanges);
+  (0, import_react37.useLayoutEffect)(() => {
+    onStickyHeaderChange?.(stickyLabel);
+    return () => {
+      onStickyHeaderChange?.(void 0);
+    };
+  }, [onStickyHeaderChange, stickyLabel]);
   const configuredOverscanRows = Math.max(
     0,
     Math.min(
@@ -76338,7 +76602,6 @@ function StreamView({
   } : void 0;
   const visibleFrame = (0, import_react37.useMemo)(() => {
     const snapshotRows = [];
-    const verticalBase = Math.max(0, effectiveViewportRows - virtualContentRows);
     for (const { entry, index: layoutIndex } of visibleEntryPairs) {
       const layout = virtualLayouts[layoutIndex];
       if (layout === void 0) continue;
@@ -76349,7 +76612,7 @@ function StreamView({
       for (let index2 = start; index2 < end; index2 += 1) {
         const line5 = entry.lines.at(index2);
         if (line5 === void 0) continue;
-        const absoluteRow = 3 + verticalBase + layout.top + index2 - visibleTop;
+        const absoluteRow = 3 + layout.top + index2 - visibleTop;
         if (absoluteRow < 3 || absoluteRow >= 3 + effectiveViewportRows) continue;
         const isBottomRow = absoluteRow === 3 + effectiveViewportRows - 1;
         const promptOverlay = isBottomRow && !viewport.follow ? (() => {
@@ -76560,10 +76823,10 @@ function StreamView({
     const expanded = divider.compactionId === expandedCompactionId;
     return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(compactionDividerLabel(divider, expanded)), "fgDim")]) }),
-      expanded && divider.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
-        styled("\u6458\u8981 ", "fgDim"),
-        styled(escapeContent(divider.summary), "fg")
-      ]) }) : null
+      expanded && divider.summary !== "" ? wrapDisplayLines(escapeContent(divider.summary), Math.max(1, contentWidth - 4)).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
+        styled("\u2502 ", "accentText"),
+        styled(row, "fg")
+      ], "toolBg", contentWidth) }, index2)) : null
     ] });
   };
   const renderActiveTurn = (turn) => {
@@ -76597,7 +76860,7 @@ function StreamView({
     const lastVisible = parts[parts.length - 1];
     const isReasoningActive = lastRaw?.kind === "reasoning";
     const isToolCompleted = lastVisible?.kind === "card" && lastVisible.card.status !== "running" || lastVisible?.kind === "tool-summary" && lastVisible.summary.runningCount === 0;
-    const showTail = generating && (isReasoningActive && !reasoningExpanded || isToolCompleted);
+    const showTail = generating && isToolCompleted && !(isReasoningActive && !reasoningExpanded);
     const tailLiveMs = liveDurationMs ?? turn.reasoningDurationMs;
     const tailSpinner = getBrailleSpinnerFrame(tailLiveMs);
     const tailLabel = isReasoningActive ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
@@ -76656,7 +76919,8 @@ function StreamView({
           {
             flexDirection: "column",
             position: physicalViewport ? "absolute" : "relative",
-            bottom: physicalViewport ? -effectiveOffset : void 0,
+            top: physicalViewport && virtualContentRows <= effectiveViewportRows ? 0 : void 0,
+            bottom: physicalViewport && virtualContentRows > effectiveViewportRows ? -effectiveOffset : void 0,
             left: physicalViewport ? contentLeft : void 0,
             marginLeft: physicalViewport ? void 0 : contentLeft,
             width: contentWidth,
@@ -78350,9 +78614,36 @@ function WorkspacePane({
   state,
   maxCols
 }) {
+  const { rows: windowRows } = use_window_size_default();
   if (!state.open) return null;
   if (state.error !== void 0) {
     return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u533A", error: state.error, footnote: "Esc \u5173\u95ED" });
+  }
+  if (state.preview !== void 0) {
+    const { name: name2, lines: fileLines, scrollOffset } = state.preview;
+    const pageSize = Math.max(1, windowRows - 6);
+    const total = fileLines.length;
+    const start = Math.min(scrollOffset, Math.max(0, total - 1));
+    const slice = fileLines.slice(start, start + pageSize);
+    const gutterWidth = Math.max(3, String(start + slice.length).length);
+    const previewRows = slice.map((line5, idx) => {
+      const lineNum = start + idx + 1;
+      const lineStr = String(lineNum).padStart(gutterWidth, " ");
+      return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: paintRow([
+        styled(`${lineStr} \u2502 `, "fgDim"),
+        styled(escapeContent(line5), "fg")
+      ]) }, lineNum);
+    });
+    const title = `\u9884\u89C8: ${name2} (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)} \u884C)`;
+    const footnote2 = "j/k \u6EDA\u52A8 \xB7 q/Esc \u8FD4\u56DE \xB7 i \u63D2\u5165\u8DEF\u5F84";
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
+      OverlayShell,
+      {
+        title,
+        footnote: footnote2,
+        children: previewRows
+      }
+    );
   }
   const footnote = state.editing ? "Enter \u89E3\u6790 \xB7 Esc \u53D6\u6D88" : state.nodes.length === 0 ? "e \u8F93\u5165\u8DEF\u5F84 \xB7 Esc \u5173\u95ED" : "j/k \u9009\u62E9 \xB7 Enter \u6253\u5F00 \xB7 e \u8DEF\u5F84 \xB7 Esc \u5173\u95ED";
   const rows = [];
@@ -79039,19 +79330,7 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       return holdComposer(state, { kind: "plan-directory-apply" });
     }
     if (workspaceOpen) {
-      if (overlays.workspace?.selectedKind === "file") {
-        const caret = clampCaretIndex(state.text, state.caretIndex);
-        const path2 = overlays.workspace.selectedPath ?? "";
-        return {
-          kind: "dispatch",
-          action: { kind: "workspace-enter" },
-          text: state.text.slice(0, caret) + path2 + state.text.slice(caret),
-          commandQuery: void 0,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: caret + path2.length
-        };
-      }
+      if (overlays.workspace?.preview === true) return { kind: "none" };
       return holdComposer(state, { kind: "workspace-enter" });
     }
     if (modelPane.open) {
@@ -79361,7 +79640,33 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     if (key === "k" || keyInfo.upArrow) {
       return holdComposer(state, { kind: "workspace-move", delta: -1 });
     }
-    if (key === "e") {
+    if (keyInfo.pageUp) {
+      return holdComposer(state, { kind: "workspace-move", delta: -20 });
+    }
+    if (keyInfo.pageDown) {
+      return holdComposer(state, { kind: "workspace-move", delta: 20 });
+    }
+    if (key === " ") {
+      if (overlays.workspace?.preview === true) return { kind: "none" };
+      return holdComposer(state, { kind: "workspace-enter" });
+    }
+    if (key === "q") {
+      return holdComposer(state, { kind: "workspace-escape" });
+    }
+    if (key === "i") {
+      const path2 = overlays.workspace?.selectedPath ?? "";
+      const caret = clampCaretIndex(state.text, state.caretIndex);
+      return {
+        kind: "dispatch",
+        action: { kind: "workspace-insert" },
+        text: state.text.slice(0, caret) + path2 + state.text.slice(caret),
+        commandQuery: void 0,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: caret + path2.length
+      };
+    }
+    if (key === "e" && overlays.workspace?.preview !== true) {
       const draft = overlays.workspace?.rootPath ?? "";
       return {
         kind: "dispatch",
@@ -79681,6 +79986,7 @@ function TuiLoop({
   const [planReviewOffset, setPlanReviewOffset] = (0, import_react39.useState)(0);
   const viewportSequenceRef = (0, import_react39.useRef)(0);
   const [viewportCommand, setViewportCommand] = (0, import_react39.useState)();
+  const [topDividerLabel, setTopDividerLabel] = (0, import_react39.useState)();
   const issueViewportCommand = (0, import_react39.useCallback)((command) => {
     frameProbe?.beginMeasurement();
     viewportSequenceRef.current += 1;
@@ -80009,7 +80315,8 @@ function TuiLoop({
           editing: workspacePaneRef.current.editing,
           rootPath: workspacePaneRef.current.root,
           selectedKind: workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.kind,
-          selectedPath: workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.path
+          selectedPath: workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.path,
+          preview: workspacePaneRef.current.preview !== void 0
         },
         feedback: {
           open: feedbackPaneRef.current.open,
@@ -80385,7 +80692,8 @@ function TuiLoop({
     renderPolicy,
     frameMetrics,
     motionPaused: viewportMotionPaused,
-    mode: currentMode
+    mode: currentMode,
+    onStickyHeaderChange: setTopDividerLabel
   });
   const conversationColumns = conversationWidth(columns);
   const hudRows = [];
@@ -80612,7 +80920,8 @@ function TuiLoop({
     badge: adaptiveInfoFooter === void 0 ? badge : shortenHomePath(controller.getCwd(), homedir()),
     status,
     children: content3,
-    input: inputSlot
+    input: inputSlot,
+    topDividerLabel
   });
 }
 
@@ -81077,6 +81386,7 @@ function createProjector() {
         compactionDividers[index2] = deepFreeze({
           ...current,
           shadowedCount: event.data.shadowedSeqs.length,
+          shadowedTokenCount: event.data.shadowedTokenCount,
           summary: event.data.summary.filter((block) => block.type === "text").map((block) => block.text).join("")
         });
         return;
@@ -82308,6 +82618,7 @@ var SEARCH_LIMIT = 30;
 var SEARCH_DEBOUNCE_MS = 120;
 var LOCAL_COMMANDS = [
   { name: "export", description: "Export this session to a Markdown file" },
+  { name: "files", description: "Browse and preview workspace files" },
   { name: "help", description: "Show command help and key bindings" },
   { name: "key", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
   { name: "login", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
@@ -82604,6 +82915,7 @@ var RuntimeController = class _RuntimeController {
   workspaceResolveError;
   /** Stale guard for in-flight workspace loads; bumped on open/close/re-root. */
   workspaceSeq = 0;
+  workspacePreview = void 0;
   feedbackOpen = false;
   /** True while the feedback note draft owns the composer. */
   feedbackEditing = false;
@@ -83086,7 +83398,8 @@ var RuntimeController = class _RuntimeController {
         selectedIndex: this.workspaceSelectedIndex,
         editing: this.workspaceEditing,
         error: fs3 === void 0 ? "\u6587\u4EF6\u7CFB\u7EDF\u672A\u7EC4\u5408" : void 0,
-        resolveError: this.workspaceResolveError
+        resolveError: this.workspaceResolveError,
+        preview: this.workspacePreview
       };
     }
     return this.workspacePaneSnapshot;
@@ -83176,6 +83489,29 @@ var RuntimeController = class _RuntimeController {
     this.workspaceExpanded.clear();
     this.workspaceSelectedIndex = 0;
     this.workspaceResolveError = void 0;
+  }
+  /** Load a workspace file into the inline previewer. */
+  async openWorkspacePreview(row) {
+    const fs3 = this.ctx.get("fs");
+    if (fs3 === void 0) return;
+    const seq = this.workspaceSeq;
+    try {
+      const text4 = await fs3.readText(row.target);
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
+      const lines = text4.split(/\r?\n/u);
+      const capped = lines.length > 5e3 ? [...lines.slice(0, 5e3), "\u2026 (truncated)"] : lines;
+      this.workspacePreview = {
+        path: row.target.displayPath,
+        name: row.name,
+        lines: capped,
+        scrollOffset: 0
+      };
+      this.workspacePaneSnapshot = void 0;
+      this.emit();
+    } catch (error51) {
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
+      this.setFeedback(`\u2717 \u65E0\u6CD5\u9884\u89C8\u6587\u4EF6\uFF1A${errorReason(error51)}`);
+    }
   }
   /**
    * Return the message-feedback overlay targeting the assistant message that
@@ -84235,6 +84571,7 @@ var RuntimeController = class _RuntimeController {
         return;
       case "workspace-pane": {
         const opening = !this.workspaceOpen;
+        this.workspacePreview = void 0;
         this.toggleOverlay("workspaceOpen");
         if (opening) {
           this.workspaceSeq += 1;
@@ -84247,12 +84584,26 @@ var RuntimeController = class _RuntimeController {
       }
       case "workspace-escape":
         if (!this.workspaceOpen) return;
+        if (this.workspacePreview !== void 0) {
+          this.workspacePreview = void 0;
+          this.workspacePaneSnapshot = void 0;
+          this.emit();
+          return;
+        }
         this.workspaceOpen = false;
         this.workspaceSeq += 1;
         this.emit();
         return;
       case "workspace-move": {
         if (!this.workspaceOpen || this.workspaceEditing) return;
+        if (this.workspacePreview !== void 0) {
+          const maxOffset2 = Math.max(0, this.workspacePreview.lines.length - 1);
+          const nextOffset = Math.min(maxOffset2, Math.max(0, this.workspacePreview.scrollOffset + action.delta));
+          this.workspacePreview = { ...this.workspacePreview, scrollOffset: nextOffset };
+          this.workspacePaneSnapshot = void 0;
+          this.emit();
+          return;
+        }
         const rowCount = this.computeWorkspaceRows().length;
         this.workspaceSelectedIndex = Math.min(
           Math.max(0, rowCount - 1),
@@ -84263,6 +84614,7 @@ var RuntimeController = class _RuntimeController {
       }
       case "workspace-enter": {
         if (!this.workspaceOpen || this.workspaceEditing) return;
+        if (this.workspacePreview !== void 0) return;
         const row = this.computeWorkspaceRows()[this.workspaceSelectedIndex];
         if (row === void 0) return;
         if (row.kind === "directory") {
@@ -84270,10 +84622,18 @@ var RuntimeController = class _RuntimeController {
           return;
         }
         if (row.kind === "file") {
-          this.workspaceOpen = false;
-          this.workspaceSeq += 1;
-          this.emit();
+          this.ownWork(this.openWorkspacePreview(row), "workspace file preview");
         }
+        return;
+      }
+      case "workspace-insert": {
+        if (!this.workspaceOpen) return;
+        this.workspaceOpen = false;
+        this.workspacePreview = void 0;
+        this.workspaceEditing = false;
+        this.workspaceSeq += 1;
+        this.workspacePaneSnapshot = void 0;
+        this.emit();
         return;
       }
       case "workspace-edit":
@@ -85387,6 +85747,12 @@ var RuntimeController = class _RuntimeController {
       this.togglePresentationFlag(query === "status" ? "statusDetails" : query);
       return;
     }
+    if (query === "files" || query === "files " || query === "workspace" || query === "workspace ") {
+      if (this.blockingHead() !== void 0) return;
+      this.closeOtherPanels();
+      this.dispatch({ kind: "workspace-pane" });
+      return;
+    }
     if (query === "export") {
       this.ownWork(this.exportLive(), "session export");
       return;
@@ -86155,7 +86521,7 @@ var RuntimeController = class _RuntimeController {
       "g a \u5B50\u4EE3\u7406 \xB7 g t \u5DE5\u4F5C\u533A \xB7 g f \u53CD\u9988 \xB7 g w \u5DE5\u4F5C\u6D41",
       "\u2191\u2193/jk \u6EDA\u52A8 \xB7 g s \u4F1A\u8BDD\u5217\u8868 \xB7 Tab \u8865\u5168 \xB7 Esc \u5173\u95ED \xB7 / \u547D\u4EE4 \xB7 @ \u63D0\u53CA",
       "\u6EDA\u8F6E\u6EDA\u52A8 \xB7 \u70B9\u51FB\u6253\u5F00\u94FE\u63A5 \xB7 \u62D6\u9009\u590D\u5236",
-      "/plan \u8BA1\u5212 \xB7 /goal \u76EE\u6807 \xB7 /compact \u538B\u7F29",
+      "/files \u5DE5\u4F5C\u533A \xB7 /plan \u8BA1\u5212 \xB7 /goal \u76EE\u6807 \xB7 /compact \u538B\u7F29",
       "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D"
     ];
   }

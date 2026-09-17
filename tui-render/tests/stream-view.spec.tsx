@@ -235,7 +235,8 @@ describe('StreamView', () => {
     try {
       await instance.waitUntilRenderFlush()
       expect(screen()).not.toContain('THOUGHT_00')
-      expect(screen()).not.toContain('✻ 思考')
+      expect(screen()).toContain('思考过程')
+      expect(screen()).not.toContain('▾ ✻ 思考')
       instance.rerender(shell(activeModel(30, true)))
       await instance.waitUntilRenderFlush()
       await expect.poll(screen).toContain('THOUGHT_29')
@@ -259,7 +260,8 @@ describe('StreamView', () => {
       instance.rerender(shell({ ...completed, reasoningExpanded: false }))
       await instance.waitUntilRenderFlush()
       expect(screen()).not.toMatch(/THOUGHT_\d+/u)
-      expect(screen()).not.toContain('✻ 思考')
+      expect(screen()).toContain('思考过程')
+      expect(screen()).not.toContain('▾ ✻ 思考')
       expect(screen()).toContain('ANSWER_FINAL')
       expect(screen()).toContain('> INPUT')
     } finally {
@@ -874,7 +876,7 @@ describe('StreamView', () => {
     expect(result.output).toContain('● 正在处理… (1.2s)')
   })
 
-  it('renders tail thinking placeholder when reasoning is active but collapsed', async () => {
+  it('renders a thinking capsule when reasoning is active but collapsed', async () => {
     const result = await timedActiveFrame({
       activeTurn: {
         turn: 1,
@@ -889,8 +891,10 @@ describe('StreamView', () => {
       advanceMs: 0,
       reasoningExpanded: false,
     })
-    expect(result.output).toContain('● 思考中… (2.5s)')
+    expect(result.output).toContain('思考过程')
+    expect(result.output).toContain('Ctrl+O 展开')
     expect(result.output).not.toContain('investigating problem')
+    expect(result.output).not.toContain('● 思考中…')
   })
 
   it('renders a table live once its delimiter row completes', () => {
@@ -924,7 +928,7 @@ describe('StreamView', () => {
     expect(table).not.toContain('| --- |')
   })
 
-  it('hides reasoning and its header when not enabled', () => {
+  it('renders a collapsed thinking capsule when reasoning is not expanded', () => {
     const active = {
       turn: 1,
       assistantText: '',
@@ -937,8 +941,10 @@ describe('StreamView', () => {
         model: model({ activeTurn: active, status: 'idle' }),
       }),
     )
-    expect(out).not.toContain('✻ 思考')
+    expect(out).toContain('思考过程')
+    expect(out).toContain('Ctrl+O 展开')
     expect(out).not.toContain('deep thinking')
+    expect(out).not.toContain('▾ ✻ 思考')
   })
 
   it('keeps completed reasoning hidden until Ctrl+O display is enabled', () => {
@@ -959,8 +965,9 @@ describe('StreamView', () => {
         model: model({ history }),
       }),
     )
-    expect(collapsed).not.toContain('✻ 思考')
+    expect(collapsed).toContain('思考过程')
     expect(collapsed).not.toContain('retained reasoning')
+    expect(collapsed).not.toContain('▾ ✻ 思考')
 
     const expanded = renderToString(
       createElement(StreamView, {
@@ -970,7 +977,7 @@ describe('StreamView', () => {
     expect(expanded).toContain('retained reasoning')
   })
 
-  it('packs a short transcript against the status and composer rows', async () => {
+  it('packs a short transcript under the title divider so live tools grow downward', async () => {
     const chunks: string[] = []
     const stdout = ttyStdout(24)
     stdout.on('data', (chunk: string) => chunks.push(chunk))
@@ -1007,7 +1014,7 @@ describe('StreamView', () => {
       expect(msgAt).toBeGreaterThan(titleAt)
       expect(composerAt).toBeGreaterThan(msgAt)
       expect(statusAt).toBeGreaterThan(composerAt)
-      expect(msgAt - titleAt).toBeGreaterThan(composerAt - msgAt)
+      expect(msgAt - titleAt).toBeLessThan(composerAt - msgAt)
     } finally {
       instance.unmount()
     }
@@ -1276,6 +1283,98 @@ describe('StreamView', () => {
     expect(plain).not.toContain('有什么可以帮忙的')
   })
 
+  it('keeps a short generating turn under the divider so the live tool grows downward', async () => {
+    const stdout = ttyStdout(24)
+    const instance = render(
+      createElement(AppShell, {
+        title: 'TITLE',
+        badge: '',
+        children: createElement(StreamView, {
+          model: model({
+            history: [{ id: 1, kind: 'user', text: 'PROMPT_STICKY_KEEP', timestamp: 1 }],
+            activeTurn: {
+              turn: 1,
+              assistantText: '',
+              reasoningText: '',
+              reasoningDurationMs: 0,
+              toolCalls: [{
+                callId: ToolCallId('call-ls'),
+                name: 'bash',
+                arguments: '{"command":"ls -la"}',
+              }],
+            },
+            status: 'generating',
+          }),
+        }),
+        input: createElement(Text, null, 'INPUT'),
+        status: createElement(Text, null, 'STATUS'),
+      }),
+      {
+        stdout: frameTtyStdout(stdout),
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      const snapshot = visibleFrameSnapshot()
+      expect(snapshot).toBeDefined()
+      const userRow = snapshot!.rows.find(row => row.line.text.includes('PROMPT_STICKY_KEEP'))
+      const toolRow = snapshot!.rows.find(row => row.line.text.includes('bash'))
+      expect(userRow?.row).toBeLessThanOrEqual(5)
+      expect(toolRow?.row).toBeGreaterThan(userRow!.row)
+      expect(toolRow!.row - userRow!.row).toBeLessThan(8)
+    } finally {
+      instance.unmount()
+    }
+  })
+
+  it('projects the last user prompt onto the sticky divider once follow mode leaves it', async () => {
+    const labels: Array<string | undefined> = []
+    const pad = Array.from({ length: 80 }, (_, index) => `PAD_LINE_${String(index).padStart(3, '0')}`).join('\n')
+    const stdout = ttyStdout(24)
+    const instance = render(
+      createElement(AppShell, {
+        title: 'TITLE',
+        badge: '',
+        children: createElement(StreamView, {
+          model: model({
+            history: [{ id: 1, kind: 'user', text: 'PROMPT_OFFSCREEN', timestamp: 1 }],
+            activeTurn: {
+              turn: 1,
+              assistantText: pad,
+              reasoningText: '',
+              reasoningDurationMs: 0,
+              toolCalls: [],
+            },
+            status: 'generating',
+          }),
+          onStickyHeaderChange: (label) => {
+            labels.push(label)
+          },
+        }),
+        input: createElement(Text, null, 'INPUT'),
+        status: createElement(Text, null, 'STATUS'),
+      }),
+      {
+        stdout: frameTtyStdout(stdout),
+        stdin: fakeTtyStdin(),
+        exitOnCtrlC: false,
+        patchConsole: false,
+        interactive: true,
+      },
+    )
+    try {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      expect(labels.some(label => label === '> PROMPT_OFFSCREEN')).toBe(true)
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('expands history tool cards when toolCardsExpanded is true', () => {
     const history: ViewModel['history'] = [{
       id: 1,
@@ -1341,7 +1440,7 @@ describe('StreamView', () => {
     expect(plain.indexOf('AFTER_TOOL')).toBeGreaterThan(plain.indexOf('▸ bash · ✓'))
   })
 
-  it('hides reasoning completely by default while streaming the answer', () => {
+  it('folds reasoning into a capsule by default while streaming the answer', () => {
     const reasoningText = Array.from(
       { length: 10 },
       (_, index) => `THINK_${index}`,
@@ -1360,11 +1459,12 @@ describe('StreamView', () => {
         }),
       }),
     ))
-    expect(plain).not.toContain('✻ 思考')
-    expect(plain).not.toContain('Ctrl+O 展开')
+    expect(plain).toContain('思考过程')
+    expect(plain).toContain('Ctrl+O 展开')
     expect(plain).toContain('looking')
     expect(plain).not.toContain('THINK_0')
     expect(plain).not.toContain('THINK_9')
+    expect(plain).not.toContain('▾ ✻ 思考')
   })
 
   it('labels each reasoning run with its own duration while generating', () => {
@@ -1593,7 +1693,8 @@ describe('StreamView', () => {
       }),
     ))
     expect(collapsed).not.toContain('● 过程摘要')
-    expect(collapsed).not.toContain('✻ 思考')
+    expect(collapsed).toContain('思考过程')
+    expect(collapsed).not.toContain('▾ ✻ 思考')
     expect(collapsed).not.toContain('THINK_')
     expect(collapsed).toContain('PART_0')
     expect(collapsed).toContain('PART_20')

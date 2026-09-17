@@ -38,8 +38,10 @@ describe('ReasoningBlock', () => {
     expect(render(false)).toContain('second line')
   })
 
-  it('hides the whole block without leaving a fold marker', () => {
-    expect(render(true)).toBe('')
+  it('renders a compact capsule with line count and duration when collapsed', () => {
+    const out = stripAnsi(render(true, 'deep thinking\nsecond line', 1234))
+    expect(out).toContain('▸ ✻ 思考过程 (共 2 行 · 1.2s) · Ctrl+O 展开')
+    expect(out).not.toContain('deep thinking')
   })
 
   it('keeps visible reasoning readable without color', () => {

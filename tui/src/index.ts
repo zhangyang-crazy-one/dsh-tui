@@ -259,6 +259,7 @@ import type {
   WorkflowHudMember,
   WorkflowHudState,
   WorkflowOverlayState,
+  WorkspaceFilePreview,
   WorkspacePaneState,
 } from '@deepseek-ai/dsh-tui-render'
 // Empty type imports carry the loader Context merge for the settlement await
@@ -958,6 +959,7 @@ export const SEARCH_DEBOUNCE_MS = 120
  */
 const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
   { name: 'export', description: 'Export this session to a Markdown file' },
+  { name: 'files', description: 'Browse and preview workspace files' },
   { name: 'help', description: 'Show command help and key bindings' },
   { name: 'key', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
   { name: 'login', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
@@ -1152,6 +1154,7 @@ export class RuntimeController implements TuiController {
   private workspaceResolveError: string | undefined
   /** Stale guard for in-flight workspace loads; bumped on open/close/re-root. */
   private workspaceSeq = 0
+  private workspacePreview: WorkspaceFilePreview | undefined = undefined
   private feedbackOpen = false
   /** True while the feedback note draft owns the composer. */
   private feedbackEditing = false
@@ -1798,6 +1801,7 @@ export class RuntimeController implements TuiController {
         editing: this.workspaceEditing,
         error: fs === undefined ? '文件系统未组合' : undefined,
         resolveError: this.workspaceResolveError,
+        preview: this.workspacePreview,
       }
     }
     return this.workspacePaneSnapshot
@@ -1905,6 +1909,35 @@ export class RuntimeController implements TuiController {
     this.workspaceExpanded.clear()
     this.workspaceSelectedIndex = 0
     this.workspaceResolveError = undefined
+  }
+
+  /** Load a workspace file into the inline previewer. */
+  private async openWorkspacePreview(row: {
+    target: FsTarget
+    name: string
+  }): Promise<void> {
+    const fs = this.ctx.get('fs')
+    if (fs === undefined) return
+    const seq = this.workspaceSeq
+    try {
+      const text = await fs.readText(row.target)
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+      const lines = text.split(/\r?\n/u)
+      const capped = lines.length > 5000
+        ? [...lines.slice(0, 5000), '… (truncated)']
+        : lines
+      this.workspacePreview = {
+        path: row.target.displayPath,
+        name: row.name,
+        lines: capped,
+        scrollOffset: 0,
+      }
+      this.workspacePaneSnapshot = undefined
+      this.emit()
+    } catch (error: unknown) {
+      if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+      this.setFeedback(`✗ 无法预览文件：${errorReason(error)}`)
+    }
   }
 
   /**
@@ -3110,6 +3143,7 @@ export class RuntimeController implements TuiController {
         return
       case 'workspace-pane': {
         const opening = !this.workspaceOpen
+        this.workspacePreview = undefined
         this.toggleOverlay('workspaceOpen')
         if (opening) {
           this.workspaceSeq += 1
@@ -3122,12 +3156,26 @@ export class RuntimeController implements TuiController {
       }
       case 'workspace-escape':
         if (!this.workspaceOpen) return
+        if (this.workspacePreview !== undefined) {
+          this.workspacePreview = undefined
+          this.workspacePaneSnapshot = undefined
+          this.emit()
+          return
+        }
         this.workspaceOpen = false
         this.workspaceSeq += 1
         this.emit()
         return
       case 'workspace-move': {
         if (!this.workspaceOpen || this.workspaceEditing) return
+        if (this.workspacePreview !== undefined) {
+          const maxOffset = Math.max(0, this.workspacePreview.lines.length - 1)
+          const nextOffset = Math.min(maxOffset, Math.max(0, this.workspacePreview.scrollOffset + action.delta))
+          this.workspacePreview = { ...this.workspacePreview, scrollOffset: nextOffset }
+          this.workspacePaneSnapshot = undefined
+          this.emit()
+          return
+        }
         const rowCount = this.computeWorkspaceRows().length
         this.workspaceSelectedIndex = Math.min(
           Math.max(0, rowCount - 1),
@@ -3138,6 +3186,7 @@ export class RuntimeController implements TuiController {
       }
       case 'workspace-enter': {
         if (!this.workspaceOpen || this.workspaceEditing) return
+        if (this.workspacePreview !== undefined) return
         const row = this.computeWorkspaceRows()[this.workspaceSelectedIndex]
         if (row === undefined) return
         if (row.kind === 'directory') {
@@ -3145,11 +3194,18 @@ export class RuntimeController implements TuiController {
           return
         }
         if (row.kind === 'file') {
-          // The loop already inserted the displayPath; close the overlay.
-          this.workspaceOpen = false
-          this.workspaceSeq += 1
-          this.emit()
+          this.ownWork(this.openWorkspacePreview(row), 'workspace file preview')
         }
+        return
+      }
+      case 'workspace-insert': {
+        if (!this.workspaceOpen) return
+        this.workspaceOpen = false
+        this.workspacePreview = undefined
+        this.workspaceEditing = false
+        this.workspaceSeq += 1
+        this.workspacePaneSnapshot = undefined
+        this.emit()
         return
       }
       case 'workspace-edit':
@@ -4367,6 +4423,12 @@ export class RuntimeController implements TuiController {
       this.togglePresentationFlag(query === 'status' ? 'statusDetails' : query)
       return
     }
+    if (query === 'files' || query === 'files ' || query === 'workspace' || query === 'workspace ') {
+      if (this.blockingHead() !== undefined) return
+      this.closeOtherPanels()
+      this.dispatch({ kind: 'workspace-pane' })
+      return
+    }
     if (query === 'export') {
       this.ownWork(this.exportLive(), 'session export')
       return
@@ -5244,7 +5306,7 @@ export class RuntimeController implements TuiController {
       'g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流',
       '↑↓/jk 滚动 · g s 会话列表 · Tab 补全 · Esc 关闭 · / 命令 · @ 提及',
       '滚轮滚动 · 点击打开链接 · 拖选复制',
-      '/plan 计划 · /goal 目标 · /compact 压缩',
+      '/files 工作区 · /plan 计划 · /goal 目标 · /compact 压缩',
       '/model 模型选择 · /new 新会话 · /help 帮助 · /export 导出会话 · /settings 设置 · /resume 会话 · /reload 重载',
     ]
   }

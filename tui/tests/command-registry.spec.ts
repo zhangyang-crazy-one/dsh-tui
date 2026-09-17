@@ -140,12 +140,13 @@ describe('command directory', () => {
       handler: () => ({ kind: 'success', text: 'Download request' }),
     })
 
-    // The palette shows the registry commands plus local export/help/model/reload/settings,
+    // The palette shows the registry commands plus local export/files/help/model/reload/settings,
     // with exactly one export entry (the Web placeholder is filtered).
     expect(controller.commands.map(command => command.name)).toEqual([
       'compact',
       'export',
       'feedback',
+      'files',
       'help',
       'key',
       'login',
@@ -530,7 +531,7 @@ describe('/help', () => {
     expect(sheet).toContain('↑↓/jk 滚动')
     expect(sheet).toContain('滚轮滚动 · 点击打开链接 · 拖选复制')
     expect(sheet).toContain('Esc 关闭')
-    expect(sheet).toContain('/plan 计划 · /goal 目标 · /compact 压缩')
+    expect(sheet).toContain('/files 工作区 · /plan 计划 · /goal 目标 · /compact 压缩')
     expect(sheet).toContain('/model 模型选择')
     expect(sheet).toContain('/settings 设置')
     expect(sheet).toContain('/resume 会话')

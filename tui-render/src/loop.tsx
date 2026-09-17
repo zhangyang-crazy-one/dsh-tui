@@ -170,6 +170,7 @@ export type LoopAction =
   | { kind: 'workspace-escape' }
   | { kind: 'workspace-move'; delta: number }
   | { kind: 'workspace-enter' }
+  | { kind: 'workspace-insert' }
   | { kind: 'workspace-edit' }
   | { kind: 'workspace-apply'; value: string }
   | { kind: 'workspace-cancel-edit' }
@@ -217,7 +218,6 @@ export interface TuiController {
   getAgentHubPane(): AgentHubPaneState
   /** Plan-directory overlay (`计划`). */
   getPlanDirectoryPane(): PlanDirectoryPaneState
-  /** Workspace-tree overlay (`工作区`). */
   /** Workspace-tree overlay (`工作区`). */
   getWorkspacePane(): WorkspacePaneState
   /** Message-feedback overlay (`反馈`). */
@@ -738,6 +738,7 @@ export function mapKeyEvent(
       rootPath?: string | undefined
       selectedKind?: 'directory' | 'file' | 'other' | undefined
       selectedPath?: string | undefined
+      preview?: boolean | undefined
     }
     feedback?: {
       open: boolean
@@ -1085,20 +1086,7 @@ export function mapKeyEvent(
       return holdComposer(state, { kind: 'plan-directory-apply' })
     }
     if (workspaceOpen) {
-      if (overlays.workspace?.selectedKind === 'file') {
-        // File Enter inserts the displayPath at the caret; the controller closes.
-        const caret = clampCaretIndex(state.text, state.caretIndex)
-        const path = overlays.workspace.selectedPath ?? ''
-        return {
-          kind: 'dispatch',
-          action: { kind: 'workspace-enter' },
-          text: state.text.slice(0, caret) + path + state.text.slice(caret),
-          commandQuery: undefined,
-          prefixG: false,
-          renaming: state.renaming,
-          caretIndex: caret + path.length,
-        }
-      }
+      if (overlays.workspace?.preview === true) return { kind: 'none' }
       return holdComposer(state, { kind: 'workspace-enter' })
     }
     if (modelPane.open) {
@@ -1432,7 +1420,33 @@ export function mapKeyEvent(
     if (key === 'k' || keyInfo.upArrow) {
       return holdComposer(state, { kind: 'workspace-move', delta: -1 })
     }
-    if (key === 'e') {
+    if (keyInfo.pageUp) {
+      return holdComposer(state, { kind: 'workspace-move', delta: -20 })
+    }
+    if (keyInfo.pageDown) {
+      return holdComposer(state, { kind: 'workspace-move', delta: 20 })
+    }
+    if (key === ' ' ) {
+      if (overlays.workspace?.preview === true) return { kind: 'none' }
+      return holdComposer(state, { kind: 'workspace-enter' })
+    }
+    if (key === 'q') {
+      return holdComposer(state, { kind: 'workspace-escape' })
+    }
+    if (key === 'i') {
+      const path = overlays.workspace?.selectedPath ?? ''
+      const caret = clampCaretIndex(state.text, state.caretIndex)
+      return {
+        kind: 'dispatch',
+        action: { kind: 'workspace-insert' },
+        text: state.text.slice(0, caret) + path + state.text.slice(caret),
+        commandQuery: undefined,
+        prefixG: false,
+        renaming: state.renaming,
+        caretIndex: caret + path.length,
+      }
+    }
+    if (key === 'e' && overlays.workspace?.preview !== true) {
       // The path draft prefills the composer with the current root (D-09).
       const draft = overlays.workspace?.rootPath ?? ''
       return {
@@ -1922,6 +1936,7 @@ export function TuiLoop({
   const [planReviewOffset, setPlanReviewOffset] = useState(0)
   const viewportSequenceRef = useRef(0)
   const [viewportCommand, setViewportCommand] = useState<TranscriptViewportCommand>()
+  const [topDividerLabel, setTopDividerLabel] = useState<string | undefined>()
   const issueViewportCommand = useCallback((
     command: TranscriptViewportCommandInput,
   ): void => {
@@ -2284,6 +2299,7 @@ export function TuiLoop({
             workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.kind,
           selectedPath:
             workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.path,
+          preview: workspacePaneRef.current.preview !== undefined,
         },
         feedback: {
           open: feedbackPaneRef.current.open,
@@ -2750,6 +2766,7 @@ export function TuiLoop({
     frameMetrics,
     motionPaused: viewportMotionPaused,
     mode: currentMode,
+    onStickyHeaderChange: setTopDividerLabel,
   })
   const conversationColumns = conversationWidth(columns)
   const hudRows: ReactNode[] = []
@@ -3010,6 +3027,7 @@ export function TuiLoop({
     status,
     children: content,
     input: inputSlot,
+    topDividerLabel,
   })
 }
 

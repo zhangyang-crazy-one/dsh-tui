@@ -2758,7 +2758,7 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
     }
   })
 
-  it('dispatches workspace-enter for a directory and inserts the path for a file', () => {
+  it('dispatches workspace-enter for a directory and for a file', () => {
     const directory = extras(CLOSED, {
       workspace: { open: true, rootPath: '/ws', selectedKind: 'directory', selectedPath: '/ws/src' },
     })
@@ -2780,7 +2780,7 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
     const file = extras(CLOSED, {
       workspace: { open: true, rootPath: '/ws', selectedKind: 'file', selectedPath: '/ws/a.ts' },
     })
-    const insert = mapKeyEvent(
+    const openPreview = mapKeyEvent(
       EMPTY,
       '',
       keyInfo({ return: true }),
@@ -2789,13 +2789,55 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
       CHAT_SEARCH,
       ...file,
     )
-    expect(insert.kind === 'dispatch' ? insert.action : insert).toEqual({
+    expect(openPreview.kind === 'dispatch' ? openPreview.action : openPreview).toEqual({
       kind: 'workspace-enter',
+    })
+    if (openPreview.kind === 'dispatch') {
+      expect(openPreview.text).toBe('')
+    }
+  })
+
+  it('inserts the selected workspace path on i and closes via workspace-insert', () => {
+    const file = extras(CLOSED, {
+      workspace: { open: true, rootPath: '/ws', selectedKind: 'file', selectedPath: '/ws/a.ts' },
+    })
+    const insert = mapKeyEvent(EMPTY, 'i', keyInfo(), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...file)
+    expect(insert.kind === 'dispatch' ? insert.action : insert).toEqual({
+      kind: 'workspace-insert',
     })
     if (insert.kind === 'dispatch') {
       expect(insert.text).toBe('/ws/a.ts')
       expect(insert.caretIndex).toBe('/ws/a.ts'.length)
     }
+  })
+
+  it('swallows Enter and Space while a workspace file preview is open', () => {
+    const preview = extras(CLOSED, {
+      workspace: {
+        open: true,
+        rootPath: '/ws',
+        selectedKind: 'file',
+        selectedPath: '/ws/a.ts',
+        preview: true,
+      },
+    })
+    const enter = mapKeyEvent(
+      EMPTY,
+      '',
+      keyInfo({ return: true }),
+      COMMANDS,
+      CHAT_PANE,
+      CHAT_SEARCH,
+      ...preview,
+    )
+    expect(enter.kind).toBe('none')
+    const space = mapKeyEvent(EMPTY, ' ', keyInfo(), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...preview)
+    expect(space.kind).toBe('none')
+    const down = mapKeyEvent(EMPTY, 'j', keyInfo(), COMMANDS, CHAT_PANE, CHAT_SEARCH, ...preview)
+    expect(down.kind === 'dispatch' ? down.action : down).toEqual({
+      kind: 'workspace-move',
+      delta: 1,
+    })
   })
 
   it('routes the workspace path draft through the shared editing keys', () => {

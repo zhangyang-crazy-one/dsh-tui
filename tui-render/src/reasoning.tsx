@@ -1,6 +1,7 @@
 /**
- * Optional dim reasoning in the main transcript. Hidden blocks occupy no rows;
- * visible blocks retain their complete text during streaming and settlement.
+ * Optional dim reasoning in the main transcript. Collapsed blocks occupy one
+ * capsule row with line count and duration; expanded blocks retain their
+ * complete text during streaming and settlement.
  * @module @deepseek-ai/dsh-tui-render/reasoning
  */
 
@@ -14,7 +15,7 @@ import { getBrailleSpinnerFrame } from './ui-copy.ts'
 export interface ReasoningBlockProps {
   /** The assembled reasoning text. */
   text: string
-  /** Hide the entire block when true. */
+  /** Fold the body into a one-line capsule when true. */
   collapsed: boolean
   /** Milliseconds the turn has run; the fold label. */
   durationMs: number
@@ -51,7 +52,7 @@ function bodyRow(line: string, key: number, width?: number): ReactNode {
 }
 
 /**
- * Render complete reasoning under a dim header, or nothing when hidden.
+ * Render complete reasoning under a dim header, or a one-line capsule when folded.
  * The containing transcript owns clipping and scrolling.
  * @param props - display state and available width.
  * @returns the element tree.
@@ -64,10 +65,27 @@ export function ReasoningBlock({
   maxCols,
 }: ReasoningBlockProps): ReactNode {
   const { columns } = useWindowSize()
-  if (collapsed || text === '') return null
+  if (text === '') return null
   const width = maxCols ?? columns
   const escaped = escapeContent(text)
   const body = wrapDisplayLines(escaped, Math.max(1, width - 4))
+
+  if (collapsed) {
+    const lineCount = body.length
+    const icon = live ? getBrailleSpinnerFrame(durationMs) : '✻'
+    const parts = [
+      styled('▸ ', 'accentText'),
+      styled(`${icon} 思考过程`, 'accentText'),
+      styled(` (共 ${String(lineCount)} 行 · ${formatSeconds(durationMs)}s)`, 'fgDim'),
+      styled(' · Ctrl+O 展开', 'fgDim'),
+    ]
+    return (
+      <Box flexDirection="column" width="100%" backgroundColor={inkColor('toolBg')}>
+        <Text wrap="truncate">{paintBackgroundRow(parts, 'toolBg', width > 0 ? width : 0)}</Text>
+      </Box>
+    )
+  }
+
   return (
     <Box flexDirection="column" width="100%" backgroundColor={inkColor('toolBg')}>
       <Text wrap="truncate">{thinkingHeader(durationMs, !live, live, width)}</Text>

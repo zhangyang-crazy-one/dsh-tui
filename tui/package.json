@@ -32,7 +32,6 @@
   ],
   "dependencies": {
     "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime-worker-thread": "workspace:^",
     "@deepseek-ai/dsh-llm-anthropic": "workspace:^",
     "@deepseek-ai/dsh-llm-openai": "workspace:^",
     "@deepseek-ai/dsh-message-feedback": "workspace:^",

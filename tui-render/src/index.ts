@@ -91,6 +91,19 @@ export {
   physicalScrollRailGeometry,
   reduceTranscriptViewport,
 } from './transcript-viewport.ts'
+export {
+  formatStickyThinkingLabel,
+  formatStickyToolLabel,
+  formatStickyUserLabel,
+  resolveStickyThinkingHeader,
+  resolveStickyTranscriptHeader,
+} from './sticky-header.ts'
+export type {
+  StickyReasoningRange,
+  StickyToolRange,
+  StickyTranscriptRanges,
+  StickyUserRange,
+} from './sticky-header.ts'
 export type {
   PhysicalScrollRailGeometry,
   TranscriptBlockLayout,
@@ -236,7 +249,7 @@ export type { WorkflowHudMember, WorkflowHudState } from './workflow-hud.tsx'
 export { WorkflowOverlay, EMPTY_WORKFLOW_OVERLAY, WORKFLOW_OVERLAY_WINDOW } from './workflow-overlay.tsx'
 export type { WorkflowOverlayState } from './workflow-overlay.tsx'
 export { WorkspacePane, EMPTY_WORKSPACE_PANE } from './workspace-pane.tsx'
-export type { WorkspaceNode, WorkspacePaneState } from './workspace-pane.tsx'
+export type { WorkspaceFilePreview, WorkspaceNode, WorkspacePaneState } from './workspace-pane.tsx'
 export { FeedbackPane, EMPTY_FEEDBACK_PANE } from './feedback-pane.tsx'
 export type { FeedbackPaneState, FeedbackWriteError } from './feedback-pane.tsx'
 export { QueueChip, queueChipText } from './queue-chip.tsx'

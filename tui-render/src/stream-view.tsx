@@ -12,7 +12,7 @@
  * stack. Settled and streaming text share {@link MarkdownBlock} so a finishing
  * turn never reflows; the `● ` marker is the first row's painted prefix, and
  * enabled reasoning retains its full body, and only its final run has a live
- * duration while generating. Disabled reasoning occupies no transcript rows.
+ * duration while generating. Collapsed reasoning occupies one capsule row.
  *
  * The conversation uses the full width on narrow terminals and otherwise
  * reserves two columns on each side. The rail owns the terminal's rightmost
@@ -35,7 +35,7 @@ import type {
   ProjectedTurnContent,
   ViewModel,
 } from './projection.ts'
-import { displayColumnSlice, displayWidth, escapeContent } from './content.ts'
+import { displayColumnSlice, displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
 import { formatTurnTailStats, producedPathsForTurn } from './turn-tail.ts'
 import { pathToFileURL } from 'node:url'
@@ -72,6 +72,12 @@ import type {
   TranscriptBlockLayout,
   TranscriptViewportCommand,
 } from './transcript-viewport.ts'
+import {
+  resolveStickyTranscriptHeader,
+  type StickyReasoningRange,
+  type StickyToolRange,
+  type StickyUserRange,
+} from './sticky-header.ts'
 import { TranscriptLayoutCache } from './transcript-layout-cache.ts'
 import { setMouseRailRegion } from './mouse-io.ts'
 import { releaseFrameRail, setFrameRail, writePublishedFrameSnapshot } from './frame-fill.ts'
@@ -183,6 +189,8 @@ export interface StreamViewProps {
    * so conclusions dominate.
    */
   mode?: 'agent' | 'plan' | 'focus' | undefined
+  /** Report the AppShell top-divider sticky thinking label. */
+  onStickyHeaderChange?: ((label: string | undefined) => void) | undefined
 }
 
 /** Fixed-width scroll-rail cells for one transcript viewport. */
@@ -224,9 +232,9 @@ function isVisiblePart(part: TurnPart): boolean {
   return part.text !== ''
 }
 
-/** Remove disabled reasoning before allocating rows or inter-module spacing. */
-function displayedParts(parts: readonly TurnPart[], reasoningExpanded: boolean): TurnPart[] {
-  return parts.filter(part => isVisiblePart(part) && (part.kind !== 'reasoning' || reasoningExpanded))
+/** Filter out empty parts while retaining cards, summaries, and collapsible reasoning. */
+function displayedParts(parts: readonly TurnPart[], _reasoningExpanded: boolean): TurnPart[] {
+  return parts.filter(isVisiblePart)
 }
 
 /** Maximum individual cards retained while the tool fold is closed. */
@@ -383,7 +391,10 @@ export function compactionDividerLabel(
   const count = divider.shadowedCount === undefined
     ? ''
     : ` ${String(divider.shadowedCount)} 条`
-  return `──── ✂ 已压缩${count} · Ctrl+K ${expanded ? '折叠' : '展开'} ────`
+  const tokens = divider.shadowedTokenCount === undefined
+    ? ''
+    : ` · ~${String(divider.shadowedTokenCount)} tok`
+  return `──── ✂ 已压缩${count}${tokens} · Ctrl+K ${expanded ? '折叠' : '展开'} ────`
 }
 
 /**
@@ -931,6 +942,40 @@ interface ProjectedEntryRows {
   readonly rows: ReadonlyMap<string, RowSource<MarkdownRenderLine>>
   readonly textRanges: ReadonlyMap<string, readonly BlockTextRange[]>
   readonly storeBlocks: ReadonlyMap<string, StoredBlockRows>
+  readonly reasoningSticky: ReadonlyMap<string, readonly StickyReasoningRange[]>
+  readonly toolSticky: ReadonlyMap<string, readonly StickyToolRange[]>
+  readonly userSticky: ReadonlyMap<string, StickyUserRange>
+}
+
+/**
+ * Prefer presenter titles over the raw tool name for sticky divider copy.
+ * @param card - projected tool card.
+ * @returns a single-line title.
+ */
+function stickyToolTitle(card: ToolCardModel): string {
+  return card.resultView?.title ?? card.callView?.title ?? card.name
+}
+
+/**
+ * Record a sticky range only when the card has a body below its heading.
+ * @param map - per-entry tool ranges in block-local row coordinates.
+ * @param id - transcript block id owning the card.
+ * @param start - heading row inside the block.
+ * @param end - exclusive end row of the card.
+ * @param card - projected tool card.
+ */
+function recordToolSticky(
+  map: Map<string, StickyToolRange[]>,
+  id: string,
+  start: number,
+  end: number,
+  card: ToolCardModel,
+): void {
+  if (end - start <= 1) return
+  const existing = map.get(id)
+  const next = existing === undefined ? [] : existing
+  next.push({ start, end, title: stickyToolTitle(card) })
+  map.set(id, next)
 }
 
 /** Affix-free range list shared by entries whose rows are self-contained. */
@@ -1250,7 +1295,10 @@ function makeToolCardBlockEntry(
  * Render the measured transcript inside one fixed physical-row viewport.
  * Stable block refs feed the viewport reducer after each Ink layout; navigation
  * moves only the absolutely positioned transcript inside the clipped slot.
- * Reasoning stays hidden and tool cards remain compact by default.
+ * Short transcripts pin to the top of that slot so a live tool grows downward
+ * instead of shoving the last user prompt into the title bar; overflow still
+ * follows the live edge. Reasoning stays hidden and tool cards remain compact
+ * by default.
  * @param props - projected conversation state and interaction callbacks.
  * @returns the centered Ink element tree for the current physical viewport.
  */
@@ -1268,6 +1316,7 @@ export function StreamView({
   mode = 'agent',
   layoutKey,
   locale = 'zh-CN',
+  onStickyHeaderChange,
 }: StreamViewProps): ReactNode {
   const policy = renderPolicy ?? renderPolicyDefaults()
   const toolRows = useMemo(() => new ToolRowCache(policy.tools), [
@@ -1516,6 +1565,9 @@ export function StreamView({
     const map = new Map<string, RowSource<MarkdownRenderLine>>()
     const textRanges = new Map<string, readonly BlockTextRange[]>()
     const storeBlocks = new Map<string, StoredBlockRows>()
+    const reasoningSticky = new Map<string, readonly StickyReasoningRange[]>()
+    const toolSticky = new Map<string, StickyToolRange[]>()
+    const userSticky = new Map<string, StickyUserRange>()
     const projectorCache = projectorStates.current
     const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks)
     const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
@@ -1528,6 +1580,9 @@ export function StreamView({
           ...(row.divider.shadowedCount === undefined
             ? {}
             : { compactionShadowedCount: row.divider.shadowedCount }),
+          ...(row.divider.shadowedTokenCount === undefined
+            ? {}
+            : { compactionShadowedTokenCount: row.divider.shadowedTokenCount }),
         }
         const projection = project(id, {
           id,
@@ -1547,6 +1602,7 @@ export function StreamView({
           ...(hasSubsequent ? { meta: { userMessageGap: true } } : {}),
         }, settledBlockRowsScope, undefined, false)
         map.set(id, projection.lines)
+        userSticky.set(id, { start: 0, end: projection.lines.length, text: row.message.text })
         continue
       }
       const parts = displayedParts(
@@ -1559,6 +1615,7 @@ export function StreamView({
       for (const [partIndex, part] of parts.entries()) {
         if (turnPartGap(parts, partIndex) > 0) rows.push(GAP_LINE)
         if (part.kind === 'reasoning') {
+          const stickyStart = rows.length
           rows.append(project(id, {
             id: `${id}-r-${String(partIndex)}`,
             kind: 'reasoning',
@@ -1569,6 +1626,17 @@ export function StreamView({
               reasoningLive: false,
             },
           }, settledBlockRowsScope, undefined, false).lines)
+          if (reasoningExpanded && rows.length - stickyStart > 1) {
+            const existing = reasoningSticky.get(id)
+            const next: StickyReasoningRange[] = existing === undefined ? [] : [...existing]
+            next.push({
+              start: stickyStart,
+              end: rows.length,
+              turnOrdinal: row.message.turnOrdinal ?? 1,
+              durationMs: part.durationMs,
+            })
+            reasoningSticky.set(id, next)
+          }
           continue
         }
         if (part.kind === 'tool-summary') {
@@ -1582,6 +1650,7 @@ export function StreamView({
           continue
         }
         if (part.kind === 'card') {
+          const stickyStart = rows.length
           rows.append(project(
             id,
             makeToolCardBlockEntry(id, part.card),
@@ -1589,6 +1658,7 @@ export function StreamView({
             undefined,
             false,
           ).lines)
+          recordToolSticky(toolSticky, id, stickyStart, rows.length, part.card)
           continue
         }
         const start = rows.length
@@ -1641,7 +1711,7 @@ export function StreamView({
       map.set(id, rows.build())
       if (ranges.length > 0) textRanges.set(id, ranges)
     }
-    return { rows: map, textRanges, storeBlocks }
+    return { rows: map, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky }
   }, [
     contentWidth,
     expandedCompactionId,
@@ -1668,6 +1738,8 @@ export function StreamView({
     lines: RowSource<MarkdownRenderLine>
     ranges: readonly BlockTextRange[]
     storeBlocks: Map<string, StoredBlockRows>
+    reasoningSticky: readonly StickyReasoningRange[]
+    toolSticky: readonly StickyToolRange[]
   } | undefined>(() => {
     if (activeTurn === undefined) return undefined
     const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
@@ -1697,13 +1769,15 @@ export function StreamView({
           )}s)`,
         },
       }, blockRowsScope, undefined, true).lines
-      return { id, lines, ranges: [], storeBlocks }
+      return { id, lines, ranges: [], storeBlocks, reasoningSticky: [], toolSticky: [] }
     }
     const parts = displayedParts(
       compactToolParts(rawParts, toolCardsExpanded, batchPresenters, mode, presenterCache), reasoningExpanded,
     )
     const rows = new RowSequence<MarkdownRenderLine>()
     const ranges: BlockTextRange[] = []
+    const sticky: StickyReasoningRange[] = []
+    const toolSticky: StickyToolRange[] = []
     let textIndex = 0
     let lastVisiblePart = -1
     for (const [partIndex, part] of parts.entries()) {
@@ -1713,18 +1787,28 @@ export function StreamView({
       if (turnPartGap(parts, partIndex) > 0) rows.push(GAP_LINE)
       if (part.kind === 'reasoning') {
         const live = status === 'generating' && partIndex === lastVisiblePart
+        const durationMs = live
+          ? liveDurationMs ?? part.durationMs
+          : part.durationMs
+        const stickyStart = rows.length
         rows.append(project(id, {
           id: `${id}-r-${String(partIndex)}`,
           kind: 'reasoning',
           source: part.text,
           meta: {
-            reasoningDurationMs: live
-              ? liveDurationMs ?? part.durationMs
-              : part.durationMs,
+            reasoningDurationMs: durationMs,
             reasoningExpanded,
             reasoningLive: live,
           },
         }, blockRowsScope, undefined, status === 'generating').lines)
+        if (reasoningExpanded && rows.length - stickyStart > 1) {
+          sticky.push({
+            start: stickyStart,
+            end: rows.length,
+            turnOrdinal: activeTurn.turn,
+            durationMs,
+          })
+        }
         continue
       }
       if (part.kind === 'tool-summary') {
@@ -1738,6 +1822,7 @@ export function StreamView({
         continue
       }
       if (part.kind === 'card') {
+        const stickyStart = rows.length
         rows.append(project(
           id,
           makeToolCardBlockEntry(id, part.card),
@@ -1745,6 +1830,13 @@ export function StreamView({
           undefined,
           status === 'generating',
         ).lines)
+        if (rows.length - stickyStart > 1) {
+          toolSticky.push({
+            start: stickyStart,
+            end: rows.length,
+            title: stickyToolTitle(part.card),
+          })
+        }
         continue
       }
       const start = rows.length
@@ -1766,7 +1858,7 @@ export function StreamView({
       const isReasoningActive = lastRaw?.kind === 'reasoning'
       const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
         || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
-      if ((isReasoningActive && !reasoningExpanded) || isToolCompleted) {
+      if (isToolCompleted && !(isReasoningActive && !reasoningExpanded)) {
         const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
         const spinner = getBrailleSpinnerFrame(liveMs)
         const label = isReasoningActive
@@ -1783,7 +1875,7 @@ export function StreamView({
         }, blockRowsScope, undefined, true).lines)
       }
     }
-    return { id, lines: rows.build(), ranges, storeBlocks }
+    return { id, lines: rows.build(), ranges, storeBlocks, reasoningSticky: sticky, toolSticky }
   }, [
     activeTurn,
     activeVersion,
@@ -1817,7 +1909,15 @@ export function StreamView({
     for (const [key, val] of activeTurnRows.storeBlocks) {
       storeBlocks.set(key, val)
     }
-    return { rows: map, textRanges, storeBlocks }
+    const reasoningSticky = new Map(settledEntryRows.reasoningSticky)
+    if (activeTurnRows.reasoningSticky.length > 0) {
+      reasoningSticky.set(activeTurnRows.id, activeTurnRows.reasoningSticky)
+    }
+    const toolSticky = new Map(settledEntryRows.toolSticky)
+    if (activeTurnRows.toolSticky.length > 0) {
+      toolSticky.set(activeTurnRows.id, activeTurnRows.toolSticky)
+    }
+    return { rows: map, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky: settledEntryRows.userSticky }
   }, [settledEntryRows, activeTurnRows])
   const [presentedEntryRows, setPresentedEntryRows] = useState(entryRows)
   const activeEntryRows = status === 'generating' ? presentedEntryRows : entryRows
@@ -2072,6 +2172,58 @@ export function StreamView({
     virtualContentRows - effectiveViewportRows - effectiveOffset,
   )
   const visibleBottom = visibleTop + effectiveViewportRows
+  const stickyRanges = useMemo(() => {
+    const reasoning: StickyReasoningRange[] = []
+    const tools: StickyToolRange[] = []
+    const users: StickyUserRange[] = []
+    for (const layout of virtualLayouts) {
+      if (reasoningExpanded) {
+        const relative = activeEntryRows.reasoningSticky.get(layout.id)
+        if (relative !== undefined) {
+          for (const range of relative) {
+            reasoning.push({
+              start: layout.top + range.start,
+              end: layout.top + range.end,
+              turnOrdinal: range.turnOrdinal,
+              durationMs: range.durationMs,
+            })
+          }
+        }
+      }
+      const toolRelative = activeEntryRows.toolSticky.get(layout.id)
+      if (toolRelative !== undefined) {
+        for (const range of toolRelative) {
+          tools.push({
+            start: layout.top + range.start,
+            end: layout.top + range.end,
+            title: range.title,
+          })
+        }
+      }
+      const userRelative = activeEntryRows.userSticky.get(layout.id)
+      if (userRelative !== undefined) {
+        users.push({
+          start: layout.top + userRelative.start,
+          end: layout.top + userRelative.end,
+          text: userRelative.text,
+        })
+      }
+    }
+    return { reasoning, tools, users }
+  }, [
+    activeEntryRows.reasoningSticky,
+    activeEntryRows.toolSticky,
+    activeEntryRows.userSticky,
+    reasoningExpanded,
+    virtualLayouts,
+  ])
+  const stickyLabel = resolveStickyTranscriptHeader(visibleTop, stickyRanges)
+  useLayoutEffect(() => {
+    onStickyHeaderChange?.(stickyLabel)
+    return () => {
+      onStickyHeaderChange?.(undefined)
+    }
+  }, [onStickyHeaderChange, stickyLabel])
   /**
    * Follow mode mounts configured overscan while streaming to avoid viewport
    * clipping jitter at block boundaries when new rows are appended.
@@ -2352,7 +2504,6 @@ export function StreamView({
     : undefined
   const visibleFrame = useMemo<VisibleFrameSnapshot>(() => {
     const snapshotRows = []
-    const verticalBase = Math.max(0, effectiveViewportRows - virtualContentRows)
     for (const { entry, index: layoutIndex } of visibleEntryPairs) {
       const layout = virtualLayouts[layoutIndex]
       if (layout === undefined) continue
@@ -2366,7 +2517,7 @@ export function StreamView({
       for (let index = start; index < end; index += 1) {
         const line = entry.lines.at(index)
         if (line === undefined) continue
-        const absoluteRow = 3 + verticalBase + layout.top + index - visibleTop
+        const absoluteRow = 3 + layout.top + index - visibleTop
         if (absoluteRow < 3 || absoluteRow >= 3 + effectiveViewportRows) continue
         const isBottomRow = absoluteRow === 3 + effectiveViewportRows - 1
         const promptOverlay = isBottomRow && !viewport.follow
@@ -2622,14 +2773,16 @@ export function StreamView({
     return (
       <Box flexDirection="column" width="100%">
         <Text>{paintRow([styled(escapeContent(compactionDividerLabel(divider, expanded)), 'fgDim')])}</Text>
-        {expanded && divider.summary !== '' ? (
-          <Text>
-            {paintRow([
-              styled('摘要 ', 'fgDim'),
-              styled(escapeContent(divider.summary), 'fg'),
-            ])}
-          </Text>
-        ) : null}
+        {expanded && divider.summary !== ''
+          ? wrapDisplayLines(escapeContent(divider.summary), Math.max(1, contentWidth - 4)).map((row, index) => (
+            <Text key={index} wrap="truncate">
+              {paintBackgroundRow([
+                styled('│ ', 'accentText'),
+                styled(row, 'fg'),
+              ], 'toolBg', contentWidth)}
+            </Text>
+          ))
+          : null}
       </Box>
     )
   }
@@ -2674,7 +2827,7 @@ export function StreamView({
     const isReasoningActive = lastRaw?.kind === 'reasoning'
     const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
       || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
-    const showTail = generating && ((isReasoningActive && !reasoningExpanded) || isToolCompleted)
+    const showTail = generating && isToolCompleted && !(isReasoningActive && !reasoningExpanded)
     const tailLiveMs = liveDurationMs ?? turn.reasoningDurationMs
     const tailSpinner = getBrailleSpinnerFrame(tailLiveMs)
     const tailLabel = isReasoningActive
@@ -2746,7 +2899,8 @@ export function StreamView({
           <Box
             flexDirection="column"
             position={physicalViewport ? 'absolute' : 'relative'}
-            bottom={physicalViewport ? -effectiveOffset : undefined}
+            top={physicalViewport && virtualContentRows <= effectiveViewportRows ? 0 : undefined}
+            bottom={physicalViewport && virtualContentRows > effectiveViewportRows ? -effectiveOffset : undefined}
             left={physicalViewport ? contentLeft : undefined}
             marginLeft={physicalViewport ? undefined : contentLeft}
             width={contentWidth}

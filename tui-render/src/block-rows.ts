@@ -123,6 +123,8 @@ export interface BlockRowsMeta {
   readonly compactionExpanded?: boolean
   /** Compaction shadowed count (`已压缩 N 条`). */
   readonly compactionShadowedCount?: number
+  /** Compaction shadowed token estimate (`~N tok`). */
+  readonly compactionShadowedTokenCount?: number
   /** Turn-tail produced paths array for the `产物` row. */
   readonly turnTailProduced?: readonly string[]
   /** Turn-tail stats string (`turn N · M tok · Mms`); undefined hides the row. */
@@ -353,7 +355,7 @@ export function projectBlockRows(
     case 'divider':
       return projectDividerEntry(entry, scope)
     case 'compaction':
-      return projectCompactionEntry(entry)
+      return projectCompactionEntry(entry, scope)
     case 'turn-tail':
       return projectTurnTailEntry(entry, scope)
     case 'tool-summary':
@@ -708,8 +710,8 @@ function projectUserEntry(
  * ========================================================================== */
 
 /**
- * Hidden reasoning emits no rows. Visible reasoning retains its complete
- * body under a dim header; only the main transcript viewport clips it.
+ * Collapsed reasoning emits one capsule row. Expanded reasoning retains its
+ * complete body under a dim header; only the main transcript viewport clips it.
  * @param entry - reasoning entry (id + source + meta).
  * @param scope - rendering scope.
  * @returns ordered rows.
@@ -722,8 +724,20 @@ function projectReasoningEntry(
   const expanded = entry.meta?.reasoningExpanded === true
   const live = entry.meta?.reasoningLive === true
   const secondsLabel = (reasoningDurationMs / 1000).toFixed(1)
-  if (!expanded || entry.source === '') {
+  if (entry.source === '') {
     return { revision: 0, sourceLength: entry.source.length, lines: [] }
+  }
+  const escaped = escapeContent(entry.source)
+  const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4))
+  if (!expanded) {
+    const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : '✻'
+    const capsule = surfaceLine([
+      { text: '▸ ', token: 'accentText' as const, bold: false },
+      { text: `${icon} 思考过程`, token: 'accentText' as const, bold: false },
+      { text: ` (共 ${String(body.length)} 行 · ${secondsLabel}s)`, token: 'fgDim' as const, bold: false },
+      { text: ' · Ctrl+O 展开', token: 'fgDim' as const, bold: false },
+    ], 0, 'toolBg', scope.width)
+    return { revision: 0, sourceLength: entry.source.length, lines: [capsule] }
   }
   const icon = live ? getBrailleSpinnerFrame(reasoningDurationMs) : '✻'
   const prefix = live ? '' : '▾ '
@@ -733,8 +747,6 @@ function projectReasoningEntry(
     { text: ` (${secondsLabel}s)`, token: 'fgDim' as const, bold: false },
   ], 0, 'toolBg', scope.width)
   const lines: MarkdownRenderLine[] = [headerLine]
-  const escaped = escapeContent(entry.source)
-  const body = wrapDisplayLines(escaped, Math.max(1, scope.width - 4))
   for (const row of body) {
     const text = `│ ${row}`
     const cols = displayWidth(text)
@@ -796,29 +808,35 @@ function projectDividerEntry(
 }
 
 /**
- * Render the compaction divider. Collapsed emits one row, expanded adds
- * a `摘要 text` row. The collapsible marker (`──── ✂ 已压缩 N 条 · …`)
- * mirrors the locked copy {@link stream-view.compactionDividerLabel}
- * produces.
+ * Render the compaction divider. Collapsed emits one row with item and
+ * token counts; expanded adds bordered summary rows. The collapsible
+ * marker mirrors {@link stream-view.compactionDividerLabel}.
  * @param entry - compaction entry.
+ * @param scope - rendering scope (width for the summary card).
  * @returns the projection.
  */
 function projectCompactionEntry(
   entry: BlockRowsEntry,
+  scope: BlockRowsScope,
 ): BlockRowsProjection {
   const shadowed = entry.meta?.compactionShadowedCount
   const countLabel = shadowed === undefined ? '' : ` ${String(shadowed)} 条`
+  const tokens = entry.meta?.compactionShadowedTokenCount
+  const tokenLabel = tokens === undefined ? '' : ` · ~${String(tokens)} tok`
   const expanded = entry.meta?.compactionExpanded === true
-  const marker = `──── ✂ 已压缩${countLabel} · Ctrl+K ${expanded ? '折叠' : '展开'} ────`
+  const marker = `──── ✂ 已压缩${countLabel}${tokenLabel} · Ctrl+K ${expanded ? '折叠' : '展开'} ────`
   const lines: MarkdownRenderLine[] = [
     lineForText(marker, 'fgDim', false, 0),
   ]
   const summary = entry.meta?.compactionSummary ?? ''
   if (expanded && summary !== '') {
-    lines.push(mixedLine([
-      { text: '摘要 ', token: 'fgDim', bold: false },
-      { text: escapeContent(summary), token: 'fg', bold: false },
-    ], lines.length))
+    const wrapped = wrapDisplayLines(escapeContent(summary), Math.max(1, scope.width - 4))
+    for (const row of wrapped) {
+      lines.push(surfaceLine([
+        { text: '│ ', token: 'accentText' as const, bold: false },
+        { text: row, token: 'fg', bold: false },
+      ], lines.length, 'toolBg', scope.width))
+    }
   }
   return { revision: 0, sourceLength: entry.source.length, lines }
 }

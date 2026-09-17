@@ -1,8 +1,9 @@
 /**
- * RuntimeController workspace overlay: `g t` loads the lazy tree through
- * ctx.fs (resolve + listDir, never node:fs), directory Enter expands/collapses,
- * file Enter closes, the `e` path draft resolves or keeps the previous root
- * with the failure pair, and a missing fs paints the S19 opener error.
+ * RuntimeController workspace overlay: `g t` and `/files` load the lazy tree
+ * through ctx.fs (resolve + listDir + readText, never node:fs), directory
+ * Enter expands/collapses, file Enter opens an inline preview, `i` inserts the
+ * path and closes, the `e` path draft resolves or keeps the previous root with
+ * the failure pair, and a missing fs paints the S19 opener error.
  */
 
 import { describe, expect, it, vi } from 'vitest'
@@ -34,6 +35,7 @@ function entry(path: string, type: 'file' | 'directory'): FsDirEntry {
 
 interface FsFake {
   readonly tree: Map<string, FsDirEntry[]>
+  readonly files?: Map<string, string>
   readonly resolved: string[]
   failOn?: string
 }
@@ -53,6 +55,11 @@ function provideFs(ctx: Context, fake: FsFake): () => void {
       const children = fake.tree.get(String(targetArg.targetKey))
       if (children === undefined) return Promise.reject(new Error('FS_NOT_FOUND'))
       return Promise.resolve(children)
+    },
+    readText: (targetArg: FsTarget) => {
+      const content = fake.files?.get(String(targetArg.targetKey))
+      if (content === undefined) return Promise.reject(new Error('FS_NOT_FOUND'))
+      return Promise.resolve(content)
     },
   } as never)
 }
@@ -123,6 +130,11 @@ function defaultTree(): FsFake {
       ['/ws/src', [entry('/ws/src/app.ts', 'file')]],
       ['/elsewhere', [entry('/elsewhere/note.txt', 'file')]],
     ]),
+    files: new Map([
+      ['/ws/README.md', 'hello\nworld\nthird'],
+      ['/ws/src/app.ts', 'export const n = 1\n'],
+      ['/elsewhere/note.txt', 'note'],
+    ]),
     resolved: [],
   }
 }
@@ -185,7 +197,7 @@ describe('workspace overlay', () => {
     await ctx.fiber.dispose()
   })
 
-  it('closes on file Enter (the loop inserts the displayPath)', async () => {
+  it('opens an inline preview on file Enter and returns to the tree on escape', async () => {
     const { ctx, controller } = await bench((ctx) => {
       provideFs(ctx, defaultTree())
     })
@@ -196,7 +208,49 @@ describe('workspace overlay', () => {
     controller.dispatch({ kind: 'workspace-move', delta: 1 })
     expect(controller.getWorkspacePane().selectedIndex).toBe(1)
     controller.dispatch({ kind: 'workspace-enter' })
+    await vi.waitFor(() => {
+      expect(controller.getWorkspacePane().preview?.name).toBe('README.md')
+    })
+    const preview = controller.getWorkspacePane().preview
+    expect(controller.getWorkspacePane().open).toBe(true)
+    expect(preview?.lines).toEqual(['hello', 'world', 'third'])
+    expect(preview?.scrollOffset).toBe(0)
+    controller.dispatch({ kind: 'workspace-move', delta: 1 })
+    expect(controller.getWorkspacePane().preview?.scrollOffset).toBe(1)
+    controller.dispatch({ kind: 'workspace-escape' })
+    expect(controller.getWorkspacePane().preview).toBeUndefined()
+    expect(controller.getWorkspacePane().open).toBe(true)
+    await ctx.fiber.dispose()
+  })
+
+  it('inserts and closes the overlay on workspace-insert', async () => {
+    const { ctx, controller } = await bench((ctx) => {
+      provideFs(ctx, defaultTree())
+    })
+    controller.dispatch({ kind: 'workspace-pane' })
+    await vi.waitFor(() => {
+      expect(controller.getWorkspacePane().nodes.length).toBe(2)
+    })
+    controller.dispatch({ kind: 'workspace-move', delta: 1 })
+    controller.dispatch({ kind: 'workspace-enter' })
+    await vi.waitFor(() => {
+      expect(controller.getWorkspacePane().preview).toBeDefined()
+    })
+    controller.dispatch({ kind: 'workspace-insert' })
     expect(controller.getWorkspacePane().open).toBe(false)
+    expect(controller.getWorkspacePane().preview).toBeUndefined()
+    await ctx.fiber.dispose()
+  })
+
+  it('opens the workspace overlay from /files', async () => {
+    const { ctx, controller } = await bench((ctx) => {
+      provideFs(ctx, defaultTree())
+    })
+    controller.dispatch({ kind: 'command', query: 'files' })
+    await vi.waitFor(() => {
+      expect(controller.getWorkspacePane().open).toBe(true)
+      expect(controller.getWorkspacePane().nodes.length).toBe(2)
+    })
     await ctx.fiber.dispose()
   })
 

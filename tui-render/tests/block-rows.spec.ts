@@ -95,7 +95,7 @@ describe('projectBlockRows — non-markdown blocks', () => {
     ])
   })
 
-  it('emits no rows for hidden reasoning', () => {
+  it('emits a one-line capsule for collapsed reasoning', () => {
     const entry: BlockRowsEntry = {
       id: 'r1',
       kind: 'reasoning',
@@ -106,7 +106,9 @@ describe('projectBlockRows — non-markdown blocks', () => {
       },
     }
     const projection = projectBlockRows(entry, settledScope(), undefined)
-    expect(projection.lines).toEqual([])
+    expect(projection.lines).toHaveLength(1)
+    expect(projection.lines[0]?.text).toContain('▸ ✻ 思考过程 (共 2 行 · 1.2s) · Ctrl+O 展开')
+    expect(projection.lines[0]?.text).not.toContain('first line')
   })
 
   it('emits a header plus wrapped reasoning rows when expanded', () => {
@@ -293,10 +295,12 @@ describe('projectBlockRows — non-markdown blocks', () => {
       meta: {
         compactionExpanded: false,
         compactionShadowedCount: 6,
+        compactionShadowedTokenCount: 400,
         compactionSummary: '一段摘要',
       },
     }, settledScope(), undefined)
     expect(collapsed.lines).toHaveLength(1)
+    expect(collapsed.lines[0]?.text).toContain('已压缩 6 条 · ~400 tok · Ctrl+K 展开')
     const expanded = projectBlockRows({
       id: 'c2',
       kind: 'compaction',
@@ -304,10 +308,12 @@ describe('projectBlockRows — non-markdown blocks', () => {
       meta: {
         compactionExpanded: true,
         compactionShadowedCount: 6,
+        compactionShadowedTokenCount: 400,
         compactionSummary: '一段摘要',
       },
     }, settledScope(), undefined)
     expect(expanded.lines).toHaveLength(2)
+    expect(expanded.lines[0]?.text).toContain('已压缩 6 条 · ~400 tok · Ctrl+K 折叠')
     expect(expanded.lines[1]?.text).toContain('一段摘要')
   })
 })

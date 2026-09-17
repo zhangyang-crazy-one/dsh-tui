@@ -100,4 +100,40 @@ describe('WorkspacePane', () => {
     )
     expect(output).not.toContain('应用')
   })
+
+  it('paints a paged file preview with a line gutter and insert footnote', () => {
+    const output = renderPlain(
+      openState({
+        preview: {
+          path: '/workspace/README.md',
+          name: 'README.md',
+          lines: ['hello', 'world', 'third'],
+          scrollOffset: 0,
+        },
+      }),
+    )
+    expect(output).toContain('预览: README.md')
+    expect(output).toContain('1 │ hello')
+    expect(output).toContain('2 │ world')
+    expect(output).toContain('j/k 滚动 · q/Esc 返回 · i 插入路径')
+    expect(output).not.toContain('Enter 打开')
+  })
+
+  it('pages the preview from scrollOffset', () => {
+    const lines = Array.from({ length: 8 }, (_, index) => `LINE_${String(index)}`)
+    const output = renderPlain(
+      openState({
+        preview: {
+          path: '/workspace/notes.md',
+          name: 'notes.md',
+          lines,
+          scrollOffset: 3,
+        },
+      }),
+    )
+    expect(output).toContain('LINE_3')
+    expect(output).not.toContain('LINE_0')
+    expect(output).toContain('4 │')
+  })
+
 })

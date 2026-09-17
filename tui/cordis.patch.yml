@@ -87,10 +87,6 @@
     timeoutMs: 60000
 
 - insert:
-    # Code Mode is a core execution capability, not a Web component.
-    - id: code-runtime
-      name: "@deepseek-ai/dsh-code-runtime-worker-thread"
-
     # Per-round token/duration stats for the terminal status line.
     - id: session-stats
       name: "@deepseek-ai/dsh-session-stats"
