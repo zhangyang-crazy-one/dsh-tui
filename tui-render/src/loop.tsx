@@ -2882,6 +2882,10 @@ export function TuiLoop({
       error: agentHubPane.error,
       transcript: agentHubPane.transcript,
       missing: agentHubPane.missing,
+      liveContinuable: agentHubPane.liveContinuable,
+      maxActiveSubagents: agentHubPane.maxActiveSubagents,
+      maxDepth: agentHubPane.maxDepth,
+      scrollOffset: agentHubPane.scrollOffset,
     })
   } else if (planDirectoryPane.open) {
     content = createElement(PlanDirectoryPane, {

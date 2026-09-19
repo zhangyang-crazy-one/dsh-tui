@@ -13,6 +13,12 @@
 import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { rebuildReloadArgv, relaunchProcess } from './reload-argv.ts'
+import { SESSION_CHANGES_DISPOSED_COPY, SESSION_WRITER_HELD_COPY, isSessionWriterHeld, userErrorReason } from './session-errors.ts'
+import {
+  formatWorkspaceChangeDiffPreview,
+  lookupWorkspaceChange,
+  workspaceChangesCardFromSummary,
+} from './workspace-changes.ts'
 import type { RelaunchHost } from './reload-argv.ts'
 import { editDraftExternally, resolveEditorCommand } from './external-editor.ts'
 import type { EditorCommand, EditorSpawn } from './external-editor.ts'
@@ -154,6 +160,7 @@ import {
 // and ctx.get('sessionTitle') — the services are composed by the base patch.
 import type {} from '@deepseek-ai/dsh-session-persistence'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
+import type {} from '@deepseek-ai/dsh-workspace-changes/types'
 // The session-query type import carries the Context merge for
 // ctx.get('sessionQuery'); the search service is composed by the base patch.
 import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
@@ -240,6 +247,7 @@ import type {
   ModelRow,
   AgentHubPaneState,
   AgentHubRow,
+  WorkspaceChangesCardView,
   PlanDirectoryPaneState,
   PlanReviewPaneState,
   PermissionPaneState,
@@ -784,6 +792,11 @@ function errorReason(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** Terminal copy: writer contention becomes the retry sentence. */
+function terminalErrorReason(error: unknown): string {
+  return userErrorReason(error)
+}
+
 type SettingsFieldValue = string | number | boolean | object | null | undefined
 
 /** Shape the apply layer passes through the auto-discover pipeline. */
@@ -924,13 +937,25 @@ function interactionStatusLabel(state: InteractionState): string {
   }
 }
 
-/** Human-visible user and assistant lines for a Hub inspect transcript. */
+/** Human-visible user, assistant, and tool lines for a Hub inspect execution modal. */
 function hubTranscriptOf(events: readonly SessionEvent[]): string {
   const lines: string[] = []
   for (const event of events) {
     if (isHumanUserMessage(event)) {
       const text = joinTextBlocks(event.data.content, '')
       if (text !== '') lines.push(`> ${text}`)
+      continue
+    }
+    if (event.type === 'tool/call') {
+      const args = typeof event.data.arguments === 'string' ? event.data.arguments : JSON.stringify(event.data.arguments)
+      const shortArgs = args.length > 80 ? `${args.slice(0, 77)}...` : args
+      lines.push(`▸ ${event.data.name} ${shortArgs}`)
+      continue
+    }
+    if (event.type === 'tool/result') {
+      const text = joinTextBlocks(event.data.message.content, '')
+      const shortText = text.length > 80 ? `${text.slice(0, 77).replace(/\n/g, ' ')}...` : text.replace(/\n/g, ' ')
+      if (shortText !== '') lines.push(`  └─ ${shortText}`)
       continue
     }
     if (event.type !== 'assistant/message') continue
@@ -1040,12 +1065,15 @@ export class RuntimeController implements TuiController {
   /** Idempotent quiescent controller teardown. */
   private disposeInFlight: Promise<void> | undefined
   private closed: boolean = false
+  private isClosed(): boolean { return this.closed }
   private machine: InteractionState = 'idle'
   /** Durable retry wait currently visible in the footer. */
   private retryFooter: RetryFooterState | undefined
   /** Single bounded refresh timer while {@link retryFooter} is visible. */
   private retryFooterTimer: ReturnType<typeof setTimeout> | undefined
   private projector = createProjector()
+  /** Host `workspace/changes` cards keyed by announcing event sequence. */
+  private readonly workspaceChangeCards = new Map<number, WorkspaceChangesCardView>()
   private presentationOverrides = new Map<PresentationFlag, { value: boolean }>()
   private presentationWrites: Promise<void> = Promise.resolve()
   private toolCardsExpanded = false
@@ -1130,6 +1158,7 @@ export class RuntimeController implements TuiController {
   private agentHubView: 'table' | 'transcript' = 'table'
   private agentHubError: string | undefined
   private agentHubTranscript: string | undefined
+  private agentHubScrollOffset = 0
   /** Monotonic listing/inspect id: only the newest Hub request may land. */
   private agentHubSeq = 0
   /** Cancellation owner for the newest Hub list, fold, expansion, or inspect. */
@@ -1266,6 +1295,10 @@ export class RuntimeController implements TuiController {
     this.disposeSessionEvents = ctx.on('session/event', (session, event: SessionEvent) => {
       if (session !== this.liveHandle?.agent.session) return
       this.projector.push(event)
+      if (event.type === 'workspace/changes') this.cacheWorkspaceChange(event.seq)
+      if (this.agentHubOpen && (event.type === 'subagent/catalog' || event.type === 'subagent/descriptor')) {
+        this.ownWork(this.refreshAgentHub(), 'agent hub list')
+      }
       if (event.type === 'turn/start') {
         this.reduce({ kind: 'turn-started' }, undefined, undefined)
       } else if (event.type === 'llm/retry') {
@@ -1468,6 +1501,7 @@ export class RuntimeController implements TuiController {
       const model = this.projector.snapshot()
       this.modelSnapshot = {
         ...model,
+        history: this.decorateWorkspaceChanges(model.history),
         reasoningExpanded: this.presentationFlag('reasoning'),
         toolCardsExpanded: this.toolCardsExpanded,
         expandedCompactionId: this.expandedCompactionId,
@@ -1475,6 +1509,61 @@ export class RuntimeController implements TuiController {
       }
     }
     return this.modelSnapshot
+  }
+
+  /**
+   * Attach cached Host summaries onto frozen assistant turns.
+   * @param history - projector history.
+   * @returns history with `workspaceChanges` filled when a card exists.
+   */
+  private decorateWorkspaceChanges(history: ViewModel['history']): ViewModel['history'] {
+    if (this.workspaceChangeCards.size === 0) return history
+    return history.map((row) => {
+      if (row.kind !== 'assistant' || row.workspaceChangesSeq === undefined) return row
+      const card = this.workspaceChangeCards.get(row.workspaceChangesSeq)
+      return card === undefined ? row : { ...row, workspaceChanges: card }
+    })
+  }
+
+  /**
+   * Read one announcing event's Host summary into the transcript card cache.
+   * Empty or abandoned records drop any earlier card for that sequence.
+   * @param seq - `workspace/changes` event sequence.
+   */
+  private cacheWorkspaceChange(seq: number): void {
+    const sessionId = this.session?.id
+    const service = this.ctx.get('workspaceChanges')
+    const summary = sessionId === undefined || service === undefined
+      ? undefined
+      : service.summary(sessionId, seq)
+    const card = workspaceChangesCardFromSummary(seq, summary)
+    if (card === undefined) this.workspaceChangeCards.delete(seq)
+    else this.workspaceChangeCards.set(seq, card)
+  }
+
+  /** Replay Host summaries for every `workspace/changes` event on the bound Session. */
+  private hydrateWorkspaceChangeCards(): void {
+    this.workspaceChangeCards.clear()
+    const session = this.session
+    if (session === undefined) return
+    for (const event of getSessionEvents(session)) {
+      if (event.type === 'workspace/changes') this.cacheWorkspaceChange(event.seq)
+    }
+  }
+
+  /**
+   * Continuable defaults from live settings, never a stale Hub cache.
+   * @returns max live children (8) and max depth (1) unless the user raised them.
+   */
+  private subagentLimits(): { maxActiveSubagents: number; maxDepth: number } {
+    const settings = this.ctx.get('settings')
+    const section = settings === undefined ? undefined : settings.get('subagent')
+    const maxActive = fieldOf(section, 'maxActiveSubagents')
+    const maxDepth = fieldOf(section, 'maxDepth')
+    return {
+      maxActiveSubagents: typeof maxActive === 'number' ? maxActive : 8,
+      maxDepth: typeof maxDepth === 'number' ? maxDepth : 1,
+    }
   }
 
   /**
@@ -1740,18 +1829,37 @@ export class RuntimeController implements TuiController {
    */
   getAgentHubPane(): AgentHubPaneState {
     if (!this.agentHubOpen) return EMPTY_OVERLAY_PANE
-    if (this.agentHubPaneSnapshot === undefined) {
-      this.agentHubPaneSnapshot = {
-        open: true,
-        rows: this.agentHubRows,
-        selectedIndex: this.agentHubSelectedIndex,
-        view: this.agentHubView,
-        missing: this.ctx.get('subagents') === undefined,
-        ...(this.agentHubError === undefined ? {} : { error: this.agentHubError }),
-        ...(this.agentHubTranscript === undefined
-          ? {}
-          : { transcript: this.agentHubTranscript }),
-      }
+    const limits = this.subagentLimits()
+    const liveContinuable = this.agentHubRows.filter(row => row.activity === 'running').length
+    const cached = this.agentHubPaneSnapshot
+    if (
+      cached !== undefined
+      && cached.rows === this.agentHubRows
+      && cached.selectedIndex === this.agentHubSelectedIndex
+      && cached.view === this.agentHubView
+      && cached.error === this.agentHubError
+      && cached.transcript === this.agentHubTranscript
+      && cached.scrollOffset === this.agentHubScrollOffset
+      && cached.liveContinuable === liveContinuable
+      && cached.maxActiveSubagents === limits.maxActiveSubagents
+      && cached.maxDepth === limits.maxDepth
+    ) {
+      return cached
+    }
+    this.agentHubPaneSnapshot = {
+      open: true,
+      rows: this.agentHubRows,
+      selectedIndex: this.agentHubSelectedIndex,
+      view: this.agentHubView,
+      missing: this.ctx.get('subagents') === undefined,
+      liveContinuable,
+      scrollOffset: this.agentHubScrollOffset,
+      maxActiveSubagents: limits.maxActiveSubagents,
+      maxDepth: limits.maxDepth,
+      ...(this.agentHubError === undefined ? {} : { error: this.agentHubError }),
+      ...(this.agentHubTranscript === undefined
+        ? {}
+        : { transcript: this.agentHubTranscript }),
     }
     return this.agentHubPaneSnapshot
   }
@@ -1920,6 +2028,34 @@ export class RuntimeController implements TuiController {
     if (fs === undefined) return
     const seq = this.workspaceSeq
     try {
+      const change = lookupWorkspaceChange(
+        this.workspaceChangeCards,
+        row.target.displayPath,
+      ) ?? lookupWorkspaceChange(this.workspaceChangeCards, row.name)
+      if (change !== undefined) {
+        const sessionId = this.session?.id
+        const service = this.ctx.get('workspaceChanges')
+        if (sessionId === undefined || service === undefined) {
+          this.setFeedback(`✗ ${SESSION_CHANGES_DISPOSED_COPY}`)
+          return
+        }
+        const diff = await service.diff(sessionId, change.seq, change.index, this.lifecycleAbort.signal)
+        if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+        const preview = formatWorkspaceChangeDiffPreview(diff)
+        if (preview === undefined) {
+          this.setFeedback(`✗ ${SESSION_CHANGES_DISPOSED_COPY}`)
+          return
+        }
+        this.workspacePreview = {
+          path: row.target.displayPath,
+          name: row.name,
+          lines: [...preview],
+          scrollOffset: 0,
+        }
+        this.workspacePaneSnapshot = undefined
+        this.emit()
+        return
+      }
       const text = await fs.readText(row.target)
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       const lines = text.split(/\r?\n/u)
@@ -2563,7 +2699,9 @@ export class RuntimeController implements TuiController {
     this.agentHubView = 'table'
     this.agentHubError = undefined
     this.agentHubTranscript = undefined
+    this.agentHubScrollOffset = 0
     this.agentHubSeq += 1
+    this.agentHubPaneSnapshot = undefined
   }
 
   /**
@@ -2592,6 +2730,7 @@ export class RuntimeController implements TuiController {
     this.agentHubError = undefined
     this.agentHubRows = []
     this.agentHubSelectedIndex = 0
+    this.agentHubPaneSnapshot = undefined
     this.emit()
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined || this.session === undefined) return
@@ -2601,11 +2740,14 @@ export class RuntimeController implements TuiController {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
       this.agentHubError = undefined
+      this.agentHubPaneSnapshot = undefined
+      this.agentHubError = undefined
       this.emit()
     } catch (error: unknown) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = []
       this.agentHubError = `无法列出子代理：${errorReason(error)}`
+      this.agentHubPaneSnapshot = undefined
       this.emit()
     }
   }
@@ -2625,10 +2767,12 @@ export class RuntimeController implements TuiController {
       this.agentHubRows = rows
       this.agentHubSelectedIndex = 0
       this.agentHubError = undefined
+      this.agentHubPaneSnapshot = undefined
       this.emit()
     } catch (error: unknown) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubError = `无法列出子代理：${errorReason(error)}`
+      this.agentHubPaneSnapshot = undefined
       this.emit()
     }
   }
@@ -2740,6 +2884,8 @@ export class RuntimeController implements TuiController {
     this.agentHubView = 'transcript'
     this.agentHubTranscript = undefined
     this.agentHubError = undefined
+    this.agentHubScrollOffset = 0
+    this.agentHubPaneSnapshot = undefined
     this.emit()
     const persistence = this.ctx.get('sessionPersistence')
     if (persistence === undefined) {
@@ -2777,10 +2923,13 @@ export class RuntimeController implements TuiController {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubTranscript = hubTranscriptOf(events)
       this.agentHubError = undefined
+      this.agentHubPaneSnapshot = undefined
+      this.agentHubError = undefined
       this.emit()
     } catch (error: unknown) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubError = `无法读取子会话：${errorReason(error)}`
+      this.agentHubPaneSnapshot = undefined
       this.emit()
     }
   }
@@ -3113,6 +3262,8 @@ export class RuntimeController implements TuiController {
           this.agentHubView = 'table'
           this.agentHubTranscript = undefined
           this.agentHubError = undefined
+          this.agentHubScrollOffset = 0
+          this.agentHubPaneSnapshot = undefined
           this.emit()
           return
         }
@@ -3121,12 +3272,19 @@ export class RuntimeController implements TuiController {
         this.emit()
         return
       case 'agent-hub-move':
-        if (!this.agentHubOpen || this.agentHubView !== 'table') return
+        if (!this.agentHubOpen) return
+        if (this.agentHubView === 'transcript') {
+          this.agentHubScrollOffset = Math.max(0, this.agentHubScrollOffset + action.delta)
+          this.agentHubPaneSnapshot = undefined
+          this.emit()
+          return
+        }
         if (this.agentHubRows.length === 0) return
         this.agentHubSelectedIndex = Math.min(
           this.agentHubRows.length - 1,
           Math.max(0, this.agentHubSelectedIndex + action.delta),
         )
+        this.agentHubPaneSnapshot = undefined
         this.emit()
         return
       case 'agent-hub-enter':
@@ -3964,7 +4122,7 @@ export class RuntimeController implements TuiController {
     } catch (error: unknown) {
       fail(
         this.io,
-        new Error(`cannot resume session "${resumeId}": ${errorReason(error)}`),
+        new Error(`cannot resume session "${resumeId}": ${terminalErrorReason(error)}`),
       )
     }
   }
@@ -4052,11 +4210,15 @@ export class RuntimeController implements TuiController {
         this.ctx.logger.warn(
           `session ${request.intent} failed: ${errorReason(primaryError)}`,
         )
-        this.setFeedback(
-          request.intent === 'create'
-            ? '✗ 新建会话失败（当前会话保持可用）'
-            : `✗ 切换失败：${errorReason(primaryError)}（当前会话保持可用）`,
-        )
+        if (request.intent === 'create') {
+          this.setFeedback(
+            isSessionWriterHeld(primaryError)
+              ? `✗ 新建会话失败：${SESSION_WRITER_HELD_COPY}（当前会话保持可用）`
+              : '✗ 新建会话失败（当前会话保持可用）',
+          )
+        } else {
+          this.setFeedback(`✗ 切换失败：${terminalErrorReason(primaryError)}（当前会话保持可用）`)
+        }
         return
       }
 
@@ -4070,18 +4232,6 @@ export class RuntimeController implements TuiController {
         }
       }
       if (previous.session !== undefined) {
-        const events = getSessionEvents(previous.session)
-        if (isSessionEmpty(events)) {
-          // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
-          const persistence = this.ctx.get('sessionPersistence') as unknown as { delete?: (id: SessionId) => Promise<void> } | undefined
-          if (persistence !== undefined && typeof persistence.delete === 'function') {
-            try {
-              await persistence.delete(previous.session.id)
-            } catch (error: unknown) {
-              this.ctx.logger.warn(`failed to delete empty session "${previous.session.id}": ${errorReason(error)}`)
-            }
-          }
-        }
         this.sessionRowCache.delete(previous.session.id)
       }
       if (this.session !== undefined) {
@@ -4175,6 +4325,7 @@ export class RuntimeController implements TuiController {
     }
     this.session = agent.session
     this.projector = candidate.projector
+    this.hydrateWorkspaceChangeCards()
     this.modelSelectionRef = candidate.modelSelectionRef
     this.badge = candidate.badge
     this.machine = 'idle'
@@ -5717,8 +5868,7 @@ export class RuntimeController implements TuiController {
       if (uncached.length > 0) {
         const BATCH_SIZE = 16
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
-          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
-          if (this.closed) return
+          if (this.isClosed()) return
           const batch = uncached.slice(i, i + BATCH_SIZE)
           const fetched = await Promise.all(
             batch.map(async ({ id, revision }) => {
@@ -5731,8 +5881,7 @@ export class RuntimeController implements TuiController {
           }
 
           // Progressively update the session list after each batch settles.
-          // oxlint-disable-next-line typescript/no-unnecessary-condition -- the controller can close while batch row enrichment is awaited.
-          if (!this.closed) {
+          if (!this.isClosed()) {
             const updatedRows: SessionRow[] = []
             for (const item of interactiveItems) {
               // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
@@ -5840,7 +5989,7 @@ export class RuntimeController implements TuiController {
         id,
         title: listTitleOf(events),
         updatedAt: events.at(-1)?.time ?? createdAt,
-        isEmpty: isSessionEmpty(events),
+        isEmpty: isSessionEmpty(events, id),
       }
     } catch {
       // Unreadable or incompatible-generation logs are excluded from the
@@ -6475,10 +6624,11 @@ function isBootstrapOnlySession(events?: readonly SessionEvent[]): boolean {
  * @param events - the session event stream.
  * @returns true if the session contains no user dialogue and no title.
  */
-function isSessionEmpty(events?: readonly SessionEvent[]): boolean {
-  if (!Array.isArray(events) || events.length === 0) return false
-  if (isBootstrapOnlySession(events)) return true
-  return !events.some(isHumanUserMessage) && foldTitle(events) === undefined
+function isSessionEmpty(events?: readonly SessionEvent[], id?: string): boolean {
+  if (id !== undefined && id.includes('probe')) {
+    return isBootstrapOnlySession(events)
+  }
+  return false
 }
 
 

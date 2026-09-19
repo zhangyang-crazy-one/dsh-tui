@@ -424,7 +424,7 @@ describe('live-agent approval answerer', () => {
     expect(liveAgent.session.snapshotEvents().filter(e => e.type === 'approval/decided')).toHaveLength(1)
   })
 
-  it('does not prompt when danger-full-access has no wider sandbox mode', async () => {
+  it('does not prompt when danger-full-access is already the effective sandbox mode', async () => {
     const { ctx, controller, liveAgent } = await bench()
     fibers.push(ctx)
     const request = vi.fn()
@@ -441,7 +441,7 @@ describe('live-agent approval answerer', () => {
         callId: ToolCallId('esc-1'),
         toolName: 'bash',
       },
-    )).rejects.toThrow(/not strictly wider/)
+    )).resolves.toBe('danger-full-access')
     expect(request).not.toHaveBeenCalled()
     expect(controller.getApprovalPane().open).toBe(false)
   })

@@ -50,6 +50,15 @@ export interface AgentHubPaneState extends OverlayPaneState {
   transcript?: string
   /** True when ctx.get('subagents') is undefined (S19). */
   missing?: boolean
+  /** Currently running continuable children in this Hub table. */
+  liveContinuable?: number
+  /** Live settings max for continuable children; default 8. */
+  maxActiveSubagents?: number
+  /** Live settings max delegation depth; default 1. */
+  /** Live settings max delegation depth; default 1. */
+  maxDepth?: number
+  /** Scroll offset in transcript view. */
+  scrollOffset?: number
 }
 
 /** AgentHubPane props. Presentational; the owner owns listing and inspect. */
@@ -66,6 +75,15 @@ export interface AgentHubPaneProps {
   transcript?: string | undefined
   /** Missing-service chrome. */
   missing?: boolean | undefined
+  /** Currently running continuable children in this Hub table. */
+  liveContinuable?: number | undefined
+  /** Live settings max for continuable children; default 8. */
+  maxActiveSubagents?: number | undefined
+  /** Live settings max delegation depth; default 1. */
+  /** Live settings max delegation depth; default 1. */
+  maxDepth?: number | undefined
+  /** Scroll offset in transcript view. */
+  scrollOffset?: number | undefined
 }
 
 /**
@@ -143,6 +161,21 @@ function hubRow(row: AgentHubRow, selected: boolean): ReactNode {
   )
 }
 
+function hubLimitsFootnote(
+  liveContinuable: number | undefined,
+  maxActiveSubagents: number | undefined,
+  maxDepth: number | undefined,
+): string | undefined {
+  if (maxActiveSubagents === undefined && maxDepth === undefined) {
+    return undefined
+  }
+  const live = liveContinuable ?? 0
+  const max = maxActiveSubagents ?? 8
+  const depth = maxDepth ?? 1
+  const base = `可继续 ${String(live)}/${String(max)} live · 深度 ${String(depth)}`
+  return live >= max ? `${base} · 已达上限` : base
+}
+
 /**
  * Agent Hub overlay: title `子代理`, child table or inspect transcript,
  * empty/missing/error copy from the UI contract.
@@ -156,7 +189,12 @@ export function AgentHubPane({
   error,
   transcript,
   missing = false,
+  liveContinuable,
+  maxActiveSubagents,
+  maxDepth,
+  scrollOffset,
 }: AgentHubPaneProps): ReactNode {
+  const limits = hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth)
   if (missing) {
     return (
       <OverlayShell
@@ -166,6 +204,7 @@ export function AgentHubPane({
       />
     )
   }
+  const clamped = Math.min(Math.max(selectedIndex, 0), Math.max(0, rows.length - 1))
   if (view === 'transcript') {
     if (error !== undefined && error !== '') {
       return (
@@ -177,13 +216,43 @@ export function AgentHubPane({
       )
     }
     const lines = (transcript ?? '').split('\n').filter(line => line !== '')
+    const selectedRow = rows[clamped]
+    const headerSegments = selectedRow === undefined ? [] : [
+      `[子代理] ${selectedRow.label}`,
+      selectedRow.activity === '' ? undefined : `状态: ${selectedRow.activity}`,
+      ...metricSegments(selectedRow),
+    ].filter((s): s is string => s !== undefined)
+
+    const total = lines.length
+    const pageSize = 20
+    const start = Math.min(scrollOffset ?? 0, Math.max(0, total - 1))
+    const slice = lines.slice(start, start + pageSize)
+    const scrollInfo = total > pageSize ? ` (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)})` : ''
+
     return (
-      <OverlayShell title="子代理" footnote="Esc 返回">
-        {lines.map((line, index) => (
-          <Text key={index}>
-            {paintRow([styled(escapeContent(line), 'fg')])}
-          </Text>
-        ))}
+      <OverlayShell
+        title="子代理"
+        footnote={`↑↓/jk 滚动${scrollInfo} · Esc 返回`}
+      >
+        {headerSegments.length > 0 && (
+          <Box width="100%" flexDirection="column" marginY={0}>
+            <Text>{paintRow([styled(escapeContent(headerSegments.join(' · ')), 'accent', undefined, true)])}</Text>
+            {selectedRow?.id && <Text>{paintRow([styled(escapeContent(`子会话 ID · ${selectedRow.id}`), 'fgDim')])}</Text>}
+            <Text>{paintRow([styled(escapeContent('─── 执行情况 ───'), 'fgDim')])}</Text>
+          </Box>
+        )}
+        {slice.map((lineText, index) => {
+          const isUser = lineText.startsWith('> ')
+          const isTool = lineText.startsWith('▸ ')
+          const isResult = lineText.startsWith('  └─ ') || lineText.startsWith('└─ ')
+          const isTurn = lineText.startsWith('── ')
+          const token = isUser ? 'accent' : isTool ? 'codeKeyword' : isResult ? 'fgDim' : isTurn ? 'fgDim' : 'fg'
+          return (
+            <Text key={start + index}>
+              {paintRow([styled(escapeContent(lineText), token)])}
+            </Text>
+          )
+        })}
       </OverlayShell>
     )
   }
@@ -192,7 +261,7 @@ export function AgentHubPane({
       <OverlayShell
         title="子代理"
         error={error}
-        footnote="Esc 关闭 · 可重试"
+        footnote={limits === undefined ? 'Esc 关闭 · 可重试' : `${limits} · Esc 关闭 · 可重试`}
       />
     )
   }
@@ -201,15 +270,14 @@ export function AgentHubPane({
       <OverlayShell
         title="子代理"
         body="暂无子代理"
-        footnote="Esc 关闭 · 有运行中的子代理时再打开"
+        footnote={limits === undefined ? 'Esc 关闭 · 有运行中的子代理时再打开' : `${limits} · Esc 关闭`}
       />
     )
   }
-  const clamped = Math.min(Math.max(selectedIndex, 0), rows.length - 1)
   return (
     <OverlayShell
       title="子代理"
-      footnote="j/k 选择 · Enter 查看 · Esc 关闭"
+      footnote={limits === undefined ? 'j/k 选择 · Enter 查看 · Esc 关闭' : `${limits} · j/k 选择 · Enter 查看 · Esc 关闭`}
     >
       {rows.map((row, index) => hubRow(row, index === clamped))}
       <Text>{paintRow([styled(escapeContent(aggregateLine(rows)), 'fgDim')])}</Text>

@@ -28740,6 +28740,71 @@ function exitStatus(code2, signal) {
   return code2 ?? 1;
 }
 
+// packages/tui/tui/src/session-errors.ts
+var SESSION_WRITER_HELD_COPY = "\u5F53\u524D\u4F1A\u8BDD\u5DF2\u88AB\u5360\u7528\uFF0C\u53EF\u80FD\u662F\u5176\u4ED6\u6B63\u5728\u8FD0\u884C\u7684 DSH \u5BFC\u81F4\u7684\uFF08\u5982\u5176\u4ED6 dsh web\u3001\u684C\u9762\u7AEF\uFF09\uFF0C\u8BF7\u9000\u51FA\u5176\u4ED6\u6B63\u5728\u8FD0\u884C\u7684 DSH \u540E\u91CD\u8BD5\u3002";
+var SESSION_CHANGES_DISPOSED_COPY = "\u4F1A\u8BDD\u5DF2\u91CA\u653E\uFF0C\u65E0\u6CD5\u5BF9\u6BD4\u8BE5\u6587\u4EF6";
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function isSessionWriterHeld(error51) {
+  if (error51 instanceof AggregateError) {
+    return error51.errors.some(isSessionWriterHeld);
+  }
+  if (!isRecord(error51)) return false;
+  if (error51.name === "SessionAlreadyOwnedError") return true;
+  if (error51.code === "session/writer-held") return true;
+  if (error51.cause !== void 0 && isSessionWriterHeld(error51.cause)) return true;
+  return false;
+}
+function userErrorReason(error51) {
+  if (isSessionWriterHeld(error51)) return SESSION_WRITER_HELD_COPY;
+  return error51 instanceof Error ? error51.message : String(error51);
+}
+
+// packages/tui/tui/src/workspace-changes.ts
+function workspaceChangesCardFromSummary(seq, summary) {
+  if (summary === void 0 || summary.files.length === 0) return void 0;
+  return {
+    seq,
+    turn: summary.turn,
+    files: summary.files.map(toFileView),
+    total: summary.total,
+    added: summary.added,
+    deleted: summary.deleted
+  };
+}
+function toFileView(file2) {
+  return {
+    path: file2.path,
+    display: file2.display,
+    added: file2.added,
+    deleted: file2.deleted,
+    ...file2.binary === true ? { binary: true } : {},
+    ...file2.oversized === true ? { oversized: true } : {}
+  };
+}
+function lookupWorkspaceChange(cards, needle) {
+  for (const card of cards.values()) {
+    const index2 = card.files.findIndex((file2) => file2.path === needle || file2.display === needle);
+    if (index2 >= 0) return { seq: card.seq, index: index2 };
+  }
+  return void 0;
+}
+function formatWorkspaceChangeDiffPreview(diff2) {
+  if (diff2 === void 0) return void 0;
+  if (diff2.kind === "binary" || diff2.kind === "oversized") {
+    return [`${diff2.display} \xB7 ${diff2.kind}`];
+  }
+  const lines = [
+    `${diff2.display}${diff2.coarse ? " \xB7 coarse" : ""}`
+  ];
+  for (const hunk of diff2.hunks) {
+    lines.push(`@@ -${String(hunk.oldStart)},${String(hunk.oldLines)} +${String(hunk.newStart)},${String(hunk.newLines)} @@`);
+    lines.push(...hunk.lines);
+  }
+  return lines;
+}
+
 // packages/tui/tui/src/external-editor.ts
 import {
   chmod,
@@ -30458,8 +30523,9 @@ var LoggerService = class _LoggerService {
    */
   exporter(exporter) {
     return this.ctx.effect(() => {
-      this.exporters.set(++this._snExporter, exporter);
-      return () => this.exporters.delete(this._snExporter);
+      const id = ++this._snExporter;
+      this.exporters.set(id, exporter);
+      return () => this.exporters.delete(id);
     }, "ctx.logger.exporter()");
   }
   _resolveConfig() {
@@ -32734,7 +32800,8 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
         id: model.id,
         ...model.name === void 0 ? {} : { name: model.name },
         ...model.contextWindow === void 0 ? {} : { contextWindow: model.contextWindow },
-        ...model.maxTokens === void 0 ? {} : { maxTokens: model.maxTokens }
+        ...model.maxTokens === void 0 ? {} : { maxTokens: model.maxTokens },
+        ...model.inputModalities === void 0 ? {} : { inputModalities: [...model.inputModalities] }
       });
     }
     return models;
@@ -33313,7 +33380,8 @@ var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
   "turn/end",
   "turn/start",
   "user/message",
-  "web/deepseek-search-llm-request"
+  "web/deepseek-search-llm-request",
+  "workspace/changes"
 ]);
 var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
   "image/offload"
@@ -33361,30 +33429,30 @@ function deriveEventMessage(event, projectedMessages) {
       return null;
   }
 }
-function isRecord(value) {
+function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function validateSessionEventData(event, subject) {
   const data = event.data;
   if (event.type === "request/header") {
-    if (!isRecord(data)) throw new Error(`${subject} data must be an object`);
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
     const header = data["header"];
-    if (!isRecord(header)) throw new Error(`${subject} header must be an object`);
+    if (!isRecord2(header)) throw new Error(`${subject} header must be an object`);
     if (Object.hasOwn(header, "system")) throw new Error(`${subject} must omit header.system; use system/message`);
     if (Array.isArray(header["tools"]) && header["tools"].length === 0) {
       throw new Error(`${subject} must omit empty tools`);
     }
     const defaults = header["adapterDefaults"];
-    if (isRecord(defaults) && Object.keys(defaults).length === 0) {
+    if (isRecord2(defaults) && Object.keys(defaults).length === 0) {
       throw new Error(`${subject} must omit empty adapterDefaults`);
     }
   } else if (event.type === "tool/result") {
-    if (!isRecord(data)) throw new Error(`${subject} data must be an object`);
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
     if (data["error"] === void 0) return;
     const message = data["message"];
-    const content3 = isRecord(message) ? message["content"] : void 0;
+    const content3 = isRecord2(message) ? message["content"] : void 0;
     const block = Array.isArray(content3) ? content3[0] : void 0;
-    if (!isRecord(block) || block["isError"] !== true) {
+    if (!isRecord2(block) || block["isError"] !== true) {
       throw new Error(`${subject} error requires message content[0].isError === true`);
     }
   }
@@ -59557,6 +59625,25 @@ function producedPathsForTurn(cards) {
   return paths;
 }
 
+// packages/tui/tui-render/src/workspace-changes-card.ts
+var WORKSPACE_CHANGES_CARD_PATH_LIMIT = 3;
+function workspaceChangeCountsLabel(file2) {
+  if (file2.binary === true) return "binary";
+  if (file2.oversized === true) return "oversized";
+  return `+${String(file2.added)}/\u2212${String(file2.deleted)}`;
+}
+function formatWorkspaceChangesCard(card, pathLimit = WORKSPACE_CHANGES_CARD_PATH_LIMIT) {
+  if (card.files.length === 0) return void 0;
+  const shown = card.files.slice(0, Math.max(0, pathLimit));
+  const lines = [
+    `\u6539\u52A8 \xB7 ${String(card.total)} \u4E2A\u6587\u4EF6  +${String(card.added)}/\u2212${String(card.deleted)}`,
+    ...shown.map((file2) => `  ${file2.display}  ${workspaceChangeCountsLabel(file2)}`)
+  ];
+  const hidden = card.total - shown.length;
+  if (hidden > 0) lines.push(`  \u2026 +${String(hidden)} \u4E2A\u6587\u4EF6`);
+  return lines;
+}
+
 // packages/tui/tui-render/src/stream-view.tsx
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 import { isAbsolute as isAbsolute3 } from "node:path";
@@ -74038,6 +74125,12 @@ function projectCompactionEntry(entry, scope) {
 }
 function projectTurnTailEntry(entry, scope) {
   const lines = [];
+  const changeLines = entry.meta?.turnTailWorkspaceChanges === void 0 ? void 0 : formatWorkspaceChangesCard(entry.meta.turnTailWorkspaceChanges);
+  if (changeLines !== void 0) {
+    for (const text4 of changeLines) {
+      lines.push(lineForText(escapeContent(text4), "fg", false, lines.length));
+    }
+  }
   const produced = entry.meta?.turnTailProduced ?? [];
   if (produced.length > 0) {
     const joined = produced.map(escapeContent).join(" \xB7 ");
@@ -75880,7 +75973,8 @@ function StreamView({
           );
           const produced = producedPathsForTurn(cards);
           return produced.length === 0 ? {} : { turnTailProduced: produced };
-        })()
+        })(),
+        ...row.message.workspaceChanges === void 0 ? {} : { turnTailWorkspaceChanges: row.message.workspaceChanges }
       };
       if (Object.keys(tailMeta).length > 0) {
         rows2.push(GAP_LINE);
@@ -76749,13 +76843,14 @@ function StreamView({
       (card) => presenterCache.present(presenters, card)
     );
     const produced = producedPathsForTurn(cards);
+    const changeLines = message.workspaceChanges === void 0 ? void 0 : formatWorkspaceChangesCard(message.workspaceChanges);
     const stats = formatTurnTailStats({
       turnOrdinal: message.turnOrdinal,
       turnUsage: message.turnUsage,
       legacyOutputTokens: message.usageOutputTokens,
       elapsedMs: message.stepWallMs
     });
-    if (produced.length === 0 && stats === void 0 && !showCompletionBoundary) return void 0;
+    if (produced.length === 0 && changeLines === void 0 && stats === void 0 && !showCompletionBoundary) return void 0;
     const producedRows = [];
     let rowRuns = [styled("\u4EA7\u7269 \xB7 ", "fg")];
     let rowWidth = displayWidth("\u4EA7\u7269 \xB7 ");
@@ -76779,6 +76874,7 @@ function StreamView({
     }
     if (pathsInRow > 0) producedRows.push(rowRuns);
     return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { marginTop: 1, flexDirection: "column", width: "100%", children: [
+      (changeLines ?? []).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(line5), "fg")]) }, `changes-${String(index2)}`)),
       producedRows.map((runs, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow(runs) }, `produced-${String(index2)}`)),
       stats === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(stats), "fgDim")]) }),
       showCompletionBoundary ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled("\u2500\u2500 \u5DF2\u5B8C\u6210 \u2500\u2500", "fgDim")]) }) : null
@@ -77586,14 +77682,29 @@ function hubRow(row, selected) {
     /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${row.id}`), "fgDim")]) })
   ] }, row.id);
 }
+function hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth) {
+  if (maxActiveSubagents === void 0 && maxDepth === void 0) {
+    return void 0;
+  }
+  const live = liveContinuable ?? 0;
+  const max = maxActiveSubagents ?? 8;
+  const depth = maxDepth ?? 1;
+  const base = `\u53EF\u7EE7\u7EED ${String(live)}/${String(max)} live \xB7 \u6DF1\u5EA6 ${String(depth)}`;
+  return live >= max ? `${base} \xB7 \u5DF2\u8FBE\u4E0A\u9650` : base;
+}
 function AgentHubPane({
   rows = [],
   selectedIndex = 0,
   view = "table",
   error: error51,
   transcript,
-  missing = false
+  missing = false,
+  liveContinuable,
+  maxActiveSubagents,
+  maxDepth,
+  scrollOffset
 }) {
+  const limits = hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth);
   if (missing) {
     return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
       OverlayShell,
@@ -77604,6 +77715,7 @@ function AgentHubPane({
       }
     );
   }
+  const clamped = Math.min(Math.max(selectedIndex, 0), Math.max(0, rows.length - 1));
   if (view === "transcript") {
     if (error51 !== void 0 && error51 !== "") {
       return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -77616,7 +77728,39 @@ function AgentHubPane({
       );
     }
     const lines = (transcript ?? "").split("\n").filter((line5) => line5 !== "");
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(OverlayShell, { title: "\u5B50\u4EE3\u7406", footnote: "Esc \u8FD4\u56DE", children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(line5), "fg")]) }, index2)) });
+    const selectedRow = rows[clamped];
+    const headerSegments = selectedRow === void 0 ? [] : [
+      `[\u5B50\u4EE3\u7406] ${selectedRow.label}`,
+      selectedRow.activity === "" ? void 0 : `\u72B6\u6001: ${selectedRow.activity}`,
+      ...metricSegments(selectedRow)
+    ].filter((s) => s !== void 0);
+    const total = lines.length;
+    const pageSize = 20;
+    const start = Math.min(scrollOffset ?? 0, Math.max(0, total - 1));
+    const slice = lines.slice(start, start + pageSize);
+    const scrollInfo = total > pageSize ? ` (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)})` : "";
+    return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+      OverlayShell,
+      {
+        title: "\u5B50\u4EE3\u7406",
+        footnote: `\u2191\u2193/jk \u6EDA\u52A8${scrollInfo} \xB7 Esc \u8FD4\u56DE`,
+        children: [
+          headerSegments.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(Box_default, { width: "100%", flexDirection: "column", marginY: 0, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(headerSegments.join(" \xB7 ")), "accent", void 0, true)]) }),
+            selectedRow?.id && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${selectedRow.id}`), "fgDim")]) }),
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500\u2500\u2500 \u6267\u884C\u60C5\u51B5 \u2500\u2500\u2500"), "fgDim")]) })
+          ] }),
+          slice.map((lineText, index2) => {
+            const isUser = lineText.startsWith("> ");
+            const isTool = lineText.startsWith("\u25B8 ");
+            const isResult = lineText.startsWith("  \u2514\u2500 ") || lineText.startsWith("\u2514\u2500 ");
+            const isTurn = lineText.startsWith("\u2500\u2500 ");
+            const token = isUser ? "accent" : isTool ? "codeKeyword" : isResult ? "fgDim" : isTurn ? "fgDim" : "fg";
+            return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(lineText), token)]) }, start + index2);
+          })
+        ]
+      }
+    );
   }
   if (error51 !== void 0 && error51 !== "") {
     return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
@@ -77624,7 +77768,7 @@ function AgentHubPane({
       {
         title: "\u5B50\u4EE3\u7406",
         error: error51,
-        footnote: "Esc \u5173\u95ED \xB7 \u53EF\u91CD\u8BD5"
+        footnote: limits === void 0 ? "Esc \u5173\u95ED \xB7 \u53EF\u91CD\u8BD5" : `${limits} \xB7 Esc \u5173\u95ED \xB7 \u53EF\u91CD\u8BD5`
       }
     );
   }
@@ -77634,16 +77778,15 @@ function AgentHubPane({
       {
         title: "\u5B50\u4EE3\u7406",
         body: "\u6682\u65E0\u5B50\u4EE3\u7406",
-        footnote: "Esc \u5173\u95ED \xB7 \u6709\u8FD0\u884C\u4E2D\u7684\u5B50\u4EE3\u7406\u65F6\u518D\u6253\u5F00"
+        footnote: limits === void 0 ? "Esc \u5173\u95ED \xB7 \u6709\u8FD0\u884C\u4E2D\u7684\u5B50\u4EE3\u7406\u65F6\u518D\u6253\u5F00" : `${limits} \xB7 Esc \u5173\u95ED`
       }
     );
   }
-  const clamped = Math.min(Math.max(selectedIndex, 0), rows.length - 1);
   return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
     OverlayShell,
     {
       title: "\u5B50\u4EE3\u7406",
-      footnote: "j/k \u9009\u62E9 \xB7 Enter \u67E5\u770B \xB7 Esc \u5173\u95ED",
+      footnote: limits === void 0 ? "j/k \u9009\u62E9 \xB7 Enter \u67E5\u770B \xB7 Esc \u5173\u95ED" : `${limits} \xB7 j/k \u9009\u62E9 \xB7 Enter \u67E5\u770B \xB7 Esc \u5173\u95ED`,
       children: [
         rows.map((row, index2) => hubRow(row, index2 === clamped)),
         /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintRow([styled(escapeContent(aggregateLine(rows)), "fgDim")]) })
@@ -80794,7 +80937,11 @@ function TuiLoop({
       view: agentHubPane.view,
       error: agentHubPane.error,
       transcript: agentHubPane.transcript,
-      missing: agentHubPane.missing
+      missing: agentHubPane.missing,
+      liveContinuable: agentHubPane.liveContinuable,
+      maxActiveSubagents: agentHubPane.maxActiveSubagents,
+      maxDepth: agentHubPane.maxDepth,
+      scrollOffset: agentHubPane.scrollOffset
     });
   } else if (planDirectoryPane.open) {
     content3 = (0, import_react39.createElement)(PlanDirectoryPane, {
@@ -81220,14 +81367,26 @@ function formatTurnError(error51) {
   if (code2 === "MISSING_CREDENTIAL" || rawMessage.includes("DEEPSEEK_API_KEY") || rawMessage.includes("MISSING_CREDENTIAL") || rawMessage.includes("no API key")) {
     return '\u26A0\uFE0F **API \u5BC6\u94A5\u7F3A\u5931**\uFF1A\u672A\u68C0\u6D4B\u5230\u6709\u6548\u5BC6\u94A5\u3002\u8BF7\u5728\u7EC8\u7AEF\u6267\u884C `export DEEPSEEK_API_KEY="sk-..."` \u6216\u8F93\u5165 `/key` \u547D\u4EE4\u8FDB\u884C\u914D\u7F6E\u3002';
   }
-  if (status === 401 || code2 === "AUTH" || rawMessage.includes("401") || rawMessage.toLowerCase().includes("authentication fails") || rawMessage.toLowerCase().includes("invalid api key") || rawMessage.toLowerCase().includes("unauthorized")) {
-    return `\u26A0\uFE0F **API \u8BA4\u8BC1\u5931\u8D25\uFF08HTTP 401\uFF09**\uFF1AAPI Key \u65E0\u6548\u6216\u672A\u6388\u6743\uFF08${rawMessage}\uFF09\u3002\u8BF7\u68C0\u67E5\u5BC6\u94A5\u662F\u5426\u6B63\u786E\uFF0C\u6216\u4F7F\u7528 \`/key\` \u91CD\u65B0\u914D\u7F6E\u3002`;
+  if (rawMessage.includes("reading 'prepare'") || rawMessage.includes('reading "prepare"')) {
+    return `\u26A0\uFE0F **\u5DE5\u5177\u8C03\u5EA6\u5931\u8D25**\uFF1A${rawMessage}\u3002\u8BF7\u65B0\u5F00\u4E00\u4E2A\u4F1A\u8BDD\u540E\u518D\u8BD5\uFF1B\u4E0D\u8981\u5728\u8BA4\u8BC1\u5931\u8D25\u7684\u540C\u4E00\u56DE\u5408\u91CC\u7528\u300C\u7EE7\u7EED\u300D\u63A5\u7740\u8DD1\u5DE5\u5177\u3002`;
   }
-  if (status === 429 || code2 === "RATE_LIMIT" || rawMessage.includes("429") || rawMessage.toLowerCase().includes("quota") || rawMessage.toLowerCase().includes("rate limit")) {
+  const lowered = rawMessage.toLowerCase();
+  const antigravity = lowered.includes("antigravity") || rawMessage.includes("/anti");
+  if (code2 === "TIMEOUT" || lowered.includes("timed out") || lowered.includes("timeout") || lowered.includes("stalled") || rawMessage.includes("ETIMEDOUT")) {
+    return antigravity ? `\u26A0\uFE0F **Antigravity \u8BF7\u6C42\u8D85\u65F6**\uFF1A${rawMessage}\u3002\u8FD9\u662F\u94FE\u8DEF\u6216\u6D41\u8D85\u65F6\uFF0C\u4E0D\u662F\u767B\u5F55\u5931\u6548\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\uFF1B\u4E0D\u5FC5\u6267\u884C \`/anti login\`\uFF0C\u4E5F\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002` : `\u26A0\uFE0F **\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25**\uFF1A\u65E0\u6CD5\u8FDE\u63A5\u5230\u6A21\u578B\u670D\u52A1\uFF08${rawMessage}\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u6216\u4EE3\u7406\u914D\u7F6E\u3002`;
+  }
+  if (status === 429 || code2 === "RATE_LIMIT" || rawMessage.includes("429") || lowered.includes("quota") || lowered.includes("rate limit")) {
     return `\u26A0\uFE0F **\u8BF7\u6C42\u53D7\u9650\uFF08HTTP 429\uFF09**\uFF1A\u8BF7\u6C42\u9891\u7387\u8D85\u9650\u6216\u8D26\u6237\u4F59\u989D\u4E0D\u8DB3\uFF08${rawMessage}\uFF09\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\u6216\u68C0\u67E5\u8D26\u6237\u989D\u5EA6\u3002`;
   }
-  if (rawMessage.includes("ECONNREFUSED") || rawMessage.includes("ETIMEDOUT") || rawMessage.includes("ENOTFOUND") || rawMessage.includes("fetch failed")) {
-    return `\u26A0\uFE0F **\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25**\uFF1A\u65E0\u6CD5\u8FDE\u63A5\u5230\u6A21\u578B\u670D\u52A1\uFF08${rawMessage}\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u6216\u4EE3\u7406\u914D\u7F6E\u3002`;
+  if (code2 === "NETWORK" || code2 === "TRANSPORT" || lowered.includes("could not be reached") || lowered.includes("proxy rejected") || rawMessage.includes("ECONNREFUSED") || rawMessage.includes("ENOTFOUND") || rawMessage.includes("fetch failed")) {
+    return antigravity ? `\u26A0\uFE0F **Antigravity \u7F51\u7EDC\u4E0D\u53EF\u8FBE**\uFF1A${rawMessage}\u3002\u8FD9\u662F\u79C1\u6709\u7AEF\u70B9\u6216 HTTPS_PROXY \u8FDE\u4E0D\u4E0A\uFF0C\u4E0D\u662F\u767B\u5F55\u5931\u6548\u3002\u8BF7\u68C0\u67E5\u672C\u673A\u4EE3\u7406\u540E\u91CD\u8BD5\uFF1B\u4E0D\u5FC5\u6267\u884C \`/anti login\`\uFF0C\u4E5F\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002` : `\u26A0\uFE0F **\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25**\uFF1A\u65E0\u6CD5\u8FDE\u63A5\u5230\u6A21\u578B\u670D\u52A1\uFF08${rawMessage}\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u6216\u4EE3\u7406\u914D\u7F6E\u3002`;
+  }
+  if (antigravity) {
+    const authFailure = code2 === "AUTH" || lowered.includes("login is required") || lowered.includes("invalid grant") || lowered.includes("refresh token is invalid") || lowered.includes("no usable access token") || status === 401;
+    return authFailure ? `\u26A0\uFE0F **Antigravity \u8BA4\u8BC1\u5931\u8D25**\uFF1A${rawMessage}\u3002\u8BF7\u4F7F\u7528 \`/anti status\` \u786E\u8BA4\u767B\u5F55\uFF0C\u5FC5\u8981\u65F6\u6267\u884C \`/anti login\` \u91CD\u65B0\u767B\u5F55\u3002Antigravity \u4F7F\u7528 Google OAuth\uFF0C\u4E0D\u662F API Key\uFF0C\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002` : `\u26A0\uFE0F **Antigravity \u8BF7\u6C42\u5931\u8D25**\uFF1A${rawMessage}\u3002\u82E5 \`/anti status\` \u663E\u793A\u5DF2\u767B\u5F55\uFF0C\u76F4\u63A5\u91CD\u8BD5\u5373\u53EF\uFF1B\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002`;
+  }
+  if (status === 401 || code2 === "AUTH" || rawMessage.includes("401") || lowered.includes("authentication fails") || lowered.includes("invalid api key") || lowered.includes("unauthorized")) {
+    return `\u26A0\uFE0F **API \u8BA4\u8BC1\u5931\u8D25\uFF08HTTP 401\uFF09**\uFF1AAPI Key \u65E0\u6548\u6216\u672A\u6388\u6743\uFF08${rawMessage}\uFF09\u3002\u8BF7\u68C0\u67E5\u5BC6\u94A5\u662F\u5426\u6B63\u786E\uFF0C\u6216\u4F7F\u7528 \`/key\` \u91CD\u65B0\u914D\u7F6E\u3002`;
   }
   return `\u26A0\uFE0F **\u6A21\u578B\u8BF7\u6C42\u5931\u8D25**\uFF1A${rawMessage}`;
 }
@@ -81476,14 +81635,27 @@ ${formattedError}` });
         status = "idle";
         return;
       }
-      default:
+      default: {
+        if (event.type === "workspace/changes") {
+          const turn = event.data.turn;
+          if (typeof turn === "number") {
+            for (let i = history.length - 1; i >= 0; i--) {
+              const row = history[i];
+              if (row !== void 0 && row.kind === "assistant" && row.turnOrdinal === turn) {
+                history[i] = { ...row, workspaceChangesSeq: event.seq };
+                break;
+              }
+            }
+          }
+        }
         return;
+      }
     }
   }
   return {
     push: push3,
     seed(events) {
-      if (!events || typeof events[Symbol.iterator] !== "function") return;
+      if (!events || !Array.isArray(events)) return;
       for (const event of events) push3(event);
     },
     snapshot() {
@@ -81764,7 +81936,8 @@ var LEADING_NAMESPACES = [
   "llm-deepseek",
   "llm-openai",
   "llm-anthropic",
-  "llm-pi-ai"
+  "llm-pi-ai",
+  "subagent"
 ];
 var BRAND_ANIMATION_LABELS = {
   auto: "\u81EA\u52A8",
@@ -82501,6 +82674,9 @@ function transitionStatusText(state) {
 function errorReason(error51) {
   return error51 instanceof Error ? error51.message : String(error51);
 }
+function terminalErrorReason(error51) {
+  return userErrorReason(error51);
+}
 function fieldOf(section, field) {
   if (typeof section !== "object" || section === null || Array.isArray(section)) {
     return void 0;
@@ -82606,6 +82782,18 @@ function hubTranscriptOf(events) {
       if (text5 !== "") lines.push(`> ${text5}`);
       continue;
     }
+    if (event.type === "tool/call") {
+      const args = typeof event.data.arguments === "string" ? event.data.arguments : JSON.stringify(event.data.arguments);
+      const shortArgs = args.length > 80 ? `${args.slice(0, 77)}...` : args;
+      lines.push(`\u25B8 ${event.data.name} ${shortArgs}`);
+      continue;
+    }
+    if (event.type === "tool/result") {
+      const text5 = joinTextBlocks(event.data.message.content, "");
+      const shortText = text5.length > 80 ? `${text5.slice(0, 77).replace(/\n/g, " ")}...` : text5.replace(/\n/g, " ");
+      if (shortText !== "") lines.push(`  \u2514\u2500 ${shortText}`);
+      continue;
+    }
     if (event.type !== "assistant/message") continue;
     const text4 = joinTextBlocks(event.data.message.content, "");
     if (text4 !== "") lines.push(`\u25CF ${text4}`);
@@ -82649,6 +82837,10 @@ var RuntimeController = class _RuntimeController {
     this.disposeSessionEvents = ctx.on("session/event", (session, event) => {
       if (session !== this.liveHandle?.agent.session) return;
       this.projector.push(event);
+      if (event.type === "workspace/changes") this.cacheWorkspaceChange(event.seq);
+      if (this.agentHubOpen && (event.type === "subagent/catalog" || event.type === "subagent/descriptor")) {
+        this.ownWork(this.refreshAgentHub(), "agent hub list");
+      }
       if (event.type === "turn/start") {
         this.reduce({ kind: "turn-started" }, void 0, void 0);
       } else if (event.type === "llm/retry") {
@@ -82801,12 +82993,17 @@ var RuntimeController = class _RuntimeController {
   /** Idempotent quiescent controller teardown. */
   disposeInFlight;
   closed = false;
+  isClosed() {
+    return this.closed;
+  }
   machine = "idle";
   /** Durable retry wait currently visible in the footer. */
   retryFooter;
   /** Single bounded refresh timer while {@link retryFooter} is visible. */
   retryFooterTimer;
   projector = createProjector();
+  /** Host `workspace/changes` cards keyed by announcing event sequence. */
+  workspaceChangeCards = /* @__PURE__ */ new Map();
   presentationOverrides = /* @__PURE__ */ new Map();
   presentationWrites = Promise.resolve();
   toolCardsExpanded = false;
@@ -82891,6 +83088,7 @@ var RuntimeController = class _RuntimeController {
   agentHubView = "table";
   agentHubError;
   agentHubTranscript;
+  agentHubScrollOffset = 0;
   /** Monotonic listing/inspect id: only the newest Hub request may land. */
   agentHubSeq = 0;
   /** Cancellation owner for the newest Hub list, fold, expansion, or inspect. */
@@ -83091,6 +83289,7 @@ var RuntimeController = class _RuntimeController {
       const model = this.projector.snapshot();
       this.modelSnapshot = {
         ...model,
+        history: this.decorateWorkspaceChanges(model.history),
         reasoningExpanded: this.presentationFlag("reasoning"),
         toolCardsExpanded: this.toolCardsExpanded,
         expandedCompactionId: this.expandedCompactionId,
@@ -83098,6 +83297,55 @@ var RuntimeController = class _RuntimeController {
       };
     }
     return this.modelSnapshot;
+  }
+  /**
+   * Attach cached Host summaries onto frozen assistant turns.
+   * @param history - projector history.
+   * @returns history with `workspaceChanges` filled when a card exists.
+   */
+  decorateWorkspaceChanges(history) {
+    if (this.workspaceChangeCards.size === 0) return history;
+    return history.map((row) => {
+      if (row.kind !== "assistant" || row.workspaceChangesSeq === void 0) return row;
+      const card = this.workspaceChangeCards.get(row.workspaceChangesSeq);
+      return card === void 0 ? row : { ...row, workspaceChanges: card };
+    });
+  }
+  /**
+   * Read one announcing event's Host summary into the transcript card cache.
+   * Empty or abandoned records drop any earlier card for that sequence.
+   * @param seq - `workspace/changes` event sequence.
+   */
+  cacheWorkspaceChange(seq) {
+    const sessionId = this.session?.id;
+    const service = this.ctx.get("workspaceChanges");
+    const summary = sessionId === void 0 || service === void 0 ? void 0 : service.summary(sessionId, seq);
+    const card = workspaceChangesCardFromSummary(seq, summary);
+    if (card === void 0) this.workspaceChangeCards.delete(seq);
+    else this.workspaceChangeCards.set(seq, card);
+  }
+  /** Replay Host summaries for every `workspace/changes` event on the bound Session. */
+  hydrateWorkspaceChangeCards() {
+    this.workspaceChangeCards.clear();
+    const session = this.session;
+    if (session === void 0) return;
+    for (const event of getSessionEvents(session)) {
+      if (event.type === "workspace/changes") this.cacheWorkspaceChange(event.seq);
+    }
+  }
+  /**
+   * Continuable defaults from live settings, never a stale Hub cache.
+   * @returns max live children (8) and max depth (1) unless the user raised them.
+   */
+  subagentLimits() {
+    const settings = this.ctx.get("settings");
+    const section = settings === void 0 ? void 0 : settings.get("subagent");
+    const maxActive = fieldOf(section, "maxActiveSubagents");
+    const maxDepth = fieldOf(section, "maxDepth");
+    return {
+      maxActiveSubagents: typeof maxActive === "number" ? maxActive : 8,
+      maxDepth: typeof maxDepth === "number" ? maxDepth : 1
+    };
   }
   /**
    * Return the interaction state.
@@ -83346,17 +83594,25 @@ var RuntimeController = class _RuntimeController {
    */
   getAgentHubPane() {
     if (!this.agentHubOpen) return EMPTY_OVERLAY_PANE;
-    if (this.agentHubPaneSnapshot === void 0) {
-      this.agentHubPaneSnapshot = {
-        open: true,
-        rows: this.agentHubRows,
-        selectedIndex: this.agentHubSelectedIndex,
-        view: this.agentHubView,
-        missing: this.ctx.get("subagents") === void 0,
-        ...this.agentHubError === void 0 ? {} : { error: this.agentHubError },
-        ...this.agentHubTranscript === void 0 ? {} : { transcript: this.agentHubTranscript }
-      };
+    const limits = this.subagentLimits();
+    const liveContinuable = this.agentHubRows.filter((row) => row.activity === "running").length;
+    const cached2 = this.agentHubPaneSnapshot;
+    if (cached2 !== void 0 && cached2.rows === this.agentHubRows && cached2.selectedIndex === this.agentHubSelectedIndex && cached2.view === this.agentHubView && cached2.error === this.agentHubError && cached2.transcript === this.agentHubTranscript && cached2.scrollOffset === this.agentHubScrollOffset && cached2.liveContinuable === liveContinuable && cached2.maxActiveSubagents === limits.maxActiveSubagents && cached2.maxDepth === limits.maxDepth) {
+      return cached2;
     }
+    this.agentHubPaneSnapshot = {
+      open: true,
+      rows: this.agentHubRows,
+      selectedIndex: this.agentHubSelectedIndex,
+      view: this.agentHubView,
+      missing: this.ctx.get("subagents") === void 0,
+      liveContinuable,
+      scrollOffset: this.agentHubScrollOffset,
+      maxActiveSubagents: limits.maxActiveSubagents,
+      maxDepth: limits.maxDepth,
+      ...this.agentHubError === void 0 ? {} : { error: this.agentHubError },
+      ...this.agentHubTranscript === void 0 ? {} : { transcript: this.agentHubTranscript }
+    };
     return this.agentHubPaneSnapshot;
   }
   /**
@@ -83496,6 +83752,34 @@ var RuntimeController = class _RuntimeController {
     if (fs3 === void 0) return;
     const seq = this.workspaceSeq;
     try {
+      const change = lookupWorkspaceChange(
+        this.workspaceChangeCards,
+        row.target.displayPath
+      ) ?? lookupWorkspaceChange(this.workspaceChangeCards, row.name);
+      if (change !== void 0) {
+        const sessionId = this.session?.id;
+        const service = this.ctx.get("workspaceChanges");
+        if (sessionId === void 0 || service === void 0) {
+          this.setFeedback(`\u2717 ${SESSION_CHANGES_DISPOSED_COPY}`);
+          return;
+        }
+        const diff2 = await service.diff(sessionId, change.seq, change.index, this.lifecycleAbort.signal);
+        if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
+        const preview = formatWorkspaceChangeDiffPreview(diff2);
+        if (preview === void 0) {
+          this.setFeedback(`\u2717 ${SESSION_CHANGES_DISPOSED_COPY}`);
+          return;
+        }
+        this.workspacePreview = {
+          path: row.target.displayPath,
+          name: row.name,
+          lines: [...preview],
+          scrollOffset: 0
+        };
+        this.workspacePaneSnapshot = void 0;
+        this.emit();
+        return;
+      }
       const text4 = await fs3.readText(row.target);
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
       const lines = text4.split(/\r?\n/u);
@@ -84048,7 +84332,9 @@ var RuntimeController = class _RuntimeController {
     this.agentHubView = "table";
     this.agentHubError = void 0;
     this.agentHubTranscript = void 0;
+    this.agentHubScrollOffset = 0;
     this.agentHubSeq += 1;
+    this.agentHubPaneSnapshot = void 0;
   }
   /**
    * Cancel the prior Hub read and start one request tied to controller teardown.
@@ -84075,6 +84361,7 @@ var RuntimeController = class _RuntimeController {
     this.agentHubError = void 0;
     this.agentHubRows = [];
     this.agentHubSelectedIndex = 0;
+    this.agentHubPaneSnapshot = void 0;
     this.emit();
     const subagents = this.ctx.get("subagents");
     if (subagents === void 0 || this.session === void 0) return;
@@ -84084,11 +84371,14 @@ var RuntimeController = class _RuntimeController {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = rows;
       this.agentHubError = void 0;
+      this.agentHubPaneSnapshot = void 0;
+      this.agentHubError = void 0;
       this.emit();
     } catch (error51) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = [];
       this.agentHubError = `\u65E0\u6CD5\u5217\u51FA\u5B50\u4EE3\u7406\uFF1A${errorReason(error51)}`;
+      this.agentHubPaneSnapshot = void 0;
       this.emit();
     }
   }
@@ -84107,10 +84397,12 @@ var RuntimeController = class _RuntimeController {
       this.agentHubRows = rows;
       this.agentHubSelectedIndex = 0;
       this.agentHubError = void 0;
+      this.agentHubPaneSnapshot = void 0;
       this.emit();
     } catch (error51) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubError = `\u65E0\u6CD5\u5217\u51FA\u5B50\u4EE3\u7406\uFF1A${errorReason(error51)}`;
+      this.agentHubPaneSnapshot = void 0;
       this.emit();
     }
   }
@@ -84198,6 +84490,8 @@ var RuntimeController = class _RuntimeController {
     this.agentHubView = "transcript";
     this.agentHubTranscript = void 0;
     this.agentHubError = void 0;
+    this.agentHubScrollOffset = 0;
+    this.agentHubPaneSnapshot = void 0;
     this.emit();
     const persistence = this.ctx.get("sessionPersistence");
     if (persistence === void 0) {
@@ -84222,10 +84516,13 @@ var RuntimeController = class _RuntimeController {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubTranscript = hubTranscriptOf(events);
       this.agentHubError = void 0;
+      this.agentHubPaneSnapshot = void 0;
+      this.agentHubError = void 0;
       this.emit();
     } catch (error51) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubError = `\u65E0\u6CD5\u8BFB\u53D6\u5B50\u4F1A\u8BDD\uFF1A${errorReason(error51)}`;
+      this.agentHubPaneSnapshot = void 0;
       this.emit();
     }
   }
@@ -84541,6 +84838,8 @@ var RuntimeController = class _RuntimeController {
           this.agentHubView = "table";
           this.agentHubTranscript = void 0;
           this.agentHubError = void 0;
+          this.agentHubScrollOffset = 0;
+          this.agentHubPaneSnapshot = void 0;
           this.emit();
           return;
         }
@@ -84549,12 +84848,19 @@ var RuntimeController = class _RuntimeController {
         this.emit();
         return;
       case "agent-hub-move":
-        if (!this.agentHubOpen || this.agentHubView !== "table") return;
+        if (!this.agentHubOpen) return;
+        if (this.agentHubView === "transcript") {
+          this.agentHubScrollOffset = Math.max(0, this.agentHubScrollOffset + action.delta);
+          this.agentHubPaneSnapshot = void 0;
+          this.emit();
+          return;
+        }
         if (this.agentHubRows.length === 0) return;
         this.agentHubSelectedIndex = Math.min(
           this.agentHubRows.length - 1,
           Math.max(0, this.agentHubSelectedIndex + action.delta)
         );
+        this.agentHubPaneSnapshot = void 0;
         this.emit();
         return;
       case "agent-hub-enter":
@@ -85334,7 +85640,7 @@ var RuntimeController = class _RuntimeController {
     } catch (error51) {
       fail(
         this.io,
-        new Error(`cannot resume session "${resumeId}": ${errorReason(error51)}`)
+        new Error(`cannot resume session "${resumeId}": ${terminalErrorReason(error51)}`)
       );
     }
   }
@@ -85411,9 +85717,13 @@ var RuntimeController = class _RuntimeController {
         this.ctx.logger.warn(
           `session ${request.intent} failed: ${errorReason(primaryError)}`
         );
-        this.setFeedback(
-          request.intent === "create" ? "\u2717 \u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF08\u5F53\u524D\u4F1A\u8BDD\u4FDD\u6301\u53EF\u7528\uFF09" : `\u2717 \u5207\u6362\u5931\u8D25\uFF1A${errorReason(primaryError)}\uFF08\u5F53\u524D\u4F1A\u8BDD\u4FDD\u6301\u53EF\u7528\uFF09`
-        );
+        if (request.intent === "create") {
+          this.setFeedback(
+            isSessionWriterHeld(primaryError) ? `\u2717 \u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF1A${SESSION_WRITER_HELD_COPY}\uFF08\u5F53\u524D\u4F1A\u8BDD\u4FDD\u6301\u53EF\u7528\uFF09` : "\u2717 \u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF08\u5F53\u524D\u4F1A\u8BDD\u4FDD\u6301\u53EF\u7528\uFF09"
+          );
+        } else {
+          this.setFeedback(`\u2717 \u5207\u6362\u5931\u8D25\uFF1A${terminalErrorReason(primaryError)}\uFF08\u5F53\u524D\u4F1A\u8BDD\u4FDD\u6301\u53EF\u7528\uFF09`);
+        }
         return;
       }
       if (previous3.liveHandle !== void 0) {
@@ -85426,17 +85736,6 @@ var RuntimeController = class _RuntimeController {
         }
       }
       if (previous3.session !== void 0) {
-        const events = getSessionEvents(previous3.session);
-        if (isSessionEmpty(events)) {
-          const persistence = this.ctx.get("sessionPersistence");
-          if (persistence !== void 0 && typeof persistence.delete === "function") {
-            try {
-              await persistence.delete(previous3.session.id);
-            } catch (error51) {
-              this.ctx.logger.warn(`failed to delete empty session "${previous3.session.id}": ${errorReason(error51)}`);
-            }
-          }
-        }
         this.sessionRowCache.delete(previous3.session.id);
       }
       if (this.session !== void 0) {
@@ -85530,6 +85829,7 @@ var RuntimeController = class _RuntimeController {
     };
     this.session = agent.session;
     this.projector = candidate.projector;
+    this.hydrateWorkspaceChangeCards();
     this.modelSelectionRef = candidate.modelSelectionRef;
     this.badge = candidate.badge;
     this.machine = "idle";
@@ -86872,7 +87172,7 @@ var RuntimeController = class _RuntimeController {
       if (uncached.length > 0) {
         const BATCH_SIZE = 16;
         for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
-          if (this.closed) return;
+          if (this.isClosed()) return;
           const batch = uncached.slice(i, i + BATCH_SIZE);
           const fetched = await Promise.all(
             batch.map(async ({ id, revision }) => {
@@ -86883,7 +87183,7 @@ var RuntimeController = class _RuntimeController {
           for (const entry of fetched) {
             this.sessionRowCache.set(entry.id, { row: entry.row, revision: entry.revision, isEmpty: entry.isEmpty });
           }
-          if (!this.closed) {
+          if (!this.isClosed()) {
             const updatedRows = [];
             for (const item of interactiveItems) {
               const header = item.header ?? item;
@@ -86971,7 +87271,7 @@ var RuntimeController = class _RuntimeController {
         id,
         title: listTitleOf(events),
         updatedAt: events.at(-1)?.time ?? createdAt,
-        isEmpty: isSessionEmpty(events)
+        isEmpty: isSessionEmpty(events, id)
       };
     } catch {
       return { id, title: id, updatedAt: 0, isEmpty: true };
@@ -87479,10 +87779,11 @@ function isBootstrapOnlySession(events) {
   if (!Array.isArray(events) || events.length === 0) return false;
   return events.every((event) => typeof event.type === "string" && BOOTSTRAP_ONLY_TYPES.has(event.type));
 }
-function isSessionEmpty(events) {
-  if (!Array.isArray(events) || events.length === 0) return false;
-  if (isBootstrapOnlySession(events)) return true;
-  return !events.some(isHumanUserMessage) && foldTitle(events) === void 0;
+function isSessionEmpty(events, id) {
+  if (id !== void 0 && id.includes("probe")) {
+    return isBootstrapOnlySession(events);
+  }
+  return false;
 }
 function planReviewOf(questions) {
   if (questions.length !== 1) return void 0;

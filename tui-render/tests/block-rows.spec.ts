@@ -287,6 +287,53 @@ describe('projectBlockRows — non-markdown blocks', () => {
     ])
   })
 
+  it('turn-tail paints a bounded workspace-changes card above produced paths', () => {
+    const projection = projectBlockRows({
+      id: 'tt-changes',
+      kind: 'turn-tail',
+      source: '',
+      meta: {
+        turnTailWorkspaceChanges: {
+          seq: 9,
+          turn: 1,
+          files: [
+            { path: 'a.ts', display: 'a.ts', added: 3, deleted: 1 },
+            { path: 'b.ts', display: 'b.ts', added: 0, deleted: 2 },
+          ],
+          total: 2,
+          added: 3,
+          deleted: 3,
+        },
+        turnTailProduced: ['a.ts'],
+        turnTailStats: 'turn 1 · 12 tok · 200 ms',
+      },
+    }, settledScope(), undefined)
+    expect(projection.lines.map(line => line.text)).toEqual([
+      '改动 · 2 个文件  +3/−3',
+      '  a.ts  +3/−1',
+      '  b.ts  +0/−2',
+      '产物 · a.ts',
+      'turn 1 · 12 tok · 200 ms',
+    ])
+  })
+
+  it('turn-tail omits an empty workspace-changes card', () => {
+    const projection = projectBlockRows({
+      id: 'tt-empty-changes',
+      kind: 'turn-tail',
+      source: '',
+      meta: {
+        turnTailWorkspaceChanges: {
+          seq: 9, turn: 1, files: [], total: 0, added: 0, deleted: 0,
+        },
+        turnTailStats: 'turn 1 · 1 tok · 1 ms',
+      },
+    }, settledScope(), undefined)
+    expect(projection.lines.map(line => line.text)).toEqual([
+      'turn 1 · 1 tok · 1 ms',
+    ])
+  })
+
   it('compaction produces one collapsed row and two expanded', () => {
     const collapsed = projectBlockRows({
       id: 'c1',

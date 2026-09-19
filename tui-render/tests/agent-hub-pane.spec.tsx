@@ -18,6 +18,9 @@ import { EMPTY_ASK_USER_PANE } from '../src/ask-user-pane.tsx'
 import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
 import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
+import { EMPTY_WORKSPACE_PANE } from '../src/workspace-pane.tsx'
+import { EMPTY_FEEDBACK_PANE } from '../src/feedback-pane.tsx'
+import { EMPTY_WORKFLOW_OVERLAY } from '../src/workflow-overlay.tsx'
 
 afterEach(() => {
   applyTheme('truecolor')
@@ -88,9 +91,9 @@ function stubController(
     getSettingsPane: () => EMPTY_SETTINGS_PANE,
     getAgentHubPane: () => hub,
     getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-    getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-    getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-    getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+    getWorkspacePane: () => EMPTY_WORKSPACE_PANE,
+    getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+    getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY,
     getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
     getComposerHud: () => undefined,
     getToolPresenters: () => undefined,
@@ -101,6 +104,10 @@ function stubController(
     commands: [],
     getCwd: () => '/',
     listMentions: async () => [],
+    intakeClipboardImage: async () => ({ ok: false as const, reason: 'unsupported' }),
+    intakeImagePath: async () => ({ ok: false as const, reason: 'unsupported' }),
+    note: () => {},
+    noteUserActivity: () => {},
   }
 }
 
@@ -204,6 +211,30 @@ describe('AgentHubPane', () => {
     expect(failed).toContain('✗ list failed')
     expect(failed).toContain('可重试')
   })
+  it('renders a rich execution modal with header metrics, step trace, and scroll info', () => {
+    const trace = [
+      '> Read project files',
+      '▸ glob {"pattern":"**/*.ts"}',
+      '  └─ 3 files',
+      '● Analysis complete',
+    ].join('\n')
+    const out = render({
+      view: 'transcript',
+      rows: [{ ...CHILD, tokens: 450, durationMs: 12_000, model: 'deepseek-flash' }],
+      selectedIndex: 0,
+      transcript: trace,
+    })
+    expect(out).toContain('[子代理] explorer')
+    expect(out).toContain('状态: running')
+    expect(out).toContain('子会话 ID · child-1')
+    expect(out).toContain('─── 执行情况 ───')
+    expect(out).toContain('Read project files')
+    expect(out).toContain('glob')
+    expect(out).toContain('3 files')
+    expect(out).toContain('Analysis complete')
+    expect(out).toContain('Esc 返回')
+  })
+
 
   it('paints inspect failure with Esc 返回列表', () => {
     const out = render({
@@ -235,6 +266,31 @@ describe('AgentHubPane', () => {
     expect(out).toContain('\\x1b')
     expect(out).toContain('子会话 ID · child-\\x1b[2J')
   })
+
+  it('paints live/max/depth and 已达上限 without replacing the child table', () => {
+    const out = render({
+      rows: [CHILD],
+      selectedIndex: 0,
+      liveContinuable: 8,
+      maxActiveSubagents: 8,
+      maxDepth: 1,
+    })
+    expect(out).toContain('explorer · running')
+    expect(out).toContain('可继续 8/8 live · 深度 1 · 已达上限')
+    expect(out).toContain('j/k 选择 · Enter 查看 · Esc 关闭')
+    expect(out).not.toContain('✗')
+  })
+
+  it('keeps empty chrome when limits are present', () => {
+    const out = render({
+      liveContinuable: 0,
+      maxActiveSubagents: 8,
+      maxDepth: 1,
+    })
+    expect(out).toContain('暂无子代理')
+    expect(out).toContain('可继续 0/8 live · 深度 1')
+    expect(out).toContain('Esc 关闭')
+  })
 })
 
 describe('TuiLoop Agent Hub', () => {
@@ -261,5 +317,24 @@ describe('TuiLoop Agent Hub', () => {
       }),
     )
     expect(out).toContain('✗ 子代理服务未组合')
+  })
+
+  it('passes continuable limits through the Hub snapshot', () => {
+    applyTheme('truecolor')
+    const out = renderToString(
+      createElement(TuiLoop, {
+        title: 't',
+        controller: stubController({
+          open: true,
+          rows: [CHILD],
+          selectedIndex: 0,
+          liveContinuable: 8,
+          maxActiveSubagents: 8,
+          maxDepth: 1,
+        }),
+      }),
+    )
+    expect(out).toContain('可继续 8/8 live · 深度 1 · 已达上限')
+    expect(out).toContain('explorer · running')
   })
 })

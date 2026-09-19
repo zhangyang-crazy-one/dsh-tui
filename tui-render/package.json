@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tui-render",
-  "version": "0.1.3-alpha.1",
+  "version": "0.1.6-alpha.2",
   "type": "module",
   "license": "MIT",
   "description": "The deepseek-tui terminal render layer: session projection, DeepSeek theme tokens, Ink components, and the throttled render loop. A pure consumer — it registers no harness services.",

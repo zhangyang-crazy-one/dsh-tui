@@ -109,6 +109,9 @@
     },
     {
       "path": "../../session/session-stats"
+    },
+    {
+      "path": "../../deliverables/workspace-changes"
     }
   ]
 }

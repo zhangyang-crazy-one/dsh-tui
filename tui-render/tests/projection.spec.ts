@@ -743,6 +743,93 @@ describe('createProjector', () => {
     expect(row?.text).toContain('⚠️ **模型请求失败**：Connection reset by peer')
   })
 
+
+  it('formats Antigravity OAuth failures as /anti login, not API key /key', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'Antigravity login is required before model use',
+          code: 'AUTH',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('Antigravity 认证失败')
+    expect(row?.text).toContain('/anti')
+    expect(row?.text).not.toContain('API Key 无效')
+    expect(row?.text).not.toContain('/key` 重新配置')
+  })
+
+  it('formats an Antigravity transport timeout as a retryable stall, not a login failure', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'The Antigravity private request timed out',
+          code: 'TIMEOUT',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('Antigravity 请求超时')
+    expect(row?.text).toContain('链路或流超时')
+    expect(row?.text).not.toContain('认证失败')
+    expect(row?.text).not.toContain('API Key 无效')
+    expect(row?.text).toContain('不必执行')
+  })
+
+  it('formats an Antigravity unreachable endpoint as a network failure, not a login failure', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'The Antigravity private request could not be reached',
+          code: 'NETWORK',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('Antigravity 网络不可达')
+    expect(row?.text).toContain('HTTPS_PROXY')
+    expect(row?.text).not.toContain('认证失败')
+    expect(row?.text).not.toContain('API Key 无效')
+  })
+
+  it('formats a missing tool scheduler as a session-runtime failure', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'TypeError',
+          message: "Cannot read properties of undefined (reading 'prepare')",
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('工具调度失败')
+    expect(row?.text).toContain('新开一个会话')
+  })
+
   it('formats HTTP 401 authentication failure with specific guidance', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
@@ -840,5 +927,26 @@ describe('createProjector', () => {
       expect(row.text).not.toContain('# System')
       expect(row.text).not.toContain('# System Updated')
     }
+  })
+
+  it('attaches workspace/changes seq to the matching assistant turn without hydrating the card', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'step/start', { turn: 1, step: 1 }))
+    projector.push(event(3, 'assistant/message', {
+      turn: 1,
+      step: 1,
+      message: {
+        id: 'a1',
+        role: 'assistant',
+        source: { kind: 'model', provider: 'test', model: 'test' },
+        content: [{ type: 'text', text: 'done' }],
+      },
+    }))
+    projector.push(event(4, 'turn/end', { turn: 1, reason: { kind: 'completed' } }))
+    projector.push(event(5, 'workspace/changes', { turn: 1 }))
+    const row = projector.snapshot().history.find(item => item.kind === 'assistant')
+    expect(row).toMatchObject({ kind: 'assistant', text: 'done', turnOrdinal: 1, workspaceChangesSeq: 5 })
+    expect(row?.workspaceChanges).toBeUndefined()
   })
 })

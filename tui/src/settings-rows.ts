@@ -14,6 +14,7 @@ const LEADING_NAMESPACES = [
   'llm-openai',
   'llm-anthropic',
   'llm-pi-ai',
+  'subagent',
 ] as const
 
 const BRAND_ANIMATION_LABELS = {

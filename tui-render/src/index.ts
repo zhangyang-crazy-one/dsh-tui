@@ -210,6 +210,15 @@ export type {
   CompactionDivider,
   ProjectedToolCall,
 } from './projection.ts'
+export {
+  formatWorkspaceChangesCard,
+  WORKSPACE_CHANGES_CARD_PATH_LIMIT,
+  workspaceChangeCountsLabel,
+} from './workspace-changes-card.ts'
+export type {
+  WorkspaceChangeFileView,
+  WorkspaceChangesCardView,
+} from './workspace-changes-card.ts'
 export { copyText, encodeOsc52, hostClipboardCommand, OSC52_MAX_CHARS } from './clipboard.ts'
 export type { ClipboardSpec, SpawnFn } from './clipboard.ts'
 export { createRenderLoop, withThrottle } from './render-loop.ts'

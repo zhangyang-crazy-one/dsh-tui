@@ -38,6 +38,8 @@
  */
 
 import { displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
+import { formatWorkspaceChangesCard } from './workspace-changes-card.ts'
+import type { WorkspaceChangesCardView } from './workspace-changes-card.ts'
 import {
   type MarkdownProjection,
   type MarkdownRenderScope,
@@ -131,6 +133,8 @@ export interface BlockRowsMeta {
   readonly turnTailStats?: string
   /** Whether the turn tail shows the `── 已完成 ──` separator. */
   readonly turnTailCompletionBoundary?: boolean
+  /** Host `workspace/changes` card; absent when empty or abandoned. */
+  readonly turnTailWorkspaceChanges?: WorkspaceChangesCardView
   /** Highest-priority status represented by a collapsed tool summary. */
   readonly toolSummaryStatus?: ToolCardStatus
   /** Active-turn placeholder row text (`● 正在思考…`). */
@@ -854,6 +858,14 @@ function projectTurnTailEntry(
   scope: BlockRowsScope,
 ): BlockRowsProjection {
   const lines: MarkdownRenderLine[] = []
+  const changeLines = entry.meta?.turnTailWorkspaceChanges === undefined
+    ? undefined
+    : formatWorkspaceChangesCard(entry.meta.turnTailWorkspaceChanges)
+  if (changeLines !== undefined) {
+    for (const text of changeLines) {
+      lines.push(lineForText(escapeContent(text), 'fg', false, lines.length))
+    }
+  }
   const produced = entry.meta?.turnTailProduced ?? []
   if (produced.length > 0) {
     const joined = produced.map(escapeContent).join(' · ')

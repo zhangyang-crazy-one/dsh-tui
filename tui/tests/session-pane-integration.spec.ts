@@ -36,6 +36,7 @@ import { escapeContent } from '@deepseek-ai/dsh-tui-render'
 import { logPath } from '../../../session/session-persistence-jsonl/src/format.ts'
 import { FEEDBACK_MS, RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
+import { SESSION_WRITER_HELD_COPY } from '../src/session-errors.ts'
 
 const TITLE_CONFIG = {
   fallbackMaxWords: 5,
@@ -215,6 +216,8 @@ interface BenchOptions {
   stubPersistence?: { delete?: () => Promise<void> }
   /** Reject agents.create on the nth call (K8 new-session failure). */
   failCreateOn?: number
+  /** Reject agents.resume with this value (session-writer contention). */
+  failResumeWith?: unknown
   /** Expected persisted session count at bench startup (default 3). */
   expectedListLength?: number
 }
@@ -257,6 +260,7 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
   const createCalls = vi.fn()
   const resumeCalls = vi.fn()
   const failCreateOn = options.failCreateOn
+  const failResumeWith = options.failResumeWith
   ctx.agents.setFactory({
     async createAgent(
       ownerCtx: Context,
@@ -281,6 +285,7 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
       options: ResumeAgentOptions,
     ): Promise<AgentHandle> {
       resumeCalls(options.resumeSessionId)
+      if (failResumeWith !== undefined) throw failResumeWith
       const events = await loadStoredEvents(ctx.sessionPersistence, options.resumeSessionId)
       const session = ctx.sessions.create(options.resumeSessionId, {
         seed: events.map(event => structuredClone(event)),
@@ -601,6 +606,28 @@ describe('session directory controller', () => {
     // The next key clears the feedback row (S4 next-key rule).
     controller.dispatch({ kind: 'scroll', delta: 1 })
     expect(controller.getFeedback()).toBeUndefined()
+    await ctx.fiber.dispose()
+  })
+
+  it('maps session-writer contention to the retry copy instead of a generic IO error', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-sessions-'))
+    roots.push(root)
+    await preCreateSessions(root)
+    const owned = Object.assign(new Error('EACCES: lock'), { name: 'SessionAlreadyOwnedError' })
+    const { ctx, resumeCalls, controller } = await bench(root, { failResumeWith: owned })
+    await controller.start()
+    await vi.waitFor(() => {
+      expect(controller.getSessionPane().rows).toHaveLength(4)
+    })
+    const originalId = controller.session?.id
+    controller.dispatch({ kind: 'select-session', id: 'session-1' })
+    await vi.waitFor(() => {
+      expect(controller.getFeedback()).toContain(SESSION_WRITER_HELD_COPY)
+    })
+    expect(controller.getFeedback()).not.toContain('EACCES')
+    expect(controller.getFeedback()).not.toContain('SessionAlreadyOwnedError')
+    expect(resumeCalls).toHaveBeenCalledWith('session-1')
+    expect(controller.session?.id).toBe(originalId)
     await ctx.fiber.dispose()
   })
 

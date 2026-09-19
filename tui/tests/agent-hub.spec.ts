@@ -740,4 +740,115 @@ describe('Agent Hub controller', () => {
     expect(pane.transcript).toBeUndefined()
     await fixture.ctx.fiber.dispose()
   })
+
+  it('exposes continuable defaults of 8 live children and depth 1', async () => {
+    const { ctx, controller } = await bench({ listChildren: async () => [] })
+    await controller.start()
+    controller.dispatch({ kind: 'agent-hub' })
+    await vi.waitFor(() => { expect(controller.getAgentHubPane().open).toBe(true) })
+    expect(controller.getAgentHubPane()).toMatchObject({
+      liveContinuable: 0,
+      maxActiveSubagents: 8,
+      maxDepth: 1,
+    })
+    expect(controller.getAgentHubPane()).toBe(controller.getAgentHubPane())
+    await ctx.fiber.dispose()
+  })
+
+  it('reads live settings overrides instead of caching the default cap', async () => {
+    const { ctx, controller } = await bench({ listChildren: async () => [] })
+    const subagent = { maxActiveSubagents: 8, maxDepth: 1 }
+    ctx.provide('settings', { get: (ns: unknown) => ns === 'subagent' ? subagent : undefined } as never)
+    await controller.start()
+    controller.dispatch({ kind: 'agent-hub' })
+    await vi.waitFor(() => { expect(controller.getAgentHubPane().open).toBe(true) })
+    expect(controller.getAgentHubPane().maxActiveSubagents).toBe(8)
+    subagent.maxActiveSubagents = 12
+    subagent.maxDepth = 2
+    expect(controller.getAgentHubPane()).toMatchObject({
+      maxActiveSubagents: 12,
+      maxDepth: 2,
+    })
+    await ctx.fiber.dispose()
+  })
+
+  it('counts running children against the live cap without stuffing an error overlay', async () => {
+    const running = Array.from({ length: 8 }, (_, index) => ({
+      kind: 'child' as const,
+      id: SessionId(`child-${String(index)}`),
+      mode: 'continuable' as const,
+      label: `worker-${String(index)}`,
+      activity: 'running' as const,
+      hasChildren: false,
+    }))
+    const { ctx, controller } = await bench({ listChildren: async () => running })
+    await controller.start()
+    controller.dispatch({ kind: 'agent-hub' })
+    await vi.waitFor(() => { expect(controller.getAgentHubPane().rows).toHaveLength(8) })
+    const pane = controller.getAgentHubPane()
+    expect(pane.liveContinuable).toBe(8)
+    expect(pane.maxActiveSubagents).toBe(8)
+    expect(pane.maxDepth).toBe(1)
+    expect(pane.error).toBeUndefined()
+    expect(pane.rows).toHaveLength(8)
+    await ctx.fiber.dispose()
+  })
+  it('scrolls the subagent execution modal transcript on agent-hub-move delta and resets on escape', async () => {
+    const childId = SessionId('child-inspect-scroll')
+    const events = [
+      {
+        type: 'user/message',
+        data: {
+          content: [{ type: 'text', text: 'Task prompt' }],
+          source: { kind: 'user' },
+        },
+      },
+      {
+        type: 'tool/call',
+        data: { name: 'bash', arguments: '{"command":"ls"}' },
+      },
+      {
+        type: 'tool/result',
+        data: { message: { content: [{ type: 'text', text: 'file1\nfile2' }] } },
+      },
+      {
+        type: 'assistant/message',
+        data: {
+          message: {
+            content: [{ type: 'text', text: 'All done' }],
+          },
+        },
+      },
+    ]
+    const { ctx, controller } = await bench({
+      listChildren: async () => [{
+        kind: 'child',
+        id: childId,
+        mode: 'continuable',
+        label: 'worker-scroll',
+        activity: 'inactive',
+        hasChildren: false,
+      }],
+      inspect: async id => ({ meta: { id }, events }),
+    })
+    await controller.start()
+    controller.dispatch({ kind: 'agent-hub' })
+    await vi.waitFor(() => { expect(controller.getAgentHubPane().rows).toHaveLength(1) })
+    controller.dispatch({ kind: 'agent-hub-enter' })
+    await vi.waitFor(() => {
+      expect(controller.getAgentHubPane().view).toBe('transcript')
+      expect(controller.getAgentHubPane().transcript).toContain('Task prompt')
+    })
+    expect(controller.getAgentHubPane().transcript).toContain('▸ bash {"command":"ls"}')
+    expect(controller.getAgentHubPane().transcript).toContain('└─ file1 file2')
+    expect(controller.getAgentHubPane().transcript).toContain('● All done')
+    expect(controller.getAgentHubPane().scrollOffset).toBe(0)
+    controller.dispatch({ kind: 'agent-hub-move', delta: 5 })
+    expect(controller.getAgentHubPane().scrollOffset).toBe(5)
+    controller.dispatch({ kind: 'agent-hub-escape' })
+    expect(controller.getAgentHubPane().view).toBe('table')
+    expect(controller.getAgentHubPane().scrollOffset).toBe(0)
+    await ctx.fiber.dispose()
+  })
+
 })

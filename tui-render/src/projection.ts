@@ -37,10 +37,12 @@ import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
+import type { WorkspaceChangesCardView } from './workspace-changes-card.ts'
 
 declare module '@deepseek-ai/dsh-session' {
   interface SessionEventMap {
     'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
+    'workspace/changes': { turn: number }
   }
 }
 
@@ -127,6 +129,10 @@ export interface FrozenMessage {
   readonly turnOrdinal?: number | undefined
   /** Exact aggregate usage for every billed attempt in this completed turn. */
   readonly turnUsage?: TurnTokenUsage | undefined
+  /** Sequence of the latest `workspace/changes` announcement for this turn. */
+  readonly workspaceChangesSeq?: number | undefined
+  /** Hydrated Host summary card; absent when empty, abandoned, or not yet loaded. */
+  readonly workspaceChanges?: WorkspaceChangesCardView | undefined
 }
 
 /** One durable compaction marker interleaved with frozen transcript rows. */
@@ -326,31 +332,66 @@ export function formatTurnError(error: { message?: string; code?: string; status
     return '⚠️ **API 密钥缺失**：未检测到有效密钥。请在终端执行 `export DEEPSEEK_API_KEY="sk-..."` 或输入 `/key` 命令进行配置。'
   }
   if (
-    status === 401
-    || code === 'AUTH'
-    || rawMessage.includes('401')
-    || rawMessage.toLowerCase().includes('authentication fails')
-    || rawMessage.toLowerCase().includes('invalid api key')
-    || rawMessage.toLowerCase().includes('unauthorized')
+    rawMessage.includes("reading 'prepare'")
+    || rawMessage.includes('reading "prepare"')
   ) {
-    return `⚠️ **API 认证失败（HTTP 401）**：API Key 无效或未授权（${rawMessage}）。请检查密钥是否正确，或使用 \`/key\` 重新配置。`
+    return `⚠️ **工具调度失败**：${rawMessage}。请新开一个会话后再试；不要在认证失败的同一回合里用「继续」接着跑工具。`
+  }
+  const lowered = rawMessage.toLowerCase()
+  const antigravity = lowered.includes('antigravity') || rawMessage.includes('/anti')
+  if (
+    code === 'TIMEOUT'
+    || lowered.includes('timed out')
+    || lowered.includes('timeout')
+    || lowered.includes('stalled')
+    || rawMessage.includes('ETIMEDOUT')
+  ) {
+    return antigravity
+      ? `⚠️ **Antigravity 请求超时**：${rawMessage}。这是链路或流超时，不是登录失效。请稍后重试；不必执行 \`/anti login\`，也不要使用 \`/key\`。`
+      : `⚠️ **网络连接失败**：无法连接到模型服务（${rawMessage}），请检查网络连接或代理配置。`
   }
   if (
     status === 429
     || code === 'RATE_LIMIT'
     || rawMessage.includes('429')
-    || rawMessage.toLowerCase().includes('quota')
-    || rawMessage.toLowerCase().includes('rate limit')
+    || lowered.includes('quota')
+    || lowered.includes('rate limit')
   ) {
     return `⚠️ **请求受限（HTTP 429）**：请求频率超限或账户余额不足（${rawMessage}）。请稍后重试或检查账户额度。`
   }
   if (
-    rawMessage.includes('ECONNREFUSED')
-    || rawMessage.includes('ETIMEDOUT')
+    code === 'NETWORK'
+    || code === 'TRANSPORT'
+    || lowered.includes('could not be reached')
+    || lowered.includes('proxy rejected')
+    || rawMessage.includes('ECONNREFUSED')
     || rawMessage.includes('ENOTFOUND')
     || rawMessage.includes('fetch failed')
   ) {
-    return `⚠️ **网络连接失败**：无法连接到模型服务（${rawMessage}），请检查网络连接或代理配置。`
+    return antigravity
+      ? `⚠️ **Antigravity 网络不可达**：${rawMessage}。这是私有端点或 HTTPS_PROXY 连不上，不是登录失效。请检查本机代理后重试；不必执行 \`/anti login\`，也不要使用 \`/key\`。`
+      : `⚠️ **网络连接失败**：无法连接到模型服务（${rawMessage}），请检查网络连接或代理配置。`
+  }
+  if (antigravity) {
+    const authFailure = code === 'AUTH'
+      || lowered.includes('login is required')
+      || lowered.includes('invalid grant')
+      || lowered.includes('refresh token is invalid')
+      || lowered.includes('no usable access token')
+      || status === 401
+    return authFailure
+      ? `⚠️ **Antigravity 认证失败**：${rawMessage}。请使用 \`/anti status\` 确认登录，必要时执行 \`/anti login\` 重新登录。Antigravity 使用 Google OAuth，不是 API Key，不要使用 \`/key\`。`
+      : `⚠️ **Antigravity 请求失败**：${rawMessage}。若 \`/anti status\` 显示已登录，直接重试即可；不要使用 \`/key\`。`
+  }
+  if (
+    status === 401
+    || code === 'AUTH'
+    || rawMessage.includes('401')
+    || lowered.includes('authentication fails')
+    || lowered.includes('invalid api key')
+    || lowered.includes('unauthorized')
+  ) {
+    return `⚠️ **API 认证失败（HTTP 401）**：API Key 无效或未授权（${rawMessage}）。请检查密钥是否正确，或使用 \`/key\` 重新配置。`
   }
   return `⚠️ **模型请求失败**：${rawMessage}`
 }
@@ -631,19 +672,33 @@ export function createProjector(): Projector {
         status = 'idle'
         return
       }
-      default:
+      default: {
         // SessionEventMap is merge-extensible; the v3-only `system/message`
         // surface event lands here so the transcript stays free of system
-        // prompts. Future event types added by upstream or plugins fall
-        // through the same branch.
+        // prompts. `workspace/changes` is a plugin event: attach its seq to
+        // the matching frozen assistant turn so the runtime can hydrate the
+        // Host summary without putting diff bytes in the Session log.
+        if (event.type === 'workspace/changes') {
+          const turn = event.data.turn
+          if (typeof turn === 'number') {
+            for (let i = history.length - 1; i >= 0; i--) {
+              const row = history[i]
+              if (row !== undefined && row.kind === 'assistant' && row.turnOrdinal === turn) {
+                history[i] = { ...row, workspaceChangesSeq: event.seq }
+                break
+              }
+            }
+          }
+        }
         return
+      }
     }
   }
 
   return {
     push,
     seed(events?: readonly SessionEvent[]) {
-      if (!events || typeof (events as unknown as Record<symbol, unknown>)[Symbol.iterator] !== 'function') return
+      if (!events || !Array.isArray(events)) return
       for (const event of events) push(event)
     },
     snapshot(): ViewModel {

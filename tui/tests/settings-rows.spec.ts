@@ -498,3 +498,29 @@ describe('settingsRowsFromDescribe', () => {
       .toThrow('请用 /key DEEPSEEK_API_KEY <密钥> 配置该变量')
   })
 })
+
+describe('subagent / vision settings rows', () => {
+  it('places subagent after known provider namespaces', () => {
+    const rows = settingsRowsFromDescribe(
+      [descriptor('shell'), descriptor('subagent'), descriptor('tui')],
+      ns => String(ns) === 'subagent'
+        ? { maxActiveSubagents: 8, maxDepth: 1 }
+        : String(ns) === 'tui'
+          ? { submitOnEnter: true }
+          : { timeoutMs: 30 },
+    )
+    expect(rows.map(row => `${row.namespace} · ${row.field}`)).toEqual([
+      'tui · submitOnEnter',
+      'subagent · maxActiveSubagents',
+      'subagent · maxDepth',
+      'shell · timeoutMs',
+    ])
+  })
+
+  it('labels pi-ai image defaultInput as vision, not text-only', () => {
+    expect(stringifySettingsFieldValue('llm-pi-ai', 'providers.acme.defaultInput', ['text', 'image']))
+      .toBe('text, image (支持视觉)')
+    expect(stringifySettingsFieldValue('llm-pi-ai', 'providers.acme.defaultInput', ['text']))
+      .toBe('text (仅文本)')
+  })
+})

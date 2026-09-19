@@ -38,6 +38,7 @@ import type {
 import { displayColumnSlice, displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
 import { formatTurnTailStats, producedPathsForTurn } from './turn-tail.ts'
+import { formatWorkspaceChangesCard } from './workspace-changes-card.ts'
 import { pathToFileURL } from 'node:url'
 import { isAbsolute } from 'node:path'
 import { currentTier, inkColor, paintBackgroundRow, paintRow, styled } from './theme.ts'
@@ -1698,6 +1699,9 @@ export function StreamView({
           const produced = producedPathsForTurn(cards)
           return produced.length === 0 ? {} : { turnTailProduced: produced }
         })()),
+        ...(row.message.workspaceChanges === undefined
+          ? {}
+          : { turnTailWorkspaceChanges: row.message.workspaceChanges }),
       }
       if (Object.keys(tailMeta).length > 0) {
         rows.push(GAP_LINE)
@@ -2685,13 +2689,16 @@ export function StreamView({
       presenterCache.present(presenters, card),
     )
     const produced = producedPathsForTurn(cards)
+    const changeLines = message.workspaceChanges === undefined
+      ? undefined
+      : formatWorkspaceChangesCard(message.workspaceChanges)
     const stats = formatTurnTailStats({
       turnOrdinal: message.turnOrdinal,
       turnUsage: message.turnUsage,
       legacyOutputTokens: message.usageOutputTokens,
       elapsedMs: message.stepWallMs,
     })
-    if (produced.length === 0 && stats === undefined && !showCompletionBoundary) return undefined
+    if (produced.length === 0 && changeLines === undefined && stats === undefined && !showCompletionBoundary) return undefined
     const producedRows: string[][] = []
     let rowRuns = [styled('产物 · ', 'fg')]
     let rowWidth = displayWidth('产物 · ')
@@ -2718,6 +2725,9 @@ export function StreamView({
     if (pathsInRow > 0) producedRows.push(rowRuns)
     return (
       <Box key="turn-tail" marginTop={1} flexDirection="column" width="100%">
+        {(changeLines ?? []).map((line, index) => (
+          <Text key={`changes-${String(index)}`}>{paintRow([styled(escapeContent(line), 'fg')])}</Text>
+        ))}
         {producedRows.map((runs, index) => (
           <Text key={`produced-${String(index)}`}>{paintRow(runs)}</Text>
         ))}
