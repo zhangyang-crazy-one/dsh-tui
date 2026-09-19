@@ -340,6 +340,15 @@ export function formatTurnError(error: { message?: string; code?: string; status
   const lowered = rawMessage.toLowerCase()
   const antigravity = lowered.includes('antigravity') || rawMessage.includes('/anti')
   if (
+    code === 'CANCELLED'
+    || lowered.includes('cancelled')
+    || lowered.includes('canceled')
+  ) {
+    return antigravity
+      ? `⚠️ **Antigravity 已停止**：${rawMessage}。这是用户中断，不是登录失效。直接再发一条即可；不必执行 \`/anti login\`，也不要使用 \`/key\`。`
+      : `⚠️ **已停止生成**：${rawMessage}。可以直接再发一条。`
+  }
+  if (
     code === 'TIMEOUT'
     || lowered.includes('timed out')
     || lowered.includes('timeout')

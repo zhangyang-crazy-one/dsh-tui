@@ -58835,7 +58835,7 @@ function escapeContent(text4) {
     (char) => `\\x${char.charCodeAt(0).toString(16).padStart(2, "0")}`
   ).replace(/\u001B/g, "\\x1b");
 }
-var WIDE_SYMBOLS_OR_EMOJIS = /[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/gu;
+var EMOJI_OR_PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
 function displayWidth(text4) {
   if (text4 === "") return 0;
   let cols = 0;
@@ -58853,16 +58853,15 @@ function displayWidth(text4) {
   }
   if (simple) return cols;
   const base = stringWidth(text4);
-  if (!/[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/u.test(text4)) {
+  if (!/[\u{1F300}-\u{1FAFF}\u2000-\u2BFF]/u.test(text4)) {
     return base;
   }
   let extra2 = 0;
-  for (const match of text4.matchAll(WIDE_SYMBOLS_OR_EMOJIS)) {
-    const nextCode = text4.charCodeAt(match.index + 1);
-    if (nextCode === 65039 || nextCode === 65038) {
-      continue;
+  for (const { segment: segment2 } of GRAPHEME.segment(text4)) {
+    if (segment2.includes("\uFE0E")) continue;
+    if (EMOJI_OR_PICTOGRAPHIC.test(segment2) && stringWidth(segment2) === 1) {
+      extra2 += 1;
     }
-    extra2 += 1;
   }
   return base + extra2;
 }
@@ -58917,7 +58916,7 @@ function formatSymbolSpacing(text4) {
     "$1 $2"
   );
   res = res.replace(
-    /([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u{1F300}-\u{1FAFF}\u2600-\u27BF])/gu,
+    /([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u{1F300}-\u{1FAFF}\u2600-\u27BF][\uFE0E\uFE0F]?)/gu,
     "$1 $2"
   );
   return res;
@@ -69334,7 +69333,10 @@ function wrapRow(row, widths, header) {
     const cells = row.map((cell, col) => {
       const linesForCell = wrapped[col];
       const lineText = linesForCell[lineIndex] ?? "";
-      const text4 = padDisplayEnd(lineText, widths[col]);
+      const colWidth = widths[col];
+      const padded = padDisplayEnd(lineText, colWidth);
+      const fitted = displayWidth(padded) > colWidth ? wcwidthSafeSlice(padded, colWidth) : padded;
+      const text4 = padDisplayEnd(fitted, colWidth);
       return { text: text4, width: displayWidth(text4), column: cell.column, row: cell.row };
     });
     out.push({ kind: "row", header, cells });
@@ -69581,15 +69583,32 @@ function renderBlockquote(children, width, rowOffset, sourceStart, hyperlinks2) 
     return freezeLine(buffer, rowOffset + index2, index2 === 0 ? sourceStart : -1);
   });
 }
-function renderList(list2, width, rowOffset, sourceStart, hyperlinks2) {
+function renderList(list2, width, rowOffset, sourceStart, hyperlinks2, depth = 0) {
   const lines = [];
   const ordered = list2.ordered === true;
+  const indent2 = "  ".repeat(depth);
   list2.children.forEach((item, index2) => {
-    const marker = ordered ? `${(list2.start ?? 1) + index2}. ` : "- ";
+    const marker = `${indent2}${ordered ? `${String((list2.start ?? 1) + index2)}. ` : "- "}`;
     const segments = [{ text: marker, token: "fg", bold: false }];
-    const children = item.children;
-    for (const child of children) segments.push(...inlineToSegments(child, hyperlinks2));
-    lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index2 === 0 ? sourceStart : -1));
+    for (const child of item.children) {
+      if (child.type === "list") {
+        if (segments.length > 1) {
+          lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index2 === 0 ? sourceStart : -1));
+          segments.length = 0;
+        }
+        lines.push(...renderList(child, width, rowOffset + lines.length, -1, hyperlinks2, depth + 1));
+      } else if ("children" in child && Array.isArray(child.children)) {
+        const phrasingChildren = child.children;
+        for (const grandchild of phrasingChildren) {
+          segments.push(...inlineToSegments(grandchild, hyperlinks2));
+        }
+      } else {
+        segments.push(...inlineToSegments(child, hyperlinks2));
+      }
+    }
+    if (segments.length > 1 || segments.length === 1 && segments[0]?.text !== marker) {
+      lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index2 === 0 ? sourceStart : -1));
+    }
   });
   return lines;
 }
@@ -69870,8 +69889,11 @@ function renderGridRow(row, widths, header, rowOffset, sourceStart) {
     for (let column = 0; column < widths.length; column += 1) {
       if (column > 0) appendSegment(buffer, { text: " \u2502 ", token: "fgDim", bold: false });
       const text4 = wrapped[column]?.[lineIndex] ?? "";
+      const cellWidth = widths[column];
+      const padded = padDisplayEnd(text4, cellWidth);
+      const fitted = displayWidth(padded) > cellWidth ? wcwidthSafeSlice(padded, cellWidth) : padded;
       appendSegment(buffer, {
-        text: padDisplayEnd(text4, widths[column]),
+        text: padDisplayEnd(fitted, cellWidth),
         token: header ? "accentText" : "fg",
         bold: header
       });
@@ -81372,6 +81394,9 @@ function formatTurnError(error51) {
   }
   const lowered = rawMessage.toLowerCase();
   const antigravity = lowered.includes("antigravity") || rawMessage.includes("/anti");
+  if (code2 === "CANCELLED" || lowered.includes("cancelled") || lowered.includes("canceled")) {
+    return antigravity ? `\u26A0\uFE0F **Antigravity \u5DF2\u505C\u6B62**\uFF1A${rawMessage}\u3002\u8FD9\u662F\u7528\u6237\u4E2D\u65AD\uFF0C\u4E0D\u662F\u767B\u5F55\u5931\u6548\u3002\u76F4\u63A5\u518D\u53D1\u4E00\u6761\u5373\u53EF\uFF1B\u4E0D\u5FC5\u6267\u884C \`/anti login\`\uFF0C\u4E5F\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002` : `\u26A0\uFE0F **\u5DF2\u505C\u6B62\u751F\u6210**\uFF1A${rawMessage}\u3002\u53EF\u4EE5\u76F4\u63A5\u518D\u53D1\u4E00\u6761\u3002`;
+  }
   if (code2 === "TIMEOUT" || lowered.includes("timed out") || lowered.includes("timeout") || lowered.includes("stalled") || rawMessage.includes("ETIMEDOUT")) {
     return antigravity ? `\u26A0\uFE0F **Antigravity \u8BF7\u6C42\u8D85\u65F6**\uFF1A${rawMessage}\u3002\u8FD9\u662F\u94FE\u8DEF\u6216\u6D41\u8D85\u65F6\uFF0C\u4E0D\u662F\u767B\u5F55\u5931\u6548\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\uFF1B\u4E0D\u5FC5\u6267\u884C \`/anti login\`\uFF0C\u4E5F\u4E0D\u8981\u4F7F\u7528 \`/key\`\u3002` : `\u26A0\uFE0F **\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25**\uFF1A\u65E0\u6CD5\u8FDE\u63A5\u5230\u6A21\u578B\u670D\u52A1\uFF08${rawMessage}\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u6216\u4EE3\u7406\u914D\u7F6E\u3002`;
   }

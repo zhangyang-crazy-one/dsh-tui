@@ -35,20 +35,16 @@ export function escapeContent(text: string): string {
     .replace(/\u001B/g, '\\x1b')
 }
 
-/**
- * Pattern matching BMP symbols/emojis that `string-width` treats as 1 column,
- * but render as 2 columns in terminal fonts or require a 2-cell placeholder.
- */
-const WIDE_SYMBOLS_OR_EMOJIS =
-  /[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/gu
+
+const EMOJI_OR_PICTOGRAPHIC = /\p{Extended_Pictographic}/u
 
 /**
  * The number of terminal columns a string occupies.
  *
  * Counts printable ASCII as 1 column, CJK glyphs as 2 columns, standard emojis
- * and ZWJ sequences as 2 columns, and single-codepoint emojis (⚠️, ⚙, ℹ, ⏱, etc.)
- * as 2 columns. Circled digits (U+2460–U+24F4, U+2776–U+2793) occupy 1 column
- * in monospace terminal grids.
+ * and ZWJ sequences as 2 columns, and single-codepoint emojis as 2 columns.
+ * Circled digits (U+2460–U+24F4, U+2776–U+2793) occupy 1 column in monospace
+ * terminal grids. Strips ANSI sequences safely via stringWidth.
  *
  * @param text - the string to measure.
  * @returns its display width in columns.
@@ -76,16 +72,15 @@ export function displayWidth(text: string): number {
   if (simple) return cols
 
   const base = stringWidth(text)
-  if (!/[\u26A0\u2699\u2139\u23F1\u2328\u2709\u270F\u2712\u2702\u26C8\u2764]/u.test(text)) {
+  if (!/[\u{1F300}-\u{1FAFF}\u2000-\u2BFF]/u.test(text)) {
     return base
   }
   let extra = 0
-  for (const match of text.matchAll(WIDE_SYMBOLS_OR_EMOJIS)) {
-    const nextCode = text.charCodeAt(match.index + 1)
-    if (nextCode === 0xFE0F || nextCode === 0xFE0E) {
-      continue
+  for (const { segment } of GRAPHEME.segment(text)) {
+    if (segment.includes('\uFE0E')) continue
+    if (EMOJI_OR_PICTOGRAPHIC.test(segment) && stringWidth(segment) === 1) {
+      extra += 1
     }
-    extra += 1
   }
   return base + extra
 }
@@ -163,7 +158,7 @@ export function formatSymbolSpacing(text: string): string {
     '$1 $2',
   )
   res = res.replace(
-    /([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u{1F300}-\u{1FAFF}\u2600-\u27BF])/gu,
+    /([\u4E00-\u9FFF\u3400-\u4DBF\u3000-\u303F\uFF01-\uFF60])([\u{1F300}-\u{1FAFF}\u2600-\u27BF][\uFE0E\uFE0F]?)/gu,
     '$1 $2',
   )
   return res

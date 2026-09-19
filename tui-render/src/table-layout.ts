@@ -23,7 +23,7 @@
  * @module @deepseek-ai/dsh-tui-render/table-layout
  */
 
-import { displayWidth, padDisplayEnd, wrapDisplayLines } from './content.ts'
+import { displayWidth, padDisplayEnd, wcwidthSafeSlice, wrapDisplayLines } from './content.ts'
 
 /** Content classification used to determine minimum readable column widths. */
 export type TableColumnCategory = 'compact' | 'narrative' | 'token-heavy'
@@ -582,7 +582,10 @@ function wrapRow(
     const cells = row.map((cell, col) => {
       const linesForCell = wrapped[col] as string[]
       const lineText = linesForCell[lineIndex] ?? ''
-      const text = padDisplayEnd(lineText, widths[col] as number)
+      const colWidth = widths[col] as number
+      const padded = padDisplayEnd(lineText, colWidth)
+      const fitted = displayWidth(padded) > colWidth ? wcwidthSafeSlice(padded, colWidth) : padded
+      const text = padDisplayEnd(fitted, colWidth)
       return { text, width: displayWidth(text), column: cell.column, row: cell.row }
     })
     out.push({ kind: 'row', header, cells })

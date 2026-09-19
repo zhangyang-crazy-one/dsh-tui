@@ -297,15 +297,35 @@ function renderList(
   rowOffset: number,
   sourceStart: number,
   hyperlinks: boolean,
+  depth = 0,
 ): MarkdownRenderLine[] {
   const lines: MarkdownRenderLine[] = []
   const ordered = list.ordered === true
+  const indent = '  '.repeat(depth)
   list.children.forEach((item, index) => {
-    const marker = ordered ? `${(list.start ?? 1) + index}. ` : '- '
+    const marker = `${indent}${ordered ? `${String((list.start ?? 1) + index)}. ` : '- '}`
     const segments: InlineSegment[] = [{ text: marker, token: 'fg', bold: false }]
-    const children = item.children as readonly PhrasingContent[]
-    for (const child of children) segments.push(...inlineToSegments(child, hyperlinks))
-    lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index === 0 ? sourceStart : -1))
+    for (const child of item.children) {
+      if (child.type === 'list') {
+        if (segments.length > 1) {
+          lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index === 0 ? sourceStart : -1))
+          segments.length = 0
+        }
+        lines.push(...renderList(child, width, rowOffset + lines.length, -1, hyperlinks, depth + 1))
+      } else if ('children' in child && Array.isArray((child as { readonly children?: unknown }).children)) {
+        // SAFETY: mdast BlockContent parent nodes carry PhrasingContent children
+        const phrasingChildren = (child as { readonly children: readonly PhrasingContent[] }).children
+        for (const grandchild of phrasingChildren) {
+          segments.push(...inlineToSegments(grandchild, hyperlinks))
+        }
+      } else {
+        // SAFETY: leaf child in list item can be processed as PhrasingContent
+        segments.push(...inlineToSegments(child as PhrasingContent, hyperlinks))
+      }
+    }
+    if (segments.length > 1 || (segments.length === 1 && segments[0]?.text !== marker)) {
+      lines.push(...wrapInlineSegments(segments, width, rowOffset + lines.length, index === 0 ? sourceStart : -1))
+    }
   })
   return lines
 }
@@ -683,8 +703,11 @@ function renderGridRow(
     for (let column = 0; column < widths.length; column += 1) {
       if (column > 0) appendSegment(buffer, { text: ' │ ', token: 'fgDim', bold: false })
       const text = wrapped[column]?.[lineIndex] ?? ''
+      const cellWidth = widths[column] as number
+      const padded = padDisplayEnd(text, cellWidth)
+      const fitted = displayWidth(padded) > cellWidth ? wcwidthSafeSlice(padded, cellWidth) : padded
       appendSegment(buffer, {
-        text: padDisplayEnd(text, widths[column] as number),
+        text: padDisplayEnd(fitted, cellWidth),
         token: header ? 'accentText' : 'fg',
         bold: header,
       })

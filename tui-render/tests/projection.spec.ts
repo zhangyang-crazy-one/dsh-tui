@@ -811,6 +811,29 @@ describe('createProjector', () => {
     expect(row?.text).not.toContain('API Key 无效')
   })
 
+  it('formats an Antigravity user abort as a stop, not a network or login failure', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'turn/end', {
+      turn: 1,
+      reason: {
+        kind: 'error',
+        error: {
+          name: 'LlmError',
+          message: 'The Antigravity private request was cancelled',
+          code: 'CANCELLED',
+        },
+      },
+    }))
+    const model = projector.snapshot()
+    const row = model.history[0]
+    expect(row?.text).toContain('Antigravity 已停止')
+    expect(row?.text).toContain('用户中断')
+    expect(row?.text).not.toContain('网络不可达')
+    expect(row?.text).not.toContain('认证失败')
+    expect(row?.text).not.toContain('API Key 无效')
+  })
+
   it('formats a missing tool scheduler as a session-runtime failure', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
