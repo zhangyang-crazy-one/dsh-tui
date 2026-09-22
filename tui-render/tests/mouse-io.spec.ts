@@ -248,6 +248,38 @@ describe('MouseSession', () => {
 })
 
 describe('attachMouseIo', () => {
+  it('preserves input while unmounted and delivers it once after remount', async () => {
+    const stdin = ttyStdin()
+    const stdout = ttyStdout()
+    let attached = attachMouseIo({ stdin, stdout })
+    try {
+      const firstInput = new Promise<void>((resolve) => {
+        attached.stdin.once('data', () => { resolve() })
+      })
+      stdin.emit('data', 'before editor')
+      await firstInput
+      // Wait for the scheduled Readable resume before testing disposal.
+      await new Promise<void>((resolve) => { process.nextTick(resolve) })
+      attached.dispose()
+
+      const paste = '复制的中文 café 👋\nsecond line\n'
+      stdin.push(Buffer.from(paste))
+      await new Promise<void>((resolve) => { process.nextTick(resolve) })
+      expect(stdin.readableLength).toBe(Buffer.byteLength(paste))
+
+      attached = attachMouseIo({ stdin, stdout })
+      const restored = await new Promise<Buffer>((resolve) => {
+        attached.stdin.once('data', resolve)
+      })
+      expect(restored.toString('utf8')).toBe(paste)
+      expect(stdin.readableLength).toBe(0)
+    } finally {
+      attached.dispose()
+      stdin.destroy()
+      stdout.destroy()
+    }
+  })
+
   it('passes streams through when either side is not a TTY', () => {
     const stdin = new PassThrough() as unknown as NodeJS.ReadStream
     stdin.isTTY = false

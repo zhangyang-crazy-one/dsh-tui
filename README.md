@@ -62,6 +62,10 @@ dsh-tui
 
 In this mode, the launcher automatically detects the installed `dsh` executable and mounts the bundled prebuilt TUI extension without cloning the 2GB monorepo.
 
+Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a three-second timeout. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable; probing establishes executability, not compatibility with older Harness releases.
+
+Lightweight launch uses `dsh --profile tui --patch <bundled-patch>` with a custom `tui` profile containing only `@deepseek-ai/dsh-base` and `patchReload: startup`. Existing profile manifests are preserved. The patch supplies the terminal runtime; the current `headless` profile adds its own runner and is not used. This release composition follows Harness `0.1.6-alpha.2`.
+
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:
 
@@ -86,7 +90,7 @@ dsh-tui
 
 Run `dsh-tui update` when you want to refresh the dedicated runtime before launching it again.
 
-Ordinary arguments pass to the `deepseek-tui` profile unchanged:
+Ordinary arguments pass unchanged to `tui` in lightweight mode or `deepseek-tui` in source mode:
 
 ```text
 dsh-tui "review this repository"
@@ -178,6 +182,8 @@ The proxy listens on `127.0.0.1:4097` only; remove the `zen-proxy` row from
 
 <a id="development-workflow"></a>
 ## Development workflow
+
+With the matching `../deepseek-harness` checkout and its build dependencies installed, run `npm run build`. This invokes its supported `scripts/build-dsh-tui-bundle.ts`, mirrors the TUI sources, validates bundle imports, and generates both release patches from `packages/tui/tui/cordis.patch.yml`, changing only bundled plugin paths. Run `npm test` and `npm run pack:check` before release.
 
 Implement TUI behavior in the complete DSH checkout, run the checks selected by the changed behavior, and export the confirmed `packages/tui/` tree here. Develop the launcher in this repository with `npm test`; test installation through a packed tarball rather than a workspace link.
 

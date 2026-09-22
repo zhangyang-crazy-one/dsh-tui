@@ -4,10 +4,11 @@
  * @module @crazyhappyone/dsh-tui/launcher
  */
 
-import { dirname, isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 
 const DEFAULT_SOURCE_URL = 'https://github.com/zhangyang-crazy-one/deepseek-harness.git'
 const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
+const PROBE_TIMEOUT_MS = 3000
 
 /** @typedef {'missing' | 'directory' | 'file' | 'symlink' | 'other'} PathKind */
 
@@ -37,7 +38,10 @@ const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
  * @property {(path: string) => void} makeDirectory
  * @property {(path: string) => string} readText
  * @property {(path: string, content: string) => void} [writeText]
- * @property {(command: string, args: string[], options?: {cwd?: string, stdio?: 'inherit', capture?: boolean}) => CommandResult} run
+ * @property {string} [nodeExecutable] Node executable for package bin entries without an executable bit.
+ * @property {string} [currentDirectory] Working directory for local package resolution.
+ * @property {(directory: string) => string | undefined} [resolveDshPackage] Resolve an installed @deepseek-ai/dsh package.json.
+ * @property {(command: string, args: string[], options?: {cwd?: string, stdio?: 'inherit', capture?: boolean, timeoutMs?: number}) => CommandResult} run
  * @property {(text: string) => void} writeOut
  * @property {(text: string) => void} writeError
  */
@@ -106,15 +110,18 @@ export function resolveLauncherSettings({ env, homeDirectory, packageRoot }) {
 }
 
 /**
- * Probe whether a runnable `dsh` command is available on the system.
+ * Probe DSH_BIN, PATH, npm/pnpm global packages, then local packages, in order.
+ * Each subprocess has a timeout. The caller reuses the result for this launch;
+ * an explicit DSH_BIN failure never selects a different installation.
  * @param {{env?: Readonly<Record<string, string | undefined>>, settings?: LauncherSettings, adapters: LauncherAdapters}} input
- * @returns {{ok: true, binPath: string, version: string} | {ok: false, reason: string}}
+ * @returns {{ok: true, binPath: string, version: string, command?: string, args?: string[]} | {ok: false, reason: string}}
  */
 export function probeInstalledDsh({ env = {}, settings, adapters }) {
   const explicit = settings?.dshBin ?? env['DSH_BIN']
   if (explicit && explicit.trim() !== '') {
     const trimmed = explicit.trim()
-    const probe = adapters.run(trimmed, ['--version'], { capture: true })
+    if (!isAbsolute(trimmed)) return { ok: false, reason: 'DSH_BIN must be an absolute path' }
+    const probe = adapters.run(trimmed, ['--version'], { capture: true, timeoutMs: PROBE_TIMEOUT_MS })
     if (probe.status === 0) {
       return { ok: true, binPath: trimmed, version: probe.stdout.trim() || 'unknown' }
     }
@@ -122,14 +129,54 @@ export function probeInstalledDsh({ env = {}, settings, adapters }) {
     return { ok: false, reason: `DSH_BIN is set to "${trimmed}" but failed to run${err ? `: ${err}` : ` (exit code ${probe.status})`}` }
   }
 
-  const pathProbe = adapters.run('dsh', ['--version'], { capture: true })
+  const pathProbe = adapters.run('dsh', ['--version'], { capture: true, timeoutMs: PROBE_TIMEOUT_MS })
   if (pathProbe.status === 0) {
     return { ok: true, binPath: 'dsh', version: pathProbe.stdout.trim() || 'unknown' }
   }
 
+  const checked = new Set()
+  const failures = []
+  function probePackage(manifestPath) {
+    if (!manifestPath || checked.has(manifestPath)) return undefined
+    checked.add(manifestPath)
+    if (adapters.inspectPath(manifestPath) !== 'file') return undefined
+    let manifest
+    try {
+      manifest = JSON.parse(adapters.readText(manifestPath))
+    } catch (error) {
+      failures.push(`${manifestPath}: ${errorMessage(error)}`)
+      return undefined
+    }
+    const bin = typeof manifest?.bin === 'string' ? manifest.bin : manifest?.bin?.dsh
+    if (manifest?.name !== '@deepseek-ai/dsh' || typeof bin !== 'string' || bin.trim() === '') {
+      failures.push(`${manifestPath}: missing @deepseek-ai/dsh bin entry`)
+      return undefined
+    }
+    const binPath = resolve(dirname(manifestPath), bin)
+    const command = adapters.nodeExecutable ?? binPath
+    const args = adapters.nodeExecutable ? [binPath] : []
+    const result = adapters.run(command, [...args, '--version'], { capture: true, timeoutMs: PROBE_TIMEOUT_MS })
+    if (result.status === 0) {
+      return { ok: true, binPath, version: result.stdout.trim() || 'unknown', command, args }
+    }
+    failures.push(`${binPath}: ${result.stderr.trim() || `exit code ${result.status}`}`)
+  }
+
+  for (const manager of new Set(['npm', settings?.packageManager ?? 'pnpm'])) {
+    const root = adapters.run(manager, ['root', '-g'], { capture: true, timeoutMs: PROBE_TIMEOUT_MS })
+    const directory = root.stdout.trim()
+    if (root.status !== 0 || !isAbsolute(directory) || /[\r\n]/u.test(directory)) continue
+    const result = probePackage(join(directory, '@deepseek-ai', 'dsh', 'package.json'))
+    if (result) return result
+  }
+  for (const directory of new Set([adapters.currentDirectory, settings?.packageRoot])) {
+    if (!directory) continue
+    const result = probePackage(adapters.resolveDshPackage?.(directory))
+    if (result) return result
+  }
   return {
     ok: false,
-    reason: 'dsh executable was not found in PATH or DSH_BIN',
+    reason: `dsh executable was not found in PATH, DSH_BIN, or global/local packages${failures.length ? ` (${failures.join('; ')})` : ''}`,
   }
 }
 
@@ -152,7 +199,8 @@ export function findBundledPatch(packageRoot, adapters) {
 }
 
 /**
- * Ensure the tui profile manifest exists in DSH_HOME.
+ * Ensure the custom tui profile uses dsh-base with startup-only patch reload.
+ * The release patch supplies TUI plugins; the headless bundle would add a second runner.
  * @param {{homeDirectory?: string, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
  */
 export function ensureTuiProfile({ homeDirectory, env = {}, adapters }) {
@@ -228,9 +276,10 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   if (patchPath !== undefined) {
     const probe = probeInstalledDsh({ env, settings, adapters })
     if (probe.ok) {
-      return launchLightweightTui({ args, binPath: probe.binPath, patchPath, adapters, env, settings })
+      return launchLightweightTui({ args, probe, patchPath, adapters, env, settings })
     }
-    if (effectiveMode === 'lightweight') {
+    const explicit = settings.dshBin ?? env['DSH_BIN']
+    if (effectiveMode === 'lightweight' || explicit?.trim()) {
       return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh\` or use \`dsh-tui --source\``)
     }
   } else if (effectiveMode === 'lightweight') {
@@ -256,11 +305,11 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   return launchSourceTui({ args, settings, adapters })
 }
 
-function launchLightweightTui({ args, binPath, patchPath, adapters, env = {}, settings }) {
+function launchLightweightTui({ args, probe, patchPath, adapters, env = {}, settings }) {
   ensureTuiProfile({ homeDirectory: settings?.homeDirectory, env, adapters })
   const result = adapters.run(
-    binPath,
-    ['--profile', 'tui', '--patch', patchPath, ...args],
+    probe.command ?? probe.binPath,
+    [...(probe.args ?? []), '--profile', 'tui', '--patch', patchPath, ...args],
     { stdio: 'inherit' },
   )
   return result.status

@@ -11,18 +11,20 @@
  */
 
 import { homedir } from 'node:os'
-import { Box, Text, useInput, usePaste, useWindowSize } from 'ink'
+import { Box, Text, measureElement, useInput, usePaste, useWindowSize } from 'ink'
 import {
+  Activity,
   createElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { Key } from 'ink'
+import type { DOMElement, Key } from 'ink'
 import { AppShell } from './app-shell.tsx'
 import { StreamView } from './stream-view.tsx'
 import { SessionPane } from './session-pane.tsx'
@@ -74,16 +76,17 @@ import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
 import type { RenderPolicy } from './render-policy.ts'
-import { TodoHud } from './todo-hud.tsx'
+import { fitHudRow, hudRowBudget, layoutHud } from './hud-layout.ts'
+import { renderPolicyDefaults } from './render-policy.ts'
 import type { TodoHudItem } from './todo-hud.tsx'
-import { JobsHud } from './jobs-hud.tsx'
 import type { JobHudItem } from './jobs-hud.tsx'
-import { WorkflowHud } from './workflow-hud.tsx'
 import type { WorkflowHudState } from './workflow-hud.tsx'
 import { WorkflowOverlay } from './workflow-overlay.tsx'
 import type { WorkflowOverlayState } from './workflow-overlay.tsx'
 import { WorkspacePane } from './workspace-pane.tsx'
-import type { WorkspacePaneState } from './workspace-pane.tsx'
+import { PluginsPane, EMPTY_PLUGINS_PANE } from './plugins-pane.tsx'
+import type { PluginsPaneState, PluginsPaneInput } from './plugins-pane.tsx'
+import type { WorkspacePaneState, WorkspacePreviewLayout } from './workspace-pane.tsx'
 import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
 import { keyActionFor, toolDetailsKeyAction } from './keymap.ts'
@@ -105,6 +108,8 @@ export type LoopMode = 'agent' | 'plan' | 'focus'
 
 /** Runtime actions the loop requests from its controller. */
 export type LoopAction =
+  | { kind: 'plugins-pane' }
+  | { kind: 'plugins-input'; input: PluginsPaneInput }
   | { kind: 'tool-details'; input: ToolDetailsInput; width: number; pageRows: number }
   | { kind: 'send'; text: string }
   | { kind: 'sigint' }
@@ -168,7 +173,8 @@ export type LoopAction =
   | { kind: 'plan-review-scroll'; delta: number }
   | { kind: 'workspace-pane' }
   | { kind: 'workspace-escape' }
-  | { kind: 'workspace-move'; delta: number }
+  | { kind: 'workspace-move'; delta: number; unit?: 'page' }
+  | { kind: 'workspace-preview-layout'; layout: WorkspacePreviewLayout }
   | { kind: 'workspace-enter' }
   | { kind: 'workspace-insert' }
   | { kind: 'workspace-edit' }
@@ -186,6 +192,8 @@ export type LoopAction =
 
 /** The controller seam: model access, subscription, and action dispatch. */
 export interface TuiController {
+  /** Latest Plugins inventory and controller-owned install state. */
+  getPluginsPane?(): PluginsPaneState
   /** Latest folded view model. */
   getModel(): ViewModel
   /** Latest interaction state. */
@@ -651,6 +659,8 @@ function draftKeyEffect(
  */
 function overlayChordAction(key: string): LoopAction | undefined {
   switch (key) {
+    case 'p':
+      return { kind: 'plugins-pane' }
     case 'a':
       return { kind: 'agent-hub' }
     case 't':
@@ -730,6 +740,7 @@ export function mapKeyEvent(
   },
   submitOnEnter = true,
   overlays: {
+    plugins?: PluginsPaneState
     agentHub?: { open: boolean }
     planDirectory?: { open: boolean }
     workspace?: {
@@ -761,6 +772,35 @@ export function mapKeyEvent(
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))
     && state.commandDismissed !== true
+  if (overlays.plugins?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const plugins = overlays.plugins
+    const send = (input: PluginsPaneInput) => holdComposer(state, { kind: 'plugins-input', input })
+    if (keyInfo.escape) return send({ kind: 'close' })
+    if (keyInfo.ctrl && key === 'c') return holdComposer(state, { kind: 'sigint' })
+    if (keyInfo.ctrl || keyInfo.meta) return { kind: 'none' }
+    if (plugins.busy) return key === 'c' ? send({ kind: 'cancel' }) : { kind: 'none' }
+    if (plugins.inspecting) return { kind: 'none' }
+    if (plugins.mode === 'input') {
+      if (keyInfo.return) return send({ kind: 'inspect' })
+      if (keyInfo.backspace || keyInfo.delete) return send({ kind: 'text', value: Array.from(plugins.spec).slice(0, -1).join('') })
+      if (!keyInfo.ctrl && !keyInfo.meta && key && !keyInfo.upArrow && !keyInfo.downArrow && !keyInfo.leftArrow && !keyInfo.rightArrow) {
+        return send({ kind: 'text', value: plugins.spec + key })
+      }
+      return { kind: 'none' }
+    }
+    if (plugins.mode === 'remove' || plugins.mode === 'builds') {
+      if (keyInfo.upArrow) return send({ kind: 'move', delta: -1 })
+      if (keyInfo.downArrow) return send({ kind: 'move', delta: 1 })
+      if (key === 'y') return send({ kind: 'confirm' })
+      return key === 'n' ? send({ kind: 'dismiss' }) : { kind: 'none' }
+    }
+    if (keyInfo.return && plugins.mode === 'preview') return send({ kind: 'install' })
+    if (keyInfo.upArrow || key === 'k') return send({ kind: 'move', delta: -1 })
+    if (keyInfo.downArrow || key === 'j') return send({ kind: 'move', delta: 1 })
+    const action = key === ' ' ? 'toggle' : key === 'i' ? 'edit' : key === 'd' ? 'remove'
+      : key === 'a' ? 'approve' : key === 'r' ? 'retry' : key === 'R' ? 'reload' : undefined
+    return action === undefined ? { kind: 'none' } : send({ kind: action })
+  }
   const mentionMode = activeMentionQuery(state.text) !== undefined
   const agentHubOpen = overlays.agentHub?.open === true
   const planDirectoryOpen = overlays.planDirectory?.open === true
@@ -1421,10 +1461,10 @@ export function mapKeyEvent(
       return holdComposer(state, { kind: 'workspace-move', delta: -1 })
     }
     if (keyInfo.pageUp) {
-      return holdComposer(state, { kind: 'workspace-move', delta: -20 })
+      return holdComposer(state, { kind: 'workspace-move', delta: -1, unit: 'page' })
     }
     if (keyInfo.pageDown) {
-      return holdComposer(state, { kind: 'workspace-move', delta: 20 })
+      return holdComposer(state, { kind: 'workspace-move', delta: 1, unit: 'page' })
     }
     if (key === ' ' ) {
       if (overlays.workspace?.preview === true) return { kind: 'none' }
@@ -2028,6 +2068,10 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getSettingsPane(),
   )
+  const pluginsPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE,
+  )
   const agentHubPane = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getAgentHubPane(),
@@ -2111,6 +2155,9 @@ export function TuiLoop({
   const [localMode, setLocalMode] = useState<LoopMode>('agent')
   const currentMode: LoopMode = controllerMode ?? localMode
   const { columns, rows } = useWindowSize()
+  const onWorkspacePreviewLayout = useCallback((layout: WorkspacePreviewLayout) => {
+    controller.dispatch({ kind: 'workspace-preview-layout', layout })
+  }, [controller])
   // Reopening the help sheet starts at the top (K4 focus returns to the input).
   useEffect(() => {
     if (helpPane.open) setHelpOffset(0)
@@ -2145,6 +2192,8 @@ export function TuiLoop({
   const permissionPaneRef = useRef(permissionPane)
   permissionPaneRef.current = permissionPane
   const settingsPaneRef = useRef(settingsPane)
+  const pluginsPaneRef = useRef(pluginsPane)
+  pluginsPaneRef.current = pluginsPane
   settingsPaneRef.current = settingsPane
   const agentHubPaneRef = useRef(agentHubPane)
   agentHubPaneRef.current = agentHubPane
@@ -2192,6 +2241,10 @@ export function TuiLoop({
   useEffect(() => {
     const listener = (delta: number): void => {
       frameMetrics?.recordInputEvent()
+      if (pluginsPaneRef.current.open) {
+        controller.dispatch({ kind: 'plugins-input', input: { kind: 'move', delta: -delta } })
+        return
+      }
       if (toolDetailsPaneRef.current.open) {
         controller.dispatch({ kind: 'tool-details', input: delta > 0 ? 'up' : 'down', ...toolDetailsSizeRef.current })
         return
@@ -2290,6 +2343,7 @@ export function TuiLoop({
       controller.getSubmitOnEnter(),
       {
         agentHub: { open: agentHubPaneRef.current.open },
+        plugins: pluginsPaneRef.current,
         planDirectory: { open: planDirectoryPaneRef.current.open },
         workspace: {
           open: workspacePaneRef.current.open,
@@ -2447,6 +2501,11 @@ export function TuiLoop({
 
   usePaste((pasted: string) => {
     controller.noteUserActivity()
+    if (pluginsPaneRef.current.open) {
+      if (pluginsPaneRef.current.mode === 'input') controller.dispatch({ kind: 'plugins-input',
+        input: { kind: 'text', value: pluginsPaneRef.current.spec + pasted } })
+      return
+    }
     const current = stateRef.current
     if (
       toolDetailsPaneRef.current.open
@@ -2697,6 +2756,7 @@ export function TuiLoop({
     )
   }
   const viewportMotionPaused = pane.open
+    || pluginsPane.open
     || search.open
     || timelineOpen
     || modelPane.open
@@ -2735,8 +2795,23 @@ export function TuiLoop({
     () => controller.getToolPresenters?.(),
     [controller],
   )
+  const inputMeasureRef = useRef<DOMElement | null>(null)
+  const inputMeasureKey = useMemo(() => ({}), [
+    columns, state.text, commandMode, mentionMode, mentionCandidates,
+    approvalPane, askUserPane, planReviewPane, viewportMotionPaused,
+  ])
+  const [inputMeasure, setInputMeasure] = useState<{ key: object; height: number }>()
+  useLayoutEffect(() => {
+    const height = inputMeasureRef.current === null ? 0 : measureElement(inputMeasureRef.current).height
+    setInputMeasure(previous => previous?.key === inputMeasureKey && previous.height === height
+      ? previous : { key: inputMeasureKey, height })
+  })
+  const inputRows = inputMeasure?.key === inputMeasureKey ? inputMeasure.height
+    : approvalPane.open || askUserPane.open || planReviewPane.open || commandMode || mentionMode
+      ? rows : state.text.split('\n').length + 1
   const streamLayoutKey = useMemo(() => ({}), [
     statusRowCount,
+    inputMeasure,
     state.text.split('\n').length,
     commandMode ? state.text : '',
     mentionMode ? state.text : '',
@@ -2769,21 +2844,18 @@ export function TuiLoop({
     onStickyHeaderChange: setTopDividerLabel,
   })
   const conversationColumns = conversationWidth(columns)
-  const hudRows: ReactNode[] = []
-  if (todoHud !== undefined && todoHud.length > 0) {
-    hudRows.push(createElement(TodoHud, { todos: todoHud, maxCols: conversationColumns }))
-  }
-  if (jobsHud !== undefined && jobsHud.length > 0) {
-    hudRows.push(createElement(JobsHud, { jobs: jobsHud, maxCols: conversationColumns }))
-  }
-  if (workflowHud !== undefined) {
-    hudRows.push(createElement(WorkflowHud, { run: workflowHud, maxCols: conversationColumns }))
-  }
+  const auxiliaryRows = Number(composerHud !== undefined && composerHud !== '') + Number(queuedDraftCount > 0)
+  // Three shell rows, footer, actual input, one transcript row, and its existing gap.
+  const budget = hudRowBudget(renderPolicy ?? renderPolicyDefaults(), rows, 3 + statusRowCount + inputRows + 2 + auxiliaryRows)
+  const hudRows: ReactNode[] = layoutHud({
+    todos: todoHud, jobs: jobsHud, workflow: workflowHud, rows: budget, columns: conversationColumns, locale,
+  })
+    .map(row => createElement(Text, { key: row.key, wrap: 'truncate' }, paintRow([styled(row.text, row.token)])))
   if (composerHud !== undefined && composerHud !== '') {
-    hudRows.push(createElement(Text, null, paintRow([styled(escapeContent(composerHud), 'fg')])))
+    hudRows.push(createElement(Text, { key: 'composer-hud', wrap: 'truncate' }, paintRow([styled(fitHudRow(composerHud, conversationColumns), 'fg')])))
   }
   if (queuedDraftCount > 0) {
-    hudRows.push(createElement(QueueChip, { count: queuedDraftCount }))
+    hudRows.push(createElement(QueueChip, { key: 'queue-hud', count: queuedDraftCount }))
   }
   const hasConversation = model.history.length > 0 || model.activeTurn !== undefined
   const conversation =
@@ -2797,7 +2869,7 @@ export function TuiLoop({
           ? [
             createElement(
               Box,
-              { key: 'hud-rows', flexDirection: 'column', alignItems: 'center', width: '100%' },
+              { key: 'hud-rows', flexDirection: 'column', alignItems: 'center', width: '100%', flexShrink: 0 },
               createElement(Box, { flexDirection: 'column', width: conversationColumns }, ...hudRows),
             ),
           ]
@@ -2806,6 +2878,7 @@ export function TuiLoop({
       )
   const overlayBrowseOpen =
     agentHubPane.open
+    || pluginsPane.open
     || planDirectoryPane.open
     || workspacePane.open
     || feedbackPane.open
@@ -2813,6 +2886,9 @@ export function TuiLoop({
   let content: ReactNode
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content = conversation
+  } else if (pluginsPane.open) {
+    content = createElement(PluginsPane, { state: pluginsPane, locale,
+      maxCols: conversationWidth(columns), maxRows: Math.max(3, rows - 3 - statusRowCount) })
   } else if (permissionPane.open) {
     content = createElement(PermissionPane, {
       names: permissionPane.names,
@@ -2895,7 +2971,12 @@ export function TuiLoop({
       statusError: planDirectoryPane.statusError,
     })
   } else if (workspacePane.open) {
-    content = createElement(WorkspacePane, { state: workspacePane, maxCols: columns })
+    content = createElement(WorkspacePane, {
+      state: workspacePane,
+      maxCols: columns,
+      maxRows: Math.max(0, rows - 3 - statusRowCount),
+      onPreviewLayout: onWorkspacePreviewLayout,
+    })
   } else if (feedbackPane.open) {
     content = createElement(FeedbackPane, { state: feedbackPane })
   } else if (workflowOverlay.open) {
@@ -3029,8 +3110,12 @@ export function TuiLoop({
     title: liveTitle === '' ? title : liveTitle,
     badge: adaptiveInfoFooter === undefined ? badge : shortenHomePath(controller.getCwd(), homedir()),
     status,
-    children: content,
-    input: inputSlot,
+    // Plugins retains the measured transcript and its anchor while controller updates continue.
+    children: content === conversation || (pluginsPane.open && !permissionPane.open && !settingsPane.open)
+      ? [createElement(Activity, { key: 'plugins-transcript', mode: content === conversation ? 'visible' : 'hidden', children: conversation }),
+        ...(content === conversation ? [] : [createElement(Box, { key: 'plugins-content', flexDirection: 'column', width: '100%', flexGrow: 1 }, content)])]
+      : content,
+    input: inputSlot === null || inputSlot === undefined ? inputSlot : createElement(Box, { ref: inputMeasureRef, flexDirection: 'column', width: '100%' }, inputSlot),
     topDividerLabel,
   })
 }

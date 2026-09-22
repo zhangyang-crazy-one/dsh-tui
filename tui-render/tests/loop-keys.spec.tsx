@@ -2648,6 +2648,7 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
       workspace?: {
         open: boolean
         editing?: boolean | undefined
+        preview?: boolean | undefined
         rootPath?: string | undefined
         selectedKind?: 'directory' | 'file' | 'other' | undefined
         selectedPath?: string | undefined
@@ -2794,6 +2795,23 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
     })
     if (openPreview.kind === 'dispatch') {
       expect(openPreview.text).toBe('')
+    }
+  })
+
+  it.each([false, true])('maps workspace navigation to row or page units with preview=%s', (preview) => {
+    const open = extras(CLOSED, { workspace: { open: true, preview } })
+    const state = { ...EMPTY, text: 'draft', caretIndex: 2 }
+    for (const [key, info, action] of [
+      ['j', keyInfo(), { kind: 'workspace-move', delta: 1 }],
+      ['k', keyInfo(), { kind: 'workspace-move', delta: -1 }],
+      ['', keyInfo({ downArrow: true }), { kind: 'workspace-move', delta: 1 }],
+      ['', keyInfo({ upArrow: true }), { kind: 'workspace-move', delta: -1 }],
+      ['', keyInfo({ pageDown: true }), { kind: 'workspace-move', delta: 1, unit: 'page' }],
+      ['', keyInfo({ pageUp: true }), { kind: 'workspace-move', delta: -1, unit: 'page' }],
+    ] as const) {
+      expect(mapKeyEvent(state, key, info, COMMANDS, CHAT_PANE, CHAT_SEARCH, ...open)).toMatchObject({
+        kind: 'dispatch', action, text: 'draft', caretIndex: 2,
+      })
     }
   })
 

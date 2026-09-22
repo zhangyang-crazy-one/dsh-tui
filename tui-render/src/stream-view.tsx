@@ -12,7 +12,7 @@
  * stack. Settled and streaming text share {@link MarkdownBlock} so a finishing
  * turn never reflows; the `● ` marker is the first row's painted prefix, and
  * enabled reasoning retains its full body, and only its final run has a live
- * duration while generating. Collapsed reasoning occupies one capsule row.
+ * duration while generating. Hidden reasoning occupies no rows and is not projected.
  *
  * The conversation uses the full width on narrow terminals and otherwise
  * reserves two columns on each side. The rail owns the terminal's rightmost
@@ -233,9 +233,9 @@ function isVisiblePart(part: TurnPart): boolean {
   return part.text !== ''
 }
 
-/** Filter out empty parts while retaining cards, summaries, and collapsible reasoning. */
-function displayedParts(parts: readonly TurnPart[], _reasoningExpanded: boolean): TurnPart[] {
-  return parts.filter(isVisiblePart)
+/** Omit hidden reasoning before wrapping or projection, retaining its canonical source. */
+function displayedParts(parts: readonly TurnPart[], reasoningExpanded: boolean): TurnPart[] {
+  return parts.filter(part => isVisiblePart(part) && (part.kind !== 'reasoning' || reasoningExpanded))
 }
 
 /** Maximum individual cards retained while the tool fold is closed. */
@@ -1184,7 +1184,10 @@ function projectBlockEntry(
   if (entry.kind === 'reasoning' && entry.meta?.reasoningExpanded === true && entry.source !== '') {
     const rows = new RowSequence<MarkdownRenderLine>()
     const prefix = entry.meta.reasoningLive === true ? '' : '▾ '
-    const title = `✻ ${tuiCopy('reasoning', deps.locale)}`
+    const icon = entry.meta.reasoningLive === true
+      ? getBrailleSpinnerFrame(entry.meta.reasoningDurationMs ?? 0)
+      : '✻'
+    const title = `${icon} ${tuiCopy('reasoning', deps.locale)}`
     const duration = ` (${((entry.meta.reasoningDurationMs ?? 0) / 1000).toFixed(1)}s)`
     const header = `${prefix}${title}${duration}`
     const prefixWidth = displayWidth(prefix)
@@ -1783,14 +1786,11 @@ export function StreamView({
     const sticky: StickyReasoningRange[] = []
     const toolSticky: StickyToolRange[] = []
     let textIndex = 0
-    let lastVisiblePart = -1
-    for (const [partIndex, part] of parts.entries()) {
-      if (isVisiblePart(part)) lastVisiblePart = partIndex
-    }
+    const lastRaw = rawParts.findLast(isVisiblePart)
     for (const [partIndex, part] of parts.entries()) {
       if (turnPartGap(parts, partIndex) > 0) rows.push(GAP_LINE)
       if (part.kind === 'reasoning') {
-        const live = status === 'generating' && partIndex === lastVisiblePart
+        const live = status === 'generating' && part === lastRaw
         const durationMs = live
           ? liveDurationMs ?? part.durationMs
           : part.durationMs
@@ -1857,12 +1857,11 @@ export function StreamView({
       ranges.push({ start, end: rows.length })
     }
     if (status === 'generating') {
-      const lastRaw = rawParts[rawParts.length - 1]
       const lastVisible = parts[parts.length - 1]
       const isReasoningActive = lastRaw?.kind === 'reasoning'
       const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
         || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
-      if (isToolCompleted && !(isReasoningActive && !reasoningExpanded)) {
+      if (isToolCompleted || (isReasoningActive && !reasoningExpanded)) {
         const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
         const spinner = getBrailleSpinnerFrame(liveMs)
         const label = isReasoningActive
@@ -2828,16 +2827,12 @@ export function StreamView({
       )
     }
     const parts = displayedParts(compactToolParts(rawParts, toolCardsExpanded, presenters, mode, presenterCache), reasoningExpanded)
-    let lastVisiblePart = -1
-    parts.forEach((part, index) => {
-      if (isVisiblePart(part)) lastVisiblePart = index
-    })
-    const lastRaw = rawParts[rawParts.length - 1]
+    const lastRaw = rawParts.findLast(isVisiblePart)
     const lastVisible = parts[parts.length - 1]
     const isReasoningActive = lastRaw?.kind === 'reasoning'
     const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
       || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
-    const showTail = generating && isToolCompleted && !(isReasoningActive && !reasoningExpanded)
+    const showTail = generating && (isToolCompleted || (isReasoningActive && !reasoningExpanded))
     const tailLiveMs = liveDurationMs ?? turn.reasoningDurationMs
     const tailSpinner = getBrailleSpinnerFrame(tailLiveMs)
     const tailLabel = isReasoningActive
@@ -2848,7 +2843,7 @@ export function StreamView({
         {parts.map((part, index) => {
           const gap = turnPartGap(parts, index)
           if (part.kind === 'reasoning') {
-            const live = generating && index === lastVisiblePart
+            const live = generating && part === lastRaw
             return renderReasoning(part, index, gap, live)
           }
           if (part.kind === 'tool-summary') return renderToolSummary(part, index, gap)

@@ -216,6 +216,14 @@ describe('workspace overlay', () => {
     expect(preview?.lines).toEqual(['hello', 'world', 'third'])
     expect(preview?.scrollOffset).toBe(0)
     controller.dispatch({ kind: 'workspace-move', delta: 1 })
+    expect(controller.getWorkspacePane().preview?.scrollOffset).toBe(0)
+    controller.dispatch({
+      kind: 'workspace-preview-layout',
+      layout: { lines: preview!.lines, pageRows: 2, maxOffset: 1 },
+    })
+    controller.dispatch({ kind: 'workspace-move', delta: 1 })
+    expect(controller.getWorkspacePane().preview?.scrollOffset).toBe(1)
+    controller.dispatch({ kind: 'workspace-move', delta: 1 })
     expect(controller.getWorkspacePane().preview?.scrollOffset).toBe(1)
     controller.dispatch({ kind: 'workspace-escape' })
     expect(controller.getWorkspacePane().preview).toBeUndefined()

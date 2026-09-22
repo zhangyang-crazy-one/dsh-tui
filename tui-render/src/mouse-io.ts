@@ -338,6 +338,8 @@ type WriteCall = (chunk: unknown, ...args: unknown[]) => boolean
 /**
  * Wrap stdin/stdout for one mount: enable SGR on a TTY pair, strip mouse
  * bytes from Ink's input, and feed frames into a {@link MouseSession}.
+ * Mounting resumes the TTY input; disposal pauses it so an external editor
+ * can read the terminal without competing with this process.
  * @param options - live streams and optional I/O hooks.
  * @returns streams to hand Ink, plus a disposer that disables tracking.
  */
@@ -464,10 +466,12 @@ function wrapStdin(
     }
   }
   raw.on('data', onData)
+  raw.resume()
   return {
     stdin: stream,
     dispose: () => {
       raw.off('data', onData)
+      raw.pause()
       if (flushTimer !== undefined) {
         clearTimeout(flushTimer)
         flushTimer = undefined

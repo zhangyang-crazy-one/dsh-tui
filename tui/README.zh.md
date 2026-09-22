@@ -42,6 +42,20 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 
 `/tools` 打开全部已记录调用，包括通用回退卡和进程失败。Enter 打开有界原文分页，页首保留所选操作与状态；n/p 前后翻页，d 开启原始元数据，y 复制完整原文，e 在启动工作目录中导出私有且不覆盖已有文件的 `tool-*.txt`。超大剪贴板载荷会被明确拒绝并提示导出，不会截断。Esc 先返回列表，再回到原对话。批准与用户提问对话始终保留输入优先级。
 
+<a id="plugins-and-live-tasks"></a>
+
+### 插件与实时任务
+
+`/plugins` 或 `g p` 打开 Plugins 页面，按安装供给与 profile 自有分组列出 bundle。只读原因保持可见；不可移除的 bundle 在服务允许时仍可启停。变更影响使用该 profile 的所有会话。未组合 Plugin Manager 时，页面明确提示服务不可用，并仍可关闭。
+
+页面区分已保存的选择、运行状态与操作结果。成功保存且结果为 `restart-required` 时提供 `R` 或 `/reload`；`failed`、`cancelled` 与 `overridden` 保留服务报告的含义，不显示成功重启提示。清单在打开、操作结束和收到管理器通知时刷新。外部 patch 编辑在页面重新打开时重读。
+
+安装先进行预检；拒绝时保留输入的 spec，不启动包操作。Esc 关闭页面后，控制器继续跟踪安装；重开显示最新进度或结果。安装期间只有 `c` 显式请求取消：`cancelled` 确认取消，`too-late` 继续等待，`not-running` 不声称取消成功。构建脚本重试要求确认准确的待审批包名；审批按包名持久化到 profile，并以宿主用户权限运行脚本。移除同样需要确认具名 bundle。
+
+实时 HUD 将任务计划与后台执行分区呈现。它优先显示进行中待办，作业只显示运行中或停止中项；结束作业在下次状态刷新时撤出，不删除记录或把输出标为已读。既有 `job_list` 与 `job_output` 访问在 job/Agent 生命周期内仍有效，不保证跨重启保留。进程结束不代表退出码成功。Todo、Workflow 与 Jobs 保持独立状态；bash 结束不会完成待办。
+
+`renderPolicy.normalHudRows`、`compactHudRows` 与 `compactHeightThreshold` 默认分别为 8、4 和 24。终端不足 24 行时 HUD 使用紧凑上限；可用空间还可进一步收缩任一上限。三个值必须为正整数，紧凑上限不能大于普通上限。标题、Workflow 摘要与隐藏项计数共享预算；空分区自动收起。渲染器先为输入、对话框与正文预留空间，再分配 HUD 行数。
+
 ### 约定
 
 - 运行时拥有 live Agent 句柄、会话投影和会话目录状态；渲染包只接收 controller 接口。顶栏标题是已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外；在出现 provider 或重命名标题之前循环显示紧凑挂载名 `DeepSeek · deepseek-tui`。目录行仍使用第一条人类消息作为回退。空闲无消息时，对话列绘制生成的官方 FishLogo、`DeepSeek` 与 `有什么可以帮忙的`。环境独立于颜色选择 half-block、full-block、ASCII 或纯字标输出；`brandAnimation` 保存 `auto | on | off`，任何输入、历史、覆盖层、resize、播放完成或卸载 stop 都会清除一次性 reveal timer。运行时只为已绑定的 live agent 回答 `approval/request`，其他 agent 调用 `next()`。`y`/`a` 得到 `'allowed-once'`，`n`/`d`/Esc 得到 `'rejected'`，中止（含 Ctrl+C 停止生成）经请求 signal 得到 `'cancelled'`。策略 `'never'` 由 host 在该 listener 之前决定，因此不会出现 ApprovalPane。Ctrl+E 翻转当前窗口的工具卡折叠（`toolCardsExpanded`；不写 session 事件）。空 `/permission` 打开预设覆盖层；带参 `/permission <name>` 走 `ctx.commands.execute`。空 `/settings` 打开设置覆盖层，列出 `describe()` 的每个顶层字段（`llm-deepseek · models`；`llm-pi-ai · providers` 打开一个结构化表单——目录名、模板序号 1–4、单行 `名称 端点 [模型[,模型…]]`，或多行 `name= baseURL= models= api=`；已有路由展开为 `api` / `baseURL` / `apiKeyEnv` / `displayName` / `models` 的子行）；Enter 应用经 `ctx.settings.update` 写入所选字段。`models=` 留空、任一表单中的字面量 `auto`、两 token 的 `名称 端点` 形式，以及已有路由 `providers.<route>.models` 行被填成 `auto` 时，都把模型列表组装交给 `ctx.llm.discoverModels`；面板在请求进行中显示 `正在获取模型列表…`，任何拒绝或空响应都画在 ✗ 行上且不写任何设置——未存凭据时的 401/403 会追加 `请先使用 /key 配置 API key`。浏览态 `e` 报告 `prepareDocument()`，`r` 重读行（`✓ 已重载设置`）。空 `/resume` 打开会话列表。`/reload` 是本地命令：flush 当前会话、卸载终端、dispose 该会话，再以相同启动器标志加上 `--resume <id>` 拉起新的 Node，并丢掉原来的任务位置参数，以免首条消息再发一次。覆盖层上的 `r` 只重读设置行。空闲启动且未配置 `DEEPSEEK_API_KEY` 时打开 `首次设置`；Enter 经 `ctx.credentials.set` 保存后打开模型面板，Esc 跳过且不打开。`tui` 分节拥有 `colorTier`、`submitOnEnter`（为 false 时 Enter 插入换行）、`notify`（`off | attention | every-turn`，默认 `attention`）、`notifyQuietInputSeconds`（非负整数，默认 10）、`brandAnimation`（显示为 `自动 / 开启 / 关闭`）、`scrollbar`（布尔值，默认 `true`）、`reasoning` 与 `statusDetails`（布尔值，默认 `false`）、`locale`（`zh-CN | en-US`，默认 `zh-CN`）以及上文所述已验证的 `renderPolicy`。当前 runtime root Agent 的 scope 注册 `user-questions/request` waterfall listener；它用 `next()` 委托外部 root 与 child 请求，被接纳的请求则绘制 `AskUserPane`，把中止、Agent 替换与释放归并到同一清理，并只在准入时通知一次。↑↓/jk 移动高亮，数字键再 Enter 返回选项的原始 label。斜杠目录包含每条命令的 `description`。
