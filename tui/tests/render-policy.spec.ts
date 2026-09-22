@@ -57,6 +57,19 @@ function policyWith(overrides: {
 }
 
 describe('renderPolicy Config schema', () => {
+  it('defaults HUD limits and rejects fractional, non-positive or inverted limits', () => {
+    const base = baselinePolicy()
+    const { normalHudRows: _normal, compactHudRows: _compact, compactHeightThreshold: _threshold, ...legacy } = base
+    const legacyInput = legacy as unknown as ReturnType<typeof renderPolicyDefaults>
+    expect(Config({ task: '', renderPolicy: legacyInput }).renderPolicy).toEqual(base)
+    expect([base.normalHudRows, base.compactHudRows, base.compactHeightThreshold]).toEqual([8, 4, 24])
+    for (const field of ['normalHudRows', 'compactHudRows', 'compactHeightThreshold']) {
+      for (const invalid of [0, -1, 1.5]) {
+        expect(() => Config({ task: '', renderPolicy: { ...base, [field]: invalid } })).toThrow()
+      }
+    }
+    expect(() => Config({ task: '', renderPolicy: { ...base, compactHudRows: 9 } })).toThrow(/compactHudRows/)
+  })
   it('accepts explicit tool budgets and rejects invalid or unbounded tool settings', () => {
     const tools = { previewRows: 4, diffPreviewRows: 150, detailPageRows: 24, cacheEntries: 64, cacheRows: 512 }
     expect(Config({ task: '', renderPolicy: { ...baselinePolicy(), tools } }).renderPolicy?.tools).toEqual(tools)
@@ -89,6 +102,9 @@ describe('renderPolicy Config schema', () => {
       task: 'hi',
       renderPolicy: {
         transcriptOverscan: 8,
+        normalHudRows: 12,
+        compactHudRows: 6,
+        compactHeightThreshold: 30,
         tools: { previewRows: 4, diffPreviewRows: 150, detailPageRows: 24, cacheEntries: 64, cacheRows: 1024 },
         stream: {
           frameIntervalMs: 8,
@@ -114,6 +130,9 @@ describe('renderPolicy Config schema', () => {
       },
     })
     expect(config.renderPolicy?.transcriptOverscan).toBe(8)
+    expect(config.renderPolicy?.normalHudRows).toBe(12)
+    expect(config.renderPolicy?.compactHudRows).toBe(6)
+    expect(config.renderPolicy?.compactHeightThreshold).toBe(30)
     expect(config.renderPolicy?.stream.frameIntervalMs).toBe(8)
     expect(config.renderPolicy?.stream.entryDepth).toBe(128)
     expect(config.renderPolicy?.stream.catchUpRowsPerFrame).toBe(24)

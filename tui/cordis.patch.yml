@@ -17,8 +17,8 @@
       You are interacting with the user through the deepseek-tui
       terminal interface.
 
-# The shared module-reload HMR row stays off; the launcher's watch-only
-# fallback still keeps the user patch layers live until the run exits.
+# HMR stays disabled. Profile and home patch edits apply on the next
+# process start; /reload restarts the terminal with the current session.
 - id: hmr
   disabled: true
 
@@ -86,7 +86,7 @@
       name: "@deepseek-ai/dsh-tool-ask-user"
 
     - id: tui-startup
-      name: "@deepseek-ai/dsh-tui/startup"
+      name: "../dist/startup.js"
 
     # Zero-config official OpenAI/Anthropic routes. They register
     # openai-official / anthropic-official so they do not collide with the
@@ -104,7 +104,7 @@
     # http://127.0.0.1:4097/v1 to reach the Zen free tier.
     # Remove this row to disable the listener.
     - id: zen-proxy
-      name: "./zen-proxy/index.js"
+      name: "../dist/zen-proxy.js"
       config:
         host: 127.0.0.1
         port: 4097
@@ -124,7 +124,7 @@
     # Reads its task from the ordinary tuiStartup provider.
     - id: tui-runtime
       # pi-lens-ignore: YAML:0
-      name: "@deepseek-ai/dsh-tui"
+      name: "../dist/index.js"
       inject: [tuiStartup]
       # pi-lens-ignore: YAML:0
       config:

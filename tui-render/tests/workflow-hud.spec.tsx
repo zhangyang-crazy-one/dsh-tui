@@ -36,11 +36,11 @@ describe('WorkflowHud', () => {
     expect(output).not.toContain('completed')
   })
 
-  it('paints the settled member with its host outcome key', () => {
+  it('hides a settled member without inferring another active member', () => {
     const output = renderPlain({
       current: { seq: 1, label: '侦察', outcome: 'completed' },
     })
-    expect(output).toContain('1 · 侦察 · completed')
+    expect(output).toBe('')
   })
 
   it('paints the phase row alone when the run has no members yet', () => {

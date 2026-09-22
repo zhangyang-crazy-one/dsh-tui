@@ -5,6 +5,8 @@ import { lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { constants, homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
 import { parseLauncherInvocation, resolveLauncherSettings, runLauncher } from '../src/launcher.js'
 
 function inspectPath(path) {
@@ -28,6 +30,8 @@ function run(command, args, options = {}) {
     env: process.env,
     maxBuffer: capture ? 16 * 1024 * 1024 : undefined,
     shell: false,
+    timeout: options.timeoutMs,
+    killSignal: 'SIGKILL',
     stdio: options.stdio === 'inherit' ? 'inherit' : capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
   })
   if (result.error !== undefined) {
@@ -61,6 +65,16 @@ try {
     packageVersion: manifest.version,
     env: process.env,
     adapters: {
+      nodeExecutable: process.execPath,
+      currentDirectory: process.cwd(),
+      resolveDshPackage(directory) {
+        try {
+          return createRequire(join(directory, 'package.json')).resolve('@deepseek-ai/dsh/package.json')
+        } catch (error) {
+          if (error.code === 'MODULE_NOT_FOUND') return undefined
+          throw error
+        }
+      },
       inspectPath,
       makeDirectory: path => mkdirSync(path, { recursive: true, mode: 0o700 }),
       readText: path => readFileSync(path, 'utf8'),

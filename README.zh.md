@@ -178,6 +178,12 @@ llm-pi-ai:
 <a id="development-workflow"></a>
 ## 开发工作流
 
+在相邻的 `../deepseek-harness` checkout 安装构建依赖后，运行 `npm run build`。该命令调用现有 `scripts/build-dsh-tui-bundle.ts`，镜像 TUI 源码并检查 bundle 导入，再从 `packages/tui/tui/cordis.patch.yml` 生成两份发布 patch，仅替换预构建插件的路径。发布前运行 `npm test` 和 `npm run pack:check`。
+
+轻量启动按绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包依次探测，每个探测子进程限时三秒；显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用当前 Node 执行，探测成功仅表示可执行，不保证旧版 Harness 兼容。
+
+轻量模式执行 `dsh --profile tui --patch <bundled-patch>`；首次创建的 `tui` profile 仅含 `@deepseek-ai/dsh-base`，设置 `patchReload: startup`，已有 manifest 保持不变。发布 patch 提供终端运行时，并与 Harness `0.1.6-alpha.2` 对齐。当前 `headless` profile 会添加独立 runner，因此不用于轻量启动；源码模式继续使用 `deepseek-tui`。
+
 在完整 DSH checkout 中实现 TUI 行为，运行受变更行为影响的检查，并将确认后的 `packages/tui/` tree 导出到这里。在本仓库中使用 `npm test` 开发 launcher；通过 packed tarball 测试安装，不使用 workspace link。
 
 Launcher runtime 必须与开发 checkout 分离。要安全测试其他源码，请将 `DSH_TUI_RUNTIME_DIR` 指向临时绝对目录，并配置 `DSH_TUI_SOURCE_URL` 与 `DSH_TUI_SOURCE_REF`。

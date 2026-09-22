@@ -25,13 +25,13 @@ describe('JobsHud', () => {
     expect(renderPlain([])).toBe('')
   })
 
-  it('paints `{id} · {status} · {label}` with the host status key', () => {
+  it('localizes active states and omits terminal jobs', () => {
     const output = renderPlain([
       { id: 'bash-1', status: 'running', label: '跑测试' },
       { id: 'subagent-2', status: 'failed', label: '侦察' },
     ])
-    expect(output).toContain('bash-1 · running · 跑测试')
-    expect(output).toContain('subagent-2 · failed · 侦察')
+    expect(output).toContain('bash-1 · 运行中 · 跑测试')
+    expect(output).not.toContain('subagent-2')
   })
 
   it('escapes CSI in the label instead of passing it through', () => {

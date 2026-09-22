@@ -127,6 +127,12 @@ export function toolPolicyDefaults(): RenderPolicyTools {
 
 /** Resolved render policy the TUI plugin passes to the renderer at mount. */
 export interface RenderPolicy {
+  /** Maximum total HUD rows, including titles and overflow counts. */
+  readonly normalHudRows: number
+  /** HUD row limit below compactHeightThreshold; no larger than normalHudRows. */
+  readonly compactHudRows: number
+  /** Terminal height below which compactHudRows applies. */
+  readonly compactHeightThreshold: number
   /** Extra pre-rendered rows around the visible window; 0..max. */
   readonly transcriptOverscan: number
   /** Stream-pacing knobs. */
@@ -149,6 +155,9 @@ export interface RenderPolicy {
 export function renderPolicyDefaults(): RenderPolicy {
   return {
     transcriptOverscan: RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN,
+    normalHudRows: 8,
+    compactHudRows: 4,
+    compactHeightThreshold: 24,
     stream: {
       frameIntervalMs: RENDER_POLICY_DEFAULT_STREAM_FRAME_INTERVAL_MS,
       entryDepth: RENDER_POLICY_DEFAULT_STREAM_ENTRY_DEPTH,

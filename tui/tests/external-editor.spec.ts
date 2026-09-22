@@ -79,7 +79,11 @@ describe('external editor command resolution', () => {
 })
 
 describe('editDraftExternally', () => {
-  it('uses one tty fd, direct spawn, trims one newline, and removes all residue', async () => {
+  it.each([
+    ['edited draft\n', 'edited draft'],
+    ['复制的中文 café 👋\n\tsecond line\n\n', '复制的中文 café 👋\n\tsecond line\n'],
+    ['复制的中文 café 👋\r\n\tsecond line\r\n', '复制的中文 café 👋\r\n\tsecond line'],
+  ])('uses private UTF-8 drafts and trims one final line ending: %j', async (saved, restored) => {
     const parent = await root()
     const tty = join(parent, 'tty')
     await writeFile(tty, '', { mode: 0o600 })
@@ -91,15 +95,17 @@ describe('editDraftExternally', () => {
       options: SpawnOptions,
     ) => { capturedStdio = options.stdio })
     const spawn = childProcess((child, file) => {
-      void writeFile(file, 'edited draft\n', { mode: 0o600 }).then(() => {
+      void readFile(file, 'utf8').then(async (content) => {
+        expect(content).toBe('原稿 café 👋\nsecond line')
+        await writeFile(file, saved, { mode: 0o600 })
         child.emit('exit', 0, null)
-      })
+      }).catch((error: unknown) => { child.emit('error', error) })
     }, capture)
     await expect(editDraftExternally(
       { program: 'fixture-editor', args: ['--wait'] },
-      'original draft',
+      '原稿 café 👋\nsecond line',
       { suspend, spawn, tempParent: parent, ttyPath: tty },
-    )).resolves.toBe('edited draft')
+    )).resolves.toBe(restored)
     expect(suspend).toHaveBeenCalledOnce()
     expect(capture).toHaveBeenCalledWith(
       'fixture-editor',

@@ -1,12 +1,14 @@
 /** Reasoning visibility and full-length, dim transcript rendering. */
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
 import { ReasoningBlock } from '../src/reasoning.tsx'
 import { applyTheme } from '../src/theme.ts'
+import * as content from '../src/content.ts'
 
 afterEach(() => {
+  vi.restoreAllMocks()
   applyTheme('truecolor')
 })
 
@@ -38,10 +40,13 @@ describe('ReasoningBlock', () => {
     expect(render(false)).toContain('second line')
   })
 
-  it('renders a compact capsule with line count and duration when collapsed', () => {
-    const out = stripAnsi(render(true, 'deep thinking\nsecond line', 1234))
-    expect(out).toContain('▸ ✻ 思考过程 (共 2 行 · 1.2s) · Ctrl+O 展开')
-    expect(out).not.toContain('deep thinking')
+  it('hides the complete block without wrapping its source when collapsed', () => {
+    const wrap = vi.spyOn(content, 'wrapDisplayLines')
+    const text = '完整思考 retained reasoning\n'.repeat(5000)
+    expect(render(true, text)).toBe('')
+    expect(wrap).not.toHaveBeenCalled()
+    expect(render(false, 'visible control')).toContain('visible control')
+    expect(wrap).toHaveBeenCalled()
   })
 
   it('keeps visible reasoning readable without color', () => {

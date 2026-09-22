@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   parseLauncherInvocation,
+  probeInstalledDsh,
   resolveLauncherSettings,
   runLauncher,
 } from '../src/launcher.js'
@@ -19,6 +20,12 @@ function createFixture(options = {}) {
     stdout,
     stderr,
     adapters: {
+      nodeExecutable: '/usr/bin/node',
+      currentDirectory: '/workspace',
+      resolveDshPackage(directory) {
+        calls.push({ operation: 'resolveDshPackage', directory })
+        return options.packages?.[directory]
+      },
       inspectPath(path) {
         return paths.get(path) ?? 'missing'
       },
@@ -418,7 +425,11 @@ test('launch in lightweight mode runs dsh --profile tui --patch when bundled pat
   assert.ok(mkdirCall, 'creates tui profile directory')
   const writeCall = fixture.calls.find(c => c.operation === 'writeText' && c.path === '/home/test/.dsh/profiles/tui/package.json')
   assert.ok(writeCall, 'writes tui profile package.json')
-  assert.match(writeCall.content, /@deepseek-ai\/dsh-base/)
+  assert.deepEqual(JSON.parse(writeCall.content), {
+    name: 'dsh-profile-tui',
+    private: true,
+    dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'], patchReload: 'startup' } },
+  })
   assert.deepEqual(fixture.calls.at(-1), {
     operation: 'run',
     command: 'dsh',
@@ -427,7 +438,76 @@ test('launch in lightweight mode runs dsh --profile tui --patch when bundled pat
   })
 })
 
-test('launch with --source forces source mode even if bundled patch exists', () => {
+for (const [entry, overrides, env] of [
+  ['settings', { dshBin: ' /broken/dsh ' }, { DSH_BIN: '/alternate/dsh' }],
+  ['env', {}, { DSH_BIN: ' /broken/dsh ' }],
+]) {
+  test(`default auto launch rejects a failed ${entry} DSH_BIN despite an initialized source runtime`, () => {
+    const fixture = createFixture({
+      paths: {
+        '/pkg/cordis.patch.yml': 'file',
+        [RUNTIME]: 'directory',
+        [`${RUNTIME}/.git`]: 'directory',
+      },
+      results: [{ status: 127, stdout: '', stderr: 'not found' }],
+    })
+    const status = runLauncher({
+      invocation: { kind: 'launch', args: ['task'] },
+      settings: settings({ packageRoot: '/pkg', ...overrides }),
+      env,
+      adapters: fixture.adapters,
+    })
+    assert.equal(status, 1)
+    assert.match(fixture.stderr.join(''), /DSH_BIN is set to "\/broken\/dsh" but failed to run: not found/)
+    assert.match(fixture.stderr.join(''), /dsh-tui --source/)
+    assert.deepEqual(fixture.calls, [{
+      operation: 'run', command: '/broken/dsh', args: ['--version'],
+      options: { capture: true, timeoutMs: 3000 },
+    }])
+  })
+}
+
+for (const [entry, overrides, env] of [
+  ['no override', {}, {}],
+  ['blank env override', {}, { DSH_BIN: '   ' }],
+  ['blank settings override masking env', { dshBin: '   ' }, { DSH_BIN: '/broken/dsh' }],
+]) {
+  test(`default auto launch falls back to initialized source with ${entry}`, () => {
+    const fixture = createFixture({
+      paths: {
+        '/pkg/cordis.patch.yml': 'file',
+        [RUNTIME]: 'directory',
+        [`${RUNTIME}/.git`]: 'directory',
+      },
+      results: [
+        ...Array.from({ length: 3 }, () => ({ status: 127, stdout: '', stderr: 'not found' })),
+        { status: 7, stdout: '', stderr: '' },
+      ],
+    })
+    const status = runLauncher({
+      invocation: { kind: 'launch', args: ['task'] },
+      settings: settings({ packageRoot: '/pkg', ...overrides }),
+      env,
+      adapters: fixture.adapters,
+    })
+    assert.equal(status, 7)
+    assert.deepEqual(fixture.stderr, [])
+    assert.deepEqual(fixture.calls, [
+      ...[['dsh', ['--version']], ['npm', ['root', '-g']], ['pnpm', ['root', '-g']]].map(([command, args]) => ({
+        operation: 'run', command, args, options: { capture: true, timeoutMs: 3000 },
+      })),
+      { operation: 'resolveDshPackage', directory: '/workspace' },
+      { operation: 'resolveDshPackage', directory: '/pkg' },
+      {
+        operation: 'run', command: 'pnpm',
+        args: ['dsh', '--profile', 'deepseek-tui', 'task'],
+        options: { cwd: RUNTIME, stdio: 'inherit' },
+      },
+    ])
+  })
+}
+
+test('launch with --source forces source mode even if bundled patch and DSH_BIN exist', () => {
   const fixture = createFixture({
     paths: {
       '/pkg/cordis.patch.yml': 'file',
@@ -440,11 +520,13 @@ test('launch with --source forces source mode even if bundled patch exists', () 
   })
   const status = runLauncher({
     invocation: { kind: 'launch', args: ['task'], mode: 'source' },
-    settings: settings({ packageRoot: '/pkg' }),
+    settings: settings({ packageRoot: '/pkg', dshBin: '/broken/dsh' }),
+    env: { DSH_BIN: '/also-broken/dsh' },
     packageVersion: '0.1.0-alpha.1',
     adapters: fixture.adapters,
   })
   assert.equal(status, 0)
+  assert.equal(fixture.calls.length, 1)
   assert.deepEqual(fixture.calls.at(-1), {
     operation: 'run',
     command: 'pnpm',
@@ -466,4 +548,108 @@ test('launch provides friendly installation guidance when dsh is absent and runt
   assert.equal(status, 1)
   assert.match(fixture.stderr.join(''), /npm install --global @deepseek-ai\/dsh/)
   assert.match(fixture.stderr.join(''), /dsh-tui update/)
+})
+
+test('DSH_BIN requires an absolute path and a failed override does not select another installation', () => {
+  const relative = createFixture()
+  assert.deepEqual(probeInstalledDsh({ env: { DSH_BIN: 'relative/dsh' }, adapters: relative.adapters }), {
+    ok: false, reason: 'DSH_BIN must be an absolute path',
+  })
+  assert.deepEqual(relative.calls, [])
+  const failed = createFixture({ results: [{ status: 1, stdout: '', stderr: 'timed out' }] })
+  const result = probeInstalledDsh({ env: { DSH_BIN: '/broken/dsh' }, adapters: failed.adapters })
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /timed out/)
+  assert.equal(failed.calls.length, 1)
+  assert.equal(failed.calls[0].options.timeoutMs, 3000)
+})
+
+for (const manager of ['npm', 'pnpm']) {
+  test(`discovers ${manager} global package bin from its manifest when PATH is unavailable`, () => {
+    const manifest = '/global modules/@deepseek-ai/dsh/package.json'
+    const fixture = createFixture({
+      paths: { [manifest]: 'file' },
+      text: { [manifest]: JSON.stringify({ name: '@deepseek-ai/dsh', bin: { dsh: 'lib/cli.cjs' } }) },
+      results: [
+        { status: 1, stdout: '', stderr: 'not found' },
+        ...(manager === 'pnpm' ? [{ status: 1, stdout: '', stderr: 'npm unavailable' }] : []),
+        { status: 0, stdout: '/global modules\n', stderr: '' },
+        { status: 0, stdout: '0.1.6-alpha.2\n', stderr: '' },
+      ],
+    })
+    const result = probeInstalledDsh({ adapters: fixture.adapters })
+    assert.deepEqual(result, {
+      ok: true, binPath: '/global modules/@deepseek-ai/dsh/lib/cli.cjs', version: '0.1.6-alpha.2',
+      command: '/usr/bin/node', args: ['/global modules/@deepseek-ai/dsh/lib/cli.cjs'],
+    })
+    assert.deepEqual(fixture.calls.map(call => [call.command, call.args]), [
+      ['dsh', ['--version']], ['npm', ['root', '-g']],
+      ...(manager === 'pnpm' ? [['pnpm', ['root', '-g']]] : []),
+      ['/usr/bin/node', [result.binPath, '--version']],
+    ])
+    assert.ok(fixture.calls.every(call => call.options.timeoutMs === 3000))
+  })
+}
+
+test('local package launch reuses the probe and preserves profile, patch, app args, and exit status', () => {
+  const manifest = '/workspace/node_modules/@deepseek-ai/dsh/package.json'
+  const fixture = createFixture({
+    paths: { [manifest]: 'file', '/pkg/cordis.patch.yml': 'file' },
+    packages: { '/workspace': manifest },
+    text: { [manifest]: JSON.stringify({ name: '@deepseek-ai/dsh', bin: 'bin.cjs' }) },
+    results: [
+      ...Array.from({ length: 3 }, () => ({ status: 1, stdout: '', stderr: 'not found' })),
+      { status: 0, stdout: '0.1.6-alpha.2', stderr: '' },
+      { status: 7, stdout: '', stderr: '' },
+    ],
+  })
+  const status = runLauncher({
+    invocation: { kind: 'launch', args: ['--resume', 'session-1', '--cwd', '/work space', 'task'] },
+    settings: settings({ packageRoot: '/pkg' }),
+    env: { DSH_HOME: '/custom home' },
+    adapters: fixture.adapters,
+  })
+  assert.equal(status, 7)
+  assert.deepEqual(fixture.calls.at(-1), {
+    operation: 'run', command: '/usr/bin/node',
+    args: ['/workspace/node_modules/@deepseek-ai/dsh/bin.cjs', '--profile', 'tui', '--patch', '/pkg/cordis.patch.yml', '--resume', 'session-1', '--cwd', '/work space', 'task'],
+    options: { stdio: 'inherit' },
+  })
+  assert.equal(fixture.calls.filter(call => call.args?.includes('--version')).length, 2)
+  assert.ok(fixture.calls.some(call => call.operation === 'writeText' && call.path === '/custom home/profiles/tui/package.json'))
+  assert.ok(fixture.calls.every(call => call.command !== 'git' && !call.args?.includes('install')))
+})
+
+test('unusable package candidates are diagnosed and duplicate global roots are only probed once', () => {
+  const globalManifest = '/global/@deepseek-ai/dsh/package.json'
+  const localManifest = '/local/@deepseek-ai/dsh/package.json'
+  const fixture = createFixture({
+    paths: { [globalManifest]: 'file', [localManifest]: 'file' },
+    text: { [globalManifest]: '{broken', [localManifest]: '{"name":"@deepseek-ai/dsh"}' },
+    packages: { '/workspace': localManifest, '/pkg': localManifest },
+    results: [
+      { status: 1, stdout: '', stderr: 'missing' },
+      { status: 0, stdout: '/global\n', stderr: '' },
+      { status: 0, stdout: '/global\n', stderr: '' },
+    ],
+  })
+  const result = probeInstalledDsh({ settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters })
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /global\/.*package.json/)
+  assert.match(result.reason, /missing @deepseek-ai\/dsh bin entry/)
+  assert.equal(result.reason.split(globalManifest).length, 2)
+  assert.equal(result.reason.split(localManifest).length, 2)
+})
+
+test('an existing tui profile is preserved and PATH success stops package discovery', () => {
+  const fixture = createFixture({ paths: {
+    '/pkg/cordis.patch.yml': 'file', '/home/test/.dsh/profiles/tui/package.json': 'file',
+  } })
+  assert.equal(runLauncher({
+    invocation: { kind: 'launch', args: ['--dump-config'], mode: 'lightweight' },
+    settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+  }), 0)
+  assert.deepEqual(fixture.calls.map(call => call.args), [
+    ['--version'], ['--profile', 'tui', '--patch', '/pkg/cordis.patch.yml', '--dump-config'],
+  ])
 })

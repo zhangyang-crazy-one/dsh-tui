@@ -1,17 +1,10 @@
-/**
- * Jobs HUD: one `{id} · {status} · {label}` row per job the live agent owns,
- * host status keys untranslated (running / stopping / completed / killed /
- * failed), nothing at all when the list is empty (S18). The HUD captures no
- * keys (K28) and paints no kill affordance: `job_kill` is not this entry.
- * @module @deepseek-ai/dsh-tui-render/jobs-hud
- */
+/** Bounded, localized jobs section; empty and settled content paints nothing. */
 
 import { Text } from 'ink'
 import type { ReactNode } from 'react'
-import { escapeContent } from './content.ts'
+import { layoutHud } from './hud-layout.ts'
 import { paintRow, styled } from './theme.ts'
-import { truncateDisplay } from './tool-cards.ts'
-import type { StyleToken } from './theme.ts'
+import type { TuiLocale } from './ui-copy.ts'
 
 /** One jobs-HUD row; the host maps its registry snapshot onto this. */
 export interface JobHudItem {
@@ -24,41 +17,24 @@ export interface JobHudItem {
 }
 
 /**
- * The sticky jobs HUD above the composer: no title bar, no plate; every row
- * escaped and truncated to the column budget.
- * @param props - job rows and the display-column budget per row.
- * @returns the row elements, or null when hidden.
+ * Paint a section including its title and exact overflow count within its allowance.
+ * @param props - current projection, locale, and physical row/column limits.
+ * @returns bounded rows, or null when the section is empty.
  */
 export function JobsHud({
-  jobs,
-  maxCols,
+  jobs, maxCols, limit = 5, locale,
 }: {
-  /** The current job rows; an empty list paints nothing. */
+  /** Current projection; only live items are visible. */
   jobs: readonly JobHudItem[]
-  /** Display-column budget per row. */
+  /** Available display columns. */
   maxCols: number
+  /** Total physical rows including the title. */
+  limit?: number
+  /** Presentation locale. */
+  locale?: TuiLocale
 }): ReactNode {
-  if (jobs.length === 0) return null
-  return (
-    <>
-      {jobs.map((job) => {
-        const rowText = `${job.id} · ${job.status} · ${job.label}`
-        const statusToken: StyleToken = job.status === 'running'
-          ? 'accentText'
-          : job.status === 'failed' || job.status === 'killed'
-            ? 'error'
-            : 'fgDim'
-        return (
-          <Text key={job.id} wrap="truncate">
-            {paintRow([
-              styled(
-                truncateDisplay(escapeContent(rowText), maxCols),
-                statusToken,
-              ),
-            ])}
-          </Text>
-        )
-      })}
-    </>
-  )
+  const rows = layoutHud({ jobs: jobs, columns: maxCols, rows: limit, locale })
+  return rows.length === 0 ? null : <>{rows.map(row => (
+    <Text key={row.key} wrap="truncate">{paintRow([styled(row.text, row.token)])}</Text>
+  ))}</>
 }

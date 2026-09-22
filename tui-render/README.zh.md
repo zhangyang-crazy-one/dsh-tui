@@ -26,7 +26,7 @@ kind: "package-library"
 
 ## 使用本包
 
-`dsh-tui` 运行时已拥有终端生命周期与 `TuiController` 时导入本库。使用 [`mountTuiRender`](src/index.ts) 挂载 Ink 树，并在运行时拆卸期间处置返回的句柄；所有者测试与其他终端宿主可使用纯投影与布局导出。
+`dsh-tui` 运行时已拥有终端生命周期与 `TuiController` 时导入本库。使用 [`mountTuiRender`](src/index.ts) 挂载 Ink 树，并在运行时拆卸期间处置返回的句柄；所有者测试与其他终端宿主可使用纯投影与布局导出。输入输出均为 TTY 时，挂载会恢复 stdin 读取，卸载会暂停读取，将终端输入交给外部编辑器，直到重新挂载。
 
 默认的 [Soft Slate 主题](../../../.agents/notes/implemented/feature/2026-09-02-tui-soft-slate-visual-hierarchy.zh.md) 区分画面、用户消息、工具卡、代码与输入/状态带，同时保留 truecolor、256 色、16 色和 `NO_COLOR` 降级。字体和行高仍由终端模拟器拥有。
 
@@ -53,6 +53,12 @@ kind: "package-library"
 - `FrameProbe` 为每次子树提交记录 React Profiler 的 `actualDuration`。每个时长通道保留最近 120 个精确样本，以及固定存储的全程直方图，包含数量、均值、p95、p99 和最大值。直方图分位数使用微秒桶与三位有效数字；`beginMeasurement()` 只丢弃一次启动/恢复样本，之后重置窗口不会删除全程分布。根节点与品牌渲染成本不包含 Ink diff/commit、stdout drain 或实体显示延迟。`frameMetrics` 分别记录 drain、滚动、完成写出间隔、输入/合并计数、队列深度和缓存工作量。挂载期间会在观察者收到 React 开发模式 User Timing 记录后消费这些记录，不把组件属性保留整个会话，也不清除无关测量。
 - **性能边界** — 每个流式 Markdown 块推进仅追加的完整行 collector，保留稳定 parsed block 与物理行引用，并只重新解析仍有歧义的后缀；引用定义、可视化指令、渲染 scope 变化以及无法证明局部性的结构走显式安全全量重算。fence-aware 表格 scanner 只从表头开始 holdback 当前活动表格；自适应布局保留紧凑值，依次收缩 token-heavy 与 narrative 列，并在必要时选择键值记录。`TranscriptRenderStore`、projector 缓存与语法 token 缓存均有界，且都能从 canonical source 重建。共享帧仲裁器让滚动优先于有界展示队列，并发布每次变化的物理偏移，包括最后一帧。Overscan 限制缓存行数，不限制绘制频率。反向输入从当前显示位置替换待完成的移动。滚动突发会保持已选追赶速度直到最后一步。变化的滚动偏移也会在布局阶段发布实测快照，无需等待 Ink 的独立输出节流。Ink 的最高帧率跟随配置中较快的流式/滚动节奏。在 Ink 增量输出之后，`VisibleFrameSnapshot` 会按终端坐标重绘变化的可见行，并清除缩短或不再占用的范围；未变化的物理行 identity 不产生 overlay 写出。Ink 完成一帧输出后，变化的几何或已结束轮次标识只清理当前 transcript 区域。正文、轨道和绝对光标在同一个 synchronized-output 结束标记之前提交。仅布局变化的轨道更新使用与 transcript 绘制相同的 synchronized-output 帧。浏览面板替换 transcript 时，会在布局清理阶段、替代面板绘制前释放正文快照、轨道和指针区域。`pnpm run test:tui:perf` 拥有严格的真实 PTY 长 Markdown、增长表格、10,000 行滚动、resize 与 slow-sink 目标。
 - **工具检查** — Ctrl+E 显示有界预览，不预先格式化全文。`/tools` 列出全部调用；Enter 打开分页原文，n/p 翻页，d 主动显示原始元数据，y 复制完整文本，e 导出。失败摘要独立于流水线成功状态保留退出码或 signal。`ToolRowCache` 只在已验证的条目/行数预算内生成实际请求的行；展示转换器结果和思考换行索引可复用、可重建。紧凑显示版本号引用权威数据，不把完整回答嵌入每个帧标识。新增设置、状态与详情文案使用类型化 zh-CN/en-US 字典。
+
+### 插件与实时 HUD 呈现
+
+Plugins 覆盖层渲染控制器提供的本地化清单、操作结果、预检反馈、安装进度和具名确认。页面捕获输入，同时保留组合器草稿与正文阅读位置；Esc 关闭页面，不请求取消安装。页面打开或关闭期间，控制器均持续接收更新。服务权限、取消确认、构建脚本审批和重启行为归属 [TUI 运行时](../tui/README.zh.md#plugins-and-live-tasks)。
+
+实时 HUD 在正文内容轴线上使用带标题的计划与执行分区。待办优先展示进行中项；Workflow 只提供 live phase/member 内容；作业按稳定顺序保留 running/stopping 项。空分区消失，隐藏项计数与标题共用行。所有文本均转义并适配分配的显示列宽。宿主提供已验证的上限：通常八行，终端不足 24 行时四行，并在预留输入、对话框和正文空间后进一步收缩。仅剩一行时显示合并计数；零行时隐藏 HUD，待空间恢复后重现。这些显示规则不删除作业历史或改变任务状态。
 
 ### 高级交互约定
 
