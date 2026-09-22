@@ -1,6 +1,6 @@
 {
   "name": "@crazyhappyone/dsh-tui",
-  "version": "0.1.0-alpha.48",
+  "version": "0.1.0-alpha.49",
   "description": "Source-runtime launcher for the DeepSeek Harness terminal interface",
   "type": "module",
   "license": "MIT",
@@ -19,6 +19,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "build": "node scripts/build.js",
     "test": "node --test tests/*.test.js",
     "pack:check": "npm pack --dry-run --json"
   },
