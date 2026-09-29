@@ -112,7 +112,7 @@ describe('workflow HUD', () => {
     await ctx.fiber.dispose()
   })
 
-  it('retracts the settled member while keeping the live phase', async () => {
+  it('carries the host outcome key once the member settles', async () => {
     const { ctx, controller } = await bench()
     startRun(ctx)
     ctx.emit('workflow/agent-end', RUN, {
@@ -123,7 +123,7 @@ describe('workflow HUD', () => {
     })
     expect(controller.getWorkflowHud()).toEqual({
       phase: '设计',
-      current: undefined,
+      current: { seq: 1, label: '侦察', outcome: 'completed' },
     })
     await ctx.fiber.dispose()
   })

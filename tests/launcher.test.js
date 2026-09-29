@@ -574,12 +574,12 @@ for (const manager of ['npm', 'pnpm']) {
         { status: 1, stdout: '', stderr: 'not found' },
         ...(manager === 'pnpm' ? [{ status: 1, stdout: '', stderr: 'npm unavailable' }] : []),
         { status: 0, stdout: '/global modules\n', stderr: '' },
-        { status: 0, stdout: '0.1.6-alpha.2\n', stderr: '' },
+        { status: 0, stdout: '0.2.0-rc.2\n', stderr: '' },
       ],
     })
     const result = probeInstalledDsh({ adapters: fixture.adapters })
     assert.deepEqual(result, {
-      ok: true, binPath: '/global modules/@deepseek-ai/dsh/lib/cli.cjs', version: '0.1.6-alpha.2',
+      ok: true, binPath: '/global modules/@deepseek-ai/dsh/lib/cli.cjs', version: '0.2.0-rc.2',
       command: '/usr/bin/node', args: ['/global modules/@deepseek-ai/dsh/lib/cli.cjs'],
     })
     assert.deepEqual(fixture.calls.map(call => [call.command, call.args]), [
@@ -599,7 +599,7 @@ test('local package launch reuses the probe and preserves profile, patch, app ar
     text: { [manifest]: JSON.stringify({ name: '@deepseek-ai/dsh', bin: 'bin.cjs' }) },
     results: [
       ...Array.from({ length: 3 }, () => ({ status: 1, stdout: '', stderr: 'not found' })),
-      { status: 0, stdout: '0.1.6-alpha.2', stderr: '' },
+      { status: 0, stdout: '0.2.0-rc.2', stderr: '' },
       { status: 7, stdout: '', stderr: '' },
     ],
   })

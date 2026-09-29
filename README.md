@@ -64,7 +64,7 @@ In this mode, the launcher automatically detects the installed `dsh` executable 
 
 Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a three-second timeout. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable; probing establishes executability, not compatibility with older Harness releases.
 
-Lightweight launch uses `dsh --profile tui --patch <bundled-patch>` with a custom `tui` profile containing only `@deepseek-ai/dsh-base` and `patchReload: startup`. Existing profile manifests are preserved. The patch supplies the terminal runtime; the current `headless` profile adds its own runner and is not used. This release composition follows Harness `0.1.6-alpha.2`.
+Lightweight launch uses `dsh --profile tui --patch <bundled-patch>` with a custom `tui` profile containing only `@deepseek-ai/dsh-base` and `patchReload: startup`. Existing profile manifests are preserved. The patch supplies the terminal runtime; the current `headless` profile adds its own runner and is not used. This release composition follows Harness `0.2.0-rc.2`.
 
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:

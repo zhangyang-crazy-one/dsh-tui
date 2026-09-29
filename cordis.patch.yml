@@ -17,8 +17,8 @@
       You are interacting with the user through the deepseek-tui
       terminal interface.
 
-# HMR stays disabled. Profile and home patch edits apply on the next
-# process start; /reload restarts the terminal with the current session.
+# The shared module-reload HMR row stays off; the launcher's watch-only
+# fallback still keeps the user patch layers live until the run exits.
 - id: hmr
   disabled: true
 

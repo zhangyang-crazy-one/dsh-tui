@@ -11,13 +11,6 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import type {} from '@deepseek-ai/dsh-plugin-manager'
-import type {
-  BundleInfo, PluginInfo, ChangeResult, ManagementError, PluginInstallFailureKind,
-  PluginSpecInspection, PluginInstallRequestId,
-} from '@deepseek-ai/dsh-plugin-manager/types'
-import { EMPTY_PLUGINS_PANE } from '@deepseek-ai/dsh-tui-render'
-import type { PluginsPaneState, PluginsPaneInput, PluginsPaneRow } from '@deepseek-ai/dsh-tui-render'
 import { spawn } from 'node:child_process'
 import { rebuildReloadArgv, relaunchProcess } from './reload-argv.ts'
 import { SESSION_CHANGES_DISPOSED_COPY, SESSION_WRITER_HELD_COPY, isSessionWriterHeld, userErrorReason } from './session-errors.ts'
@@ -172,7 +165,6 @@ import type {} from '@deepseek-ai/dsh-workspace-changes/types'
 // ctx.get('sessionQuery'); the search service is composed by the base patch.
 import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
 import {
-  applyTheme,
   tuiCopy,
   ToolPresenterCache,
   EMPTY_TOOL_DETAILS_PANE,
@@ -402,9 +394,6 @@ export const Config: z<Config> = z.object({
   frameStats: z.string(),
   renderPolicy: z.transform(
     z.object({
-      normalHudRows: z.number().min(1).step(1).default(8),
-      compactHudRows: z.number().min(1).step(1).default(4),
-      compactHeightThreshold: z.number().min(1).step(1).default(24),
       transcriptOverscan: z.number().min(0).max(RENDER_POLICY_MAX_OVERSCAN)
         .default(RENDER_POLICY_DEFAULT_TRANSCRIPT_OVERSCAN),
       stream: z.object({
@@ -462,9 +451,6 @@ function validateRenderPolicy(value: unknown): RenderPolicy {
   // this pass enforces the entry/exit threshold ordering required for
   // hysteresis to function (exit threshold strictly lower than entry).
   const policy = value as RenderPolicy
-  if (policy.compactHudRows > policy.normalHudRows) {
-    throw new Error('renderPolicy.compactHudRows must not exceed normalHudRows')
-  }
   if (policy.stream.exitDepth >= policy.stream.entryDepth) {
     throw new Error(
       `renderPolicy.stream.exitDepth (${String(policy.stream.exitDepth)}) `
@@ -1215,8 +1201,8 @@ export class RuntimeController implements TuiController {
   /** Stale guard for in-flight feedback reads/writes; bumped on open/close. */
   private feedbackSeq = 0
   private workflowOverlayOpen = false
-  /** Live `tui` section reader installed by {@link installSettingsSection}. */
-  private readTuiSettings: (() => TuiUserSettings) | undefined
+  /** Optional injected `tui` reader; tests reach in to bypass the settings seam. */
+  private readTuiSettings: (() => TuiUserSettings | undefined) | undefined
   /** Last recorded turn ending, consumed by the idle-time notification summary. */
   private lastTurnEnd:
     | {
@@ -1282,14 +1268,6 @@ export class RuntimeController implements TuiController {
   private workflowOverlayOffset = 0
   /** Jobs-registry change subscription; no-op when the service is absent. */
   private disposeJobsChanged: (() => void) | undefined
-  private pluginsPane: PluginsPaneState = { ...EMPTY_PLUGINS_PANE }
-  private pluginsBundles: BundleInfo[] = []
-  private pluginsEntries: PluginInfo[] = []
-  private pluginsInventorySeq = 0
-  private pluginsInspection: PluginSpecInspection | undefined
-  private pluginsAttempt: { id: PluginInstallRequestId; done?: Promise<void> | undefined } | undefined
-  private pluginsLastAttemptId: PluginInstallRequestId | undefined
-  private disposePluginEvents: () => void
   /** The five `workflow/*` event subscriptions. */
   private disposeWorkflowEvents!: () => void
 
@@ -1378,23 +1356,7 @@ export class RuntimeController implements TuiController {
       return this.enqueueApproval(request)
     })
     const jobs = ctx.get('jobs')
-    const pluginDisposers = [
-      ctx.on('plugin-manager/changed', () => {
-        this.ownWork(this.refreshPlugins(), 'plugins inventory')
-      }),
-      ctx.on('plugin-manager/install-state', (progress) => {
-        if (this.closed || progress.requestId !== this.pluginsAttempt?.id) return
-        const key = progress.phase === 'installing' ? 'pluginsInstalling'
-          : progress.phase === 'cancelling' ? 'pluginsCancelling' : 'pluginsApplying'
-        this.updatePlugins({ progress: tuiCopy(key, this.getLocale()) })
-      }),
-      ctx.on('plugin-manager/install-log', (chunk) => {
-        if (this.closed || chunk.requestId === undefined || chunk.requestId !== this.pluginsAttempt?.id) return
-        this.updatePlugins({ output: this.pluginsPane.output + chunk.text })
-      }),
-    ]
-    this.disposePluginEvents = () => { for (const dispose of pluginDisposers) dispose() }
-    this.disposeJobsChanged = jobs?.onJobsChanged(() => {
+    this.disposeJobsChanged = jobs?.events.subscribe({ owners: 'scope' }, () => {
       // The registry already contains listener throws; emit() only drops
       // caches and schedules listeners.
       this.emit()
@@ -1469,7 +1431,6 @@ export class RuntimeController implements TuiController {
     this.disposeUserQuestions()
     this.disposeUserQuestions = () => {}
     this.disposeJobsChanged?.()
-    this.disposePluginEvents()
     this.disposeWorkflowEvents()
     this.cancelQueuedApprovals()
     this.cancelQueuedAskUsers()
@@ -1489,12 +1450,6 @@ export class RuntimeController implements TuiController {
       this.ctx.logger.warn(`command cancellation during TUI unload failed: ${errorReason(error)}`)
     }
     this.lifecycleAbort.abort()
-    if (this.pluginsAttempt !== undefined) {
-      const manager = this.ctx.get('pluginManager')
-      if (manager !== undefined) {
-        this.ownWork(manager.cancelInstall(this.pluginsAttempt.id), 'plugins shutdown cancellation')
-      }
-    }
     this.listeners.clear()
     if (this.emitTimer !== undefined) {
       clearTimeout(this.emitTimer)
@@ -1603,7 +1558,7 @@ export class RuntimeController implements TuiController {
    */
   private subagentLimits(): { maxActiveSubagents: number; maxDepth: number } {
     const settings = this.ctx.get('settings')
-    const section = settings === undefined ? undefined : settings.get('subagent')
+    const section = settings === undefined ? undefined : settings.describe().find(d => d.ns === 'subagent')?.value
     const maxActive = fieldOf(section, 'maxActiveSubagents')
     const maxDepth = fieldOf(section, 'maxDepth')
     return {
@@ -2274,7 +2229,7 @@ export class RuntimeController implements TuiController {
     if (agent === undefined) return undefined
     const jobs = this.ctx.get('jobs')
     if (jobs === undefined) return undefined
-    return jobs.list(agent).filter(job => job.status === 'running' || job.status === 'stopping').map(job => ({
+    return jobs.list(agent.session.id).map(job => ({
       id: String(job.id),
       status: job.status,
       label: job.label,
@@ -2286,7 +2241,7 @@ export class RuntimeController implements TuiController {
     const run = this.workflowRun
     if (run === undefined) return undefined
     const members = [...run.members.values()].sort((a, b) => a.seq - b.seq)
-    const current = members.filter(member => member.outcome === undefined).at(-1)
+    const current = members.filter(member => member.outcome === undefined).at(-1) ?? members.at(-1)
     return { phase: run.phase, current }
   }
 
@@ -2472,8 +2427,7 @@ export class RuntimeController implements TuiController {
    * @returns false when the `tui` section sets `submitOnEnter` to false.
    */
   getSubmitOnEnter(): boolean {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.submitOnEnter !== false
   }
 
@@ -2482,8 +2436,7 @@ export class RuntimeController implements TuiController {
    * @returns `auto` when no explicit value is configured.
    */
   getBrandAnimation(): 'auto' | 'on' | 'off' {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.brandAnimation ?? 'auto'
   }
 
@@ -2508,15 +2461,22 @@ export class RuntimeController implements TuiController {
    * @returns the saved locale, or the Chinese product default.
    */
   getLocale(): TuiLocale {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.locale ?? 'zh-CN'
   }
 
   private presentationFlag(field: PresentationFlag): boolean {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return this.presentationOverrides.get(field)?.value ?? section?.[field] ?? PRESENTATION_DEFAULTS[field]
+  }
+
+  /** TUI user-settings section from the live settings `describe()` list. */
+  private tuiSettings(): TuiUserSettings | undefined {
+    const injected = this.readTuiSettings?.()
+    if (injected !== undefined) return injected
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) return undefined
+    return settings.describe().find(d => d.ns === TUI_SETTINGS_NS)?.value as TuiUserSettings | undefined
   }
 
   /** Apply immediately, serialize persistence, and let only the latest write settle its override. */
@@ -2676,320 +2636,11 @@ export class RuntimeController implements TuiController {
     this.modelError = undefined
   }
 
-  /** Return the latest Plugins snapshot, including progress received while closed. */
-  getPluginsPane(): PluginsPaneState {
-    return this.pluginsPane
-  }
-
-  /** Publish a new stable external-store snapshot without replacing transcript state. */
-  private updatePlugins(patch: Partial<PluginsPaneState>): void {
-    if (this.closed) return
-    this.pluginsPane = { ...this.pluginsPane, ...patch }
-    this.emit()
-  }
-
-  /** Read both inventories as one generation; older concurrent reads cannot replace it. */
-  private async refreshPlugins(): Promise<void> {
-    const seq = ++this.pluginsInventorySeq
-    const manager = this.ctx.get('pluginManager')
-    if (manager === undefined) {
-      this.pluginsBundles = []
-      this.pluginsEntries = []
-      this.updatePlugins({ available: false, loading: false, rows: [] })
-      return
-    }
-    this.updatePlugins({ available: true, loading: true })
-    try {
-      const [bundles, entries] = await Promise.all([manager.listBundles(), manager.listPlugins()])
-      if (this.closed || seq !== this.pluginsInventorySeq) return
-      this.pluginsBundles = bundles
-      this.pluginsEntries = entries
-      const copy = (key: Parameters<typeof tuiCopy>[0]) => tuiCopy(key, this.getLocale())
-      const rows: PluginsPaneRow[] = []
-      for (const bundle of [...bundles.filter(item => !item.installed), ...bundles.filter(item => item.installed)]) {
-        const group = bundle.installed ? 'owned' : 'supplied'
-        const details = [bundle.description, bundle.version,
-          bundle.optional ? copy('pluginsOptional') : undefined,
-          !bundle.removable ? copy('pluginsNotRemovable') : undefined,
-          bundle.readOnlyReason ? this.pluginsError({ code: bundle.readOnlyReason }) : undefined,
-          bundle.error ? this.pluginsError(bundle.error) : undefined,
-          bundle.overrides.length ? `${copy('pluginsOverrides')}: ${bundle.overrides.join(', ')}` : undefined,
-        ].filter((value): value is string => value !== undefined)
-        rows.push({ id: `bundle:${bundle.name}`, group,
-          label: `${bundle.name} · ${copy(bundle.enabled ? 'pluginsSelected' : 'pluginsUnselected')}`,
-          details, toggle: bundle.readOnlyReason === undefined, removable: bundle.removable && bundle.readOnlyReason === undefined })
-        for (const row of bundle.rows) {
-          const live = row.entryId === undefined ? undefined : entries.find(entry => entry.entryId === row.entryId)
-          rows.push({ id: `row:${bundle.name}:${row.rowId}`, group,
-            label: `  ${row.rowId} · ${copy(live === undefined ? 'pluginsDeclared' : live.enabled ? 'pluginsEnabled' : 'pluginsDisabled')}`,
-            details: [row.moduleName, ...(live?.readOnlyReason ? [this.pluginsError({ code: live.readOnlyReason })] : [])],
-            toggle: live !== undefined && live.patchId !== undefined && live.readOnlyReason === undefined,
-            removable: false })
-        }
-      }
-      const selectedId = this.pluginsPane.rows[this.pluginsPane.selectedIndex]?.id
-      const index = rows.findIndex(row => row.id === selectedId)
-      this.updatePlugins({ rows, loading: false, selectedIndex: Math.max(0, index) })
-    } catch (error) {
-      if (seq === this.pluginsInventorySeq) this.updatePlugins({ loading: false, error: errorReason(error) })
-    }
-  }
-
-  /** Localize the service's management error code. */
-  private pluginsError(error: ManagementError): string {
-    let key: Parameters<typeof tuiCopy>[0]
-    switch (error.code) {
-      case 'management-required': key = 'pluginsManagementRequired'; break
-      case 'unaddressable': key = 'pluginsUnaddressable'; break
-      case 'unknown-plugin': key = 'pluginsUnknownPlugin'; break
-      case 'invalid-spec': key = 'pluginsInvalidSpec'; break
-      case 'ambiguous-install': key = 'pluginsAmbiguousInstall'; break
-      case 'not-bundle': key = 'pluginsNotBundle'; break
-      case 'not-removable': key = 'pluginsNotRemovable'; break
-      case 'stop-profile': key = 'pluginsStopProfile'; break
-      case 'bundle-in-use': key = 'pluginsBundleInUse'; break
-      case 'stale-approval': key = 'pluginsStaleApproval'; break
-      case 'operation-error': key = 'pluginsOperationError'; break
-      default: return assertNever(error.code, 'pluginsError')
-    }
-    return tuiCopy(key, this.getLocale()) + (error.diagnostic ? `: ${error.diagnostic}` : '')
-  }
-
-  /** Localize the service's package failure category. */
-  private pluginsFailure(kind: PluginInstallFailureKind): string {
-    let key: Parameters<typeof tuiCopy>[0]
-    switch (kind) {
-      case 'pnpm-missing': key = 'pluginsPnpmMissing'; break
-      case 'timeout': key = 'pluginsTimeout'; break
-      case 'not-found': key = 'pluginsNotFound'; break
-      case 'no-matching-version': key = 'pluginsNoVersion'; break
-      case 'network': key = 'pluginsNetwork'; break
-      case 'disk-full': key = 'pluginsDiskFull'; break
-      case 'permission': key = 'pluginsPermission'; break
-      case 'build-blocked': key = 'pluginsBuildBlocked'; break
-      case 'integrity': key = 'pluginsIntegrity'; break
-      case 'unknown': key = 'pluginsUnknown'; break
-      default: return assertNever(kind, 'pluginsFailure')
-    }
-    return tuiCopy(key, this.getLocale())
-  }
-
-  /** Localize the service's inspection refusal. */
-  private pluginsInspectProblem(problem: Extract<PluginSpecInspection, { status: 'refused' }>['problem']): string {
-    let key: Parameters<typeof tuiCopy>[0]
-    switch (problem) {
-      case 'invalid-spec': key = 'pluginsInvalidSpec'; break
-      case 'already-installed': key = 'pluginsAlreadyInstalled'; break
-      case 'not-found': key = 'pluginsNotFound'; break
-      case 'not-a-package': key = 'pluginsNotPackage'; break
-      case 'not-a-bundle': key = 'pluginsNotBundle'; break
-      case 'network': key = 'pluginsNetwork'; break
-      case 'unknown': key = 'pluginsUnknown'; break
-      default: return assertNever(problem, 'pluginsInspectProblem')
-    }
-    return tuiCopy(key, this.getLocale())
-  }
-
-  /** Localize persistence/application outcomes independently from current inventory. */
-  private pluginsResult(result: ChangeResult): void {
-    let key: Parameters<typeof tuiCopy>[0]
-    switch (result.application) {
-      case 'applied': key = 'pluginsApplied'; break
-      case 'restart-required': key = result.changed && !result.error ? 'pluginsRestart' : 'pluginsUnchangedRestart'; break
-      case 'overridden': key = 'pluginsOverridden'; break
-      case 'failed': key = 'failed'; break
-      case 'cancelled': key = 'pluginsCancelled'; break
-      default: return assertNever(result.application, 'plugin application')
-    }
-    const lines = [tuiCopy(key, this.getLocale())]
-    if (result.error) lines.push(this.pluginsError(result.error))
-    if (result.packageResult?.kind) lines.push(this.pluginsFailure(result.packageResult.kind))
-    if (result.packageResult?.logPath) lines.push(result.packageResult.logPath)
-    this.updatePlugins({ result: lines,
-      restartRequired: result.changed && !result.error && result.application === 'restart-required',
-      pendingBuilds: result.pendingBuilds ?? [], retry: result.application === 'failed',
-      ...(result.packageResult === undefined ? {} : { output: result.packageResult.output }) })
-  }
-
-  /** Own mutation settlement and inventory refresh while leaving the page responsive. */
-  private async mutatePlugins(operation: () => Promise<ChangeResult>): Promise<void> {
-    this.updatePlugins({ busy: true, result: [], error: undefined, restartRequired: false })
-    try { this.pluginsResult(await operation()) }
-    catch (error) { this.updatePlugins({ error: errorReason(error) }) }
-    finally {
-      this.updatePlugins({ busy: false, progress: '' })
-      await this.refreshPlugins()
-    }
-  }
-
-  /** Inspect the unmodified service spec before allowing its install action. */
-  private async inspectPlugins(): Promise<void> {
-    const manager = this.ctx.get('pluginManager')
-    if (manager === undefined || this.pluginsPane.busy || this.pluginsPane.inspecting) return
-    const spec = this.pluginsPane.spec
-    this.pluginsInspection = undefined
-    this.updatePlugins({ inspecting: true, inspection: [], error: undefined })
-    try {
-      const result = await manager.inspect(spec, this.lifecycleAbort.signal)
-      if (this.closed) return
-      this.pluginsInspection = result
-      if (result.status === 'refused') {
-        this.updatePlugins({ mode: 'input', inspection: [this.pluginsInspectProblem(result.problem), result.reason] })
-      } else {
-        const bundleCopy = result.bundle === null ? 'pluginsBundleUnknown' : result.bundle ? 'pluginsBundleYes' : 'pluginsBundleNo'
-        this.updatePlugins({ mode: 'preview', inspection: [result.name, result.version, result.description,
-          tuiCopy(bundleCopy, this.getLocale())].filter((value): value is string => value !== undefined) })
-      }
-    } catch (error) { this.updatePlugins({ error: errorReason(error) }) }
-    finally { this.updatePlugins({ inspecting: false }) }
-  }
-
-  /** Start a single correlated installation; approved names come only from the named confirmation. */
-  private async installPlugins(approvedBuilds?: string[]): Promise<void> {
-    const manager = this.ctx.get('pluginManager')
-    if (manager === undefined || this.pluginsPane.busy || this.pluginsPane.inspecting || this.pluginsAttempt !== undefined) return
-    const spec = this.pluginsPane.spec
-    if (this.pluginsInspection?.status !== 'accepted') return
-    const attempt = { id: randomUUID() as PluginInstallRequestId, done: undefined as Promise<void> | undefined }
-    this.pluginsAttempt = attempt
-    this.pluginsLastAttemptId = attempt.id
-    this.updatePlugins({ busy: true, mode: 'inventory', progress: tuiCopy('pluginsInstalling', this.getLocale()),
-      output: '', result: [], error: undefined, cancellation: undefined, pendingBuilds: [], confirmNames: [], restartRequired: false, retry: false })
-    const run = async (): Promise<void> => {
-      try {
-        // Reinspect retries, including build approval, before any package-manager invocation.
-        const inspected = await manager.inspect(spec, this.lifecycleAbort.signal)
-        if (this.closed) return
-        if (inspected.status === 'refused') {
-          this.pluginsInspection = inspected
-          this.updatePlugins({ mode: 'input', inspection: [this.pluginsInspectProblem(inspected.problem), inspected.reason] })
-          return
-        }
-        this.pluginsResult(await manager.installBundle(spec, { requestId: attempt.id,
-          ...(approvedBuilds === undefined ? {} : { approvedBuilds }) }))
-      } catch (error) { this.updatePlugins({ error: errorReason(error), retry: true }) }
-      finally {
-        if (this.pluginsAttempt === attempt) this.pluginsAttempt = undefined
-        this.updatePlugins({ busy: false, progress: '' })
-        await this.refreshPlugins()
-      }
-    }
-    attempt.done = run()
-    await attempt.done
-  }
-
-  /** Cancellation is a separate service result; too-late/not-running never imply success. */
-  private async cancelPluginInstall(): Promise<void> {
-    const manager = this.ctx.get('pluginManager')
-    const attempt = this.pluginsAttempt
-    if (manager === undefined || attempt === undefined) return
-    try {
-      const result = await manager.cancelInstall(attempt.id)
-      if (this.closed || this.pluginsLastAttemptId !== attempt.id) return
-      switch (result.status) {
-        case 'cancelled': this.updatePlugins({ cancellation: tuiCopy('pluginsCancelled', this.getLocale()) }); break
-        case 'too-late': this.updatePlugins({ cancellation: tuiCopy('pluginsTooLate', this.getLocale()) }); break
-        case 'not-running':
-          this.updatePlugins({ cancellation: tuiCopy('pluginsNotRunning', this.getLocale()) })
-          await attempt.done
-          break
-        default: assertNever(result.status, 'plugin cancellation')
-      }
-      await this.refreshPlugins()
-    } catch (error) { this.updatePlugins({ error: errorReason(error) }) }
-  }
-
-  /** Enforce permissions and explicit confirmation at the action executor. */
-  private handlePluginsInput(input: PluginsPaneInput): void {
-    const state = this.pluginsPane
-    if (!state.open || this.blockingHead() !== undefined) return
-    if (input.kind === 'close') {
-      this.updatePlugins({ open: false, confirmNames: [], mode: state.mode === 'remove' || state.mode === 'builds' ? 'inventory' : state.mode })
-      return
-    }
-    const manager = this.ctx.get('pluginManager')
-    if (manager === undefined) return
-    if (input.kind === 'cancel') { this.ownWork(this.cancelPluginInstall(), 'plugins cancellation'); return }
-    if (state.busy || state.inspecting) return
-    if (input.kind === 'text') {
-      if (state.mode !== 'input') return
-      this.pluginsInspection = undefined
-      this.updatePlugins({ spec: input.value, inspection: [] })
-      return
-    }
-    if (input.kind === 'dismiss') { this.updatePlugins({ mode: 'inventory', confirmNames: [] }); return }
-    if (input.kind === 'move') {
-      if (state.mode === 'inventory') this.updatePlugins({ selectedIndex: Math.max(0, Math.min(state.rows.length - 1, state.selectedIndex + input.delta)) })
-      else this.updatePlugins({
-        detailOffset: Math.max(0, Math.min(state.confirmNames.length + state.inspection.length, state.detailOffset + input.delta)),
-      })
-      return
-    }
-    if (input.kind === 'edit') {
-      this.pluginsInspection = undefined
-      this.updatePlugins({ mode: 'input', inspection: [], result: [], error: undefined, pendingBuilds: [], retry: false })
-      return
-    }
-    if (input.kind === 'inspect') {
-      if (state.mode === 'input') this.ownWork(this.inspectPlugins(), 'plugins inspection')
-      return
-    }
-    if (input.kind === 'install' || input.kind === 'retry') {
-      if (input.kind === 'install' ? state.mode !== 'preview' : !state.retry || state.pendingBuilds.length > 0) return
-      this.ownWork(this.installPlugins(), 'plugins installation')
-      return
-    }
-    if (input.kind === 'approve') {
-      if (state.pendingBuilds.length) this.updatePlugins({ mode: 'builds', confirmNames: [...state.pendingBuilds], detailOffset: 0 })
-      return
-    }
-    if (input.kind === 'reload') {
-      if (state.restartRequired) this.runCommand('reload')
-      return
-    }
-    if (input.kind === 'confirm') {
-      if (state.mode === 'builds' && state.confirmNames.length) {
-        this.ownWork(this.installPlugins([...state.confirmNames]), 'plugins approved installation')
-      } else if (state.mode === 'remove') {
-        const name = state.confirmNames[0]
-        const bundle = this.pluginsBundles.find(bundle => bundle.name === name)
-        if (bundle === undefined || !bundle.removable || bundle.readOnlyReason !== undefined) return
-        this.updatePlugins({ mode: 'inventory', confirmNames: [] })
-        this.ownWork(this.mutatePlugins(() => manager.removeBundle(bundle.name)), 'plugins removal')
-      }
-      return
-    }
-    if (input.kind === 'toggle' || input.kind === 'remove') {
-      if (state.mode !== 'inventory' || state.loading) return
-      const row = state.rows[state.selectedIndex]
-      if (row === undefined) return
-      const bundle = this.pluginsBundles.find(bundle => row.id === `bundle:${bundle.name}`)
-      if (input.kind === 'remove') {
-        if (bundle && row.removable) this.updatePlugins({ mode: 'remove', confirmNames: [bundle.name], detailOffset: 0 })
-        return
-      }
-      if (!row.toggle) return
-      if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), 'plugins bundle toggle')
-      else {
-        for (const owner of this.pluginsBundles) {
-          const declaration = owner.rows.find(item => row.id === `row:${owner.name}:${item.rowId}`)
-          const live = declaration?.entryId === undefined
-            ? undefined : this.pluginsEntries.find(item => item.entryId === declaration.entryId)
-          if (live?.patchId !== undefined && live.readOnlyReason === undefined) {
-            this.ownWork(this.mutatePlugins(() => manager.setPluginEnabled(live.entryId, !live.enabled)), 'plugins row toggle')
-            break
-          }
-        }
-      }
-      return
-    }
-    assertNever(input.kind, 'PluginsPaneInput')
-  }
-
-  /** Close other overlays while retaining the tracked Plugins operation. */
+  /**
+   * Close every overlay panel and reset its transients (K2/S2 mutual
+   * exclusion). The caller re-opens its own pane afterwards.
+   */
   private closeOtherPanels(): void {
-    this.pluginsPane = { ...this.pluginsPane, open: false, confirmNames: [],
-      mode: this.pluginsPane.mode === 'remove' || this.pluginsPane.mode === 'builds' ? 'inventory' : this.pluginsPane.mode }
     this.toolDetailsOpen = false
     this.toolDetailsSelected = 0
     this.toolDetailsBody = false
@@ -3094,7 +2745,7 @@ export class RuntimeController implements TuiController {
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined || this.session === undefined) return
     try {
-      const entries = await subagents.listChildren(this.session.id, signal)
+      const entries = await subagents.listDescendants(this.session.id, signal)
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
@@ -3120,7 +2771,7 @@ export class RuntimeController implements TuiController {
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined) return
     try {
-      const entries = await subagents.listChildren(SessionId(childId), signal)
+      const entries = await subagents.listDescendants(SessionId(childId), signal)
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
@@ -3177,7 +2828,7 @@ export class RuntimeController implements TuiController {
         const header = coldHeaders.get(row.id)
         if (cache === undefined || persistence === undefined || header === undefined) return row
         try {
-          snapshot = cache.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS)
+          snapshot = cache.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS)
           if (snapshot === undefined) {
             if (persistenceHasOpen(persistence)) {
               // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
@@ -3463,18 +3114,6 @@ export class RuntimeController implements TuiController {
         return
       case 'help-scroll':
         // The loop owns the help-sheet window offset; nothing to route here.
-        return
-      case 'plugins-pane':
-        if (this.blockingHead() !== undefined) return
-        if (this.pluginsPane.open) this.handlePluginsInput({ kind: 'close' })
-        else {
-          this.closeOtherPanels()
-          this.updatePlugins({ open: true })
-          this.ownWork(this.refreshPlugins(), 'plugins inventory')
-        }
-        return
-      case 'plugins-input':
-        this.handlePluginsInput(action.input)
         return
       case 'approval-allow':
         this.answerHead('allowed-once')
@@ -4064,8 +3703,7 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the notification settings section, defaulting when no section is stored. */
   private notifySettings(): NotifySettings {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return {
       mode: section?.notify ?? 'attention',
       quietInputSeconds: section?.notifyQuietInputSeconds ?? DEFAULT_NOTIFY_QUIET_INPUT_SECONDS,
@@ -4932,7 +4570,7 @@ export class RuntimeController implements TuiController {
       name: commandName,
       description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? 'on' : 'off', locale)})`,
     }))
-    return [...registry, ...LOCAL_COMMANDS, ...displayCommands, { name: 'plugins', description: tuiCopy('pluginsCommand', locale) }, { name: 'tools', description: tuiCopy('commandTools', locale) }].sort((left, right) =>
+    return [...registry, ...LOCAL_COMMANDS, ...displayCommands, { name: 'tools', description: tuiCopy('commandTools', locale) }].sort((left, right) =>
       left.name < right.name ? -1 : 1,
     )
   }
@@ -4950,10 +4588,6 @@ export class RuntimeController implements TuiController {
    * @param query - the text after `/`, passed verbatim to the registry.
    */
   private runCommand(query: string): void {
-    if (query.trim() === 'plugins') {
-      if (!this.pluginsPane.open) this.dispatch({ kind: 'plugins-pane' })
-      return
-    }
     if (query.trim() === 'tools') {
       if (this.blockingHead() !== undefined) return
       this.closeOtherPanels()
@@ -5228,9 +4862,10 @@ export class RuntimeController implements TuiController {
   private readSettingsRows(): SettingsFieldRow[] {
     const settings = this.ctx.get('settings')
     if (settings === undefined) return []
+    const descriptors = settings.describe({ redactSecrets: true })
     const rows = settingsRowsFromDescribe(
-      settings.describe({ redactSecrets: true }),
-      ns => settings.get(ns),
+      descriptors,
+      ns => descriptors.find(d => d.ns === ns)?.value,
       { expandProviders: true },
     )
     return [...rows, ...credentialSettingRows(
@@ -5247,14 +4882,15 @@ export class RuntimeController implements TuiController {
   private referencedCredentialNames(): string[] {
     const settings = this.ctx.get('settings')
     if (settings === undefined) return []
+    const valueOf = (ns: string): unknown => settings.describe().find(d => d.ns === ns)?.value
     const names = new Set<string>()
     const collect = (profile: unknown): void => {
       if (typeof profile !== 'object' || profile === null || Array.isArray(profile)) return
       const ref = (profile as Record<string, unknown>)['apiKeyEnv']
       if (typeof ref === 'string' && isCredentialRefName(ref)) names.add(ref)
     }
-    collect(settings.get('llm-deepseek'))
-    const piAi = settings.get('llm-pi-ai')
+    collect(valueOf('llm-deepseek'))
+    const piAi = valueOf('llm-pi-ai')
     if (typeof piAi === 'object' && piAi !== null && !Array.isArray(piAi)) {
       const providers = (piAi as Record<string, unknown>)['providers']
       if (typeof providers === 'object' && providers !== null && !Array.isArray(providers)) {
@@ -5366,7 +5002,7 @@ export class RuntimeController implements TuiController {
         row.field,
         row.field === 'providers'
           ? this.rawUserProviders(row.namespace) ?? {}
-          : fieldOf(settings.get(row.namespace), row.field),
+          : fieldOf(settings.describe().find(d => d.ns === row.namespace)?.value, row.field),
         value,
         this.catalogProviderIds(row.namespace),
       )
@@ -5682,7 +5318,7 @@ export class RuntimeController implements TuiController {
         if (this.closed) return
         const settings = this.ctx.get('settings')
         if (settings !== undefined) {
-          const ds = settings.get('llm-deepseek') as Record<string, unknown> | undefined
+          const ds = settings.describe().find(d => d.ns === 'llm-deepseek')?.value as Record<string, unknown> | undefined
           if (typeof ds?.apiKeyEnv === 'string' && ds.apiKeyEnv.startsWith('sk-')) {
             await settings.update('llm-deepseek', { apiKeyEnv: 'DEEPSEEK_API_KEY' })
           }
@@ -5750,23 +5386,13 @@ export class RuntimeController implements TuiController {
   }
 
   /**
-   * Register the `tui` user-settings section when the host exposes `register`.
-   * Unit stubs that only implement `describe`/`get`/`update` are left alone.
+   * No-op placeholder kept for callers that still invoke the historical
+   * `installSection` hook. The new settings API uses `describe()`/`update()`
+   * directly; the `tui` namespace is now read through {@link tuiSettings}
+   * on every call.
    */
   private installTuiSettings(): void {
-    this.ctx.inject(['settings'], (settingsCtx) => {
-      if (typeof settingsCtx.settings.installSection !== 'function') return
-      settingsCtx.settings.installSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
-        setSource: (read) => {
-          this.readTuiSettings = read
-        },
-        onChange: () => {
-          const next = this.readTuiSettings?.()
-          if (next?.colorTier !== undefined) applyTheme(next.colorTier)
-          this.emit()
-        },
-      })
-    })
+    return
   }
 
   /**
@@ -6121,7 +5747,7 @@ export class RuntimeController implements TuiController {
       && this.session !== undefined
     ) {
       try {
-        const entries = await subagents.listChildren(this.session.id, signal)
+        const entries = await subagents.listDescendants(this.session.id, signal)
         for (const entry of entries) {
           if (entry.kind !== 'child' || entry.activity !== 'running') continue
           const name = entry.mode === 'continuable'

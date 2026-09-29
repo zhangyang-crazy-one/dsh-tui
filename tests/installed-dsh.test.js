@@ -18,7 +18,7 @@ test('the CLI finds a local package without PATH shims and launches its non-exec
 const { appendFileSync } = require('node:fs')
 const args = process.argv.slice(2)
 appendFileSync(process.env.DSH_TEST_CALLS, JSON.stringify(args) + '\\n')
-if (args[0] === '--version') console.log('0.1.6-alpha.2')
+if (args[0] === '--version') console.log('0.2.0-rc.2')
 else process.exitCode = 7
 `)
     const callsFile = join(root, 'calls.jsonl')

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tui",
-  "version": "0.1.6-alpha.2",
+  "version": "0.2.0-rc.2",
   "type": "module",
   "license": "MIT",
   "description": "The dsh terminal-surface bundle: the deepseek-tui patch layer over dsh-base plus the runtime glue plugin (terminal guard, signal hooks, echo driver). No Host, HTTP, or browser layer.",
@@ -58,7 +58,6 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-permission-presets": "workspace:^",
-    "@deepseek-ai/dsh-plugin-manager": "workspace:^",
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
@@ -76,7 +75,6 @@
     "@deepseek-ai/dsh-workflow": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-plugin-manager": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",

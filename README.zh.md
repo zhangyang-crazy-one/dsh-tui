@@ -182,7 +182,7 @@ llm-pi-ai:
 
 轻量启动按绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包依次探测，每个探测子进程限时三秒；显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用当前 Node 执行，探测成功仅表示可执行，不保证旧版 Harness 兼容。
 
-轻量模式执行 `dsh --profile tui --patch <bundled-patch>`；首次创建的 `tui` profile 仅含 `@deepseek-ai/dsh-base`，设置 `patchReload: startup`，已有 manifest 保持不变。发布 patch 提供终端运行时，并与 Harness `0.1.6-alpha.2` 对齐。当前 `headless` profile 会添加独立 runner，因此不用于轻量启动；源码模式继续使用 `deepseek-tui`。
+轻量模式执行 `dsh --profile tui --patch <bundled-patch>`；首次创建的 `tui` profile 仅含 `@deepseek-ai/dsh-base`，设置 `patchReload: startup`，已有 manifest 保持不变。发布 patch 提供终端运行时，并与 Harness `0.2.0-rc.2` 对齐。当前 `headless` profile 会添加独立 runner，因此不用于轻量启动；源码模式继续使用 `deepseek-tui`。
 
 在完整 DSH checkout 中实现 TUI 行为，运行受变更行为影响的检查，并将确认后的 `packages/tui/` tree 导出到这里。在本仓库中使用 `npm test` 开发 launcher；通过 packed tarball 测试安装，不使用 workspace link。
 

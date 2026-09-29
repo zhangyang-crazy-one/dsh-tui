@@ -123,7 +123,10 @@ function seedLog(title: string, base: number): SessionEvent[] {
       type: 'session/title',
       seq: SessionSeq(1),
       time: base + 2,
-      data: { title, messageSeqs: [], source: { kind: 'fallback' } },
+      // V4 native admission requires user-sourced titles to carry empty
+      // messageSeqs and non-user titles to cite at least one earlier
+      // user/message. A bare fixture has neither, so seed it as a user title.
+      data: { title, messageSeqs: [], source: { kind: 'user' } },
     },
     {
       type: 'turn/end',

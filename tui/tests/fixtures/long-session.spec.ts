@@ -62,7 +62,7 @@ describe('long-session fixture (SC4 prep)', () => {
     const first = longSessionEvents(7)
     const second = longSessionEvents(7)
     expect(JSON.stringify(first)).toBe(JSON.stringify(second))
-    expect(first).toHaveLength(LONG_SESSION_TURNS * 4)
+    expect(first).toHaveLength(LONG_SESSION_TURNS * 6)
     const messages = first.filter(
       event => event.type === 'user/message' || event.type === 'assistant/message',
     )
@@ -86,7 +86,7 @@ describe('long-session fixture (SC4 prep)', () => {
     } finally {
       await handle.close()
     }
-    expect(loadedEvents).toHaveLength(LONG_SESSION_TURNS * 4)
+    expect(loadedEvents).toHaveLength(LONG_SESSION_TURNS * 6)
     const loadedMessages = loadedEvents.filter(
       event =>
         event.type === 'user/message' || event.type === 'assistant/message',

@@ -19,6 +19,7 @@ import {
 function descriptor(ns: string, secrets: SettingsDescriptor['secrets'] = []): SettingsDescriptor {
   return {
     ns: ns as SettingsDescriptor['ns'],
+    autoGenerate: true,
     schema: {},
     value: {},
     revision: 0,

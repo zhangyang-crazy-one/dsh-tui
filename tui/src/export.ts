@@ -52,14 +52,14 @@ function toolCallBlock(event: SessionEvent<'tool/call'>): string {
 
 /** Render a typed tool result record in deterministic field order. */
 function toolResultBlock(event: SessionEvent<'tool/result'>): string {
-  const result = event.data.message.content[0]
+  const message = event.data.message
   const record = {
-    callId: escapeContent(result.toolCallId),
-    result: escapeContent(result.content
+    callId: escapeContent(message.toolCallId),
+    result: escapeContent(message.content
       .filter(block => block.type === 'text')
       .map(block => block.text)
       .join('')),
-    isError: result.isError ?? false,
+    isError: message.isError ?? false,
     ...(event.data.error === undefined
       ? {}
       : {

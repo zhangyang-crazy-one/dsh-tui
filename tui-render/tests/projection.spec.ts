@@ -14,7 +14,7 @@ describe('createProjector', () => {
       event(2, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'orphan' } }),
       event(3, 'assistant/message', { turn: 1, step: 1, message: { content: [] } }),
       event(4, 'tool/call', { turn: 1, step: 1, callId: 'orphan', name: 'read', arguments: '{}' }),
-      event(5, 'tool/result', { turn: 1, step: 1, message: { content: [] } }),
+      event(5, 'tool/result', { turn: 1, step: 1, message: { role: 'tool', source: { kind: 'tool', callId: 'orphan' }, toolCallId: 'orphan', content: [] } }),
       event(6, 'step/end', { turn: 1, step: 1 }),
       event(7, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
       event(8, 'future/event', {}),
@@ -393,14 +393,11 @@ describe('createProjector', () => {
         step: 1,
         message: {
           id: 'tool-message-1',
-          role: 'user',
+          role: 'tool',
           source: { kind: 'tool', callId: 'call-1' },
-          content: [{
-            type: 'tool-result',
-            toolCallId: 'call-1',
-            content: [{ type: 'text', text: 'file contents' }],
-            isError: false,
-          }],
+          toolCallId: 'call-1',
+          content: [{ type: 'text', text: 'file contents' }],
+          isError: false,
         },
         error: { name: 'ToolWarning', code: 'PARTIAL' },
         meta: { presentation: 'diff' },
@@ -569,13 +566,10 @@ describe('createProjector', () => {
       step: 1,
       message: {
         id: 'tool-1',
-        role: 'user',
+        role: 'tool',
         source: { kind: 'tool', callId: 'c1' },
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'c1',
-          content: [{ type: 'text', text: 'ok' }],
-        }],
+        toolCallId: 'c1',
+        content: [{ type: 'text', text: 'ok' }],
       },
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))
@@ -626,13 +620,10 @@ describe('createProjector', () => {
       step: 1,
       message: {
         id: 'tool-1',
-        role: 'user',
+        role: 'tool',
         source: { kind: 'tool', callId: 'c1' },
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'c1',
-          content: [{ type: 'text', text: 'ok' }],
-        }],
+        toolCallId: 'c1',
+        content: [{ type: 'text', text: 'ok' }],
       },
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))

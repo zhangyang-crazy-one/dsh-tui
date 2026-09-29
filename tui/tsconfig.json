@@ -9,9 +9,6 @@
   ],
   "references": [
     {
-      "path": "../../boot/plugin-manager"
-    },
-    {
       "path": "../../../vendor/cordis"
     },
     {

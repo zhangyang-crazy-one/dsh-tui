@@ -39,10 +39,16 @@ import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
 import type { WorkspaceChangesCardView } from './workspace-changes-card.ts'
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
+    /**
+     * One incremental assistant stream chunk delivered live during the active
+     * step. The projector folds these chunks into the assembled message and
+     * tool calls without ever producing a model-visible surface node on its
+     * own; persistence stores them losslessly so the row replays the exact
+     * provider stream.
+     */
     'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
-    'workspace/changes': { turn: number }
   }
 }
 
@@ -610,15 +616,15 @@ export function createProjector(): Projector {
       case 'tool/result': {
         if (activeTurn === undefined) return
         commitStep()
-        const block = event.data.message.content[0]
+        const message = event.data.message
         turnContent.push({
           kind: 'tool-result',
-          callId: block.toolCallId,
-          text: block.content
+          callId: message.toolCallId,
+          text: message.content
             .filter(item => item.type === 'text')
             .map(item => item.text)
             .join(''),
-          isError: block.isError ?? false,
+          isError: message.isError ?? false,
           ...event.data.error === undefined ? {} : { error: { ...event.data.error } },
           ...event.data.meta === undefined ? {} : { meta: structuredClone(event.data.meta) },
         })
