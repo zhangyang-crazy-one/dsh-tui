@@ -30,7 +30,7 @@ deepseek-tui 的 profile bundle（配置包）与运行时插件让用户在 `ds
 
 bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选的 `resume` 和可选的 `cwd`。启动 provider 接受可选的任务位置参数、`--resume <id>` 与 `--cwd <dir>`；无任务（或仅 `--resume <id>`）时 profile 以空闲的全屏循环启动，焦点位于空 composer（占位符 `输入消息`，以及一行操作/状态页脚），空 composer 上按 Enter 是无操作。
 
-随产品交付的 profile 为 `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-tui'], patchReload: 'startup' }`。profile 与 home patch 的修改在下次进程启动时生效，不会重新组合正在运行的终端、Agent 或会话。设置文件热更新仍由 settings 服务拥有。
+随产品交付的 profile 为 `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-tui'] }`。profile 与 home patch 的修改在下次进程启动时生效，不会重新组合正在运行的终端、Agent 或会话。设置文件热更新仍由 settings 服务拥有。
 
 可选 `renderPolicy` 配置在启动时解析一次，并显式传给渲染器。`transcriptOverscan` 与 `cache.maxRows`/`cache.maxBytes` 限制物理行投影和重建缓存；`stream` 拥有 smooth/catch-up 队列阈值与单帧工作量；`scroll` 拥有 latest-target 节奏、追赶步长和鼠标滚轮行数。`tools.previewRows`、`detailPageRows`、`cacheEntries` 和 `cacheRows` 分别限制工具预览、详情分页与派生存储，默认值为 6、40、128 和 2048。Config schema 要求帧间隔和缓存上限为正、overscan/缓存预算有界，且退出阈值严格小于对应进入阈值，因此无效组合会在插件加载时失败。随产品交付的值位于 [`cordis.patch.yml`](cordis.patch.yml)，`pnpm run test:tui:perf` 运行严格的真实 PTY 性能门禁。
 

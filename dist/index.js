@@ -81485,8 +81485,28 @@ function TuiLoop({
       setMouseRailListener(void 0);
     };
   }, [controller, frameMetrics, issueViewportCommand]);
-  use_input_default((key, keyInfo) => {
+  const syncPaneRef = (ref, read) => {
+    if (read !== void 0) ref.current = read();
+  };
+  const handleKeyInput = (key, keyInfo) => {
     frameMetrics?.recordInputEvent();
+    syncPaneRef(paneRef, controller.getSessionPane?.bind(controller));
+    syncPaneRef(searchRef, controller.getSearchPane?.bind(controller));
+    syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller));
+    syncPaneRef(modelPaneRef, controller.getModelPane?.bind(controller));
+    syncPaneRef(helpPaneRef, controller.getHelpPane?.bind(controller));
+    syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller));
+    syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller));
+    syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller));
+    syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller));
+    syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller));
+    syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller));
+    syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller));
+    syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller));
+    syncPaneRef(feedbackPaneRef, controller.getFeedbackPane?.bind(controller));
+    syncPaneRef(workflowOverlayRef, controller.getWorkflowOverlay?.bind(controller));
+    syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller));
+    syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller));
     controller.noteUserActivity();
     if (toolDetailsPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
       if (keyInfo.ctrl && key === "c") controller.dispatch({ kind: "sigint" });
@@ -81641,6 +81661,42 @@ function TuiLoop({
     } : current;
     stateRef.current = next;
     setState(next);
+  };
+  use_input_default((key, keyInfo) => {
+    if (key.length > 1 && key.startsWith("\x1B") && !key.startsWith("\x1B[") && !keyInfo.ctrl) {
+      const rest = key.slice(1);
+      if (rest.length > 0 && /^[\x20-\x7e\r]+$/u.test(rest)) {
+        handleKeyInput("", { ...keyInfo, meta: false, escape: true });
+        for (const char of rest) {
+          if (char === "\r") handleKeyInput(char, { ...keyInfo, meta: false, return: true });
+          else handleKeyInput(char, { ...keyInfo, meta: false });
+        }
+        return;
+      }
+    }
+    const special = keyInfo.ctrl || keyInfo.meta || keyInfo.return || keyInfo.tab || keyInfo.upArrow || keyInfo.downArrow || keyInfo.leftArrow || keyInfo.rightArrow || keyInfo.pageUp || keyInfo.pageDown || keyInfo.home || keyInfo.end || keyInfo.backspace || keyInfo.delete || keyInfo.escape;
+    if (!special && key.length > 1 && key.length <= 16) {
+      let rest = key;
+      while (rest.length > 0) {
+        const boundary = rest.indexOf("\r");
+        if (boundary === 0) {
+          handleKeyInput("\r", { ...keyInfo, return: true });
+          rest = rest.slice(1);
+        } else if (boundary > 0) {
+          for (const char of rest.slice(0, boundary)) {
+            handleKeyInput(char, { ...keyInfo, return: false });
+          }
+          rest = rest.slice(boundary);
+        } else {
+          for (const char of rest) {
+            handleKeyInput(char, { ...keyInfo, return: false });
+          }
+          break;
+        }
+      }
+      return;
+    }
+    handleKeyInput(key, keyInfo);
   });
   const insertImageToken = (token) => {
     const current = stateRef.current;
@@ -84112,6 +84168,7 @@ var RuntimeController = class _RuntimeController {
   /** The one controller-owned transition and its shared in-flight promise. */
   transitionState = IDLE_TRANSITION;
   transitionInFlight;
+  transitionInFlightRequest;
   /** The owned session, exposed for the exit flush. */
   session;
   /** Directory rows, newest activity first; refreshed from persistence. */
@@ -86771,19 +86828,50 @@ var RuntimeController = class _RuntimeController {
    * @returns the shared in-flight transition promise.
    */
   transitionSession(request, startup = false) {
-    if (this.transitionInFlight !== void 0) {
-      return this.transitionInFlight;
+    const inFlight = this.transitionInFlight;
+    if (inFlight !== void 0) {
+      const pending = this.transitionInFlightRequest;
+      const sameIntent = pending !== void 0 && pending.intent === request.intent && (pending.intent !== "switch" || request.intent === "switch" && pending.id === request.id);
+      if (sameIntent) return inFlight;
+      const chained = inFlight.then(
+        () => this.performSessionTransition(request, startup),
+        () => this.performSessionTransition(request, startup)
+      );
+      this.transitionInFlight = chained;
+      this.transitionInFlightRequest = request;
+      void chained.then(
+        () => {
+          if (this.transitionInFlight === chained) {
+            this.transitionInFlight = void 0;
+            this.transitionInFlightRequest = void 0;
+          }
+        },
+        () => {
+          if (this.transitionInFlight === chained) {
+            this.transitionInFlight = void 0;
+            this.transitionInFlightRequest = void 0;
+          }
+        }
+      );
+      return chained;
     }
     const operation = Promise.resolve().then(
       () => this.performSessionTransition(request, startup)
     );
     this.transitionInFlight = operation;
+    this.transitionInFlightRequest = request;
     void operation.then(
       () => {
-        this.transitionInFlight = void 0;
+        if (this.transitionInFlight === operation) {
+          this.transitionInFlight = void 0;
+          this.transitionInFlightRequest = void 0;
+        }
       },
       () => {
-        this.transitionInFlight = void 0;
+        if (this.transitionInFlight === operation) {
+          this.transitionInFlight = void 0;
+          this.transitionInFlightRequest = void 0;
+        }
       }
     );
     return operation;

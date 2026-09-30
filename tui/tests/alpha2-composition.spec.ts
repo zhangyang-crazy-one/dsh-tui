@@ -15,9 +15,13 @@ describe('deepseek-tui 0.1.6-alpha.2 composition', () => {
 
   it('defaults to deepseek-flash and does not re-list removed V4 Flash ids', () => {
     expect(PATCH).toContain("process.env.DSH_MODEL ?? 'deepseek-flash'")
-    expect(PATCH).toContain("process.env.DSH_LLM_PROTOCOL ?? 'messages'")
     expect(PATCH).not.toContain('deepseek-v4-flash')
     expect(PATCH).not.toContain('deepseek-v4-flash-vision-exp')
+    // The 0.2.0 llm-deepseek adapter is Messages-only and rejects
+    // config.protocol. The TUI overlay inherits the dsh-base row verbatim
+    // and must not redeclare the protocol.
+    expect(PATCH).not.toContain('DSH_LLM_PROTOCOL')
+    expect(PATCH).not.toMatch(/^\s*protocol:/m)
   })
 
   it('inserts workspace-changes with documented config bounds before tui-runtime', () => {

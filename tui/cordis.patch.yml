@@ -45,13 +45,10 @@
     openAt: first-search
 
 # Inherit the 0.1.6-alpha.2 llm-deepseek DEFAULT_MODELS catalog
-# (`deepseek-flash`, `deepseek-v4-pro`). Do not re-list removed V4 Flash
-# / V4 Flash Vision Exp ids here. Protocol stays Messages unless a PTY
-# snapshot sets DSH_LLM_PROTOCOL=chat-completions for the mock server.
-- id: llm-deepseek
-  config:
-    # pi-lens-ignore: YAML:0
-    protocol: !!js "process.env.DSH_LLM_PROTOCOL ?? 'messages'"
+# (`deepseek-flash`, `deepseek-v4-pro`) without re-listing the removed
+# V4 Flash / V4 Flash Vision Exp ids. The 0.2.0 adapter is Messages-only
+# and rejects `config.protocol`, so the TUI overlay intentionally does
+# not override it — dsh-base already inserts the `llm-deepseek` row.
 
 - id: agent-default-model
   config:
@@ -87,6 +84,13 @@
 
     - id: tui-startup
       name: "../dist/startup.js"
+
+    # Hosts the `tui` settings namespace so the `tui:` block of settings.yaml
+    # imports through Settings.importLegacyDocument() and the overlay can edit
+    # the same fields. 0.2.0-rc.2 removed the runtime's installSection hook,
+    # so this stub entry owns the Config schema with `.volatile()` fields.
+    - id: tui
+      name: "@deepseek-ai/dsh-tui/user-settings"
 
     # Zero-config official OpenAI/Anthropic routes. They register
     # openai-official / anthropic-official so they do not collide with the

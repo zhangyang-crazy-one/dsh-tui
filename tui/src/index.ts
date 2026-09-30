@@ -1094,6 +1094,7 @@ export class RuntimeController implements TuiController {
   /** The one controller-owned transition and its shared in-flight promise. */
   private transitionState: SessionTransitionState = IDLE_TRANSITION
   private transitionInFlight: Promise<void> | undefined
+  private transitionInFlightRequest: SessionTransitionRequest | undefined
   /** The owned session, exposed for the exit flush. */
   session: Session | undefined
   /** Directory rows, newest activity first; refreshed from persistence. */
@@ -2956,7 +2957,6 @@ export class RuntimeController implements TuiController {
   dispatch(action: LoopAction): void {
     if (this.closed) return
     if (this.agentHandle === undefined) {
-      // Input before the agent exists: park it for the creation moment.
       this.pending.push(action)
       return
     }
@@ -4165,8 +4165,38 @@ export class RuntimeController implements TuiController {
     request: SessionTransitionRequest,
     startup = false,
   ): Promise<void> {
-    if (this.transitionInFlight !== undefined) {
-      return this.transitionInFlight
+    const inFlight = this.transitionInFlight
+    if (inFlight !== undefined) {
+      // Coalesce only an identical intent (double Ctrl+N, or Enter on the same
+      // row twice). A different request — e.g. a session switch issued while a
+      // create is still settling — must chain after it, never be dropped.
+      const pending = this.transitionInFlightRequest
+      const sameIntent = pending !== undefined
+        && pending.intent === request.intent
+        && (pending.intent !== 'switch'
+          || (request.intent === 'switch' && pending.id === request.id))
+      if (sameIntent) return inFlight
+      const chained = inFlight.then(
+        () => this.performSessionTransition(request, startup),
+        () => this.performSessionTransition(request, startup),
+      )
+      this.transitionInFlight = chained
+      this.transitionInFlightRequest = request
+      void chained.then(
+        () => {
+          if (this.transitionInFlight === chained) {
+            this.transitionInFlight = undefined
+            this.transitionInFlightRequest = undefined
+          }
+        },
+        () => {
+          if (this.transitionInFlight === chained) {
+            this.transitionInFlight = undefined
+            this.transitionInFlightRequest = undefined
+          }
+        },
+      )
+      return chained
     }
     // Install the single-flight Promise before the first phase emits. A
     // synchronous subscriber cannot re-enter between that emit and ownership
@@ -4175,12 +4205,19 @@ export class RuntimeController implements TuiController {
       () => this.performSessionTransition(request, startup),
     )
     this.transitionInFlight = operation
+    this.transitionInFlightRequest = request
     void operation.then(
       () => {
-        this.transitionInFlight = undefined
+        if (this.transitionInFlight === operation) {
+          this.transitionInFlight = undefined
+          this.transitionInFlightRequest = undefined
+        }
       },
       () => {
-        this.transitionInFlight = undefined
+        if (this.transitionInFlight === operation) {
+          this.transitionInFlight = undefined
+          this.transitionInFlightRequest = undefined
+        }
       },
     )
     return operation

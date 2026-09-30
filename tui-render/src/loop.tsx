@@ -2234,8 +2234,35 @@ export function TuiLoop({
       setMouseRailListener(undefined)
     }
   }, [controller, frameMetrics, issueViewportCommand])
-  useInput((key, keyInfo) => {
+  // 合并块拆分后同一 tick 内的下一个按键不能等 React 渲染刷新 ref；从
+  // controller getter 同步读取权威状态。测试替身可以只实现部分 getter——缺
+  // 省时保留渲染层最后发布的值。
+  const syncPaneRef = <T,>(ref: { current: T }, read: (() => T) | undefined): void => {
+    if (read !== undefined) ref.current = read()
+  }
+
+  const handleKeyInput = (key: string, keyInfo: Key): void => {
     frameMetrics?.recordInputEvent()
+    // 拆分后的顺序按键与渲染帧解耦：每次按键前从 controller 重读权威状态刷新
+    // refs（useSyncExternalStore 的 ref 桥只在 render 时更新），否则同 tick 的
+    // 第二个键会读到过期快照（如 j 后紧跟回车读到移动前的目录选中）。
+    syncPaneRef(paneRef, controller.getSessionPane?.bind(controller))
+    syncPaneRef(searchRef, controller.getSearchPane?.bind(controller))
+    syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller))
+    syncPaneRef(modelPaneRef, controller.getModelPane?.bind(controller))
+    syncPaneRef(helpPaneRef, controller.getHelpPane?.bind(controller))
+    syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller))
+    syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller))
+    syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller))
+    syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller))
+    syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller))
+    syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller))
+    syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller))
+    syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller))
+    syncPaneRef(feedbackPaneRef, controller.getFeedbackPane?.bind(controller))
+    syncPaneRef(workflowOverlayRef, controller.getWorkflowOverlay?.bind(controller))
+    syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller))
+    syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller))
     controller.noteUserActivity()
     if (toolDetailsPaneRef.current.open
       && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
@@ -2428,6 +2455,54 @@ export function TuiLoop({
         : current
     stateRef.current = next
     setState(next)
+  }
+
+  // PTY 或终端繁忙时，多次按键可能合并为一个块交付（如 "j\r"、"sr"）。
+  // 短的纯键序块拆成顺序按键逐个同步处理（handleKeyInput 每次按键前从
+  // controller 重读权威状态），保持物理按键顺序；长块视为批量文本输入
+  //（无 bracketed-paste 标记的粘贴）保持原样不拆。
+  useInput((key, keyInfo) => {
+    // Esc 与紧随其后的可打印键合并交付时（"\x1bg"），本应用没有 Alt 绑定，
+    // 拆成 Esc + 后续键处理（终端对 Esc 与 Alt 的区分本是时序约定）。
+    if (key.length > 1 && key.startsWith('\x1b') && !key.startsWith('\x1b[')
+      && !keyInfo.ctrl) {
+      const rest = key.slice(1)
+      if (rest.length > 0 && /^[\x20-\x7e\r]+$/u.test(rest)) {
+        handleKeyInput('', { ...keyInfo, meta: false, escape: true })
+        for (const char of rest) {
+          if (char === '\r') handleKeyInput(char, { ...keyInfo, meta: false, return: true })
+          else handleKeyInput(char, { ...keyInfo, meta: false })
+        }
+        return
+      }
+    }
+    const special = keyInfo.ctrl || keyInfo.meta || keyInfo.return || keyInfo.tab
+      || keyInfo.upArrow || keyInfo.downArrow || keyInfo.leftArrow
+      || keyInfo.rightArrow || keyInfo.pageUp || keyInfo.pageDown
+      || keyInfo.home || keyInfo.end || keyInfo.backspace || keyInfo.delete
+      || keyInfo.escape
+    if (!special && key.length > 1 && key.length <= 16) {
+      let rest = key
+      while (rest.length > 0) {
+        const boundary = rest.indexOf('\r')
+        if (boundary === 0) {
+          handleKeyInput('\r', { ...keyInfo, return: true })
+          rest = rest.slice(1)
+        } else if (boundary > 0) {
+          for (const char of rest.slice(0, boundary)) {
+            handleKeyInput(char, { ...keyInfo, return: false })
+          }
+          rest = rest.slice(boundary)
+        } else {
+          for (const char of rest) {
+            handleKeyInput(char, { ...keyInfo, return: false })
+          }
+          break
+        }
+      }
+      return
+    }
+    handleKeyInput(key, keyInfo)
   })
 
   const insertImageToken = (token: string): void => {

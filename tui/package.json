@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tui",
-  "version": "0.2.0-rc.2",
+  "version": "0.1.6-alpha.2",
   "type": "module",
   "license": "MIT",
   "description": "The dsh terminal-surface bundle: the deepseek-tui patch layer over dsh-base plus the runtime glue plugin (terminal guard, signal hooks, echo driver). No Host, HTTP, or browser layer.",
@@ -19,6 +19,10 @@
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
+    "./user-settings": {
+      "types": "./lib/types/tui-user-settings.d.ts",
+      "default": "./lib/tui-user-settings.js"
+    },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./src/*": "./src/*",
     "./package.json": "./package.json"
@@ -27,6 +31,7 @@
     "lib/index.js",
     "lib/invariant.js",
     "lib/startup.js",
+    "lib/tui-user-settings.js",
     "cordis.patch.yml",
     "lib/types/**/*.d.ts"
   ],
