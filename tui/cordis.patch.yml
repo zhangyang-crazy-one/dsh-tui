@@ -92,11 +92,9 @@
     # openai-official / anthropic-official so they do not collide with the
     # dormant llm-pi-ai catalog keys openai / anthropic that the Web Models
     # page already owns.
-    - id: llm-openai
-      name: "@deepseek-ai/dsh-llm-openai"
+    # llm-openai (@deepseek-ai/dsh-llm-openai) is source-mode only; it is not published to npm.
 
-    - id: llm-anthropic
-      name: "@deepseek-ai/dsh-llm-anthropic"
+    # llm-anthropic (@deepseek-ai/dsh-llm-anthropic) is source-mode only; it is not published to npm.
 
     # In-process OpenCode Zen header proxy (vendored from
     # zhangyang-crazy-one/dsh-zen-proxy, MIT). Listens on localhost

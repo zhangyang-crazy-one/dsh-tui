@@ -54,7 +54,7 @@ The unscoped `dsh-tui` package belongs to another maintainer. This project publi
 Install the official core engine and the TUI launcher globally (dozens of MB):
 
 ```text
-npm install --global @deepseek-ai/dsh
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui probe
 dsh-tui
@@ -62,7 +62,7 @@ dsh-tui
 
 In this mode, the launcher automatically detects the installed `dsh` executable and mounts the bundled prebuilt TUI extension without cloning the 2GB monorepo.
 
-Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a three-second timeout. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable; probing establishes executability, not compatibility with older Harness releases.
+Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a three-second timeout. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable; probing establishes executability, not compatibility with older Harness releases. The engine must be on the bundle's `0.1` release line: `@deepseek-ai/dsh` `latest` is now `0.2.x`, whose plugin APIs this bundle does not support, so the launcher refuses another line with the exact install command. `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the check.
 
 Lightweight launch uses `dsh --profile tui --patch <bundled-patch>` with a custom `tui` profile containing only `@deepseek-ai/dsh-base` and `patchReload: startup`. Existing profile manifests are preserved. The patch supplies the terminal runtime; the current `headless` profile adds its own runner and is not used. This release composition follows Harness `0.1.6-alpha.2`.
 

@@ -9,6 +9,10 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 const DEFAULT_SOURCE_URL = 'https://github.com/zhangyang-crazy-one/deepseek-harness.git'
 const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
 const PROBE_TIMEOUT_MS = 3000
+/** Harness release the bundled patch and dist were composed against. */
+export const COMPATIBLE_DSH_VERSION = '0.1.6-alpha.2'
+/** Engine release line (major.minor) whose plugin APIs the bundle targets. */
+const COMPATIBLE_DSH_LINE = COMPATIBLE_DSH_VERSION.split('.').slice(0, 2).join('.')
 
 /** @typedef {'missing' | 'directory' | 'file' | 'symlink' | 'other'} PathKind */
 
@@ -264,6 +268,26 @@ function runtimeState(settings, adapters) {
   return { ok: true, initialized: true }
 }
 
+/**
+ * Check a probed engine version against the bundle's release line. A different
+ * major.minor line changes plugin APIs the bundle calls (0.2 reworked jobs and
+ * llm-deepseek config), so launching would crash after the TUI takes the screen.
+ * @param {string} version - `dsh --version` output.
+ * @param {Readonly<Record<string, string | undefined>>} env - launcher environment.
+ * @returns {{ok: true} | {ok: false, reason: string}}
+ */
+export function engineCompatibility(version, env = {}) {
+  const match = /^(\d+)\.(\d+)\./u.exec(version.trim())
+  if (!match || env['DSH_TUI_SKIP_ENGINE_CHECK'] === '1') return { ok: true }
+  if (`${match[1]}.${match[2]}` === COMPATIBLE_DSH_LINE) return { ok: true }
+  return {
+    ok: false,
+    reason: `installed dsh ${version.trim()} is not supported by this dsh-tui, which is built for @deepseek-ai/dsh ${COMPATIBLE_DSH_VERSION}. `
+      + `Install the matching engine with \`npm install --global @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\` `
+      + '(or set DSH_TUI_SKIP_ENGINE_CHECK=1 to launch anyway)',
+  }
+}
+
 function launchTui({ args, mode, settings, adapters, env = {} }) {
   const effectiveMode = mode ?? settings.mode ?? 'auto'
 
@@ -276,11 +300,13 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   if (patchPath !== undefined) {
     const probe = probeInstalledDsh({ env, settings, adapters })
     if (probe.ok) {
+      const compatibility = engineCompatibility(probe.version, env)
+      if (!compatibility.ok) return reportError(adapters, compatibility.reason)
       return launchLightweightTui({ args, probe, patchPath, adapters, env, settings })
     }
     const explicit = settings.dshBin ?? env['DSH_BIN']
     if (effectiveMode === 'lightweight' || explicit?.trim()) {
-      return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh\` or use \`dsh-tui --source\``)
+      return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\` or use \`dsh-tui --source\``)
     }
   } else if (effectiveMode === 'lightweight') {
     return reportError(adapters, `bundled TUI patch not found under ${settings.packageRoot}; run \`dsh-tui update\` to initialize source runtime`)
@@ -295,7 +321,7 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   if (state.ok && !state.initialized) {
     adapters.writeError('dsh-tui: 未检测到系统已安装的 dsh 核心引擎。\n')
     adapters.writeError('dsh-tui: 推荐通过 npm 极速安装官方运行时（无需克隆完整源码仓库，仅需数十 MB）：\n')
-    adapters.writeError('dsh-tui:   npm install --global @deepseek-ai/dsh\n\n')
+    adapters.writeError(`dsh-tui:   npm install --global @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\n\n`)
     adapters.writeError('dsh-tui: 若您需要进行底层源码开发与测试，可运行:\n')
     adapters.writeError('dsh-tui:   dsh-tui update\n')
     adapters.writeError('dsh-tui:   dsh-tui --source\n')
@@ -338,6 +364,10 @@ function showProbe({ settings, packageVersion, adapters, env = {} }) {
     adapters.writeOut(`dsh: installed\n`)
     adapters.writeOut(`executable: ${probe.binPath}\n`)
     adapters.writeOut(`dsh engine version: ${probe.version}\n`)
+    const compatibility = engineCompatibility(probe.version, env)
+    adapters.writeOut(compatibility.ok
+      ? `engine compatibility: ok (built for ${COMPATIBLE_DSH_VERSION})\n`
+      : `engine compatibility: ${compatibility.reason}\n`)
     const patchPath = findBundledPatch(settings.packageRoot, adapters)
     adapters.writeOut(`bundled patch: ${patchPath ?? 'missing'}\n`)
     return 0

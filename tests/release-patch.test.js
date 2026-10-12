@@ -24,3 +24,12 @@ test('both shipped patches refer to existing artifacts and share the current rel
     assert.ok(root.includes(`"./dist/${file}.js"`))
   }
 })
+
+test('release projection drops rows for packages the published runtime lacks', () => {
+  const source = '- insert:\n    - id: tui-startup\n      name: "@deepseek-ai/dsh-tui/startup"\n    - id: llm-openai\n      name: "@deepseek-ai/dsh-llm-openai"\n    - id: zen-proxy\n      name: "./zen-proxy/index.js"\n    - id: llm-anthropic\n      name: "@deepseek-ai/dsh-llm-anthropic"\n    - id: tui-runtime\n      name: "@deepseek-ai/dsh-tui"\n'
+  const patch = releasePatch(source, './dist')
+  assert.doesNotMatch(patch, /name: "@deepseek-ai\/dsh-llm-(openai|anthropic)"/)
+  assert.match(patch, /# llm-openai \(@deepseek-ai\/dsh-llm-openai\) is source-mode only/)
+  const root = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
+  assert.doesNotMatch(root, /name: "@deepseek-ai\/dsh-llm-(openai|anthropic)"/)
+})

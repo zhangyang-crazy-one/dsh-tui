@@ -54,13 +54,15 @@ kind: "package-group"
 只需通过 npm 全局安装官方核心引擎与 TUI launcher（仅数十 MB），即可直接运行：
 
 ```text
-npm install --global @deepseek-ai/dsh
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui probe
 dsh-tui
 ```
 
 在此模式下，launcher 会自动探测全局 `dsh`，并挂载预构建的 TUI 扩展，无需克隆 2GB 的 monorepo 仓库。
+
+引擎须与本包的 `0.1` 发布线一致：`@deepseek-ai/dsh` 的 `latest` 现为 `0.2.x`，其插件 API 与本包不兼容，launcher 会拒绝其他发布线并给出确切的安装命令；设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过检查。
 
 ### 模式 B：源码模式（开发者调试）
 若需对 TUI 或 DSH 底层代码进行修改与调试：

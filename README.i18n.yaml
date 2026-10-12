@@ -1,5 +1,5 @@
 # Bilingual-pair consistency record: both languages carry equal authority.
 # This source-only mirror has no DSH pairing runner. Recompute with:
 #   git hash-object README.md README.zh.md
-README.md: 9edd0d7b9c067fc810fa59fc53525eed8be07dd9
-README.zh.md: 9f4e419aeb64eb7e676b7763caa9b69e835cf0dd
+README.md: edb29194ddad1e2a30f5c189c9fc201ca18a0a42
+README.zh.md: 9420fa2819ccc6fe2d4ab9a4c0bc6eb4ca69f890

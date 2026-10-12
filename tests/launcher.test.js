@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import {
+import { engineCompatibility,
   parseLauncherInvocation,
   probeInstalledDsh,
   resolveLauncherSettings,
@@ -652,4 +652,14 @@ test('an existing tui profile is preserved and PATH success stops package discov
   assert.deepEqual(fixture.calls.map(call => call.args), [
     ['--version'], ['--profile', 'tui', '--patch', '/pkg/cordis.patch.yml', '--dump-config'],
   ])
+})
+
+test('engineCompatibility admits the bundle release line and rejects other lines with an install hint', () => {
+  assert.deepEqual(engineCompatibility('0.1.6-alpha.2\n'), { ok: true })
+  assert.deepEqual(engineCompatibility('0.1.2-rc.1'), { ok: true })
+  assert.deepEqual(engineCompatibility('unknown'), { ok: true })
+  const rejected = engineCompatibility('0.2.0-rc.2')
+  assert.equal(rejected.ok, false)
+  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.1\.6-alpha\.2/)
+  assert.deepEqual(engineCompatibility('0.2.0-rc.2', { DSH_TUI_SKIP_ENGINE_CHECK: '1' }), { ok: true })
 })
