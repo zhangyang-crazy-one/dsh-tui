@@ -67,7 +67,7 @@ function collapseStickyText(text: string): string {
 export function formatStickyThinkingLabel(
   range: Pick<StickyReasoningRange, 'turnOrdinal' | 'durationMs'>,
 ): string {
-  return `💭 思考中 (第 ${String(range.turnOrdinal)} 轮 · ${(range.durationMs / 1000).toFixed(1)}s) · [Ctrl+O 折叠]`
+  return `💭 思考 (第 ${String(range.turnOrdinal)} 轮 · ${(range.durationMs / 1000).toFixed(1)}s) · [Ctrl+O 折叠]`
 }
 
 /**

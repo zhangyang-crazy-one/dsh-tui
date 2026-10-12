@@ -38070,14 +38070,25 @@ function escapeContent(text4) {
   ).replace(/\u001B/g, "\\x1b");
 }
 var EMOJI_OR_PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
+function isNarrowSymbol(code2) {
+  return code2 >= 9472 && code2 <= 9631 || code2 >= 160 && code2 <= 255 && code2 !== 169 && code2 !== 173 && code2 !== 174 || code2 >= 8208 && code2 <= 8231 || code2 >= 8240 && code2 <= 8251;
+}
 function displayWidth(text4) {
   if (text4 === "") return 0;
   let cols = 0;
   let simple = true;
   for (let i = 0; i < text4.length; i += 1) {
     const code2 = text4.charCodeAt(i);
-    if (code2 >= 32 && code2 <= 126) {
+    if (code2 >= 32 && code2 <= 126 || isNarrowSymbol(code2)) {
       cols += 1;
+    } else if (code2 === 27 && text4.charCodeAt(i + 1) === 91) {
+      let end = i + 2;
+      while (end < text4.length && /[0-9;:]/u.test(text4[end])) end += 1;
+      if (text4[end] !== "m") {
+        simple = false;
+        break;
+      }
+      i = end;
     } else if (code2 >= 19968 && code2 <= 40959 || code2 >= 13312 && code2 <= 19903 || code2 >= 12288 && code2 <= 12351 || code2 >= 65281 && code2 <= 65376) {
       cols += 2;
     } else {
@@ -49972,6 +49983,8 @@ var zh = {
   settingsSaveFailed: "\u2717 \u663E\u793A\u8BBE\u7F6E\u672A\u4FDD\u5B58 \xB7 \u8BF7\u91CD\u8BD5",
   inputHint: "\u8F93\u5165\u6D88\u606F",
   sendHint: "Enter \u53D1\u9001",
+  commandModeHint: "\u547D\u4EE4 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u6267\u884C \xB7 Esc \u53D6\u6D88",
+  mentionModeHint: "\u63D0\u53CA \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u63D2\u5165 \xB7 Esc \u53D6\u6D88",
   arguments: "\u53C2\u6570",
   result: "\u7ED3\u679C",
   diagnostics: "\u8BCA\u65AD\u5143\u6570\u636E",
@@ -50093,6 +50106,8 @@ var en = {
   settingsSaveFailed: "\u2717 Display setting was not saved \xB7 Retry",
   inputHint: "Type a message",
   sendHint: "Enter to send",
+  commandModeHint: "Command \xB7 \u2191\u2193 select \xB7 Enter run \xB7 Esc cancel",
+  mentionModeHint: "Mention \xB7 \u2191\u2193 select \xB7 Enter insert \xB7 Esc cancel",
   arguments: "Arguments",
   result: "Result",
   diagnostics: "Diagnostic metadata",
@@ -51674,7 +51689,7 @@ function collapseStickyText(text4) {
   return text4.replace(/\s+/gu, " ").trim();
 }
 function formatStickyThinkingLabel(range) {
-  return `\u{1F4AD} \u601D\u8003\u4E2D (\u7B2C ${String(range.turnOrdinal)} \u8F6E \xB7 ${(range.durationMs / 1e3).toFixed(1)}s) \xB7 [Ctrl+O \u6298\u53E0]`;
+  return `\u{1F4AD} \u601D\u8003 (\u7B2C ${String(range.turnOrdinal)} \u8F6E \xB7 ${(range.durationMs / 1e3).toFixed(1)}s) \xB7 [Ctrl+O \u6298\u53E0]`;
 }
 function formatStickyToolLabel(range) {
   const title = collapseStickyText(range.title);
@@ -56867,13 +56882,22 @@ function HelpPane({ lines, offset }) {
   const maxOffset2 = Math.max(0, lines.length - HELP_WINDOW);
   const safeOffset = Math.min(offset, maxOffset2);
   const visible = lines.slice(safeOffset, safeOffset + HELP_WINDOW);
+  const below = Math.max(0, lines.length - safeOffset - HELP_WINDOW);
   return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
     safeOffset > 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { dimColor: true, children: [
       "\u2026 \u8FD8\u6709 ",
       safeOffset,
       " \u884C"
     ] }) : null,
-    visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: escapeContent(line5) }, safeOffset + index2)),
+    visible.map((line5, index2) => (
+      // An empty Text collapses to zero rows; a space keeps section gaps.
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: line5 === "" ? " " : escapeContent(line5) }, safeOffset + index2)
+    )),
+    below > 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { dimColor: true, children: [
+      "\u2026 \u4E0B\u65B9\u8FD8\u6709 ",
+      below,
+      " \u884C"
+    ] }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc/Enter \u5173\u95ED"), "fgDim") })
   ] });
 }
@@ -57654,14 +57678,17 @@ function InputBar({
   const leftPrefix = "\u2502 ";
   const placeholder = tuiCopy("inputHint", locale);
   const sendHint = tuiCopy("sendHint", locale);
-  const leftHint = `\u203A ${placeholder} \xB7 ${sendHint}`;
+  const modeHint = commandMode ? tuiCopy("commandModeHint", locale) : mentionMode ? tuiCopy("mentionModeHint", locale) : void 0;
+  const leftHint = modeHint === void 0 ? `\u203A ${placeholder} \xB7 ${sendHint}` : `\u203A ${modeHint}`;
   const leftWidth = displayWidth(leftPrefix + leftHint);
   const chipWidth = chipText !== "" ? displayWidth(chipText) : 0;
   const canFitChip = chipWidth > 0 && leftWidth + chipWidth + 2 <= columns;
   const headerParts = [
     styled(escapeContent(leftPrefix), "accentText"),
-    styled(escapeContent(`\u203A ${placeholder}`), "fg"),
-    styled(escapeContent(` \xB7 ${sendHint}`), "fgDim"),
+    ...modeHint === void 0 ? [
+      styled(escapeContent(`\u203A ${placeholder}`), "fg"),
+      styled(escapeContent(` \xB7 ${sendHint}`), "fgDim")
+    ] : [styled(escapeContent(`\u203A ${modeHint}`), "accent")],
     ...canFitChip ? [
       " ".repeat(Math.max(1, columns - leftWidth - chipWidth)),
       styled(escapeContent(chipText), "fgDim")
@@ -57690,14 +57717,11 @@ function InputBar({
             sourceColumn += width;
             return styled(visible, token.kind === "command" || token.kind === "mention" ? "accent" : token.kind === "image" ? "fgDim" : "fg");
           });
-          const last = lineIndex === lines.length - 1;
           return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
             styled(escapeContent("\u2502 "), "accentText"),
             styled(escapeContent(lineIndex === 0 ? "> " : "  "), "accentText"),
             ...window2.hiddenPrefix ? [styled("\u2039", "fgDim")] : [],
-            ...tokenParts,
-            ...last && commandMode ? [styled(escapeContent(" /"), "fgDim")] : [],
-            ...last && mentionMode ? [styled(escapeContent(" @"), "fgDim")] : []
+            ...tokenParts
           ], "inputBg", columns) }, lineIndex);
         })
       ]
@@ -58644,6 +58668,15 @@ function hasControlCodepoint(value) {
   }
   return false;
 }
+function splitInputBurst(key, keyInfo) {
+  if (key.length < 2 || keyInfo.ctrl || keyInfo.meta || !/[\r\n]/u.test(key)) return void 0;
+  const text4 = key.replace(/\r\n?/gu, "\n");
+  if (hasControlCodepoint(text4.replace(/[\n\t]/gu, ""))) return void 0;
+  if (/^\n+$/u.test(text4)) return { kind: "submit", text: "" };
+  const body = text4.endsWith("\n") ? text4.slice(0, -1) : text4;
+  if (text4.endsWith("\n") && !body.includes("\n")) return { kind: "submit", text: body };
+  return { kind: "paste", text: body };
+}
 function isTextInput(key, keyInfo) {
   return key.length > 0 && !keyInfo.ctrl && !keyInfo.meta && !key.startsWith("[") && !hasControlCodepoint(key);
 }
@@ -59572,6 +59605,23 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       renaming: state.renaming
     };
   }
+  if (keyInfo.ctrl && (key === "u" || key === "w") && !modelPane.open && !search2.open && !helpPane.open) {
+    const caret = clampCaretIndex(state.text, state.caretIndex);
+    const before = state.text.slice(0, caret);
+    const start = key === "u" ? before.lastIndexOf("\n") + 1 : before.replace(/\S*\s*$/u, "").length;
+    const text4 = state.text.slice(0, start) + state.text.slice(caret);
+    return {
+      kind: "dispatch",
+      action: { kind: "none" },
+      text: text4,
+      commandQuery: text4.startsWith("/") ? text4.slice(1) : void 0,
+      prefixG: false,
+      renaming: state.renaming,
+      caretIndex: start,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
+    };
+  }
   if (keyInfo.leftArrow || keyInfo.rightArrow) {
     const caret = clampCaretIndex(state.text, state.caretIndex);
     return {
@@ -60114,7 +60164,7 @@ function TuiLoop({
       setMouseRailListener(void 0);
     };
   }, [controller, frameMetrics, issueViewportCommand]);
-  use_input_default((key, keyInfo) => {
+  const handleKey = (key, keyInfo) => {
     frameMetrics?.recordInputEvent();
     controller.noteUserActivity();
     if (toolDetailsPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
@@ -60271,6 +60321,17 @@ function TuiLoop({
     } : current;
     stateRef.current = next;
     setState(next);
+  };
+  use_input_default((key, keyInfo) => {
+    const burst = splitInputBurst(key, keyInfo);
+    if (burst === void 0) {
+      handleKey(key, keyInfo);
+    } else if (burst.kind === "paste") {
+      handlePaste(burst.text);
+    } else {
+      if (burst.text !== "") handleKey(burst.text, { ...keyInfo, return: false });
+      handleKey("", { ...keyInfo, return: true });
+    }
   });
   const insertImageToken = (token) => {
     const current = stateRef.current;
@@ -60290,7 +60351,7 @@ function TuiLoop({
     stateRef.current = next;
     setState(next);
   };
-  use_paste_default((pasted) => {
+  const handlePaste = (pasted) => {
     controller.noteUserActivity();
     if (pluginsPaneRef.current.open) {
       if (pluginsPaneRef.current.mode === "input") controller.dispatch({
@@ -60332,7 +60393,8 @@ function TuiLoop({
     };
     stateRef.current = next;
     setState(next);
-  });
+  };
+  use_paste_default(handlePaste);
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
   const mentionQuery = activeMentionQuery(state.text);
   const mentionMode = mentionQuery !== void 0 && !state.mentionDismissed;
@@ -65241,6 +65303,39 @@ function latestAssistantCopyTarget(history) {
   const code2 = lastFencedCode(message.text);
   return code2 === void 0 ? { kind: "message", text: message.text } : { kind: "code", text: code2 };
 }
+function reasoningDurationsFromStream(stream) {
+  if (!Array.isArray(stream)) return [];
+  const records = stream;
+  const startOf = (record2) => record2.time0 ?? record2.time;
+  const durations = [];
+  let blockIndex;
+  let blockStart = 0;
+  let blockEnd = 0;
+  const close = (end) => {
+    if (blockIndex === void 0) return;
+    durations.push(Math.max(0, end - blockStart));
+    blockIndex = void 0;
+  };
+  for (const record2 of records) {
+    const start = startOf(record2);
+    if (typeof start !== "number") continue;
+    if (record2.type === "reasoning-chunks") {
+      const end = start + (record2.dt ?? []).reduce((sum, gap) => sum + gap, 0);
+      if (blockIndex !== void 0 && record2.index === blockIndex) {
+        blockEnd = end;
+        continue;
+      }
+      close(start);
+      blockIndex = record2.index ?? -1;
+      blockStart = start;
+      blockEnd = end;
+    } else if (record2.type !== "chunk") {
+      close(start);
+    }
+  }
+  close(blockEnd);
+  return durations;
+}
 function projectUserContent(blocks) {
   let imageOrdinal = 0;
   return blocks.map((block) => {
@@ -65257,16 +65352,18 @@ function projectUserContent(blocks) {
     }
   }).join("");
 }
-function projectAssistantBlocks(blocks) {
+function projectAssistantBlocks(blocks, reasoningDurations = []) {
   const content3 = [];
   const toolCalls = [];
+  let reasoningOrdinal = 0;
   for (const block of blocks) {
     switch (block.type) {
       case "text":
         content3.push({ kind: "text", text: block.text });
         break;
       case "reasoning":
-        content3.push({ kind: "reasoning", text: block.text, durationMs: 0 });
+        content3.push({ kind: "reasoning", text: block.text, durationMs: reasoningDurations[reasoningOrdinal] ?? 0 });
+        reasoningOrdinal += 1;
         break;
       case "tool-call":
         toolCalls.push({
@@ -65362,10 +65459,11 @@ function createProjector() {
       const start = reasoningStarts[index2];
       const end = reasoningEnds[index2] ?? turnEventAt;
       index2 += 1;
+      const durable = item.durationMs ?? 0;
       return {
         kind: "reasoning",
         text: item.text,
-        durationMs: Math.max(0, end - start)
+        durationMs: durable > 0 ? durable : Math.max(0, end - start)
       };
     });
     reasoningStarts.length = index2;
@@ -65393,8 +65491,8 @@ function createProjector() {
     stepCommitted = true;
     updateActiveTurn();
   }
-  function replaceStep(blocks) {
-    const projected = projectAssistantBlocks(blocks);
+  function replaceStep(blocks, reasoningDurations) {
+    const projected = projectAssistantBlocks(blocks, reasoningDurations);
     stepContent = projected.content;
     stepToolCalls = projected.toolCalls;
     stepCommitted = false;
@@ -65451,7 +65549,10 @@ function createProjector() {
       }
       case "assistant/message": {
         if (activeTurn !== void 0) {
-          replaceStep(event.data.message.content);
+          replaceStep(
+            event.data.message.content,
+            reasoningDurationsFromStream(event.data.stream)
+          );
           commitStep();
           lastUsageOutputTokens = event.data.usage?.outputTokens;
           lastStepWallMs = Math.max(0, event.time - stepStartedAt);
@@ -65582,8 +65683,28 @@ ${formattedError}` });
       }
     }
   }
+  function pushStreamFrame(frame) {
+    if (activeTurn === void 0) return;
+    switch (frame.type) {
+      case "start":
+        assembler = new BlockAssembler();
+        replaceStep([]);
+        return;
+      case "chunk":
+        assembler ??= new BlockAssembler();
+        turnEventAt = Math.max(turnEventAt, frame.time);
+        assembler.push(frame.chunk);
+        replaceStep(assembler.blocks());
+        return;
+      case "end":
+        if (frame.outcome.kind !== "committed" && !stepCommitted) replaceStep([]);
+        assembler = void 0;
+        return;
+    }
+  }
   return {
     push: push3,
+    pushStreamFrame,
     seed(events) {
       if (!events || !Array.isArray(events)) return;
       for (const event of events) push3(event);
@@ -83353,6 +83474,23 @@ var LOCAL_COMMANDS = [
   { name: "resume", description: "Switch or resume a session" },
   { name: "settings", description: "Edit settings, catalogs, and General" }
 ];
+var ZH_COMMAND_DESCRIPTIONS = {
+  compact: "\u538B\u7F29\u8F83\u65E9\u7684\u5BF9\u8BDD\u5386\u53F2",
+  export: "\u5BFC\u51FA\u5F53\u524D\u4F1A\u8BDD\u4E3A Markdown \u6587\u4EF6",
+  feedback: "\u8BB0\u5F55\u5BF9\u672C\u4F1A\u8BDD\u7684\u53CD\u9988",
+  files: "\u6D4F\u89C8\u5E76\u9884\u89C8\u5DE5\u4F5C\u533A\u6587\u4EF6",
+  goal: "\u8BBE\u7F6E\u6216\u67E5\u770B\u957F\u4EFB\u52A1\u76EE\u6807",
+  help: "\u547D\u4EE4\u4E0E\u5FEB\u6377\u952E\u901F\u67E5",
+  key: "\u8BBE\u7F6E\u6216\u66F4\u65B0 API \u5BC6\u94A5",
+  login: "\u8BBE\u7F6E\u6216\u66F4\u65B0 API \u5BC6\u94A5\uFF08\u540C /key\uFF09",
+  model: "\u5207\u6362\u5F53\u524D\u6A21\u578B",
+  new: "\u5F00\u59CB\u65B0\u4F1A\u8BDD",
+  permission: "\u5207\u6362\u6743\u9650\u9884\u8BBE\uFF08\u6C99\u7BB1\u6A21\u5F0F + \u5BA1\u6279\u7B56\u7565\uFF09",
+  plan: "\u8FDB\u5165\u6216\u9000\u51FA\u8BA1\u5212\u6A21\u5F0F",
+  reload: "\u91CD\u542F\u8FDB\u7A0B\u5E76\u6062\u590D\u5F53\u524D\u4F1A\u8BDD",
+  resume: "\u5207\u6362\u6216\u6062\u590D\u4F1A\u8BDD",
+  settings: "\u7F16\u8F91\u8BBE\u7F6E\u3001\u6A21\u578B\u76EE\u5F55\u4E0E\u901A\u7528\u9009\u9879"
+};
 var RuntimeController = class _RuntimeController {
   /**
    * Create a controller and immediately subscribe to the global Session event
@@ -83420,6 +83558,13 @@ var RuntimeController = class _RuntimeController {
         if (agent !== this.agent || status !== "idle") return;
         this.drainDraftFifo();
         this.notifyRunSettled();
+      }),
+      // Session format v3 persists no per-chunk events; live text and
+      // reasoning arrive only on this transient channel.
+      ctx.on("agent/assistant-stream", ({ agent, frame }) => {
+        if (agent !== this.liveHandle?.agent) return;
+        this.projector.pushStreamFrame(frame);
+        this.emit();
       })
     ];
     this.disposeAgentInboxEvents = () => {
@@ -87040,7 +87185,11 @@ var RuntimeController = class _RuntimeController {
       name: commandName,
       description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? "on" : "off", locale)})`
     }));
-    return [...registry2, ...LOCAL_COMMANDS, ...displayCommands, { name: "plugins", description: tuiCopy("pluginsCommand", locale) }, { name: "tools", description: tuiCopy("commandTools", locale) }].sort(
+    const localized = [...registry2, ...LOCAL_COMMANDS].map((command) => {
+      const zh2 = locale === "zh-CN" ? ZH_COMMAND_DESCRIPTIONS[command.name] : void 0;
+      return zh2 === void 0 ? command : { ...command, description: zh2 };
+    });
+    return [...localized, ...displayCommands, { name: "plugins", description: tuiCopy("pluginsCommand", locale) }, { name: "tools", description: tuiCopy("commandTools", locale) }].sort(
       (left, right) => left.name < right.name ? -1 : 1
     );
   }
@@ -87838,16 +87987,18 @@ var RuntimeController = class _RuntimeController {
       return `/${command.name} \u2014 ${command.description}${hint}`;
     });
     return [
-      "/help \u2014 \u547D\u4EE4\u4E0E\u952E\u4F4D\u901F\u67E5",
-      ...commands,
-      "",
+      "\u2500\u2500 \u5FEB\u6377\u952E \u2500\u2500",
       "\u952E\u4F4D: Ctrl+C \u505C\u6B62/\u9000\u51FA \xB7 Ctrl+O \u663E\u793A/\u9690\u85CF\u601D\u8003 \xB7 Ctrl+N \u65B0\u4F1A\u8BDD \xB7 Ctrl+K \u641C\u7D22 \xB7 Ctrl+T \u65F6\u95F4\u7EBF",
       "Ctrl+E \u5DE5\u5177\u5361 \xB7 y/n \u5BA1\u6279 \xB7 /permission \xB7 /settings \xB7 e/r \u5BFC\u51FA\u91CD\u8F7D",
-      "g a \u5B50\u4EE3\u7406 \xB7 g t \u5DE5\u4F5C\u533A \xB7 g f \u53CD\u9988 \xB7 g w \u5DE5\u4F5C\u6D41",
+      "\u7F16\u8F91: Shift+Enter \u6362\u884C \xB7 Ctrl+U \u5220\u81F3\u884C\u9996 \xB7 Ctrl+W \u5220\u524D\u4E00\u8BCD \xB7 \u2191\u2193 \u5386\u53F2",
+      "g a \u5B50\u4EE3\u7406 \xB7 g t \u5DE5\u4F5C\u533A \xB7 g f \u53CD\u9988 \xB7 g w \u5DE5\u4F5C\u6D41 \xB7 g p \u63D2\u4EF6",
       "\u2191\u2193/jk \u6EDA\u52A8 \xB7 g s \u4F1A\u8BDD\u5217\u8868 \xB7 Tab \u8865\u5168 \xB7 Esc \u5173\u95ED \xB7 / \u547D\u4EE4 \xB7 @ \u63D0\u53CA",
       "\u6EDA\u8F6E\u6EDA\u52A8 \xB7 \u70B9\u51FB\u6253\u5F00\u94FE\u63A5 \xB7 \u62D6\u9009\u590D\u5236",
       "/files \u5DE5\u4F5C\u533A \xB7 /plan \u8BA1\u5212 \xB7 /goal \u76EE\u6807 \xB7 /compact \u538B\u7F29",
-      "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D"
+      "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D",
+      "",
+      "\u2500\u2500 \u547D\u4EE4 \u2500\u2500",
+      ...commands
     ];
   }
   /**

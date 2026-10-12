@@ -107,9 +107,9 @@ export interface InputBarProps {
   locale?: TuiLocale
   /** The buffered text to display. */
   text: string
-  /** Command menu open state (renders the `/` hint). */
+  /** Command menu open state (the header names the command mode). */
   commandMode: boolean
-  /** Mention mode open state (renders the `@` hint). */
+  /** Mention mode open state (the header names the mention mode). */
   mentionMode: boolean
   /** Palette and status rows below the composer, excluded from its caret row. */
   rowsBelow?: number
@@ -192,14 +192,22 @@ export function InputBar({
   const leftPrefix = '│ '
   const placeholder = tuiCopy('inputHint', locale)
   const sendHint = tuiCopy('sendHint', locale)
-  const leftHint = `› ${placeholder} · ${sendHint}`
+  // The open palette owns Enter/Esc, so the header names the active mode.
+  const modeHint = commandMode
+    ? tuiCopy('commandModeHint', locale)
+    : mentionMode ? tuiCopy('mentionModeHint', locale) : undefined
+  const leftHint = modeHint === undefined ? `› ${placeholder} · ${sendHint}` : `› ${modeHint}`
   const leftWidth = displayWidth(leftPrefix + leftHint)
   const chipWidth = chipText !== '' ? displayWidth(chipText) : 0
   const canFitChip = chipWidth > 0 && leftWidth + chipWidth + 2 <= columns
   const headerParts = [
     styled(escapeContent(leftPrefix), 'accentText'),
-    styled(escapeContent(`› ${placeholder}`), 'fg'),
-    styled(escapeContent(` · ${sendHint}`), 'fgDim'),
+    ...(modeHint === undefined
+      ? [
+        styled(escapeContent(`› ${placeholder}`), 'fg'),
+        styled(escapeContent(` · ${sendHint}`), 'fgDim'),
+      ]
+      : [styled(escapeContent(`› ${modeHint}`), 'accent')]),
     ...(canFitChip
       ? [
         ' '.repeat(Math.max(1, columns - leftWidth - chipWidth)),
@@ -233,7 +241,6 @@ export function InputBar({
               ? 'fgDim'
               : 'fg')
         })
-        const last = lineIndex === lines.length - 1
         return (
           <Text key={lineIndex} wrap="truncate">
             {paintBackgroundRow([
@@ -241,8 +248,6 @@ export function InputBar({
               styled(escapeContent(lineIndex === 0 ? '> ' : '  '), 'accentText'),
               ...(window.hiddenPrefix ? [styled('‹', 'fgDim')] : []),
               ...tokenParts,
-              ...(last && commandMode ? [styled(escapeContent(' /'), 'fgDim')] : []),
-              ...(last && mentionMode ? [styled(escapeContent(' @'), 'fgDim')] : []),
             ], 'inputBg', columns)}
           </Text>
         )

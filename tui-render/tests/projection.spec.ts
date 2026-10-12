@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createProjector, EMPTY_VIEW } from '../src/projection.ts'
+import { createProjector, EMPTY_VIEW, reasoningDurationsFromStream } from '../src/projection.ts'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 function event(seq: number, type: string, data: unknown): SessionEvent {
@@ -971,5 +971,62 @@ describe('createProjector', () => {
     const row = projector.snapshot().history.find(item => item.kind === 'assistant')
     expect(row).toMatchObject({ kind: 'assistant', text: 'done', turnOrdinal: 1, workspaceChangesSeq: 5 })
     expect(row?.workspaceChanges).toBeUndefined()
+  })
+
+  it('renders v3 live stream frames before the durable message commits', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'step/start', { turn: 1, step: 1 }))
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 100, chunk: { type: 'block-start', index: 0, blockType: 'reasoning' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 100, chunk: { type: 'reasoning-delta', index: 0, text: 'plan ' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 900, chunk: { type: 'reasoning-delta', index: 0, text: 'more' } })
+    expect(projector.snapshot().activeTurn?.reasoningText).toBe('plan more')
+    projector.pushStreamFrame({ type: 'chunk', time: 1600, chunk: { type: 'block-start', index: 1, blockType: 'text' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 1600, chunk: { type: 'text-delta', index: 1, text: 'hel' } })
+    const live = projector.snapshot().activeTurn
+    expect(live?.assistantText).toBe('hel')
+    expect(live?.content.find(item => item.kind === 'reasoning')).toMatchObject({ durationMs: 1500 })
+  })
+
+  it('drops an abandoned attempt and lets a retry replace its partial', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 2, chunk: { type: 'text-delta', index: 0, text: 'stale' } })
+    projector.pushStreamFrame({ type: 'end', outcome: { kind: 'abandoned' } })
+    expect(projector.snapshot().activeTurn?.assistantText).toBe('')
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 3, chunk: { type: 'text-delta', index: 0, text: 'fresh' } })
+    expect(projector.snapshot().activeTurn?.assistantText).toBe('fresh')
+  })
+
+  it('ignores stream frames between turns', () => {
+    const projector = createProjector()
+    projector.pushStreamFrame({ type: 'chunk', time: 1, chunk: { type: 'text-delta', index: 0, text: 'x' } })
+    expect(projector.snapshot()).toEqual(EMPTY_VIEW)
+  })
+
+  it('replays reasoning durations from the durable timed stream', () => {
+    const stream = [
+      { type: 'reasoning-chunks', time0: 1000, index: 0, dt: [200, 300], texts: ['a', 'b', 'c'] },
+      { type: 'text-chunks', time0: 2500, index: 1, dt: [10], texts: ['x', 'y'] },
+    ]
+    expect(reasoningDurationsFromStream(stream)).toEqual([1500])
+    expect(reasoningDurationsFromStream(undefined)).toEqual([])
+    const projector = createProjector()
+    projector.seed([
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        stream,
+        message: { id: 'm', role: 'assistant', content: [{ type: 'reasoning', text: 'abc' }, { type: 'text', text: 'xy' }] },
+      }),
+      event(4, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ])
+    const [row] = projector.snapshot().history
+    expect(row).toMatchObject({ reasoningDurationMs: 1500 })
   })
 })

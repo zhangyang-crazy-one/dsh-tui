@@ -398,6 +398,34 @@ function hasControlCodepoint(value: string): boolean {
   return false
 }
 
+/** How one unbracketed multi-byte input chunk containing line breaks should apply. */
+export type InputBurst =
+  | { readonly kind: 'submit'; readonly text: string }
+  | { readonly kind: 'paste'; readonly text: string }
+
+/**
+ * Split an input chunk that carries typed text and line breaks together.
+ * Ink delivers such a chunk (fast typing under load, tmux/SSH batching, IME
+ * commit plus Enter, or a paste without bracketed-paste mode) as one input
+ * string with no `return` flag, and its control bytes would otherwise make
+ * the whole chunk non-text. A single trailing break means "type, then press
+ * Enter"; interior breaks mean pasted multi-line text, which is inserted
+ * without submitting.
+ * @param key - raw Ink input string.
+ * @param keyInfo - Ink key flags for the chunk.
+ * @returns the burst interpretation, or undefined for ordinary input.
+ */
+export function splitInputBurst(key: string, keyInfo: Key): InputBurst | undefined {
+  if (key.length < 2 || keyInfo.ctrl || keyInfo.meta || !/[\r\n]/u.test(key)) return undefined
+  const text = key.replace(/\r\n?/gu, '\n')
+  // Any other control byte is an unrecognized sequence, not typed text.
+  if (hasControlCodepoint(text.replace(/[\n\t]/gu, ''))) return undefined
+  if (/^\n+$/u.test(text)) return { kind: 'submit', text: '' }
+  const body = text.endsWith('\n') ? text.slice(0, -1) : text
+  if (text.endsWith('\n') && !body.includes('\n')) return { kind: 'submit', text: body }
+  return { kind: 'paste', text: body }
+}
+
 function isTextInput(key: string, keyInfo: Key): boolean {
   return (
     key.length > 0 &&
@@ -1558,6 +1586,27 @@ export function mapKeyEvent(
       renaming: state.renaming,
     }
   }
+  // Readline-style kills: Ctrl+U clears to the start of the caret's line,
+  // Ctrl+W deletes the word before the caret.
+  if (keyInfo.ctrl && (key === 'u' || key === 'w') && !modelPane.open && !search.open && !helpPane.open) {
+    const caret = clampCaretIndex(state.text, state.caretIndex)
+    const before = state.text.slice(0, caret)
+    const start = key === 'u'
+      ? before.lastIndexOf('\n') + 1
+      : before.replace(/\S*\s*$/u, '').length
+    const text = state.text.slice(0, start) + state.text.slice(caret)
+    return {
+      kind: 'dispatch',
+      action: { kind: 'none' as never },
+      text,
+      commandQuery: text.startsWith('/') ? text.slice(1) : undefined,
+      prefixG: false,
+      renaming: state.renaming,
+      caretIndex: start,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
+    }
+  }
   // ←/→ move the composer caret one grapheme; ↑/↓ navigate prompt history
   // (or move caret vertically across lines in multiline text), never scrolling the conversation.
   if (keyInfo.leftArrow || keyInfo.rightArrow) {
@@ -2283,7 +2332,7 @@ export function TuiLoop({
       setMouseRailListener(undefined)
     }
   }, [controller, frameMetrics, issueViewportCommand])
-  useInput((key, keyInfo) => {
+  const handleKey = (key: string, keyInfo: Key): void => {
     frameMetrics?.recordInputEvent()
     controller.noteUserActivity()
     if (toolDetailsPaneRef.current.open
@@ -2478,6 +2527,18 @@ export function TuiLoop({
         : current
     stateRef.current = next
     setState(next)
+  }
+  useInput((key, keyInfo) => {
+    const burst = splitInputBurst(key, keyInfo)
+    if (burst === undefined) {
+      handleKey(key, keyInfo)
+    } else if (burst.kind === 'paste') {
+      handlePaste(burst.text)
+    } else {
+      // stateRef is written synchronously, so Enter sees the typed text.
+      if (burst.text !== '') handleKey(burst.text, { ...keyInfo, return: false })
+      handleKey('', { ...keyInfo, return: true })
+    }
   })
 
   const insertImageToken = (token: string): void => {
@@ -2499,7 +2560,7 @@ export function TuiLoop({
     setState(next)
   }
 
-  usePaste((pasted: string) => {
+  const handlePaste = (pasted: string): void => {
     controller.noteUserActivity()
     if (pluginsPaneRef.current.open) {
       if (pluginsPaneRef.current.mode === 'input') controller.dispatch({ kind: 'plugins-input',
@@ -2554,7 +2615,8 @@ export function TuiLoop({
     }
     stateRef.current = next
     setState(next)
-  })
+  }
+  usePaste(handlePaste)
 
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))

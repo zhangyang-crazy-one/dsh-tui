@@ -71,6 +71,12 @@ describe('HelpPane', () => {
     expect(renderPane({ lines: many })).not.toContain('… 还有')
   })
 
+  it('announces rows hidden below the window', () => {
+    const many = Array.from({ length: 30 }, (_, index) => `line ${index}`)
+    expect(renderPane({ lines: many })).toContain('… 下方还有 10 行')
+    expect(renderPane({ lines: many, offset: 10 })).not.toContain('下方还有')
+  })
+
   it('renders an empty sheet with only the footer', () => {
     const out = renderPane({ lines: [] })
     expect(out).toContain('↑↓/jk 滚动 · Esc/Enter 关闭')

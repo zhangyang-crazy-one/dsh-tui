@@ -190,11 +190,11 @@ describe('AppShell', () => {
           title: 'title',
           badge: 'badge',
           children: createElement(Text, null, 'CONTENT'),
-          topDividerLabel: '💭 思考中 (14.2s) · [Ctrl+O 折叠]',
+          topDividerLabel: '💭 思考 (14.2s) · [Ctrl+O 折叠]',
         },
       ),
     )
-    expect(stripAnsi(out)).toContain('─── 💭 思考中 (14.2s) · [Ctrl+O 折叠] ───')
+    expect(stripAnsi(out)).toContain('─── 💭 思考 (14.2s) · [Ctrl+O 折叠] ───')
   })
 
   it('draws a thin separator above the status slot when status is provided', () => {

@@ -1009,6 +1009,28 @@ const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
 ]
 
 /**
+ * Chinese palette copy for registry and local commands whose descriptors
+ * carry upstream English text. A command missing here keeps its own text.
+ */
+const ZH_COMMAND_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  compact: '压缩较早的对话历史',
+  export: '导出当前会话为 Markdown 文件',
+  feedback: '记录对本会话的反馈',
+  files: '浏览并预览工作区文件',
+  goal: '设置或查看长任务目标',
+  help: '命令与快捷键速查',
+  key: '设置或更新 API 密钥',
+  login: '设置或更新 API 密钥（同 /key）',
+  model: '切换当前模型',
+  new: '开始新会话',
+  permission: '切换权限预设（沙箱模式 + 审批策略）',
+  plan: '进入或退出计划模式',
+  reload: '重启进程并恢复当前会话',
+  resume: '切换或恢复会话',
+  settings: '编辑设置、模型目录与通用选项',
+}
+
+/**
  * Owns one committed Agent handle and every mutation derived from its Session.
  * The global `session/event` listener compares the authoritative Session object
  * with the committed `liveHandle.agent.session` before projection, interaction
@@ -1367,6 +1389,13 @@ export class RuntimeController implements TuiController {
         if (agent !== this.agent || status !== 'idle') return
         this.drainDraftFifo()
         this.notifyRunSettled()
+      }),
+      // Session format v3 persists no per-chunk events; live text and
+      // reasoning arrive only on this transient channel.
+      ctx.on('agent/assistant-stream', ({ agent, frame }) => {
+        if (agent !== this.liveHandle?.agent) return
+        this.projector.pushStreamFrame(frame)
+        this.emit()
       }),
     ]
     this.disposeAgentInboxEvents = () => {
@@ -4932,7 +4961,11 @@ export class RuntimeController implements TuiController {
       name: commandName,
       description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? 'on' : 'off', locale)})`,
     }))
-    return [...registry, ...LOCAL_COMMANDS, ...displayCommands, { name: 'plugins', description: tuiCopy('pluginsCommand', locale) }, { name: 'tools', description: tuiCopy('commandTools', locale) }].sort((left, right) =>
+    const localized = [...registry, ...LOCAL_COMMANDS].map(command => {
+      const zh = locale === 'zh-CN' ? ZH_COMMAND_DESCRIPTIONS[command.name] : undefined
+      return zh === undefined ? command : { ...command, description: zh }
+    })
+    return [...localized, ...displayCommands, { name: 'plugins', description: tuiCopy('pluginsCommand', locale) }, { name: 'tools', description: tuiCopy('commandTools', locale) }].sort((left, right) =>
       left.name < right.name ? -1 : 1,
     )
   }
@@ -5839,17 +5872,20 @@ export class RuntimeController implements TuiController {
         command.input === undefined ? '' : ` 输入: ${command.input.hint}`
       return `/${command.name} — ${command.description}${hint}`
     })
+    // Shortcuts lead: they are compact and otherwise fall below the window.
     return [
-      '/help — 命令与键位速查',
-      ...commands,
-      '',
+      '── 快捷键 ──',
       '键位: Ctrl+C 停止/退出 · Ctrl+O 显示/隐藏思考 · Ctrl+N 新会话 · Ctrl+K 搜索 · Ctrl+T 时间线',
       'Ctrl+E 工具卡 · y/n 审批 · /permission · /settings · e/r 导出重载',
-      'g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流',
+      '编辑: Shift+Enter 换行 · Ctrl+U 删至行首 · Ctrl+W 删前一词 · ↑↓ 历史',
+      'g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流 · g p 插件',
       '↑↓/jk 滚动 · g s 会话列表 · Tab 补全 · Esc 关闭 · / 命令 · @ 提及',
       '滚轮滚动 · 点击打开链接 · 拖选复制',
       '/files 工作区 · /plan 计划 · /goal 目标 · /compact 压缩',
       '/model 模型选择 · /new 新会话 · /help 帮助 · /export 导出会话 · /settings 设置 · /resume 会话 · /reload 重载',
+      '',
+      '── 命令 ──',
+      ...commands,
     ]
   }
 

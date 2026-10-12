@@ -39,6 +39,21 @@ export function escapeContent(text: string): string {
 const EMOJI_OR_PICTOGRAPHIC = /\p{Extended_Pictographic}/u
 
 /**
+ * Single-column symbols the TUI draws constantly (box-drawing gutters, rules,
+ * `·`, `…`, `›`). None is pictographic, emoji-capable, or combining, so each
+ * measures 1 alone; a following combining mark or selector is itself outside
+ * every fast range and still sends the whole string to the exact path.
+ * @param code - one UTF-16 code unit.
+ * @returns whether it is a known narrow symbol.
+ */
+function isNarrowSymbol(code: number): boolean {
+  return (code >= 0x2500 && code <= 0x259f) // box drawing, block elements
+    || (code >= 0x00a0 && code <= 0x00ff && code !== 0x00a9 && code !== 0x00ad && code !== 0x00ae)
+    || (code >= 0x2010 && code <= 0x2027) // dashes, quotes, bullet, ellipsis
+    || (code >= 0x2030 && code <= 0x203b) // per-mille, primes, ‹ ›, ※
+}
+
+/**
  * The number of terminal columns a string occupies.
  *
  * Counts printable ASCII as 1 column, CJK glyphs as 2 columns, standard emojis
@@ -55,8 +70,18 @@ export function displayWidth(text: string): number {
   let simple = true
   for (let i = 0; i < text.length; i += 1) {
     const code = text.charCodeAt(i)
-    if (code >= 0x20 && code <= 0x7e) {
+    if ((code >= 0x20 && code <= 0x7e) || isNarrowSymbol(code)) {
       cols += 1
+    } else if (code === 0x1b && text.charCodeAt(i + 1) === 0x5b) {
+      // A complete SGR sequence (ESC [ params m) is zero-width, exactly as
+      // string-width strips it; any other escape takes the exact path.
+      let end = i + 2
+      while (end < text.length && /[0-9;:]/u.test(text[end] as string)) end += 1
+      if (text[end] !== 'm') {
+        simple = false
+        break
+      }
+      i = end
     } else if (
       (code >= 0x4e00 && code <= 0x9fff)
       || (code >= 0x3400 && code <= 0x4dbf)

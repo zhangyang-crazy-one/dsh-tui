@@ -1,7 +1,7 @@
 /** mapKeyEvent against Ink's real input contract (boolean flags, '\r' Enter). */
 
 import { describe, expect, it } from 'vitest'
-import { feedbackLabel, feedbackLine, mapKeyEvent, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, activeMentionQuery } from '../src/loop.tsx'
+import { feedbackLabel, feedbackLine, mapKeyEvent, splitInputBurst, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, activeMentionQuery } from '../src/loop.tsx'
 import type { MentionCandidate } from '../src/mention.tsx'
 import type { LoopInputState } from '../src/loop.tsx'
 
@@ -82,6 +82,47 @@ function keyInfo(
     ...overrides,
   }
 }
+
+describe('unbracketed input bursts', () => {
+  it('splits typed text plus a trailing Enter into a submit', () => {
+    expect(splitInputBurst('hello\r', keyInfo())).toEqual({ kind: 'submit', text: 'hello' })
+    expect(splitInputBurst('你好\r\n', keyInfo())).toEqual({ kind: 'submit', text: '你好' })
+    expect(splitInputBurst('\r\r', keyInfo())).toEqual({ kind: 'submit', text: '' })
+  })
+
+  it('treats interior line breaks as a multi-line paste that does not submit', () => {
+    expect(splitInputBurst('a\rb\r', keyInfo())).toEqual({ kind: 'paste', text: 'a\nb' })
+    expect(splitInputBurst('a\nb', keyInfo())).toEqual({ kind: 'paste', text: 'a\nb' })
+  })
+
+  it('leaves ordinary, modified, and escape-bearing input alone', () => {
+    expect(splitInputBurst('\r', keyInfo({ return: true }))).toBeUndefined()
+    expect(splitInputBurst('hello', keyInfo())).toBeUndefined()
+    expect(splitInputBurst('a\r', keyInfo({ meta: true }))).toBeUndefined()
+    expect(splitInputBurst('a\u0007\r', keyInfo())).toBeUndefined()
+  })
+})
+
+describe('readline kills', () => {
+  function kill(text: string, key: 'u' | 'w', caretIndex = text.length) {
+    const effect = mapKeyEvent({ ...EMPTY, text, caretIndex }, key, keyInfo({ ctrl: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH)
+    if (effect.kind !== 'dispatch') throw new Error('expected dispatch')
+    return { text: effect.text, caret: effect.caretIndex }
+  }
+
+  it('Ctrl+U clears to the start of the caret line', () => {
+    expect(kill('hello world', 'u')).toEqual({ text: '', caret: 0 })
+    expect(kill('one\ntwo three', 'u')).toEqual({ text: 'one\n', caret: 4 })
+    expect(kill('hello world', 'u', 5)).toEqual({ text: ' world', caret: 0 })
+  })
+
+  it('Ctrl+W deletes the word before the caret', () => {
+    expect(kill('foo bar  ', 'w')).toEqual({ text: 'foo ', caret: 4 })
+    expect(kill('foo bar', 'w')).toEqual({ text: 'foo ', caret: 4 })
+    expect(kill('   ', 'w')).toEqual({ text: '', caret: 0 })
+    expect(kill('/hel', 'w')).toEqual({ text: '', caret: 0 })
+  })
+})
 
 describe('text input delivery', () => {
   it('appends multi-character IME commits to the composer', () => {

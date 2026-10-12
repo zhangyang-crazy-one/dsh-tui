@@ -153,6 +153,7 @@ describe('command directory', () => {
       'model',
       'new',
       'permission',
+      'plugins',
       'reasoning',
       'reload',
       'resume',
@@ -163,27 +164,27 @@ describe('command directory', () => {
     ])
     expect(controller.commands.find(command => command.name === 'compact')).toEqual({
       name: 'compact',
-      description: 'Compact older conversation history',
+      description: '压缩较早的对话历史',
     })
     expect(controller.commands.find(command => command.name === 'permission')).toEqual({
       name: 'permission',
-      description: 'Switch the permission preset (sandbox mode + approval policy)',
+      description: '切换权限预设（沙箱模式 + 审批策略）',
     })
     expect(controller.commands.find(command => command.name === 'settings')).toEqual({
       name: 'settings',
-      description: 'Edit settings, catalogs, and General',
+      description: '编辑设置、模型目录与通用选项',
     })
     expect(controller.commands.find(command => command.name === 'new')).toEqual({
       name: 'new',
-      description: 'Start a new session',
+      description: '开始新会话',
     })
     expect(controller.commands.find(command => command.name === 'reload')).toEqual({
       name: 'reload',
-      description: 'Relaunch this process and resume the session',
+      description: '重启进程并恢复当前会话',
     })
     expect(controller.commands.find(command => command.name === 'resume')).toEqual({
       name: 'resume',
-      description: 'Switch or resume a session',
+      description: '切换或恢复会话',
     })
     await ctx.fiber.dispose()
   })
@@ -201,7 +202,7 @@ describe('command directory', () => {
     await vi.waitFor(() => {
       const help = controller.getHelpPane()
       expect(help.open).toBe(true)
-      expect(help.lines.join('\n')).toContain('Export this session to a Markdown file')
+      expect(help.lines.join('\n')).toContain('导出当前会话为 Markdown 文件')
     })
     expect(controller.getHelpPane().lines.join('\n')).not.toContain('ZIP archive')
     await ctx.fiber.dispose()
@@ -512,8 +513,8 @@ describe('/help', () => {
       const help = controller.getHelpPane()
       expect(help.open).toBe(true)
       const sheet = help.lines.join('\n')
-      expect(sheet).toContain('/feedback — Record feedback 输入: <text>')
-      expect(sheet).toContain('/export — Export this session to a Markdown file')
+      expect(sheet).toContain('/feedback — 记录对本会话的反馈 输入: <text>')
+      expect(sheet).toContain('/export — 导出当前会话为 Markdown 文件')
     })
     const sheet = controller.getHelpPane().lines.join('\n')
     // The old `✓ ` success-color workaround is gone: the sheet is a pane now.
@@ -536,8 +537,8 @@ describe('/help', () => {
     expect(sheet).toContain('/settings 设置')
     expect(sheet).toContain('/resume 会话')
     expect(sheet).toContain('/reload 重载')
-    expect(sheet).toContain('/resume — Switch or resume a session')
-    expect(sheet).toContain('/reload — Relaunch this process and resume the session')
+    expect(sheet).toContain('/resume — 切换或恢复会话')
+    expect(sheet).toContain('/reload — 重启进程并恢复当前会话')
     await ctx.fiber.dispose()
   })
 
