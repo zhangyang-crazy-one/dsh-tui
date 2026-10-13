@@ -58823,6 +58823,9 @@ function splitInputBurst(key, keyInfo) {
   if (text4.endsWith("\n") && !body.includes("\n")) return { kind: "submit", text: body };
   return { kind: "paste", text: body };
 }
+function isNavigationBurst(key, keyInfo) {
+  return key.length > 1 && !keyInfo.ctrl && !keyInfo.meta && /^[jk]+$/u.test(key);
+}
 function isTextInput(key, keyInfo) {
   return key.length > 0 && !keyInfo.ctrl && !keyInfo.meta && !key.startsWith("[") && !hasControlCodepoint(key);
 }
@@ -60338,6 +60341,7 @@ function TuiLoop({
       else {
         const input = toolDetailsKeyAction(key, keyInfo);
         if (input !== void 0) controller.dispatch({ kind: "tool-details", input, ...toolDetailsSizeRef.current });
+        else if (isNavigationBurst(key, keyInfo)) for (const char of key) handleKey(char, keyInfo);
       }
       return;
     }
@@ -60405,6 +60409,10 @@ function TuiLoop({
       { available: (model.compactionDividers?.length ?? 0) > 0 },
       inputHistory
     );
+    if (effect.kind === "none" && isNavigationBurst(key, keyInfo)) {
+      for (const char of key) handleKey(char, keyInfo);
+      return;
+    }
     if (effect.kind === "dispatch") {
       const action = effect.action;
       if (isSessionTransitionAction(action) && isSessionTransitionStatus(feedbackRef.current)) {

@@ -431,6 +431,18 @@ export function splitInputBurst(key: string, keyInfo: Key): InputBurst | undefin
   return { kind: 'paste', text: body }
 }
 
+/**
+ * Whether one input chunk is several j/k presses delivered together (key
+ * repeat, tmux/SSH batching). A pane that handles single j/k keys and ignores
+ * the whole chunk receives the presses one at a time instead.
+ * @param key - raw Ink input string.
+ * @param keyInfo - Ink key flags for the chunk.
+ * @returns true for a run of two or more j/k characters without modifiers.
+ */
+export function isNavigationBurst(key: string, keyInfo: Key): boolean {
+  return key.length > 1 && !keyInfo.ctrl && !keyInfo.meta && /^[jk]+$/u.test(key)
+}
+
 function isTextInput(key: string, keyInfo: Key): boolean {
   return (
     key.length > 0 &&
@@ -2367,6 +2379,7 @@ export function TuiLoop({
       else {
         const input = toolDetailsKeyAction(key, keyInfo)
         if (input !== undefined) controller.dispatch({ kind: 'tool-details', input, ...toolDetailsSizeRef.current })
+        else if (isNavigationBurst(key, keyInfo)) for (const char of key) handleKey(char, keyInfo)
       }
       return
     }
@@ -2449,6 +2462,10 @@ export function TuiLoop({
       { available: (model.compactionDividers?.length ?? 0) > 0 },
       inputHistory,
     )
+    if (effect.kind === 'none' && isNavigationBurst(key, keyInfo)) {
+      for (const char of key) handleKey(char, keyInfo)
+      return
+    }
     if (effect.kind === 'dispatch') {
       const action = effect.action
       if (

@@ -152,6 +152,58 @@ describe('Plugins input', () => {
       expect(sent).toEqual(['draft-草稿!'])
     } finally { instance.unmount(); await instance.waitUntilExit() }
   })
+  it('moves once per j/k press when a terminal batches several presses into one chunk', async () => {
+    let page: PluginsPaneState = { ...opened }
+    const moves: number[] = []
+    const texts: string[] = []
+    const listeners = new Set<() => void>()
+    const model: ViewModel = { status: 'idle', activeTurn: undefined, reasoningExpanded: false, toolCardsExpanded: false, history: [] }
+    const session = { open: false, rows: [], selectedIndex: 0, currentId: undefined, confirmDelete: false, deleteUnavailable: false }
+    const search = { open: false, query: '', results: [], selectedIndex: 0, status: 'idle' as const }
+    const modelPane = { open: false, filter: '', rows: [], selectedIndex: 0, status: 'idle' as const }
+    const help = { open: false, lines: [] }
+    const controller: TuiController = {
+      getModel: () => model, getInteraction: () => 'idle', getBadge: () => '', getTitle: () => '',
+      getSessionPane: () => session, getSearchPane: () => search, getModelPane: () => modelPane,
+      getHelpPane: () => help, getTimelineOpen: () => false, getPluginsPane: () => page,
+      getApprovalPane: () => EMPTY_APPROVAL_PANE, getAskUserPane: () => EMPTY_ASK_USER_PANE,
+      getPermissionPane: () => EMPTY_PERMISSION_PANE, getSettingsPane: () => EMPTY_SETTINGS_PANE,
+      getAgentHubPane: () => EMPTY_OVERLAY_PANE, getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_WORKSPACE_PANE, getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+      getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY, getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
+      getComposerHud: () => undefined, getSubmitOnEnter: () => true, getFeedback: () => undefined,
+      intakeClipboardImage: async () => ({ ok: false, reason: '' }), intakeImagePath: async () => ({ ok: false, reason: '' }),
+      note: () => {}, noteUserActivity: () => {}, getCwd: () => '/test', listMentions: async () => [],
+      commands: [{ name: 'plugins', description: 'Plugins' }],
+      subscribe: (listener) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      dispatch: (action) => {
+        if (action.kind !== 'plugins-input') return
+        if (action.input.kind === 'move') moves.push(action.input.delta)
+        if (action.input.kind === 'text') { texts.push(action.input.value); page = { ...page, spec: action.input.value } }
+        if (action.input.kind === 'edit') page = { ...page, mode: 'input', spec: '' }
+        for (const listener of listeners) listener()
+      },
+    }
+    const stdout = fakeTtyStdout(), stdin = fakeTtyStdin()
+    Object.assign(stdout, { isTTY: true, rows: 24, columns: 80 })
+    const instance = render(createElement(TuiLoop, { title: 'test', controller }), { stdout, stdin, patchConsole: false, exitOnCtrlC: false, interactive: true })
+    const press = async (text: string) => {
+      stdin.push(text)
+      await new Promise(resolve => setTimeout(resolve, 20))
+      await instance.waitUntilRenderFlush()
+    }
+    try {
+      await instance.waitUntilRenderFlush()
+      await press('jjjj')
+      await press('kjk')
+      expect(moves).toEqual([1, 1, 1, 1, -1, 1, -1])
+      // The spec field takes the same chunk as typed text, not as navigation.
+      await press('i')
+      await press('jjk')
+      expect(texts).toEqual(['jjk'])
+      expect(moves).toHaveLength(7)
+    } finally { instance.unmount(); await instance.waitUntilExit() }
+  })
   it('maps g p and /plugins Enter to the same controller page entry', () => {
     expect(key(undefined, 'p', {}, { ...draft, text: 'g', prefixG: true })).toMatchObject({ kind: 'dispatch', action: { kind: 'plugins-pane' }, text: '' })
     expect(key(undefined, '\r', { return: true }, { ...draft, text: '/plugins', commandQuery: 'plugins' })).toMatchObject({ kind: 'dispatch', action: { kind: 'command', query: 'plugins' } })

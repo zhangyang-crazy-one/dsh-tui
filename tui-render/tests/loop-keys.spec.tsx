@@ -1,7 +1,7 @@
 /** mapKeyEvent against Ink's real input contract (boolean flags, '\r' Enter). */
 
 import { describe, expect, it } from 'vitest'
-import { feedbackLabel, feedbackLine, mapKeyEvent, splitInputBurst, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, activeMentionQuery } from '../src/loop.tsx'
+import { feedbackLabel, feedbackLine, mapKeyEvent, splitInputBurst, isNavigationBurst, statusHint, statusLine, statusSlot, formatIdleComposerStatus, composeIdleComposerStatus, shortenHomePath, activeMentionQuery } from '../src/loop.tsx'
 import type { MentionCandidate } from '../src/mention.tsx'
 import type { LoopInputState } from '../src/loop.tsx'
 
@@ -86,6 +86,10 @@ function keyInfo(
 describe('unbracketed input bursts', () => {
   it('splits typed text plus a trailing Enter into a submit', () => {
     expect(splitInputBurst('hello\r', keyInfo())).toEqual({ kind: 'submit', text: 'hello' })
+    expect(isNavigationBurst('jjkj', keyInfo())).toBe(true)
+    expect(isNavigationBurst('j', keyInfo())).toBe(false)
+    expect(isNavigationBurst('jx', keyInfo())).toBe(false)
+    expect(isNavigationBurst('jj', keyInfo({ ctrl: true }))).toBe(false)
     expect(splitInputBurst('你好\r\n', keyInfo())).toEqual({ kind: 'submit', text: '你好' })
     expect(splitInputBurst('\r\r', keyInfo())).toEqual({ kind: 'submit', text: '' })
   })
