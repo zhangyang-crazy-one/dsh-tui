@@ -46,7 +46,7 @@ Reasoning is hidden by default. Ctrl+O or `/reasoning` shows the complete dim re
 
 ### Plugins and live tasks
 
-`/plugins` or `g p` opens the Plugins page with installation-supplied and profile-owned bundles. Read-only reasons remain visible; non-removable bundles can still be toggled when the service permits it. Changes affect every session using the profile. Without Plugin Manager, the page reports that the service is unavailable and remains closable.
+`/plugins` or `g p` opens the Plugins page with official, installation-supplied, and profile-owned bundles. An official catalog entry with `availability: 'missing'` and an `installTarget` shows that target; Space inspects it and opens the install preview instead of toggling selection. Read-only reasons remain visible; non-removable bundles can still be toggled when the service permits it. Changes affect every session using the profile. Without Plugin Manager, the page reports that the service is unavailable and remains closable.
 
 The page separates saved selection, running state and operation outcome. A successfully saved `restart-required` result offers `R` or `/reload`; `failed`, `cancelled` and `overridden` retain their service-reported meaning without a successful-restart notice. Inventory refreshes on open, after operations and on manager notifications. External patch edits are reread when the page reopens.
 
@@ -55,6 +55,8 @@ Installation starts with an inspection; refusal preserves the entered spec and s
 The live HUD separates task plans from background execution. It prioritizes in-progress todos and shows only running or stopping jobs; finished jobs disappear on the next state refresh without deleting their records or marking output read. Existing `job_list` and `job_output` access remains valid within the job/Agent lifetime, without a cross-restart guarantee. Process completion does not imply exit-code success. Todo, Workflow and Jobs keep independent state; finishing a bash job does not complete a todo.
 
 `renderPolicy.normalHudRows`, `compactHudRows` and `compactHeightThreshold` default to 8, 4 and 24. Below 24 terminal rows the HUD uses the compact limit; available space can reduce either limit further. All three values must be positive integers and the compact limit cannot exceed the normal limit. Titles, Workflow summaries and hidden-item counts share the budget; empty sections collapse. The renderer reserves space for input, dialogs and the transcript before allocating HUD rows.
+
+`/login` opens the account page when `deepseekAccount` is mounted. The page subscribes to `watch()` only while open, starts sign-in with the loopback origin of the `webServer` service, opens the authorization link once outside SSH, and reads profile and balance after a credential is stored; without the service, `/login` keeps opening the API-key editor. `/logout` opens the same page on the sign-out confirmation. `deepseek-account/model-sign-in-required` and `deepseek-account/session-expired` paint a status-row prompt. `/cd [path]` reads or calls `workingDirectory.set`; the footer, header, `@` mentions, `/files`, and tool exports use the Session directory when the service is mounted. Empty `deepseek-account` and `deepseek-official` catalogs appear in `/model` as unselectable rows that name `/login` or `/key`.
 
 ### Contract
 

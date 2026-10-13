@@ -30,6 +30,10 @@ describe('dsh-tui bundle patch', () => {
     expect(PATCH.indexOf('workspace-changes')).toBeLessThan(PATCH.indexOf('id: tui-runtime'))
   })
 
+  it('serves the account sign-in callback from a loopback webserver on an OS-assigned port', () => {
+    expect(PATCH).toMatch(/- id: webserver\n\s+name: '@deepseek-ai\/dsh-host-webserver'\n\s+config:\n\s+host: 127\.0\.0\.1\n\s+port: 0\n/u)
+  })
+
   it('mounts no source-only provider packages', () => {
     expect(PATCH).not.toContain('@deepseek-ai/dsh-llm-openai')
     expect(PATCH).not.toContain('@deepseek-ai/dsh-llm-anthropic')

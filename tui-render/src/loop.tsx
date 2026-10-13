@@ -86,6 +86,8 @@ import type { WorkflowOverlayState } from './workflow-overlay.tsx'
 import { WorkspacePane } from './workspace-pane.tsx'
 import { PluginsPane, EMPTY_PLUGINS_PANE } from './plugins-pane.tsx'
 import type { PluginsPaneState, PluginsPaneInput } from './plugins-pane.tsx'
+import { AccountPane, EMPTY_ACCOUNT_PANE, accountAttemptActive } from './account-pane.tsx'
+import type { AccountPaneState, AccountPaneInput } from './account-pane.tsx'
 import type { WorkspacePaneState, WorkspacePreviewLayout } from './workspace-pane.tsx'
 import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
@@ -110,6 +112,7 @@ export type LoopMode = 'agent' | 'plan' | 'focus'
 export type LoopAction =
   | { kind: 'plugins-pane' }
   | { kind: 'plugins-input'; input: PluginsPaneInput }
+  | { kind: 'account-input'; input: AccountPaneInput }
   | { kind: 'tool-details'; input: ToolDetailsInput; width: number; pageRows: number }
   | { kind: 'send'; text: string }
   | { kind: 'sigint' }
@@ -194,6 +197,8 @@ export type LoopAction =
 export interface TuiController {
   /** Latest Plugins inventory and controller-owned install state. */
   getPluginsPane?(): PluginsPaneState
+  /** Latest DeepSeek account page state. */
+  getAccountPane?(): AccountPaneState
   /** Latest folded view model. */
   getModel(): ViewModel
   /** Latest interaction state. */
@@ -769,6 +774,7 @@ export function mapKeyEvent(
   submitOnEnter = true,
   overlays: {
     plugins?: PluginsPaneState
+    account?: AccountPaneState
     agentHub?: { open: boolean }
     planDirectory?: { open: boolean }
     workspace?: {
@@ -800,6 +806,20 @@ export function mapKeyEvent(
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))
     && state.commandDismissed !== true
+  if (overlays.account?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const account = overlays.account
+    const send = (input: AccountPaneInput) => holdComposer(state, { kind: 'account-input', input })
+    if (keyInfo.escape) return send({ kind: 'close' })
+    if (keyInfo.ctrl && key === 'c') return holdComposer(state, { kind: 'sigint' })
+    if (keyInfo.ctrl || keyInfo.meta || account.busy) return { kind: 'none' }
+    if (account.confirmSignOut) return key === 'y' ? send({ kind: 'confirm' }) : key === 'n' ? send({ kind: 'dismiss' }) : { kind: 'none' }
+    if (accountAttemptActive(account.phase)) {
+      return key === 'o' ? send({ kind: 'open-url' }) : key === 'c' ? send({ kind: 'cancel' }) : { kind: 'none' }
+    }
+    if (account.status === 'credential-stored') return key === 'x' ? send({ kind: 'sign-out' }) : { kind: 'none' }
+    if (keyInfo.return && account.available) return send({ kind: 'sign-in' })
+    return key === 'k' ? send({ kind: 'api-key' }) : { kind: 'none' }
+  }
   if (overlays.plugins?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
     const plugins = overlays.plugins
     const send = (input: PluginsPaneInput) => holdComposer(state, { kind: 'plugins-input', input })
@@ -2121,6 +2141,10 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE,
   )
+  const accountPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getAccountPane?.() ?? EMPTY_ACCOUNT_PANE,
+  )
   const agentHubPane = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getAgentHubPane(),
@@ -2243,6 +2267,8 @@ export function TuiLoop({
   const settingsPaneRef = useRef(settingsPane)
   const pluginsPaneRef = useRef(pluginsPane)
   pluginsPaneRef.current = pluginsPane
+  const accountPaneRef = useRef(accountPane)
+  accountPaneRef.current = accountPane
   settingsPaneRef.current = settingsPane
   const agentHubPaneRef = useRef(agentHubPane)
   agentHubPaneRef.current = agentHubPane
@@ -2393,6 +2419,7 @@ export function TuiLoop({
       {
         agentHub: { open: agentHubPaneRef.current.open },
         plugins: pluginsPaneRef.current,
+        account: accountPaneRef.current,
         planDirectory: { open: planDirectoryPaneRef.current.open },
         workspace: {
           open: workspacePaneRef.current.open,
@@ -2819,6 +2846,7 @@ export function TuiLoop({
   }
   const viewportMotionPaused = pane.open
     || pluginsPane.open
+    || accountPane.open
     || search.open
     || timelineOpen
     || modelPane.open
@@ -2941,6 +2969,7 @@ export function TuiLoop({
   const overlayBrowseOpen =
     agentHubPane.open
     || pluginsPane.open
+    || accountPane.open
     || planDirectoryPane.open
     || workspacePane.open
     || feedbackPane.open
@@ -2948,6 +2977,8 @@ export function TuiLoop({
   let content: ReactNode
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content = conversation
+  } else if (accountPane.open) {
+    content = createElement(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) })
   } else if (pluginsPane.open) {
     content = createElement(PluginsPane, { state: pluginsPane, locale,
       maxCols: conversationWidth(columns), maxRows: Math.max(3, rows - 3 - statusRowCount) })

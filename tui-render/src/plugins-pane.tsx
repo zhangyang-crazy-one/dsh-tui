@@ -11,7 +11,7 @@ import type { TuiLocale } from './ui-copy.ts'
 /** One selectable bundle or declared plugin row; labels are localized by the controller. */
 export interface PluginsPaneRow {
   id: string
-  group: 'supplied' | 'owned'
+  group: 'official' | 'supplied' | 'owned'
   label: string
   details: readonly string[]
   toggle: boolean
@@ -91,9 +91,10 @@ export function PluginsPane({ state, locale = 'zh-CN', maxCols, maxRows }: {
   } else {
     if (state.loading) lines.push({ text: copy('pluginsLoading') })
     if (!state.loading && state.rows.length === 0) lines.push({ text: copy('pluginsEmpty') })
-    for (const group of ['supplied', 'owned'] as const) {
+    for (const group of ['official', 'supplied', 'owned'] as const) {
       const rows = state.rows.map((row, index) => ({ row, index })).filter(({ row }) => row.group === group)
-      lines.push({ text: copy(group === 'supplied' ? 'pluginsSupplied' : 'pluginsOwned') })
+      if (group === 'official' && rows.length === 0) continue
+      lines.push({ text: copy(group === 'official' ? 'pluginsOfficialGroup' : group === 'supplied' ? 'pluginsSupplied' : 'pluginsOwned') })
       for (const { row, index } of rows) {
         const selected = index === state.selectedIndex
         lines.push({ text: `${selected ? '›' : ' '} ${row.label}`, selected })

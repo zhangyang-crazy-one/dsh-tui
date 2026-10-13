@@ -46,7 +46,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 
 ### 插件与实时任务
 
-`/plugins` 或 `g p` 打开 Plugins 页面，按安装供给与 profile 自有分组列出 bundle。只读原因保持可见；不可移除的 bundle 在服务允许时仍可启停。变更影响使用该 profile 的所有会话。未组合 Plugin Manager 时，页面明确提示服务不可用，并仍可关闭。
+`/plugins` 或 `g p` 打开 Plugins 页面，按官方、安装供给与 profile 自有分组列出 bundle。`availability: 'missing'` 且带 `installTarget` 的官方目录条目显示该目标；按 Space 会检查该目标并打开安装预览，而不是切换选中状态。只读原因保持可见；不可移除的 bundle 在服务允许时仍可启停。变更影响使用该 profile 的所有会话。未组合 Plugin Manager 时，页面明确提示服务不可用，并仍可关闭。
 
 页面区分已保存的选择、运行状态与操作结果。成功保存且结果为 `restart-required` 时提供 `R` 或 `/reload`；`failed`、`cancelled` 与 `overridden` 保留服务报告的含义，不显示成功重启提示。清单在打开、操作结束和收到管理器通知时刷新。外部 patch 编辑在页面重新打开时重读。
 
@@ -55,6 +55,8 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 实时 HUD 将任务计划与后台执行分区呈现。它优先显示进行中待办，作业只显示运行中或停止中项；结束作业在下次状态刷新时撤出，不删除记录或把输出标为已读。既有 `job_list` 与 `job_output` 访问在 job/Agent 生命周期内仍有效，不保证跨重启保留。进程结束不代表退出码成功。Todo、Workflow 与 Jobs 保持独立状态；bash 结束不会完成待办。
 
 `renderPolicy.normalHudRows`、`compactHudRows` 与 `compactHeightThreshold` 默认分别为 8、4 和 24。终端不足 24 行时 HUD 使用紧凑上限；可用空间还可进一步收缩任一上限。三个值必须为正整数，紧凑上限不能大于普通上限。标题、Workflow 摘要与隐藏项计数共享预算；空分区自动收起。渲染器先为输入、对话框与正文预留空间，再分配 HUD 行数。
+
+挂载 `deepseekAccount` 时，`/login` 打开账号页。页面仅在打开期间订阅 `watch()`，以 `webServer` 服务的回环 origin 发起登录，非 SSH 环境下只自动打开一次授权链接，并在凭据保存后读取账号资料与余额；未挂载该服务时，`/login` 仍打开 API 密钥编辑器。`/logout` 直接打开同一页面的退出确认。`deepseek-account/model-sign-in-required` 与 `deepseek-account/session-expired` 在状态行显示提示。`/cd [路径]` 读取或调用 `workingDirectory.set`；挂载该服务时，底栏、顶栏、`@` 提及、`/files` 与工具导出使用会话工作目录。`deepseek-account` 与 `deepseek-official` 目录为空时，在 `/model` 中显示为不可选中的行，并注明 `/login` 或 `/key`。
 
 ### 约定
 

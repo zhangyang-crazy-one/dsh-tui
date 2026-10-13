@@ -143,6 +143,7 @@ describe('command directory', () => {
     // The palette shows the registry commands plus local export/files/help/model/reload/settings,
     // with exactly one export entry (the Web placeholder is filtered).
     expect(controller.commands.map(command => command.name)).toEqual([
+      'cd',
       'compact',
       'export',
       'feedback',
@@ -150,6 +151,7 @@ describe('command directory', () => {
       'help',
       'key',
       'login',
+      'logout',
       'model',
       'new',
       'permission',
@@ -604,6 +606,50 @@ describe('listMentions', () => {
       expect.objectContaining({ kind: 'skill', name: 'fetch-weather' }),
     ])
     expect(await controller.listMentions(root, 'zzz')).toEqual([])
+    await ctx.fiber.dispose()
+  })
+})
+
+describe('session working directory', () => {
+  /** Fake only the working-directory service; controller dispatch and the Session are real. */
+  function provideWorkingDirectory(ctx: Context, initial: string) {
+    const directories = new Map<Session, string>()
+    const service = {
+      get: vi.fn((session: Session) => directories.get(session) ?? initial),
+      set: vi.fn(async (agent: Agent, path: string) => {
+        if (path === 'missing') throw new Error(`working-directory: directory does not exist: "${path}"`)
+        const next = join(service.get(agent.session), path)
+        directories.set(agent.session, next)
+        return next
+      }),
+    }
+    ctx.provide('workingDirectory', service as unknown as Context['workingDirectory'])
+    return service
+  }
+
+  it('reports the launch cwd without the service and refuses /cd', async () => {
+    const { ctx, controller } = await bench('/launch')
+    await controller.start()
+    expect(controller.getCwd()).toBe('/launch')
+    controller.dispatch({ kind: 'command', query: 'cd src' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✗ 当前 dsh 未提供会话工作目录服务'))
+    await ctx.fiber.dispose()
+  })
+
+  it('shows, changes, and reports failures for the bound Session directory', async () => {
+    const { ctx, controller } = await bench('/launch')
+    const service = provideWorkingDirectory(ctx, '/project')
+    await controller.start()
+    expect(controller.getCwd()).toBe('/project')
+    controller.dispatch({ kind: 'command', query: 'cd' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('工作目录: /project'))
+    controller.dispatch({ kind: 'command', query: 'cd packages' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✓ 工作目录已切换: /project/packages'))
+    expect(service.set).toHaveBeenCalledWith(expect.anything(), 'packages', expect.any(AbortSignal))
+    expect(controller.getCwd()).toBe('/project/packages')
+    controller.dispatch({ kind: 'command', query: 'cd missing' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✗ working-directory: directory does not exist: "missing"'))
+    expect(controller.getCwd()).toBe('/project/packages')
     await ctx.fiber.dispose()
   })
 })

@@ -29,6 +29,8 @@ export interface ModelRow {
   fallback: boolean
   /** True when this row matches the live selection. */
   current: boolean
+  /** Guidance for a provider that currently advertises no models; such a row cannot be selected. */
+  unavailable?: string
 }
 
 /** Model panel phase: loading/error are mutually exclusive with results. */
@@ -119,6 +121,9 @@ export function ModelPane({
               {row.current ? (
                 <Text>{styled(escapeContent(' · 当前'), 'accentDim')}</Text>
               ) : null}
+              {row.unavailable === undefined ? null : (
+                <Text>{styled(escapeContent(` · ${row.unavailable}`), 'fgDim')}</Text>
+              )}
             </Box>
           )
         })

@@ -325,13 +325,33 @@ describe('model panel', () => {
       fallback: false,
       current: false,
     })
-    // A throwing catalog degrades to the provider's default row, never error.
+    // A throwing catalog degrades to an unselectable provider row, never error.
     expect(rows[2]).toMatchObject({
       id: 'default:beta',
       provider: 'beta',
       fallback: true,
+      unavailable: '模型目录加载失败',
     })
     expect(controller.getModelPane().status).toBe('idle')
+    await ctx.fiber.dispose()
+  })
+
+  it('names sign-in or key setup for empty DeepSeek catalogs and refuses selecting them', async () => {
+    const { ctx, controller, saveSelection } = await bench([
+      ['test-provider', new CatalogAdapter([() => [model('test-provider', 'test-model')]])],
+      ['deepseek-account', new CatalogAdapter()],
+      ['deepseek-official', new CatalogAdapter()],
+    ])
+    await controller.start()
+    controller.dispatch({ kind: 'command', query: 'model' })
+    await vi.waitFor(() => expect(controller.getModelPane().status).toBe('idle'))
+    const rows = controller.getModelPane().rows
+    expect(rows.find(row => row.provider === 'deepseek-account')?.unavailable).toBe('登录 DeepSeek 账号后可用 · /login')
+    expect(rows.find(row => row.provider === 'deepseek-official')?.unavailable).toBe('配置 API 密钥后可用 · /key')
+    controller.dispatch({ kind: 'select-model', id: 'default:deepseek-account' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✗ deepseek-account：登录 DeepSeek 账号后可用 · /login'))
+    expect(saveSelection).not.toHaveBeenCalled()
+    expect(controller.getModelPane().open).toBe(true)
     await ctx.fiber.dispose()
   })
 

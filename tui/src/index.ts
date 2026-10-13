@@ -16,8 +16,11 @@ import type {
   BundleInfo, PluginInfo, ChangeResult, ManagementError, PluginInstallFailureKind,
   PluginSpecInspection, PluginInstallRequestId,
 } from '@deepseek-ai/dsh-plugin-manager/types'
-import { EMPTY_PLUGINS_PANE } from '@deepseek-ai/dsh-tui-render'
-import type { PluginsPaneState, PluginsPaneInput, PluginsPaneRow } from '@deepseek-ai/dsh-tui-render'
+import { EMPTY_PLUGINS_PANE, EMPTY_ACCOUNT_PANE, accountAttemptActive, openUrl } from '@deepseek-ai/dsh-tui-render'
+import type { PluginsPaneState, PluginsPaneInput, PluginsPaneRow, AccountPaneState, AccountPaneInput } from '@deepseek-ai/dsh-tui-render'
+import type {} from '@deepseek-ai/dsh-deepseek-account'
+import type { AccountClientMetadata, AccountView, AccountWallet, SignInAttemptId } from '@deepseek-ai/dsh-deepseek-account/types'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 import { spawn } from 'node:child_process'
 import { rebuildReloadArgv, relaunchProcess } from './reload-argv.ts'
 import { SESSION_CHANGES_DISPOSED_COPY, SESSION_WRITER_HELD_COPY, isSessionWriterHeld, userErrorReason } from './session-errors.ts'
@@ -33,7 +36,7 @@ import { DEFAULT_NOTIFY_QUIET_INPUT_SECONDS, decideNotify } from './notify.ts'
 import type { TuiUserSettings } from './user-settings.ts'
 import type {} from '@deepseek-ai/dsh-config-editor'
 import type { NotifyDecision, NotifySettings } from './notify.ts'
-import { constants } from 'node:fs'
+import { constants, readFileSync } from 'node:fs'
 import type { Stats } from 'node:fs'
 import { access, lstat, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -54,6 +57,7 @@ import type { CommandDescriptor } from '@deepseek-ai/dsh-commands'
 // Type-only imports carry the Context merges for ctx.fs and ctx.skills; both
 // services are composed by the base patch.
 import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@deepseek-ai/dsh-working-directory'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-skill'
 // Type-only: declaration-merges ctx.subagents. The service is composed by
@@ -528,6 +532,10 @@ export const internals: {
   /** `process.argv` snapshot for `/reload` argv rebuilding. */
   processArgv: readonly string[]
   /** Clipboard-image reader spawn; tests inject a deterministic stub. */
+  /** Browser opener for the account authorization link; tests capture the URL. */
+  openUrl: (href: string) => void
+  /** Environment used to detect a remote (SSH) terminal for the sign-in callback hint. */
+  accountEnvironment: NodeJS.ProcessEnv
   clipboardSpawn: (
     command: string,
     args: readonly string[],
@@ -559,6 +567,8 @@ export const internals: {
   editorTtyPath: '/dev/tty',
   processArgv: process.argv,
   clipboardSpawn: (command, args, options) => spawn(command, [...args], options),
+  openUrl: href => { openUrl(href) },
+  accountEnvironment: process.env,
 }
 
 /** Observable ownership facts about the TUI root effect. */
@@ -574,6 +584,38 @@ export interface TuiRuntimeLifecycleSnapshot {
 }
 
 type TuiRuntimeLifecycleObserver = (snapshot: TuiRuntimeLifecycleSnapshot) => void
+
+/**
+ * Read this package's version for the account client identity headers.
+ * @returns the `version` of the nearest package manifest above the running module: the bundle's in a built install, the TUI workspace package's from source.
+ */
+function tuiClientVersion(): string {
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version?: unknown }
+  if (typeof manifest.version !== 'string' || manifest.version === '') throw new Error('dsh-tui: package manifest carries no version')
+  return manifest.version
+}
+
+/**
+ * Format wallets as `CNY 12.30 · bonus USD 1.00`.
+ * @param wallets - recharge wallets.
+ * @param bonus - bonus wallets.
+ * @param bonusLabel - localized bonus label.
+ * @returns display text, or undefined when there is no wallet.
+ */
+function formatWallets(wallets: readonly AccountWallet[], bonus: readonly AccountWallet[], bonusLabel: string): string | undefined {
+  const parts = [...wallets.map(wallet => `${wallet.currency} ${wallet.balance}`),
+    ...bonus.map(wallet => `${bonusLabel} ${wallet.currency} ${wallet.balance}`)]
+  return parts.length === 0 ? undefined : parts.join(' · ')
+}
+
+/**
+ * The exact install target of a bundle whose files must be installed before it can be selected.
+ * @param bundle - one plugin-manager bundle entry.
+ * @returns the catalog target, or undefined when the bundle's files are readable or no target is offered.
+ */
+function catalogInstallTarget(bundle: BundleInfo): NonNullable<BundleInfo['installTarget']> | undefined {
+  return bundle.availability === 'missing' ? bundle.installTarget : undefined
+}
 
 const liveRuntimeLifecycles = new Set<TuiRuntimeLifecycleSnapshot>()
 const runtimeLifecycleObservers = new Set<TuiRuntimeLifecycleObserver>()
@@ -995,11 +1037,13 @@ export const SEARCH_DEBOUNCE_MS = 120
  * `/settings` opens the settings overlay.
  */
 const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
+  { name: 'cd', description: 'Show or change the session working directory', input: { hint: '[PATH]' } },
   { name: 'export', description: 'Export this session to a Markdown file' },
   { name: 'files', description: 'Browse and preview workspace files' },
   { name: 'help', description: 'Show command help and key bindings' },
   { name: 'key', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
-  { name: 'login', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
+  { name: 'login', description: 'Sign in to a DeepSeek account (API key when sign-in is unavailable)', input: { hint: '[KEY_NAME] <SECRET>' } },
+  { name: 'logout', description: 'Sign out of the DeepSeek account' },
   { name: 'model', description: 'Switch the active model' },
   { name: 'new', description: 'Start a new session' },
   { name: 'reload', description: 'Relaunch this process and resume the session' },
@@ -1012,6 +1056,7 @@ const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
  * carry upstream English text. A command missing here keeps its own text.
  */
 const ZH_COMMAND_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  cd: '查看或切换会话工作目录',
   compact: '压缩较早的对话历史',
   export: '导出当前会话为 Markdown 文件',
   feedback: '记录对本会话的反馈',
@@ -1019,7 +1064,8 @@ const ZH_COMMAND_DESCRIPTIONS: Readonly<Record<string, string>> = {
   goal: '设置或查看长任务目标',
   help: '命令与快捷键速查',
   key: '设置或更新 API 密钥',
-  login: '设置或更新 API 密钥（同 /key）',
+  login: '登录 DeepSeek 账号（不支持时设置 API 密钥）',
+  logout: '退出 DeepSeek 账号',
   model: '切换当前模型',
   new: '开始新会话',
   permission: '切换权限预设（沙箱模式 + 审批策略）',
@@ -1303,6 +1349,11 @@ export class RuntimeController implements TuiController {
   /** Jobs-registry change subscription; no-op when the service is absent. */
   private disposeJobsChanged: (() => void) | undefined
   private pluginsPane: PluginsPaneState = { ...EMPTY_PLUGINS_PANE }
+  /** DeepSeek account page; the watch subscription lives while the page is open. */
+  private accountPane: AccountPaneState = { ...EMPTY_ACCOUNT_PANE }
+  private accountWatch: AbortController | undefined
+  private accountAttemptId: SignInAttemptId | undefined
+  private accountUrlOpened: string | undefined
   private pluginsBundles: BundleInfo[] = []
   private pluginsEntries: PluginInfo[] = []
   private pluginsInventorySeq = 0
@@ -1420,6 +1471,15 @@ export class RuntimeController implements TuiController {
         this.updatePlugins({ output: this.pluginsPane.output + chunk.text })
       }),
     ]
+    pluginDisposers.push(
+      ctx.on('deepseek-account/model-sign-in-required', () => {
+        this.setFeedback(`✗ ${tuiCopy('accountSignInRequired', this.getLocale())}`)
+      }),
+      ctx.on('deepseek-account/session-expired', () => {
+        this.setFeedback(`✗ ${tuiCopy('accountSessionExpired', this.getLocale())}`)
+        if (this.accountPane.open) this.updateAccount({ profile: undefined, balance: undefined })
+      }),
+    )
     this.disposePluginEvents = () => { for (const dispose of pluginDisposers) dispose() }
     // The HUD shows lifecycle state only; output events carry no row change.
     // The registry contains listener throws; emit() only drops caches and
@@ -1498,6 +1558,7 @@ export class RuntimeController implements TuiController {
     this.disposeUserQuestions = () => {}
     this.disposeJobsChanged?.()
     this.disposePluginEvents()
+    this.accountWatch?.abort()
     this.disposeWorkflowEvents()
     this.cancelQueuedApprovals()
     this.cancelQueuedAskUsers()
@@ -1813,7 +1874,7 @@ export class RuntimeController implements TuiController {
 
   /** Write one explicitly requested source export without replacing an existing file. */
   private async exportToolText(text: string, locale: TuiLocale): Promise<void> {
-    const path = resolve(this.config.cwd ?? process.cwd(), `tool-${randomUUID()}.txt`)
+    const path = resolve(this.getCwd(), `tool-${randomUUID()}.txt`)
     try {
       await writeFile(path, text, { flag: 'wx', mode: 0o600 })
       if (!this.closed) this.setFeedback(`${tuiCopy('toolExported', locale)} · ${path}`)
@@ -2029,7 +2090,7 @@ export class RuntimeController implements TuiController {
     const fs = this.ctx.get('fs')
     if (fs === undefined) return
     try {
-      const root = await fs.resolve(this.config.cwd ?? '.')
+      const root = await fs.resolve(this.sessionDirectory() ?? '.')
       const children = await fs.listDir(root)
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       this.commitResolvedWorkspaceRoot(root, children)
@@ -2713,6 +2774,165 @@ export class RuntimeController implements TuiController {
     this.modelError = undefined
   }
 
+  /** Return the latest DeepSeek account page snapshot. */
+  getAccountPane(): AccountPaneState {
+    return this.accountPane
+  }
+
+  /** Publish a new account page snapshot. */
+  private updateAccount(patch: Partial<AccountPaneState>): void {
+    if (this.closed) return
+    this.accountPane = { ...this.accountPane, ...patch }
+    this.emit()
+  }
+
+  /** Identity headers for one account call. */
+  private accountClient(): AccountClientMetadata {
+    return { version: tuiClientVersion(), locale: this.getLocale(), timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60 }
+  }
+
+  /**
+   * Open the account page and subscribe to account snapshots until it closes.
+   * @param confirmSignOut - open directly on the sign-out confirmation (`/logout`).
+   */
+  private openAccountPane(confirmSignOut = false): void {
+    this.closeOtherPanels()
+    const account = this.ctx.get('deepseekAccount')
+    this.accountPane = { ...EMPTY_ACCOUNT_PANE, open: true, available: account !== undefined,
+      confirmSignOut: confirmSignOut && account !== undefined }
+    this.emit()
+    if (account === undefined) return
+    const watch = new AbortController()
+    this.accountWatch = watch
+    this.ownWork((async () => {
+      try {
+        for await (const view of account.watch(AbortSignal.any([watch.signal, this.lifecycleAbort.signal]))) {
+          if (watch.signal.aborted || this.closed) return
+          this.applyAccountView(view)
+        }
+      } catch (error) {
+        if (!watch.signal.aborted && !this.closed) this.updateAccount({ error: errorReason(error) })
+      }
+    })(), 'account watch')
+  }
+
+  /** Fold one account snapshot; a newly stored credential loads profile and balance. */
+  private applyAccountView(view: AccountView): void {
+    const attempt = view.attempt
+    this.accountAttemptId = attempt?.id
+    const wasSignedIn = this.accountPane.status === 'credential-stored'
+    this.updateAccount({ status: view.status, phase: attempt?.phase, authorizeUrl: attempt?.authorizeUrl,
+      errorCode: attempt?.errorCode,
+      ...(view.status === 'signed-out' ? { profile: undefined, balance: undefined } : {}) })
+    if (attempt?.phase === 'waiting-browser' && attempt.authorizeUrl !== undefined && this.accountUrlOpened !== attempt.authorizeUrl) {
+      this.accountUrlOpened = attempt.authorizeUrl
+      // A remote terminal's browser cannot reach this host's loopback callback without a forward; show the link only.
+      if (this.accountPane.forward === undefined) internals.openUrl(attempt.authorizeUrl)
+    }
+    if (view.status === 'credential-stored' && !wasSignedIn) this.ownWork(this.loadAccountDetails(), 'account details')
+  }
+
+  /** Read profile and balance independently; either failure leaves the other visible. */
+  private async loadAccountDetails(): Promise<void> {
+    const account = this.ctx.get('deepseekAccount')
+    if (account === undefined) return
+    const client = this.accountClient()
+    const [profile, balance] = await Promise.allSettled([account.getProfile(client), account.getBalance(client)])
+    if (this.closed || this.accountPane.status !== 'credential-stored') return
+    const patch: Partial<AccountPaneState> = {}
+    if (profile.status === 'fulfilled' && profile.value?.status === 'ready') {
+      const value = profile.value.value
+      const text = [value.name, value.contact].filter((part): part is string => part !== null && part !== '').join(' · ')
+      if (text !== '') patch.profile = text
+    }
+    if (balance.status === 'fulfilled' && balance.value?.status === 'ready') {
+      patch.balance = formatWallets(balance.value.value, balance.value.bonusWallets, this.getLocale() === 'zh-CN' ? '赠送' : 'bonus')
+    }
+    this.updateAccount(patch)
+  }
+
+  /** Start or join browser sign-in with the loopback callback served by the webserver row. */
+  private async startAccountSignIn(): Promise<void> {
+    const account = this.ctx.get('deepseekAccount')
+    if (account === undefined) return
+    const webServer = this.ctx.get('webServer')
+    if (webServer === undefined || webServer.protocol !== 'http:') {
+      this.updateAccount({ error: tuiCopy('accountCallbackUnavailable', this.getLocale()) })
+      return
+    }
+    const host = webServer.host.includes(':') ? `[${webServer.host}]` : webServer.host
+    const environment = internals.accountEnvironment
+    const remote = environment.SSH_CONNECTION !== undefined || environment.SSH_TTY !== undefined
+    this.accountUrlOpened = undefined
+    this.updateAccount({ busy: true, error: undefined,
+      forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : undefined })
+    try {
+      this.applyAccountView(await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, 'web'))
+    } catch (error) {
+      this.updateAccount({ error: errorReason(error) })
+    } finally {
+      this.updateAccount({ busy: false })
+    }
+  }
+
+  /** Run one account mutation and surface its failure on the page. */
+  private async accountOperation(operation: () => Promise<AccountView>, done?: string): Promise<void> {
+    this.updateAccount({ busy: true, error: undefined })
+    try {
+      this.applyAccountView(await operation())
+      if (done !== undefined) this.setFeedback(`✓ ${done}`)
+    } catch (error) {
+      this.updateAccount({ error: errorReason(error) })
+    } finally {
+      this.updateAccount({ busy: false })
+    }
+  }
+
+  /** Enforce the page's state at the action executor. */
+  private handleAccountInput(input: AccountPaneInput): void {
+    const state = this.accountPane
+    if (!state.open) return
+    if (input.kind === 'close') {
+      this.accountWatch?.abort()
+      this.accountWatch = undefined
+      this.updateAccount({ open: false, confirmSignOut: false })
+      return
+    }
+    if (input.kind === 'api-key') {
+      this.handleAccountInput({ kind: 'close' })
+      this.openApiKeyPane()
+      return
+    }
+    const account = this.ctx.get('deepseekAccount')
+    if (account === undefined || state.busy) return
+    switch (input.kind) {
+      case 'sign-in':
+        if (state.status !== 'credential-stored' && !accountAttemptActive(state.phase)) this.ownWork(this.startAccountSignIn(), 'account sign-in')
+        return
+      case 'open-url':
+        if (state.authorizeUrl !== undefined) internals.openUrl(state.authorizeUrl)
+        return
+      case 'cancel': {
+        const id = this.accountAttemptId
+        if (id !== undefined && accountAttemptActive(state.phase)) this.ownWork(this.accountOperation(() => account.cancelSignIn(id)), 'account cancel')
+        return
+      }
+      case 'sign-out':
+        if (state.status === 'credential-stored') this.updateAccount({ confirmSignOut: true })
+        return
+      case 'dismiss':
+        this.updateAccount({ confirmSignOut: false })
+        return
+      case 'confirm':
+        if (!state.confirmSignOut) return
+        this.updateAccount({ confirmSignOut: false })
+        this.ownWork(this.accountOperation(() => account.signOut(this.accountClient()), tuiCopy('accountSignedOutDone', this.getLocale())), 'account sign-out')
+        return
+      default:
+        assertNever(input.kind, 'AccountPaneInput')
+    }
+  }
+
   /** Return the latest Plugins snapshot, including progress received while closed. */
   getPluginsPane(): PluginsPaneState {
     return this.pluginsPane
@@ -2743,17 +2963,24 @@ export class RuntimeController implements TuiController {
       this.pluginsEntries = entries
       const copy = (key: Parameters<typeof tuiCopy>[0]) => tuiCopy(key, this.getLocale())
       const rows: PluginsPaneRow[] = []
-      for (const bundle of [...bundles.filter(item => !item.installed), ...bundles.filter(item => item.installed)]) {
-        const group = bundle.installed ? 'owned' : 'supplied'
+      const groupOf = (bundle: BundleInfo): PluginsPaneRow['group'] => bundle.installed ? 'owned' : bundle.official ? 'official' : 'supplied'
+      const groupOrder: readonly PluginsPaneRow['group'][] = ['official', 'supplied', 'owned']
+      for (const bundle of groupOrder.flatMap(group => bundles.filter(item => groupOf(item) === group))) {
+        const group = groupOf(bundle)
+        const catalog = catalogInstallTarget(bundle)
         const details = [bundle.description, bundle.version,
+          bundle.availability === 'missing' ? copy(bundle.installed ? 'pluginsMissingFiles' : 'pluginsNotInstalled') : undefined,
+          catalog === undefined ? undefined : `${copy('pluginsInstallTarget')}: ${catalog.spec} (${catalog.version})`,
           bundle.optional ? copy('pluginsOptional') : undefined,
           !bundle.removable ? copy('pluginsNotRemovable') : undefined,
           bundle.readOnlyReason ? this.pluginsError({ code: bundle.readOnlyReason }) : undefined,
           bundle.error ? this.pluginsError(bundle.error) : undefined,
           bundle.overrides.length ? `${copy('pluginsOverrides')}: ${bundle.overrides.join(', ')}` : undefined,
         ].filter((value): value is string => value !== undefined)
+        const badges = [bundle.official ? copy('pluginsOfficial') : undefined,
+          copy(catalog !== undefined ? 'pluginsCatalog' : bundle.enabled ? 'pluginsSelected' : 'pluginsUnselected')]
         rows.push({ id: `bundle:${bundle.name}`, group,
-          label: `${bundle.name} · ${copy(bundle.enabled ? 'pluginsSelected' : 'pluginsUnselected')}`,
+          label: [bundle.name, ...badges.filter((value): value is string => value !== undefined)].join(' · '),
           details, toggle: bundle.readOnlyReason === undefined, removable: bundle.removable && bundle.readOnlyReason === undefined })
         for (const row of bundle.rows) {
           const live = row.entryId === undefined ? undefined : entries.find(entry => entry.entryId === row.entryId)
@@ -3012,7 +3239,13 @@ export class RuntimeController implements TuiController {
         return
       }
       if (!row.toggle) return
-      if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), 'plugins bundle toggle')
+      const catalog = bundle === undefined ? undefined : catalogInstallTarget(bundle)
+      if (catalog !== undefined) {
+        // An on-demand catalog entry has no files to select; installing its exact target is the switch-on action.
+        this.pluginsInspection = undefined
+        this.updatePlugins({ mode: 'input', spec: catalog.spec, inspection: [], result: [], error: undefined, pendingBuilds: [], retry: false })
+        this.ownWork(this.inspectPlugins(), 'plugins catalog inspection')
+      } else if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), 'plugins bundle toggle')
       else {
         for (const owner of this.pluginsBundles) {
           const declaration = owner.rows.find(item => row.id === `row:${owner.name}:${item.rowId}`)
@@ -3031,6 +3264,11 @@ export class RuntimeController implements TuiController {
 
   /** Close other overlays while retaining the tracked Plugins operation. */
   private closeOtherPanels(): void {
+    if (this.accountPane.open) {
+      this.accountWatch?.abort()
+      this.accountWatch = undefined
+      this.accountPane = { ...this.accountPane, open: false, confirmSignOut: false }
+    }
     this.pluginsPane = { ...this.pluginsPane, open: false, confirmNames: [],
       mode: this.pluginsPane.mode === 'remove' || this.pluginsPane.mode === 'builds' ? 'inventory' : this.pluginsPane.mode }
     this.toolDetailsOpen = false
@@ -3518,6 +3756,9 @@ export class RuntimeController implements TuiController {
         return
       case 'plugins-input':
         this.handlePluginsInput(action.input)
+        return
+      case 'account-input':
+        this.handleAccountInput(action.input)
         return
       case 'approval-allow':
         this.answerHead('allowed-once')
@@ -5021,6 +5262,10 @@ export class RuntimeController implements TuiController {
       this.ownWork(this.exportLive(), 'session export')
       return
     }
+    if (query === 'cd' || query.startsWith('cd ')) {
+      this.ownWork(this.changeWorkingDirectory(query.slice(2).trim()), 'working directory change')
+      return
+    }
     if (query === 'new' || query === 'new ') {
       if (this.blockingHead() !== undefined) return
       this.closeOtherPanels()
@@ -5041,6 +5286,16 @@ export class RuntimeController implements TuiController {
     }
     if (query === 'help') {
       this.openHelpPane()
+      return
+    }
+    if ((query === 'login' || query === 'login ') && this.ctx.get('deepseekAccount') !== undefined) {
+      if (this.blockingHead() !== undefined) return
+      this.openAccountPane()
+      return
+    }
+    if (query === 'logout' || query === 'logout ') {
+      if (this.blockingHead() !== undefined) return
+      this.openAccountPane(true)
       return
     }
     if (query === 'key' || query === 'key ' || query === 'login' || query === 'login ') {
@@ -5091,6 +5346,32 @@ export class RuntimeController implements TuiController {
       return
     }
     this.executeSlash(query)
+  }
+
+  /**
+   * Show or change the bound Session's working directory. Existing shells and
+   * terminals keep their own directories; the service records the change in
+   * the Session log and queues the model-visible notice.
+   * @param path - absolute or current-directory-relative target; empty shows the current directory.
+   */
+  private async changeWorkingDirectory(path: string): Promise<void> {
+    const locale = this.getLocale()
+    const agent = this.agent
+    const workingDirectory = this.ctx.get('workingDirectory')
+    if (agent === undefined || workingDirectory === undefined) {
+      this.reportCommandFailure(tuiCopy('cdUnavailable', locale))
+      return
+    }
+    if (path === '') {
+      this.setFeedback(`${tuiCopy('cdCurrent', locale)}: ${workingDirectory.get(agent.session)}`)
+      return
+    }
+    try {
+      const directory = await workingDirectory.set(agent, path, this.lifecycleAbort.signal)
+      if (!this.closed) this.setFeedback(`✓ ${tuiCopy('cdChanged', locale)}: ${directory}`)
+    } catch (error) {
+      if (!this.closed) this.reportCommandFailure(errorReason(error))
+    }
   }
 
   /**
@@ -5961,6 +6242,7 @@ export class RuntimeController implements TuiController {
       const providers = llm.listProviders()
       const groups = await Promise.all(providers.map(async (provider) => {
         let models: readonly LlmModelInfo[]
+        let failed = false
         try {
           models = await llm.listModels(provider.id)
         } catch (error: unknown) {
@@ -5969,9 +6251,10 @@ export class RuntimeController implements TuiController {
             `model catalog for "${provider.id}" failed: ${String(error)}`,
           )
           models = []
+          failed = true
         }
         if (models.length === 0) {
-          return [this.fallbackModelRow(provider.id, provider.name, current)]
+          return [this.fallbackModelRow(provider.id, provider.name, current, failed)]
         }
         return models.map(model =>
           this.catalogRow(provider.id, model.id, model.name, current),
@@ -6018,24 +6301,24 @@ export class RuntimeController implements TuiController {
 
   /**
    * The degraded row for a provider with no discoverable catalog: the live
-   * default model when the provider is the current one, else the provider
-   * route itself as the only known identity.
+   * default model when the provider is the current one, else an unselectable
+   * provider row whose guidance names how its models become available.
+   * DeepSeek providers advertise models only after sign-in or key setup.
    */
   private fallbackModelRow(
     provider: string,
     providerName: string,
     current: ModelSelection,
+    failed: boolean,
   ): ModelRow {
-    const isCurrentProvider = current.provider === provider
-    const model = isCurrentProvider ? current.model : provider
-    return {
-      id: `default:${provider}`,
-      provider,
-      model,
-      name: isCurrentProvider ? current.model : providerName,
-      fallback: true,
-      current: isCurrentProvider,
+    if (current.provider === provider) {
+      return { id: `default:${provider}`, provider, model: current.model, name: current.model, fallback: true, current: true }
     }
+    const unavailable = failed ? '模型目录加载失败'
+      : provider === 'deepseek-account' ? '登录 DeepSeek 账号后可用 · /login'
+        : provider === 'deepseek-official' ? '配置 API 密钥后可用 · /key'
+          : '暂无可用模型 · /settings 配置'
+    return { id: `default:${provider}`, provider, model: provider, name: providerName, fallback: true, current: false, unavailable }
   }
 
   /**
@@ -6050,6 +6333,10 @@ export class RuntimeController implements TuiController {
     const ref = this.modelSelectionRef
     const defaultModel = this.ctx.get('agentDefaultModel')
     if (row === undefined || ref === undefined || defaultModel === undefined) {
+      return
+    }
+    if (row.unavailable !== undefined) {
+      this.setFeedback(`✗ ${row.name}：${row.unavailable}`)
       return
     }
     const next: ModelSelection = { provider: row.provider, model: row.model }
@@ -6073,11 +6360,22 @@ export class RuntimeController implements TuiController {
   }
 
   /**
-   * Return the workspace base directory `@` mention queries resolve under.
-   * @returns the configured run cwd, else the process cwd.
+   * Return the directory the footer shows and `@` mentions and `/files` resolve under.
+   * @returns the bound Session's working directory when the working-directory service is mounted, else the configured run cwd, else the process cwd.
    */
   getCwd(): string {
-    return this.config.cwd ?? process.cwd()
+    return this.sessionDirectory() ?? process.cwd()
+  }
+
+  /**
+   * The explicit base directory for filesystem lookups.
+   * @returns the bound Session's working directory when the service is mounted, else the configured run cwd; undefined lets the filesystem provider apply its own base.
+   */
+  private sessionDirectory(): string | undefined {
+    const agent = this.agent
+    const workingDirectory = this.ctx.get('workingDirectory')
+    if (agent !== undefined && workingDirectory !== undefined) return workingDirectory.get(agent.session)
+    return this.config.cwd
   }
 
   /**
@@ -6102,9 +6400,10 @@ export class RuntimeController implements TuiController {
     const needle = query.toLowerCase()
     const fs = this.ctx.get('fs')
     if (fs !== undefined && basePath.trim() !== '') {
+      const cwd = this.sessionDirectory()
       try {
         const target = await fs.resolve(basePath, {
-          ...(this.config.cwd === undefined ? {} : { cwd: this.config.cwd }),
+          ...(cwd === undefined ? {} : { cwd }),
           ...(signal === undefined ? {} : { signal }),
         })
         const entries = await fs.listDir(target, signal)

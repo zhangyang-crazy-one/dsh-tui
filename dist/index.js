@@ -24758,14 +24758,14 @@ var require_permessage_deflate = __commonJS({
       }
     };
     module.exports = PerMessageDeflate2;
-    function deflateOnData(chunk) {
-      this[kBuffers].push(chunk);
-      this[kTotalLength] += chunk.length;
+    function deflateOnData(chunk2) {
+      this[kBuffers].push(chunk2);
+      this[kTotalLength] += chunk2.length;
     }
-    function inflateOnData(chunk) {
-      this[kTotalLength] += chunk.length;
+    function inflateOnData(chunk2) {
+      this[kTotalLength] += chunk2.length;
       if (this[kPerMessageDeflate]._maxPayload < 1 || this[kTotalLength] <= this[kPerMessageDeflate]._maxPayload) {
-        this[kBuffers].push(chunk);
+        this[kBuffers].push(chunk2);
         return;
       }
       this[kError] = new RangeError("Max payload size exceeded");
@@ -25066,7 +25066,7 @@ var require_receiver = __commonJS({
        * @param {Function} cb Callback
        * @private
        */
-      _write(chunk, encoding, cb) {
+      _write(chunk2, encoding, cb) {
         if (this._opcode === 8 && this._state == GET_INFO) return cb();
         if (this._maxBufferedChunks > 0 && this._buffers.length >= this._maxBufferedChunks) {
           cb(
@@ -25080,8 +25080,8 @@ var require_receiver = __commonJS({
           );
           return;
         }
-        this._bufferedBytes += chunk.length;
-        this._buffers.push(chunk);
+        this._bufferedBytes += chunk2.length;
+        this._buffers.push(chunk2);
         this.startLoop(cb);
       }
       /**
@@ -27345,8 +27345,8 @@ var require_websocket = __commonJS({
       this.removeListener("end", socketOnEnd);
       websocket._readyState = WebSocket2.CLOSING;
       if (!this._readableState.endEmitted && !websocket._closeFrameReceived && !websocket._receiver._writableState.errorEmitted && this._readableState.length !== 0) {
-        const chunk = this.read(this._readableState.length);
-        websocket._receiver.write(chunk);
+        const chunk2 = this.read(this._readableState.length);
+        websocket._receiver.write(chunk2);
       }
       websocket._receiver.end();
       this[kWebSocket] = void 0;
@@ -27358,8 +27358,8 @@ var require_websocket = __commonJS({
         websocket._receiver.on("finish", receiverOnFinish);
       }
     }
-    function socketOnData(chunk) {
-      if (!this[kWebSocket]._receiver.write(chunk)) {
+    function socketOnData(chunk2) {
+      if (!this[kWebSocket]._receiver.write(chunk2)) {
         this.pause();
       }
     }
@@ -27462,14 +27462,14 @@ var require_stream = __commonJS({
       duplex._read = function() {
         if (ws.isPaused) ws.resume();
       };
-      duplex._write = function(chunk, encoding, callback) {
+      duplex._write = function(chunk2, encoding, callback) {
         if (ws.readyState === ws.CONNECTING) {
           ws.once("open", function open2() {
-            duplex._write(chunk, encoding, callback);
+            duplex._write(chunk2, encoding, callback);
           });
           return;
         }
-        ws.send(chunk, callback);
+        ws.send(chunk2, callback);
       };
       duplex.on("end", duplexOnEnd);
       duplex.on("error", duplexOnError);
@@ -35621,8 +35621,8 @@ var parseKeypresses = (input) => {
 var createInputParser = () => {
   let pending = "";
   return {
-    push(chunk) {
-      const parsedInput = parseKeypresses(pending + chunk);
+    push(chunk2) {
+      const parsedInput = parseKeypresses(pending + chunk2);
       pending = parsedInput.pending;
       return parsedInput.events;
     },
@@ -36154,9 +36154,9 @@ function App({ children, stdin, stdout, stderr, writeToStdout, writeToStderr, ex
   }, [clearPendingInputFlush, emitInput]);
   const handleReadable = (0, import_react15.useCallback)(() => {
     clearPendingInputFlush();
-    let chunk;
-    while ((chunk = stdin.read()) !== null) {
-      const inputEvents = inputParserRef.current.push(chunk);
+    let chunk2;
+    while ((chunk2 = stdin.read()) !== null) {
+      const inputEvents = inputParserRef.current.push(chunk2);
       for (const event of inputEvents) {
         if (typeof event === "string") {
           emitInput(event);
@@ -37265,8 +37265,8 @@ var Ink = class {
       }
     };
     const onData = (data) => {
-      const chunk = typeof data === "string" ? textEncoder.encode(data) : data;
-      for (const byte of chunk) {
+      const chunk2 = typeof data === "string" ? textEncoder.encode(data) : data;
+      for (const byte of chunk2) {
         responseBuffer.push(byte);
       }
       if (hasCompleteKittyQueryResponse(responseBuffer)) {
@@ -44496,19 +44496,19 @@ function resolveAllLineSuffixes(events, context) {
       let size = 0;
       let tabs;
       while (index2--) {
-        const chunk = chunks[index2];
-        if (typeof chunk === "string") {
-          bufferIndex = chunk.length;
-          while (chunk.charCodeAt(bufferIndex - 1) === 32) {
+        const chunk2 = chunks[index2];
+        if (typeof chunk2 === "string") {
+          bufferIndex = chunk2.length;
+          while (chunk2.charCodeAt(bufferIndex - 1) === 32) {
             size++;
             bufferIndex--;
           }
           if (bufferIndex) break;
           bufferIndex = -1;
-        } else if (chunk === -2) {
+        } else if (chunk2 === -2) {
           tabs = true;
           size++;
-        } else if (chunk === -1) {
+        } else if (chunk2 === -1) {
         } else {
           index2++;
           break;
@@ -44703,17 +44703,17 @@ function createTokenizer(parser, initialize, from2) {
   function main() {
     let chunkIndex;
     while (point3._index < chunks.length) {
-      const chunk = chunks[point3._index];
-      if (typeof chunk === "string") {
+      const chunk2 = chunks[point3._index];
+      if (typeof chunk2 === "string") {
         chunkIndex = point3._index;
         if (point3._bufferIndex < 0) {
           point3._bufferIndex = 0;
         }
-        while (point3._index === chunkIndex && point3._bufferIndex < chunk.length) {
-          go(chunk.charCodeAt(point3._bufferIndex));
+        while (point3._index === chunkIndex && point3._bufferIndex < chunk2.length) {
+          go(chunk2.charCodeAt(point3._bufferIndex));
         }
       } else {
-        go(chunk);
+        go(chunk2);
       }
     }
   }
@@ -44909,11 +44909,11 @@ function serializeChunks(chunks, expandTabs2) {
   const result = [];
   let atTab;
   while (++index2 < chunks.length) {
-    const chunk = chunks[index2];
+    const chunk2 = chunks[index2];
     let value;
-    if (typeof chunk === "string") {
-      value = chunk;
-    } else switch (chunk) {
+    if (typeof chunk2 === "string") {
+      value = chunk2;
+    } else switch (chunk2) {
       case -5: {
         value = "\r";
         break;
@@ -44936,10 +44936,10 @@ function serializeChunks(chunks, expandTabs2) {
         break;
       }
       default: {
-        value = String.fromCharCode(chunk);
+        value = String.fromCharCode(chunk2);
       }
     }
-    atTab = chunk === -2;
+    atTab = chunk2 === -2;
     result.push(value);
   }
   return result.join("");
@@ -46903,7 +46903,7 @@ function resolveToPotentialGfmFootnoteCall(events, context) {
     start: Object.assign({}, marker.end),
     end: Object.assign({}, events[events.length - 1][1].start)
   };
-  const chunk = {
+  const chunk2 = {
     type: "chunkString",
     contentType: "string",
     start: Object.assign({}, string6.start),
@@ -46922,8 +46922,8 @@ function resolveToPotentialGfmFootnoteCall(events, context) {
     ["exit", marker, context],
     // Everything in between.
     ["enter", string6, context],
-    ["enter", chunk, context],
-    ["exit", chunk, context],
+    ["enter", chunk2, context],
+    ["exit", chunk2, context],
     ["exit", string6, context],
     // The ending (`]`, properly parsed and labelled).
     events[events.length - 2],
@@ -49258,10 +49258,10 @@ var TableScanner = class {
    * @param chunk - new source bytes (may end mid-line).
    * @returns the latest {@link TableScannerSnapshot}.
    */
-  feed(chunk) {
-    if (chunk === "") return this.snapshot();
-    this.buffer += chunk;
-    this.totalFed += chunk.length;
+  feed(chunk2) {
+    if (chunk2 === "") return this.snapshot();
+    this.buffer += chunk2;
+    this.totalFed += chunk2.length;
     this.processLines(false);
     return this.snapshot();
   }
@@ -49896,6 +49896,50 @@ var zh = {
   pluginsDisabled: "\u5DF2\u7981\u7528",
   pluginsDeclared: "\u4EC5\u58F0\u660E \xB7 \u65E0\u8FD0\u884C\u6761\u76EE",
   pluginsOptional: "\u53EF\u9009",
+  accountTitle: "DeepSeek \u8D26\u53F7",
+  accountUnavailable: "\u5F53\u524D dsh \u672A\u63D0\u4F9B DeepSeek \u8D26\u53F7\u767B\u5F55\uFF1B\u53EF\u6539\u7528 API \u5BC6\u94A5",
+  accountLoading: "\u6B63\u5728\u8BFB\u53D6\u8D26\u53F7\u72B6\u6001\u2026",
+  accountSignedOut: "\u672A\u767B\u5F55",
+  accountSignedIn: "\u5DF2\u767B\u5F55",
+  accountBalance: "\u4F59\u989D",
+  accountPhaseInitializing: "\u6B63\u5728\u53D1\u8D77\u767B\u5F55\u2026",
+  accountPhaseWaiting: "\u7B49\u5F85\u6D4F\u89C8\u5668\u6388\u6743\u2026",
+  accountPhaseExchanging: "\u6B63\u5728\u6362\u53D6\u767B\u5F55\u51ED\u636E\u2026",
+  accountPhaseCommitting: "\u6B63\u5728\u4FDD\u5B58\u767B\u5F55\u51ED\u636E\u2026",
+  accountPhaseSucceeded: "\u767B\u5F55\u6210\u529F",
+  accountPhaseCancelled: "\u767B\u5F55\u5DF2\u53D6\u6D88",
+  accountPhaseExpired: "\u767B\u5F55\u5DF2\u8FC7\u671F",
+  accountPhaseFailed: "\u767B\u5F55\u5931\u8D25",
+  accountErrorNoResponse: "\u670D\u52A1\u65E0\u54CD\u5E94",
+  accountErrorNetwork: "\u7F51\u7EDC\u6216\u8D26\u53F7\u4FE1\u606F\u8BF7\u6C42\u5931\u8D25",
+  accountErrorProtocol: "\u6388\u6743\u6570\u636E\u65E0\u6548",
+  accountErrorExpired: "\u6388\u6743\u5DF2\u8FC7\u671F",
+  accountErrorStorage: "\u672C\u5730\u51ED\u636E\u4FDD\u5B58\u5931\u8D25",
+  accountModelHint: "\u7528 /model \u9009\u62E9 deepseek-account \u6A21\u578B",
+  accountOpenLink: "\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\u4EE5\u4E0B\u94FE\u63A5\u5B8C\u6210\u767B\u5F55\uFF1A",
+  accountForward: "\u8FDC\u7A0B\u4F1A\u8BDD\u9700\u5148\u8F6C\u53D1\u56DE\u8C03\u7AEF\u53E3",
+  accountCallbackUnavailable: "\u767B\u5F55\u56DE\u8C03\u670D\u52A1\u672A\u542F\u52A8\uFF08\u7F3A\u5C11 webserver \u884C\uFF09",
+  accountSignOutConfirm: "\u786E\u8BA4\u9000\u51FA DeepSeek \u8D26\u53F7\uFF1FAPI \u5BC6\u94A5\u4F1A\u4FDD\u7559\u3002",
+  accountSignedOutDone: "\u5DF2\u9000\u51FA DeepSeek \u8D26\u53F7",
+  accountSignInRequired: "\u9700\u8981\u767B\u5F55 DeepSeek \u8D26\u53F7 \xB7 /login",
+  accountSessionExpired: "DeepSeek \u8D26\u53F7\u767B\u5F55\u5DF2\u5931\u6548 \xB7 /login",
+  accountSignInHint: "Enter \u767B\u5F55",
+  accountOpenHint: "o \u6253\u5F00\u6D4F\u89C8\u5668",
+  accountCancelHint: "c \u53D6\u6D88\u767B\u5F55",
+  accountSignOutHint: "x \u9000\u51FA\u767B\u5F55",
+  accountApiKeyHint: "k \u4F7F\u7528 API \u5BC6\u94A5",
+  accountCloseHint: "Esc \u5173\u95ED",
+  accountConfirmHint: "y \u786E\u8BA4 \xB7 n \u53D6\u6D88",
+  accountBusyHint: "\u5904\u7406\u4E2D\u2026",
+  cdUnavailable: "\u5F53\u524D dsh \u672A\u63D0\u4F9B\u4F1A\u8BDD\u5DE5\u4F5C\u76EE\u5F55\u670D\u52A1",
+  cdCurrent: "\u5DE5\u4F5C\u76EE\u5F55",
+  cdChanged: "\u5DE5\u4F5C\u76EE\u5F55\u5DF2\u5207\u6362",
+  pluginsOfficialGroup: "\u5B98\u65B9\u63D2\u4EF6",
+  pluginsOfficial: "\u5B98\u65B9",
+  pluginsCatalog: "\u53EF\u5B89\u88C5",
+  pluginsNotInstalled: "\u672A\u5B89\u88C5",
+  pluginsMissingFiles: "\u6587\u4EF6\u7F3A\u5931",
+  pluginsInstallTarget: "\u5B89\u88C5\u76EE\u6807",
   pluginsNotRemovable: "\u4E0D\u53EF\u79FB\u9664",
   pluginsOverrides: "\u8986\u76D6\u884C",
   pluginsHint: "\u2191\u2193 \u9009\u62E9 \xB7 Space \u542F\u505C \xB7 i \u5B89\u88C5 \xB7 d \u79FB\u9664 \xB7 Esc \u5173\u95ED",
@@ -50020,6 +50064,50 @@ var en = {
   pluginsDisabled: "Disabled",
   pluginsDeclared: "Declaration only \xB7 no live entry",
   pluginsOptional: "Optional",
+  accountTitle: "DeepSeek account",
+  accountUnavailable: "This dsh does not provide DeepSeek account sign-in; use an API key instead",
+  accountLoading: "Reading account state\u2026",
+  accountSignedOut: "Signed out",
+  accountSignedIn: "Signed in",
+  accountBalance: "Balance",
+  accountPhaseInitializing: "Starting sign-in\u2026",
+  accountPhaseWaiting: "Waiting for browser authorization\u2026",
+  accountPhaseExchanging: "Exchanging the authorization\u2026",
+  accountPhaseCommitting: "Saving the sign-in\u2026",
+  accountPhaseSucceeded: "Signed in successfully",
+  accountPhaseCancelled: "Sign-in cancelled",
+  accountPhaseExpired: "Sign-in expired",
+  accountPhaseFailed: "Sign-in failed",
+  accountErrorNoResponse: "the service did not respond",
+  accountErrorNetwork: "network or account request failed",
+  accountErrorProtocol: "invalid authorization data",
+  accountErrorExpired: "authorization expired",
+  accountErrorStorage: "could not save the local credential",
+  accountModelHint: "Use /model to choose a deepseek-account model",
+  accountOpenLink: "Open this link in a browser to sign in:",
+  accountForward: "Remote sessions must forward the callback port first",
+  accountCallbackUnavailable: "The sign-in callback server is not running (no webserver row)",
+  accountSignOutConfirm: "Sign out of the DeepSeek account? API keys are kept.",
+  accountSignedOutDone: "Signed out of the DeepSeek account",
+  accountSignInRequired: "DeepSeek account sign-in required \xB7 /login",
+  accountSessionExpired: "DeepSeek account sign-in expired \xB7 /login",
+  accountSignInHint: "Enter Sign in",
+  accountOpenHint: "o Open browser",
+  accountCancelHint: "c Cancel sign-in",
+  accountSignOutHint: "x Sign out",
+  accountApiKeyHint: "k Use API key",
+  accountCloseHint: "Esc Close",
+  accountConfirmHint: "y Confirm \xB7 n Cancel",
+  accountBusyHint: "Working\u2026",
+  cdUnavailable: "This dsh does not provide the session working-directory service",
+  cdCurrent: "Working directory",
+  cdChanged: "Working directory changed",
+  pluginsOfficialGroup: "Official plugins",
+  pluginsOfficial: "Official",
+  pluginsCatalog: "Available to install",
+  pluginsNotInstalled: "Not installed",
+  pluginsMissingFiles: "Files missing",
+  pluginsInstallTarget: "Install target",
   pluginsNotRemovable: "Not removable",
   pluginsOverrides: "Overrides",
   pluginsHint: "\u2191\u2193 Select \xB7 Space Toggle \xB7 i Install \xB7 d Remove \xB7 Esc Close",
@@ -52166,8 +52254,8 @@ function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
   }
   writer(bytes);
 }
-function transformFrameChunk(chunk, tier = currentTier(), publishFrame = true) {
-  let out = chunk;
+function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true) {
+  let out = chunk2;
   const on = bgSequence(tier);
   if (on !== "") {
     if (out.includes("\x1B")) {
@@ -52197,12 +52285,12 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
   const wrapped = Object.create(stdout);
   let synchronizedFrameOpen = false;
   let inkBottomRow = stdout.rows;
-  const transformingWrite = (chunk, ...args) => {
-    if (typeof chunk === "string" && chunk.includes(START_SYNC)) synchronizedFrameOpen = true;
-    if (typeof chunk === "string" && chunk.includes(END_SYNC)) synchronizedFrameOpen = false;
-    const inkChunk = typeof chunk === "string" && stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(chunk) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${chunk}` : chunk;
+  const transformingWrite = (chunk2, ...args) => {
+    if (typeof chunk2 === "string" && chunk2.includes(START_SYNC)) synchronizedFrameOpen = true;
+    if (typeof chunk2 === "string" && chunk2.includes(END_SYNC)) synchronizedFrameOpen = false;
+    const inkChunk = typeof chunk2 === "string" && stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(chunk2) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${chunk2}` : chunk2;
     const transformed = typeof inkChunk === "string" ? transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen) : inkChunk;
-    if (typeof chunk === "string" && chunk.includes("\n")) inkBottomRow = Math.min(stdout.rows, chunk.split("\n").length);
+    if (typeof chunk2 === "string" && chunk2.includes("\n")) inkBottomRow = Math.min(stdout.rows, chunk2.split("\n").length);
     return writeMeasured(transformed, ...args);
   };
   const writeMeasured = (transformed, ...args) => {
@@ -52227,12 +52315,12 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
   };
   wrapped.write = transformingWrite;
   const overlayStream = wrapped;
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk) => writeMeasured(chunk);
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2) => writeMeasured(chunk2);
   return wrapped;
 }
 var TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
-function countWrittenCells(chunk) {
-  const printable = chunk.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
+function countWrittenCells(chunk2) {
+  const printable = chunk2.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
   return printable.split("\n").reduce((cells, line5) => cells + displayWidth(line5), 0);
 }
 
@@ -52332,10 +52420,10 @@ var ScreenAtlas = class {
    * Consume one stdout chunk, holding incomplete ESC prefixes.
    * @param chunk - bytes written to the terminal.
    */
-  feed(chunk) {
+  feed(chunk2) {
     this.snapshotRows.clear();
     this.snapshotRail = void 0;
-    const text4 = this.leftover + chunk;
+    const text4 = this.leftover + chunk2;
     this.leftover = "";
     const segments = GRAPHEME2.segment(text4)[Symbol.iterator]();
     let segment2 = segments.next();
@@ -53057,22 +53145,22 @@ var MouseSession = class {
    * @param chunk - bytes about to hit the terminal.
    * @returns chunk plus overlay and caret restore.
    */
-  feedStdout(chunk) {
+  feedStdout(chunk2) {
     const snapshot2 = visibleFrameSnapshot();
     if (snapshot2 === void 0) {
-      this.atlas.feed(chunk);
+      this.atlas.feed(chunk2);
     } else if (snapshot2.revision !== this.lastFrameRevision) {
       this.atlas.applyFrameSnapshot(snapshot2);
       this.lastFrameRevision = snapshot2.revision;
     }
-    if (this.selection === void 0) return chunk;
+    if (this.selection === void 0) return chunk2;
     const overlay = this.atlas.selectionOverlay(
       this.selection.start,
       this.selection.end
     );
-    if (overlay === "") return chunk;
+    if (overlay === "") return chunk2;
     this.paintedSelection = this.selection;
-    return `${chunk}${overlay}${publishedCaretBytes()}`;
+    return `${chunk2}${overlay}${publishedCaretBytes()}`;
   }
   /**
    * Resize the atlas to the live terminal size.
@@ -53153,8 +53241,8 @@ function attachMouseIo(options) {
     columns: options.stdout.columns,
     rows: options.stdout.rows,
     copyText: (text4) => {
-      copyText(text4, (chunk) => {
-        options.stdout.write(chunk);
+      copyText(text4, (chunk2) => {
+        options.stdout.write(chunk2);
       });
     },
     onScroll: notifyMouseScroll
@@ -53177,9 +53265,9 @@ function attachMouseIo(options) {
     if (repaint !== "") write2(repaint);
   }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS);
   const wrappedStdout = Object.create(options.stdout);
-  const transformingWrite = (chunk, ...args) => {
-    if (typeof chunk !== "string") return write2(chunk, ...args);
-    return write2(session.feedStdout(chunk), ...args);
+  const transformingWrite = (chunk2, ...args) => {
+    if (typeof chunk2 !== "string") return write2(chunk2, ...args);
+    return write2(session.feedStdout(chunk2), ...args);
   };
   wrappedStdout.write = transformingWrite;
   const onResize = () => {
@@ -53215,12 +53303,12 @@ function wrapStdin(raw, onMouse, wheelRows) {
   };
   let buffer = "";
   let flushTimer;
-  const onData = (chunk) => {
+  const onData = (chunk2) => {
     if (flushTimer !== void 0) {
       clearTimeout(flushTimer);
       flushTimer = void 0;
     }
-    buffer += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+    buffer += typeof chunk2 === "string" ? chunk2 : chunk2.toString("utf8");
     const consumed = consumeMouseStdin(buffer);
     buffer = consumed.rest;
     let wheelDelta = 0;
@@ -56851,7 +56939,8 @@ function ModelPane({
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: !highlighted, children: escapeContent(row.name) }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: !highlighted, children: highlighted ? ` ${styled(escapeContent(row.provider), "fgDim")}` : ` ${escapeContent(row.provider)}` }),
-        row.current ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") }) : null
+        row.current ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") }) : null,
+        row.unavailable === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(` \xB7 ${row.unavailable}`), "fgDim") })
       ] }, row.id);
     }),
     status !== "loading" && status !== "error" && rows.length > MODEL_WINDOW ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: true, children: windowHint }) : null,
@@ -58464,9 +58553,10 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
   } else {
     if (state.loading) lines.push({ text: copy("pluginsLoading") });
     if (!state.loading && state.rows.length === 0) lines.push({ text: copy("pluginsEmpty") });
-    for (const group of ["supplied", "owned"]) {
+    for (const group of ["official", "supplied", "owned"]) {
       const rows = state.rows.map((row, index2) => ({ row, index: index2 })).filter(({ row }) => row.group === group);
-      lines.push({ text: copy(group === "supplied" ? "pluginsSupplied" : "pluginsOwned") });
+      if (group === "official" && rows.length === 0) continue;
+      lines.push({ text: copy(group === "official" ? "pluginsOfficialGroup" : group === "supplied" ? "pluginsSupplied" : "pluginsOwned") });
       for (const { row, index: index2 } of rows) {
         const selected2 = index2 === state.selectedIndex;
         lines.push({ text: `${selected2 ? "\u203A" : " "} ${row.label}`, selected: selected2 });
@@ -58493,8 +58583,80 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint), children: visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintRow([styled(clean(line5.text), "selected" in line5 && line5.selected ? "accent" : "fg")]) }, index2)) });
 }
 
-// packages/tui/tui-render/src/feedback-pane.tsx
+// packages/tui/tui-render/src/account-pane.tsx
 var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
+var EMPTY_ACCOUNT_PANE = {
+  open: false,
+  available: false,
+  status: "unknown",
+  busy: false,
+  confirmSignOut: false
+};
+var ACTIVE_PHASES = /* @__PURE__ */ new Set(["initializing", "waiting-browser", "exchanging", "committing"]);
+function accountAttemptActive(phase) {
+  return phase !== void 0 && ACTIVE_PHASES.has(phase);
+}
+function chunk(text4, width) {
+  const size = Math.max(8, width);
+  const rows = [];
+  for (let index2 = 0; index2 < text4.length; index2 += size) rows.push(text4.slice(index2, index2 + size));
+  return rows;
+}
+function AccountPane({ state, locale = "zh-CN", maxCols }) {
+  if (!state.open) return null;
+  const copy = (key) => tuiCopy(key, locale);
+  const width = Math.max(1, maxCols);
+  const lines = [];
+  const active = accountAttemptActive(state.phase);
+  let hint;
+  if (!state.available) {
+    lines.push({ text: copy("accountUnavailable"), token: "fgDim" });
+    hint = [copy("accountApiKeyHint"), copy("accountCloseHint")].join(" \xB7 ");
+  } else if (state.confirmSignOut) {
+    lines.push({ text: copy("accountSignOutConfirm"), token: "fg" });
+    hint = copy("accountConfirmHint");
+  } else {
+    const statusKey = state.status === "credential-stored" ? "accountSignedIn" : state.status === "signed-out" ? "accountSignedOut" : "accountLoading";
+    lines.push({ text: copy(statusKey), token: state.status === "credential-stored" ? "accent" : "fg" });
+    if (state.profile !== void 0) lines.push({ text: state.profile, token: "fg" });
+    if (state.balance !== void 0) lines.push({ text: `${copy("accountBalance")}: ${state.balance}`, token: "fg" });
+    if (state.phase !== void 0 && !(state.phase === "succeeded" && state.status === "credential-stored")) {
+      const phaseKey = {
+        "initializing": "accountPhaseInitializing",
+        "waiting-browser": "accountPhaseWaiting",
+        "exchanging": "accountPhaseExchanging",
+        "committing": "accountPhaseCommitting",
+        "succeeded": "accountPhaseSucceeded",
+        "cancelled": "accountPhaseCancelled",
+        "expired": "accountPhaseExpired",
+        "failed": "accountPhaseFailed"
+      }[state.phase];
+      const reason = state.errorCode === void 0 ? "" : `: ${copy({
+        "no-response": "accountErrorNoResponse",
+        "network": "accountErrorNetwork",
+        "protocol": "accountErrorProtocol",
+        "expired": "accountErrorExpired",
+        "storage": "accountErrorStorage"
+      }[state.errorCode])}`;
+      lines.push({ text: copy(phaseKey) + reason, token: state.phase === "failed" || state.phase === "expired" ? "error" : "fgDim" });
+    }
+    if (state.phase === "succeeded" && state.status === "credential-stored") lines.push({ text: copy("accountModelHint"), token: "fgDim" });
+    if (state.phase === "waiting-browser" && state.authorizeUrl !== void 0) {
+      lines.push({ text: copy("accountOpenLink"), token: "fg" });
+      for (const row of chunk(state.authorizeUrl, width)) lines.push({ text: row, token: "accent", wrap: true });
+      if (state.forward !== void 0) {
+        lines.push({ text: `${copy("accountForward")}:`, token: "fgDim" });
+        for (const row of chunk(state.forward, width)) lines.push({ text: row, token: "fg", wrap: true });
+      }
+    }
+    hint = (active ? [state.phase === "waiting-browser" ? copy("accountOpenHint") : void 0, copy("accountCancelHint"), copy("accountCloseHint")] : state.status === "credential-stored" ? [copy("accountSignOutHint"), copy("accountCloseHint")] : [copy("accountSignInHint"), copy("accountApiKeyHint"), copy("accountCloseHint")]).filter((value) => value !== void 0).join(" \xB7 ");
+    if (state.busy) hint = copy("accountBusyHint");
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error, children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token)]) }, index2)) });
+}
+
+// packages/tui/tui-render/src/feedback-pane.tsx
+var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_FEEDBACK_PANE = {
   open: false,
   hasTarget: false,
@@ -58510,10 +58672,10 @@ function FeedbackPane({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (!state.hasTarget) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
       OverlayShell,
       {
         title: "\u53CD\u9988",
@@ -58527,13 +58689,13 @@ function FeedbackPane({
   const rows = [
     { key: "positive", label: "\u8D5E" },
     { key: "negative", label: "\u8E29" }
-  ].map((row) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { children: paintRow([
+  ].map((row) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { children: paintRow([
     styled(
       escapeContent(`${row.label}${state.rating === row.key ? " \xB7 \u5F53\u524D" : ""}`),
       state.rating === row.key ? "fg" : "fgDim"
     )
   ]) }, row.key));
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
     OverlayShell,
     {
       title: "\u53CD\u9988",
@@ -58583,7 +58745,7 @@ function toolDetailsKeyAction(key, info) {
 }
 
 // packages/tui/tui-render/src/tool-details-pane.tsx
-var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_TOOL_DETAILS_PANE = Object.freeze({
   open: false,
   cards: [],
@@ -58620,21 +58782,21 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
     }
     lines.push(truncateDisplay(`${state.page + 1} \xB7 ${page.remainingLines} ${tuiCopy("remaining", locale)} \xB7 d ${tuiCopy("diagnostics", locale)} ${tuiCopy(state.diagnostics ? "on" : "off", locale)}`, columns));
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: heading }),
-    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
+  return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: heading }),
+    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
+    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
   ] });
 }
 
 // packages/tui/tui-render/src/queue-chip.tsx
-var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
 function queueChipText(count) {
   return count <= 0 ? void 0 : `\u5F85\u53D1 ${String(count)} \xB7 \u2191 \u53D6\u51FA`;
 }
 function QueueChip({ count }) {
   const text4 = queueChipText(count);
-  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
+  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
 }
 
 // packages/tui/tui-render/src/loop.tsx
@@ -58846,6 +59008,20 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
   selectedCandidate: void 0
 }, queuedDraft = {}, compaction = { available: false }, inputHistory = []) {
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
+  if (overlays.account?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const account = overlays.account;
+    const send = (input) => holdComposer(state, { kind: "account-input", input });
+    if (keyInfo.escape) return send({ kind: "close" });
+    if (keyInfo.ctrl && key === "c") return holdComposer(state, { kind: "sigint" });
+    if (keyInfo.ctrl || keyInfo.meta || account.busy) return { kind: "none" };
+    if (account.confirmSignOut) return key === "y" ? send({ kind: "confirm" }) : key === "n" ? send({ kind: "dismiss" }) : { kind: "none" };
+    if (accountAttemptActive(account.phase)) {
+      return key === "o" ? send({ kind: "open-url" }) : key === "c" ? send({ kind: "cancel" }) : { kind: "none" };
+    }
+    if (account.status === "credential-stored") return key === "x" ? send({ kind: "sign-out" }) : { kind: "none" };
+    if (keyInfo.return && account.available) return send({ kind: "sign-in" });
+    return key === "k" ? send({ kind: "api-key" }) : { kind: "none" };
+  }
   if (overlays.plugins?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
     const plugins = overlays.plugins;
     const send = (input) => holdComposer(state, { kind: "plugins-input", input });
@@ -59944,6 +60120,10 @@ function TuiLoop({
     (callback) => controller.subscribe(callback),
     () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE
   );
+  const accountPane = (0, import_react40.useSyncExternalStore)(
+    (callback) => controller.subscribe(callback),
+    () => controller.getAccountPane?.() ?? EMPTY_ACCOUNT_PANE
+  );
   const agentHubPane = (0, import_react40.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAgentHubPane()
@@ -60064,6 +60244,8 @@ function TuiLoop({
   const settingsPaneRef = (0, import_react40.useRef)(settingsPane);
   const pluginsPaneRef = (0, import_react40.useRef)(pluginsPane);
   pluginsPaneRef.current = pluginsPane;
+  const accountPaneRef = (0, import_react40.useRef)(accountPane);
+  accountPaneRef.current = accountPane;
   settingsPaneRef.current = settingsPane;
   const agentHubPaneRef = (0, import_react40.useRef)(agentHubPane);
   agentHubPaneRef.current = agentHubPane;
@@ -60195,6 +60377,7 @@ function TuiLoop({
       {
         agentHub: { open: agentHubPaneRef.current.open },
         plugins: pluginsPaneRef.current,
+        account: accountPaneRef.current,
         planDirectory: { open: planDirectoryPaneRef.current.open },
         workspace: {
           open: workspacePaneRef.current.open,
@@ -60554,7 +60737,7 @@ function TuiLoop({
       ))
     );
   }
-  const viewportMotionPaused = pane.open || pluginsPane.open || search2.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
+  const viewportMotionPaused = pane.open || pluginsPane.open || accountPane.open || search2.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
   const brandBlocked = state.text !== "" || model.status !== "idle" || viewportMotionPaused;
   const brandLifecycleAllowed = !brandBlocked && (brandAnimationMode === "on" || brandAnimationMode === "auto" && brandAutoEligible);
   if (brandRevealStartedRef.current && !brandLifecycleAllowed) {
@@ -60650,10 +60833,12 @@ function TuiLoop({
     ] : [],
     (0, import_react40.createElement)(Box_default, { key: "conversation-gap", width: "100%", height: 1, flexShrink: 0 })
   );
-  const overlayBrowseOpen = agentHubPane.open || pluginsPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open;
+  const overlayBrowseOpen = agentHubPane.open || pluginsPane.open || accountPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open;
   let content3;
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content3 = conversation;
+  } else if (accountPane.open) {
+    content3 = (0, import_react40.createElement)(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) });
   } else if (pluginsPane.open) {
     content3 = (0, import_react40.createElement)(PluginsPane, {
       state: pluginsPane,
@@ -63267,9 +63452,9 @@ var PartialArguments = class _PartialArguments {
   settle(text4) {
     if (this.object !== void 0 || text4.length !== this.#size) return _PartialArguments.fromText(text4);
     let offset = 0;
-    for (const chunk of this.chunks) {
-      if (!text4.startsWith(chunk, offset)) return _PartialArguments.fromText(text4);
-      offset += chunk.length;
+    for (const chunk2 of this.chunks) {
+      if (!text4.startsWith(chunk2, offset)) return _PartialArguments.fromText(text4);
+      offset += chunk2.length;
     }
     this.chunks = text4.length === 0 ? [] : [text4];
     this.#ends = text4.length === 0 ? [] : [text4.length];
@@ -63528,15 +63713,15 @@ var PartialArguments = class _PartialArguments {
     let chunkIndex = this.chunkAt(read.at);
     while (read.at < end && read.length < limit) {
       const base = chunkIndex === 0 ? 0 : this.#ends[chunkIndex - 1];
-      const chunk = this.chunks[chunkIndex];
-      const remaining = chunk.slice(read.at - base, Math.min(chunk.length, end - base));
+      const chunk2 = this.chunks[chunkIndex];
+      const remaining = chunk2.slice(read.at - base, Math.min(chunk2.length, end - base));
       const boundary = remaining.search(CONTENT_ESCAPE);
       const length = Math.min(boundary < 0 ? remaining.length : boundary, limit - read.length);
       if (length > 0) {
         if (materialize) read.text += remaining.slice(0, length);
         read.at += length;
         read.length += length;
-        if (read.at === base + chunk.length) chunkIndex++;
+        if (read.at === base + chunk2.length) chunkIndex++;
         continue;
       }
       const type = remaining.length > 1 ? remaining[1] : read.at + 1 < end ? this.chunks[chunkIndex + 1][0] : void 0;
@@ -65051,13 +65236,13 @@ var BlockAssembler = class {
    * Feed one chunk into the assembly state.
    * @param chunk - the next raw chunk, in stream order.
    */
-  push(chunk) {
-    switch (chunk.type) {
+  push(chunk2) {
+    switch (chunk2.type) {
       case "block-start": {
-        if (!this.partials.has(chunk.index)) {
-          this.order.push(chunk.index);
-          this.partials.set(chunk.index, {
-            blockType: chunk.blockType,
+        if (!this.partials.has(chunk2.index)) {
+          this.order.push(chunk2.index);
+          this.partials.set(chunk2.index, {
+            blockType: chunk2.blockType,
             text: "",
             toolCallArguments: ""
           });
@@ -65066,36 +65251,36 @@ var BlockAssembler = class {
       }
       case "text-delta":
       case "reasoning-delta": {
-        const partial2 = this.ensure(chunk.index, chunk.type === "text-delta" ? "text" : "reasoning");
+        const partial2 = this.ensure(chunk2.index, chunk2.type === "text-delta" ? "text" : "reasoning");
         if (partial2.block) return;
-        partial2.text += chunk.text;
+        partial2.text += chunk2.text;
         return;
       }
       case "tool-call-delta": {
-        const partial2 = this.ensure(chunk.index, "tool-call");
+        const partial2 = this.ensure(chunk2.index, "tool-call");
         if (partial2.block) return;
-        partial2.toolCallId = chunk.id;
-        if (chunk.name) partial2.toolCallName = chunk.name;
-        partial2.toolCallArguments += chunk.argumentsDelta;
+        partial2.toolCallId = chunk2.id;
+        if (chunk2.name) partial2.toolCallName = chunk2.name;
+        partial2.toolCallArguments += chunk2.argumentsDelta;
         return;
       }
       case "block-end": {
-        const partial2 = this.ensure(chunk.index, chunk.block.type);
+        const partial2 = this.ensure(chunk2.index, chunk2.block.type);
         if (partial2.block) return;
-        partial2.block = chunk.block;
+        partial2.block = chunk2.block;
         return;
       }
       case "usage": {
-        this._usage = chunk.usage;
+        this._usage = chunk2.usage;
         return;
       }
       case "finish": {
-        this._finish = chunk.reason;
-        this._replayState = chunk.replayState;
+        this._finish = chunk2.reason;
+        this._replayState = chunk2.replayState;
         return;
       }
       default:
-        return assertNever(chunk, "BlockAssembler.push");
+        return assertNever(chunk2, "BlockAssembler.push");
     }
   }
   ensure(index2, blockType) {
@@ -66523,13 +66708,13 @@ ${formattedError}` });
 }
 
 // packages/tui/tui-render/src/todo-hud.tsx
-var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
-
-// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
 
-// packages/tui/tui-render/src/workflow-hud.tsx
+// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime31 = __toESM(require_jsx_runtime(), 1);
+
+// packages/tui/tui-render/src/workflow-hud.tsx
+var import_jsx_runtime32 = __toESM(require_jsx_runtime(), 1);
 
 // packages/tui/tui-render/src/interaction-state.ts
 function reduceInteraction(state, event) {
@@ -66994,7 +67179,7 @@ function truncateCodePoints(text4, limit) {
 }
 
 // packages/tui/tui/src/index.ts
-import { constants as constants2 } from "node:fs";
+import { constants as constants2, readFileSync as readFileSync3 } from "node:fs";
 import { access, lstat as lstat2, readFile as readFile2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname as dirname4, resolve as resolve4 } from "node:path";
@@ -84830,8 +85015,27 @@ var internals = {
   editorTempParent: tmpdir(),
   editorTtyPath: "/dev/tty",
   processArgv: process.argv,
-  clipboardSpawn: (command, args, options) => spawn3(command, [...args], options)
+  clipboardSpawn: (command, args, options) => spawn3(command, [...args], options),
+  openUrl: (href) => {
+    openUrl(href);
+  },
+  accountEnvironment: process.env
 };
+function tuiClientVersion() {
+  const manifest = JSON.parse(readFileSync3(new URL("../package.json", import.meta.url), "utf8"));
+  if (typeof manifest.version !== "string" || manifest.version === "") throw new Error("dsh-tui: package manifest carries no version");
+  return manifest.version;
+}
+function formatWallets(wallets, bonus, bonusLabel) {
+  const parts = [
+    ...wallets.map((wallet) => `${wallet.currency} ${wallet.balance}`),
+    ...bonus.map((wallet) => `${bonusLabel} ${wallet.currency} ${wallet.balance}`)
+  ];
+  return parts.length === 0 ? void 0 : parts.join(" \xB7 ");
+}
+function catalogInstallTarget(bundle) {
+  return bundle.availability === "missing" ? bundle.installTarget : void 0;
+}
 var liveRuntimeLifecycles = /* @__PURE__ */ new Set();
 var runtimeLifecycleObservers = /* @__PURE__ */ new Set();
 function observeTuiRuntimeLifecycle(observer) {
@@ -85012,11 +85216,13 @@ var LIST_TITLE_MAX_BYTES = 80;
 var SEARCH_LIMIT = 30;
 var SEARCH_DEBOUNCE_MS = 120;
 var LOCAL_COMMANDS = [
+  { name: "cd", description: "Show or change the session working directory", input: { hint: "[PATH]" } },
   { name: "export", description: "Export this session to a Markdown file" },
   { name: "files", description: "Browse and preview workspace files" },
   { name: "help", description: "Show command help and key bindings" },
   { name: "key", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
-  { name: "login", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
+  { name: "login", description: "Sign in to a DeepSeek account (API key when sign-in is unavailable)", input: { hint: "[KEY_NAME] <SECRET>" } },
+  { name: "logout", description: "Sign out of the DeepSeek account" },
   { name: "model", description: "Switch the active model" },
   { name: "new", description: "Start a new session" },
   { name: "reload", description: "Relaunch this process and resume the session" },
@@ -85024,6 +85230,7 @@ var LOCAL_COMMANDS = [
   { name: "settings", description: "Edit settings, catalogs, and General" }
 ];
 var ZH_COMMAND_DESCRIPTIONS = {
+  cd: "\u67E5\u770B\u6216\u5207\u6362\u4F1A\u8BDD\u5DE5\u4F5C\u76EE\u5F55",
   compact: "\u538B\u7F29\u8F83\u65E9\u7684\u5BF9\u8BDD\u5386\u53F2",
   export: "\u5BFC\u51FA\u5F53\u524D\u4F1A\u8BDD\u4E3A Markdown \u6587\u4EF6",
   feedback: "\u8BB0\u5F55\u5BF9\u672C\u4F1A\u8BDD\u7684\u53CD\u9988",
@@ -85031,7 +85238,8 @@ var ZH_COMMAND_DESCRIPTIONS = {
   goal: "\u8BBE\u7F6E\u6216\u67E5\u770B\u957F\u4EFB\u52A1\u76EE\u6807",
   help: "\u547D\u4EE4\u4E0E\u5FEB\u6377\u952E\u901F\u67E5",
   key: "\u8BBE\u7F6E\u6216\u66F4\u65B0 API \u5BC6\u94A5",
-  login: "\u8BBE\u7F6E\u6216\u66F4\u65B0 API \u5BC6\u94A5\uFF08\u540C /key\uFF09",
+  login: "\u767B\u5F55 DeepSeek \u8D26\u53F7\uFF08\u4E0D\u652F\u6301\u65F6\u8BBE\u7F6E API \u5BC6\u94A5\uFF09",
+  logout: "\u9000\u51FA DeepSeek \u8D26\u53F7",
   model: "\u5207\u6362\u5F53\u524D\u6A21\u578B",
   new: "\u5F00\u59CB\u65B0\u4F1A\u8BDD",
   permission: "\u5207\u6362\u6743\u9650\u9884\u8BBE\uFF08\u6C99\u7BB1\u6A21\u5F0F + \u5BA1\u6279\u7B56\u7565\uFF09",
@@ -85134,11 +85342,20 @@ var RuntimeController = class _RuntimeController {
         const key = progress.phase === "installing" ? "pluginsInstalling" : progress.phase === "cancelling" ? "pluginsCancelling" : "pluginsApplying";
         this.updatePlugins({ progress: tuiCopy(key, this.getLocale()) });
       }),
-      ctx.on("plugin-manager/install-log", (chunk) => {
-        if (this.closed || chunk.requestId === void 0 || chunk.requestId !== this.pluginsAttempt?.id) return;
-        this.updatePlugins({ output: this.pluginsPane.output + chunk.text });
+      ctx.on("plugin-manager/install-log", (chunk2) => {
+        if (this.closed || chunk2.requestId === void 0 || chunk2.requestId !== this.pluginsAttempt?.id) return;
+        this.updatePlugins({ output: this.pluginsPane.output + chunk2.text });
       })
     ];
+    pluginDisposers.push(
+      ctx.on("deepseek-account/model-sign-in-required", () => {
+        this.setFeedback(`\u2717 ${tuiCopy("accountSignInRequired", this.getLocale())}`);
+      }),
+      ctx.on("deepseek-account/session-expired", () => {
+        this.setFeedback(`\u2717 ${tuiCopy("accountSessionExpired", this.getLocale())}`);
+        if (this.accountPane.open) this.updateAccount({ profile: void 0, balance: void 0 });
+      })
+    );
     this.disposePluginEvents = () => {
       for (const dispose of pluginDisposers) dispose();
     };
@@ -85439,6 +85656,11 @@ var RuntimeController = class _RuntimeController {
   /** Jobs-registry change subscription; no-op when the service is absent. */
   disposeJobsChanged;
   pluginsPane = { ...EMPTY_PLUGINS_PANE };
+  /** DeepSeek account page; the watch subscription lives while the page is open. */
+  accountPane = { ...EMPTY_ACCOUNT_PANE };
+  accountWatch;
+  accountAttemptId;
+  accountUrlOpened;
   pluginsBundles = [];
   pluginsEntries = [];
   pluginsInventorySeq = 0;
@@ -85482,6 +85704,7 @@ var RuntimeController = class _RuntimeController {
     };
     this.disposeJobsChanged?.();
     this.disposePluginEvents();
+    this.accountWatch?.abort();
     this.disposeWorkflowEvents();
     this.cancelQueuedApprovals();
     this.cancelQueuedAskUsers();
@@ -85761,8 +85984,8 @@ var RuntimeController = class _RuntimeController {
         if (text4.length > OSC52_MAX_CHARS) this.setFeedback(`${tuiCopy("toolCopyFailed", options.locale)} \xB7 e ${tuiCopy("toolExportAction", options.locale)}`);
         else {
           try {
-            internals.copyText(text4, (chunk) => {
-              this.io.stdout.write(chunk);
+            internals.copyText(text4, (chunk2) => {
+              this.io.stdout.write(chunk2);
             });
             this.setFeedback(tuiCopy("toolCopied", options.locale));
           } catch (error51) {
@@ -85779,7 +86002,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Write one explicitly requested source export without replacing an existing file. */
   async exportToolText(text4, locale) {
-    const path2 = resolve4(this.config.cwd ?? process.cwd(), `tool-${randomUUID2()}.txt`);
+    const path2 = resolve4(this.getCwd(), `tool-${randomUUID2()}.txt`);
     try {
       await writeFile2(path2, text4, { flag: "wx", mode: 384 });
       if (!this.closed) this.setFeedback(`${tuiCopy("toolExported", locale)} \xB7 ${path2}`);
@@ -85950,7 +86173,7 @@ var RuntimeController = class _RuntimeController {
     const fs3 = this.ctx.get("fs");
     if (fs3 === void 0) return;
     try {
-      const root = await fs3.resolve(this.config.cwd ?? ".");
+      const root = await fs3.resolve(this.sessionDirectory() ?? ".");
       const children = await fs3.listDir(root);
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
       this.commitResolvedWorkspaceRoot(root, children);
@@ -86546,6 +86769,166 @@ var RuntimeController = class _RuntimeController {
     this.modelStatus = "idle";
     this.modelError = void 0;
   }
+  /** Return the latest DeepSeek account page snapshot. */
+  getAccountPane() {
+    return this.accountPane;
+  }
+  /** Publish a new account page snapshot. */
+  updateAccount(patch) {
+    if (this.closed) return;
+    this.accountPane = { ...this.accountPane, ...patch };
+    this.emit();
+  }
+  /** Identity headers for one account call. */
+  accountClient() {
+    return { version: tuiClientVersion(), locale: this.getLocale(), timezoneOffsetSeconds: -(/* @__PURE__ */ new Date()).getTimezoneOffset() * 60 };
+  }
+  /**
+   * Open the account page and subscribe to account snapshots until it closes.
+   * @param confirmSignOut - open directly on the sign-out confirmation (`/logout`).
+   */
+  openAccountPane(confirmSignOut = false) {
+    this.closeOtherPanels();
+    const account = this.ctx.get("deepseekAccount");
+    this.accountPane = {
+      ...EMPTY_ACCOUNT_PANE,
+      open: true,
+      available: account !== void 0,
+      confirmSignOut: confirmSignOut && account !== void 0
+    };
+    this.emit();
+    if (account === void 0) return;
+    const watch = new AbortController();
+    this.accountWatch = watch;
+    this.ownWork((async () => {
+      try {
+        for await (const view of account.watch(AbortSignal.any([watch.signal, this.lifecycleAbort.signal]))) {
+          if (watch.signal.aborted || this.closed) return;
+          this.applyAccountView(view);
+        }
+      } catch (error51) {
+        if (!watch.signal.aborted && !this.closed) this.updateAccount({ error: errorReason(error51) });
+      }
+    })(), "account watch");
+  }
+  /** Fold one account snapshot; a newly stored credential loads profile and balance. */
+  applyAccountView(view) {
+    const attempt = view.attempt;
+    this.accountAttemptId = attempt?.id;
+    const wasSignedIn = this.accountPane.status === "credential-stored";
+    this.updateAccount({
+      status: view.status,
+      phase: attempt?.phase,
+      authorizeUrl: attempt?.authorizeUrl,
+      errorCode: attempt?.errorCode,
+      ...view.status === "signed-out" ? { profile: void 0, balance: void 0 } : {}
+    });
+    if (attempt?.phase === "waiting-browser" && attempt.authorizeUrl !== void 0 && this.accountUrlOpened !== attempt.authorizeUrl) {
+      this.accountUrlOpened = attempt.authorizeUrl;
+      if (this.accountPane.forward === void 0) internals.openUrl(attempt.authorizeUrl);
+    }
+    if (view.status === "credential-stored" && !wasSignedIn) this.ownWork(this.loadAccountDetails(), "account details");
+  }
+  /** Read profile and balance independently; either failure leaves the other visible. */
+  async loadAccountDetails() {
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0) return;
+    const client = this.accountClient();
+    const [profile, balance] = await Promise.allSettled([account.getProfile(client), account.getBalance(client)]);
+    if (this.closed || this.accountPane.status !== "credential-stored") return;
+    const patch = {};
+    if (profile.status === "fulfilled" && profile.value?.status === "ready") {
+      const value = profile.value.value;
+      const text4 = [value.name, value.contact].filter((part) => part !== null && part !== "").join(" \xB7 ");
+      if (text4 !== "") patch.profile = text4;
+    }
+    if (balance.status === "fulfilled" && balance.value?.status === "ready") {
+      patch.balance = formatWallets(balance.value.value, balance.value.bonusWallets, this.getLocale() === "zh-CN" ? "\u8D60\u9001" : "bonus");
+    }
+    this.updateAccount(patch);
+  }
+  /** Start or join browser sign-in with the loopback callback served by the webserver row. */
+  async startAccountSignIn() {
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0) return;
+    const webServer = this.ctx.get("webServer");
+    if (webServer === void 0 || webServer.protocol !== "http:") {
+      this.updateAccount({ error: tuiCopy("accountCallbackUnavailable", this.getLocale()) });
+      return;
+    }
+    const host = webServer.host.includes(":") ? `[${webServer.host}]` : webServer.host;
+    const environment2 = internals.accountEnvironment;
+    const remote = environment2.SSH_CONNECTION !== void 0 || environment2.SSH_TTY !== void 0;
+    this.accountUrlOpened = void 0;
+    this.updateAccount({
+      busy: true,
+      error: void 0,
+      forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : void 0
+    });
+    try {
+      this.applyAccountView(await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, "web"));
+    } catch (error51) {
+      this.updateAccount({ error: errorReason(error51) });
+    } finally {
+      this.updateAccount({ busy: false });
+    }
+  }
+  /** Run one account mutation and surface its failure on the page. */
+  async accountOperation(operation, done) {
+    this.updateAccount({ busy: true, error: void 0 });
+    try {
+      this.applyAccountView(await operation());
+      if (done !== void 0) this.setFeedback(`\u2713 ${done}`);
+    } catch (error51) {
+      this.updateAccount({ error: errorReason(error51) });
+    } finally {
+      this.updateAccount({ busy: false });
+    }
+  }
+  /** Enforce the page's state at the action executor. */
+  handleAccountInput(input) {
+    const state = this.accountPane;
+    if (!state.open) return;
+    if (input.kind === "close") {
+      this.accountWatch?.abort();
+      this.accountWatch = void 0;
+      this.updateAccount({ open: false, confirmSignOut: false });
+      return;
+    }
+    if (input.kind === "api-key") {
+      this.handleAccountInput({ kind: "close" });
+      this.openApiKeyPane();
+      return;
+    }
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0 || state.busy) return;
+    switch (input.kind) {
+      case "sign-in":
+        if (state.status !== "credential-stored" && !accountAttemptActive(state.phase)) this.ownWork(this.startAccountSignIn(), "account sign-in");
+        return;
+      case "open-url":
+        if (state.authorizeUrl !== void 0) internals.openUrl(state.authorizeUrl);
+        return;
+      case "cancel": {
+        const id = this.accountAttemptId;
+        if (id !== void 0 && accountAttemptActive(state.phase)) this.ownWork(this.accountOperation(() => account.cancelSignIn(id)), "account cancel");
+        return;
+      }
+      case "sign-out":
+        if (state.status === "credential-stored") this.updateAccount({ confirmSignOut: true });
+        return;
+      case "dismiss":
+        this.updateAccount({ confirmSignOut: false });
+        return;
+      case "confirm":
+        if (!state.confirmSignOut) return;
+        this.updateAccount({ confirmSignOut: false });
+        this.ownWork(this.accountOperation(() => account.signOut(this.accountClient()), tuiCopy("accountSignedOutDone", this.getLocale())), "account sign-out");
+        return;
+      default:
+        assertNever(input.kind, "AccountPaneInput");
+    }
+  }
   /** Return the latest Plugins snapshot, including progress received while closed. */
   getPluginsPane() {
     return this.pluginsPane;
@@ -86574,21 +86957,30 @@ var RuntimeController = class _RuntimeController {
       this.pluginsEntries = entries;
       const copy = (key) => tuiCopy(key, this.getLocale());
       const rows = [];
-      for (const bundle of [...bundles.filter((item) => !item.installed), ...bundles.filter((item) => item.installed)]) {
-        const group = bundle.installed ? "owned" : "supplied";
+      const groupOf = (bundle) => bundle.installed ? "owned" : bundle.official ? "official" : "supplied";
+      const groupOrder = ["official", "supplied", "owned"];
+      for (const bundle of groupOrder.flatMap((group) => bundles.filter((item) => groupOf(item) === group))) {
+        const group = groupOf(bundle);
+        const catalog = catalogInstallTarget(bundle);
         const details = [
           bundle.description,
           bundle.version,
+          bundle.availability === "missing" ? copy(bundle.installed ? "pluginsMissingFiles" : "pluginsNotInstalled") : void 0,
+          catalog === void 0 ? void 0 : `${copy("pluginsInstallTarget")}: ${catalog.spec} (${catalog.version})`,
           bundle.optional ? copy("pluginsOptional") : void 0,
           !bundle.removable ? copy("pluginsNotRemovable") : void 0,
           bundle.readOnlyReason ? this.pluginsError({ code: bundle.readOnlyReason }) : void 0,
           bundle.error ? this.pluginsError(bundle.error) : void 0,
           bundle.overrides.length ? `${copy("pluginsOverrides")}: ${bundle.overrides.join(", ")}` : void 0
         ].filter((value) => value !== void 0);
+        const badges = [
+          bundle.official ? copy("pluginsOfficial") : void 0,
+          copy(catalog !== void 0 ? "pluginsCatalog" : bundle.enabled ? "pluginsSelected" : "pluginsUnselected")
+        ];
         rows.push({
           id: `bundle:${bundle.name}`,
           group,
-          label: `${bundle.name} \xB7 ${copy(bundle.enabled ? "pluginsSelected" : "pluginsUnselected")}`,
+          label: [bundle.name, ...badges.filter((value) => value !== void 0)].join(" \xB7 "),
           details,
           toggle: bundle.readOnlyReason === void 0,
           removable: bundle.removable && bundle.readOnlyReason === void 0
@@ -86951,7 +87343,12 @@ var RuntimeController = class _RuntimeController {
         return;
       }
       if (!row.toggle) return;
-      if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), "plugins bundle toggle");
+      const catalog = bundle === void 0 ? void 0 : catalogInstallTarget(bundle);
+      if (catalog !== void 0) {
+        this.pluginsInspection = void 0;
+        this.updatePlugins({ mode: "input", spec: catalog.spec, inspection: [], result: [], error: void 0, pendingBuilds: [], retry: false });
+        this.ownWork(this.inspectPlugins(), "plugins catalog inspection");
+      } else if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), "plugins bundle toggle");
       else {
         for (const owner of this.pluginsBundles) {
           const declaration = owner.rows.find((item) => row.id === `row:${owner.name}:${item.rowId}`);
@@ -86968,6 +87365,11 @@ var RuntimeController = class _RuntimeController {
   }
   /** Close other overlays while retaining the tracked Plugins operation. */
   closeOtherPanels() {
+    if (this.accountPane.open) {
+      this.accountWatch?.abort();
+      this.accountWatch = void 0;
+      this.accountPane = { ...this.accountPane, open: false, confirmSignOut: false };
+    }
     this.pluginsPane = {
       ...this.pluginsPane,
       open: false,
@@ -87394,6 +87796,9 @@ var RuntimeController = class _RuntimeController {
         return;
       case "plugins-input":
         this.handlePluginsInput(action.input);
+        return;
+      case "account-input":
+        this.handleAccountInput(action.input);
         return;
       case "approval-allow":
         this.answerHead("allowed-once");
@@ -88082,9 +88487,9 @@ var RuntimeController = class _RuntimeController {
     let received = 0;
     const store = this.attachmentStore();
     const limit = store?.imageLimits.maxImageBytes ?? 10 * 1024 * 1024;
-    child.stdout.on("data", (chunk) => {
-      received += chunk.length;
-      if (received <= limit) chunks.push(chunk);
+    child.stdout.on("data", (chunk2) => {
+      received += chunk2.length;
+      if (received <= limit) chunks.push(chunk2);
     });
     const closed = await new Promise((resolve5) => {
       child.on("error", (error51) => {
@@ -88290,8 +88695,8 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     const payload = target.text.slice(0, OSC52_MAX_CHARS);
-    internals.copyText(payload, (chunk) => {
-      this.io.stdout.write(chunk);
+    internals.copyText(payload, (chunk2) => {
+      this.io.stdout.write(chunk2);
     });
     this.setFeedback(target.kind === "code" ? "\u5DF2\u590D\u5236\u4EE3\u7801\u5757" : "\u5DF2\u590D\u5236\u6700\u8FD1\u6D88\u606F");
   }
@@ -88795,6 +89200,10 @@ var RuntimeController = class _RuntimeController {
       this.ownWork(this.exportLive(), "session export");
       return;
     }
+    if (query === "cd" || query.startsWith("cd ")) {
+      this.ownWork(this.changeWorkingDirectory(query.slice(2).trim()), "working directory change");
+      return;
+    }
     if (query === "new" || query === "new ") {
       if (this.blockingHead() !== void 0) return;
       this.closeOtherPanels();
@@ -88812,6 +89221,16 @@ var RuntimeController = class _RuntimeController {
     }
     if (query === "help") {
       this.openHelpPane();
+      return;
+    }
+    if ((query === "login" || query === "login ") && this.ctx.get("deepseekAccount") !== void 0) {
+      if (this.blockingHead() !== void 0) return;
+      this.openAccountPane();
+      return;
+    }
+    if (query === "logout" || query === "logout ") {
+      if (this.blockingHead() !== void 0) return;
+      this.openAccountPane(true);
       return;
     }
     if (query === "key" || query === "key " || query === "login" || query === "login ") {
@@ -88856,6 +89275,31 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     this.executeSlash(query);
+  }
+  /**
+   * Show or change the bound Session's working directory. Existing shells and
+   * terminals keep their own directories; the service records the change in
+   * the Session log and queues the model-visible notice.
+   * @param path - absolute or current-directory-relative target; empty shows the current directory.
+   */
+  async changeWorkingDirectory(path2) {
+    const locale = this.getLocale();
+    const agent = this.agent;
+    const workingDirectory = this.ctx.get("workingDirectory");
+    if (agent === void 0 || workingDirectory === void 0) {
+      this.reportCommandFailure(tuiCopy("cdUnavailable", locale));
+      return;
+    }
+    if (path2 === "") {
+      this.setFeedback(`${tuiCopy("cdCurrent", locale)}: ${workingDirectory.get(agent.session)}`);
+      return;
+    }
+    try {
+      const directory = await workingDirectory.set(agent, path2, this.lifecycleAbort.signal);
+      if (!this.closed) this.setFeedback(`\u2713 ${tuiCopy("cdChanged", locale)}: ${directory}`);
+    } catch (error51) {
+      if (!this.closed) this.reportCommandFailure(errorReason(error51));
+    }
   }
   /**
    * Forward `/{query}` to the command registry. Overlay Enter uses this
@@ -89620,6 +90064,7 @@ var RuntimeController = class _RuntimeController {
       const providers = llm.listProviders();
       const groups = await Promise.all(providers.map(async (provider) => {
         let models;
+        let failed = false;
         try {
           models = await llm.listModels(provider.id);
         } catch (error51) {
@@ -89627,9 +90072,10 @@ var RuntimeController = class _RuntimeController {
             `model catalog for "${provider.id}" failed: ${String(error51)}`
           );
           models = [];
+          failed = true;
         }
         if (models.length === 0) {
-          return [this.fallbackModelRow(provider.id, provider.name, current)];
+          return [this.fallbackModelRow(provider.id, provider.name, current, failed)];
         }
         return models.map(
           (model) => this.catalogRow(provider.id, model.id, model.name, current)
@@ -89668,20 +90114,16 @@ var RuntimeController = class _RuntimeController {
   }
   /**
    * The degraded row for a provider with no discoverable catalog: the live
-   * default model when the provider is the current one, else the provider
-   * route itself as the only known identity.
+   * default model when the provider is the current one, else an unselectable
+   * provider row whose guidance names how its models become available.
+   * DeepSeek providers advertise models only after sign-in or key setup.
    */
-  fallbackModelRow(provider, providerName, current) {
-    const isCurrentProvider = current.provider === provider;
-    const model = isCurrentProvider ? current.model : provider;
-    return {
-      id: `default:${provider}`,
-      provider,
-      model,
-      name: isCurrentProvider ? current.model : providerName,
-      fallback: true,
-      current: isCurrentProvider
-    };
+  fallbackModelRow(provider, providerName, current, failed) {
+    if (current.provider === provider) {
+      return { id: `default:${provider}`, provider, model: current.model, name: current.model, fallback: true, current: true };
+    }
+    const unavailable = failed ? "\u6A21\u578B\u76EE\u5F55\u52A0\u8F7D\u5931\u8D25" : provider === "deepseek-account" ? "\u767B\u5F55 DeepSeek \u8D26\u53F7\u540E\u53EF\u7528 \xB7 /login" : provider === "deepseek-official" ? "\u914D\u7F6E API \u5BC6\u94A5\u540E\u53EF\u7528 \xB7 /key" : "\u6682\u65E0\u53EF\u7528\u6A21\u578B \xB7 /settings \u914D\u7F6E";
+    return { id: `default:${provider}`, provider, model: provider, name: providerName, fallback: true, current: false, unavailable };
   }
   /**
    * Enter on a highlighted model row: persist the selection, then apply it
@@ -89695,6 +90137,10 @@ var RuntimeController = class _RuntimeController {
     const ref = this.modelSelectionRef;
     const defaultModel = this.ctx.get("agentDefaultModel");
     if (row === void 0 || ref === void 0 || defaultModel === void 0) {
+      return;
+    }
+    if (row.unavailable !== void 0) {
+      this.setFeedback(`\u2717 ${row.name}\uFF1A${row.unavailable}`);
       return;
     }
     const next = { provider: row.provider, model: row.model };
@@ -89716,11 +90162,21 @@ var RuntimeController = class _RuntimeController {
     this.emit();
   }
   /**
-   * Return the workspace base directory `@` mention queries resolve under.
-   * @returns the configured run cwd, else the process cwd.
+   * Return the directory the footer shows and `@` mentions and `/files` resolve under.
+   * @returns the bound Session's working directory when the working-directory service is mounted, else the configured run cwd, else the process cwd.
    */
   getCwd() {
-    return this.config.cwd ?? process.cwd();
+    return this.sessionDirectory() ?? process.cwd();
+  }
+  /**
+   * The explicit base directory for filesystem lookups.
+   * @returns the bound Session's working directory when the service is mounted, else the configured run cwd; undefined lets the filesystem provider apply its own base.
+   */
+  sessionDirectory() {
+    const agent = this.agent;
+    const workingDirectory = this.ctx.get("workingDirectory");
+    if (agent !== void 0 && workingDirectory !== void 0) return workingDirectory.get(agent.session);
+    return this.config.cwd;
   }
   /**
    * Resolve `@` mention candidates for one base path and typed query: a
@@ -89740,9 +90196,10 @@ var RuntimeController = class _RuntimeController {
     const needle = query.toLowerCase();
     const fs3 = this.ctx.get("fs");
     if (fs3 !== void 0 && basePath.trim() !== "") {
+      const cwd2 = this.sessionDirectory();
       try {
         const target = await fs3.resolve(basePath, {
-          ...this.config.cwd === void 0 ? {} : { cwd: this.config.cwd },
+          ...cwd2 === void 0 ? {} : { cwd: cwd2 },
           ...signal === void 0 ? {} : { signal }
         });
         const entries = await fs3.listDir(target, signal);

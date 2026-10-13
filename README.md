@@ -150,7 +150,15 @@ The TUI is a dsh plugin bundle, not a fork or a separate agent runtime:
        └─ zen-proxy    (./zen-proxy)    optional OpenCode Zen header proxy
 ```
 
-Rows name plugins through the package's `exports`, so a settings edit records a portable row name in the profile patch. The bundle also inserts the published dsh plugins `session-stats`, `message-feedback`, `tool-ask-user`, and `workspace-changes`, and overrides `system-prompt`, `tools`, `session-query-sqlite`, and `session-title-llm`.
+Rows name plugins through the package's `exports`, so a settings edit records a portable row name in the profile patch. The bundle also inserts the published dsh plugins `session-stats`, `message-feedback`, `tool-ask-user`, `workspace-changes`, and a loopback `webserver` for the account sign-in callback, and overrides `system-prompt`, `tools`, `session-query-sqlite`, and `session-title-llm`.
+
+### DeepSeek account, models, and working directory
+
+- `/login` opens the DeepSeek account page when dsh mounts the `deepseek-account` service: Enter starts browser sign-in, `o` reopens the authorization link, `c` cancels, and the page shows the profile and balance once signed in. The browser returns to the bundle's `webserver` row on `127.0.0.1` with an OS-assigned port. Over SSH the page prints the `ssh -L` forward instead of opening a browser; pin `port` on the `webserver` row so the forward stays stable. Without the account service, `/login` and `/key` open the API-key editor.
+- `/logout` signs out after confirmation; stored API keys remain.
+- `/model` lists `deepseek-account` and `deepseek-official` with the step that makes their models available (`/login` or `/key`) while their catalogs are empty, and refuses to select such a row.
+- `/cd [path]` shows or changes the Session working directory on dsh 0.2.1 and later. The header, `@` mentions, and `/files` follow it, and the model receives the change notice; existing shells keep their own directories.
+- `/plugins` lists official bundles in their own group. An official catalog entry whose files are not installed is marked installable, and Space opens the install preview for its exact target.
 
 ### OpenCode Zen free models
 
@@ -241,6 +249,8 @@ The `Publish npm` workflow runs tests and packed-package verification again befo
 - **Runtime update is not launcher update** — `dsh-tui update` refreshes DSH source and dependencies; npm updates the launcher package.
 - **Integration owns release readiness** — launcher success does not replace the DSH branch's behavior, snapshot, build, or hygiene checks.
 - **Source mode targets the legacy integration branch** — `--source` boots the `deepseek-tui` profile of the configured DSH checkout (default `feat/deepseek-tui`, dsh 0.1.6); it does not use this 0.2 bundle.
+- **No scheduled reminders** — `@deepseek-ai/dsh-schedule` requires the Web host's Session controller, so the TUI composition does not mount it and preset `schedule_*` tools stay inactive.
+- **Account sign-in needs a reachable Platform** — sign-in reports `no-response` when the host cannot reach `platform.deepseek.com`; use `/key` in that case.
 - **No physical session deletion on dsh 0.2** — 0.2 session persistence archives instead of deleting, and the TUI composition mounts no workspace archive service, so the session list reports deletion as unavailable.
 
 <a id="dev-note"></a>

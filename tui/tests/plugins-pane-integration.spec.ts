@@ -12,7 +12,7 @@ import type { PluginsPaneInput } from '@deepseek-ai/dsh-tui-render'
 import { RuntimeController } from '../src/index.ts'
 
 const bundle = (patch: Partial<BundleInfo> = {}): BundleInfo => ({ name: 'sample', enabled: true,
-  installed: true, optional: false, removable: true, rows: [], overrides: [], ...patch })
+  official: false, availability: 'profile', installed: true, optional: false, removable: true, rows: [], overrides: [], ...patch })
 const result = (patch: Partial<ChangeResult> = {}): ChangeResult => ({ changed: true,
   application: 'restart-required', stage: 'enable', target: 'sample', ...patch })
 const accepted: PluginSpecInspection = { status: 'accepted', kind: 'registry', name: 'sample', version: '1.0.0', description: 'a bundle', bundle: true, registry: null }
@@ -97,6 +97,26 @@ describe('Plugins inventory and controls', () => {
     b.input({ kind: 'move', delta: 2 }); b.input({ kind: 'toggle' })
     b.input({ kind: 'move', delta: 1 }); b.input({ kind: 'toggle' })
     expect(b.manager.setPluginEnabled).not.toHaveBeenCalled()
+  })
+
+  it('lists official catalog entries first and installs their exact target on toggle', async () => {
+    const b = await bench()
+    b.manager.listBundles.mockResolvedValue([
+      bundle({ name: 'own' }),
+      bundle({ name: '@deepseek-ai/dsh-claude-code', official: true, availability: 'missing', installed: false, enabled: false,
+        optional: false, removable: false, installTarget: { spec: '@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', version: '0.2.1-alpha.2' } }),
+    ])
+    await b.open()
+    const rows = b.controller.getPluginsPane().rows
+    expect(rows.map(row => [row.id, row.group])).toEqual([['bundle:@deepseek-ai/dsh-claude-code', 'official'], ['bundle:own', 'owned']])
+    expect(rows[0]?.label).toBe('@deepseek-ai/dsh-claude-code · 官方 · 可安装')
+    expect(rows[0]?.details).toEqual(expect.arrayContaining(['未安装', '安装目标: @deepseek-ai/dsh-claude-code@0.2.1-alpha.2 (0.2.1-alpha.2)']))
+    b.input({ kind: 'toggle' })
+    await vi.waitFor(() => expect(b.controller.getPluginsPane().mode).toBe('preview'))
+    expect(b.manager.inspect).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', {}, expect.any(AbortSignal))
+    expect(b.manager.setBundleEnabled).not.toHaveBeenCalled()
+    b.input({ kind: 'install' })
+    await vi.waitFor(() => expect(b.manager.installBundle).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', expect.anything()))
   })
 
   it('toggles optional non-removable bundles and live rows with addressable controls', async () => {

@@ -83,6 +83,16 @@
         host: 127.0.0.1
         port: 4097
 
+    # Loopback route carrier for the DeepSeek account browser callback
+    # (/login). Port 0 takes a free port from the OS; pin a port here when
+    # an SSH session forwards it. Only routes registered by mounted plugins
+    # are served, and the address must stay a loopback literal.
+    - id: webserver
+      name: '@deepseek-ai/dsh-host-webserver'
+      config:
+        host: 127.0.0.1
+        port: 0
+
     # Records each top-level turn's changed files from git working-tree
     # snapshots; the TUI projects a bounded transcript card from Host
     # summaries. Bounds match the plugin Config defaults.
