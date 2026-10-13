@@ -73,16 +73,16 @@ export function longSessionText(
 }
 
 /**
- * The deterministic 4000-event log (turn/start, user/message,
+ * The deterministic 6000-event log (turn/start, user/message, step/start,
  * assistant/message, turn/end per turn) for one seed.
  * @param seed - determinism seed (default 0).
- * @returns the contiguous event list, seq 0..3999.
+ * @returns the contiguous event list, seq 0..5999.
  */
 export function longSessionEvents(seed = 0): readonly SessionEvent[] {
   const events: SessionEvent[] = []
   const base = 1_700_000_000_000
   for (let turn = 1; turn <= LONG_SESSION_TURNS; turn += 1) {
-    const seq = (turn - 1) * 4
+    const seq = (turn - 1) * 6
     const time = base + (turn - 1) * 4000
     const userIndex = (turn - 1) * 2
     events.push({ type: 'turn/start', seq: SessionSeq(seq), time, data: { turn } })
@@ -102,10 +102,11 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
       },
       surfaceOp: 'append',
     })
+    events.push({ type: 'step/start', seq: SessionSeq(seq + 2), time: time + 2, data: { turn, step: 1 } })
     events.push({
       type: 'assistant/message',
-      seq: SessionSeq(seq + 2),
-      time: time + 2,
+      seq: SessionSeq(seq + 3),
+      time: time + 3,
       data: {
         turn,
         step: 1,
@@ -128,10 +129,11 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
       },
       surfaceOp: 'append',
     })
+    events.push({ type: 'step/end', seq: SessionSeq(seq + 4), time: time + 4, data: { turn, step: 1 } })
     events.push({
       type: 'turn/end',
-      seq: SessionSeq(seq + 3),
-      time: time + 3,
+      seq: SessionSeq(seq + 5),
+      time: time + 5,
       data: { turn, reason: { kind: 'completed' } },
     })
   }

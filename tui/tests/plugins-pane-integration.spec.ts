@@ -15,7 +15,7 @@ const bundle = (patch: Partial<BundleInfo> = {}): BundleInfo => ({ name: 'sample
   installed: true, optional: false, removable: true, rows: [], overrides: [], ...patch })
 const result = (patch: Partial<ChangeResult> = {}): ChangeResult => ({ changed: true,
   application: 'restart-required', stage: 'enable', target: 'sample', ...patch })
-const accepted: PluginSpecInspection = { status: 'accepted', kind: 'registry', name: 'sample', version: '1.0.0', description: 'a bundle', bundle: true }
+const accepted: PluginSpecInspection = { status: 'accepted', kind: 'registry', name: 'sample', version: '1.0.0', description: 'a bundle', bundle: true, registry: null }
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((r) => { resolve = r })

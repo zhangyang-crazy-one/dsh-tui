@@ -461,7 +461,8 @@ export function stringifySettingValue(value: unknown): string {
   if (typeof value === 'string') return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (value === null) return 'null'
-  return JSON.stringify(value)
+  // JSON.stringify yields undefined for an unset optional field.
+  return JSON.stringify(value) ?? ''
 }
 
 /**

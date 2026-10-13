@@ -409,14 +409,11 @@ describe('HTML terminal design geometry', () => {
         step: 1,
         message: {
           id: 'tool-1',
-          role: 'user',
+          role: 'tool',
           source: { kind: 'tool', callId: 'call-write' },
-          content: [{
-            type: 'tool-result',
-            toolCallId: 'call-write',
-            content: [{ type: 'text', text: 'written' }],
-            isError: false,
-          }],
+          toolCallId: 'call-write',
+          content: [{ type: 'text', text: 'written' }],
+          isError: false,
         },
       }))
       instance.rerender(shell(columns, rows, renderModel(), FOOTER_VIEW))

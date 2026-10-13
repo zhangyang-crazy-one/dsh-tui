@@ -269,6 +269,7 @@ describe('interactive loop', () => {
     Reflect.set(controller, 'projector', {
       push,
       seed: (events: readonly SessionEvent[]) => { delegate.seed(events) },
+      pushStreamFrame: frame => { delegate.pushStreamFrame(frame) },
       snapshot: () => delegate.snapshot(),
     } satisfies Projector)
     const reduce = vi.spyOn(

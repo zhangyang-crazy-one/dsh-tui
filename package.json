@@ -1,11 +1,19 @@
 {
   "name": "@crazyhappyone/dsh-tui",
   "version": "0.1.0-alpha.49",
-  "description": "Source-runtime launcher for the DeepSeek Harness terminal interface",
+  "description": "DeepSeek Harness terminal interface: a dsh plugin bundle plus its launcher",
   "type": "module",
   "license": "MIT",
   "bin": {
     "dsh-tui": "bin/dsh-tui.js"
+  },
+  "exports": {
+    "./runtime": "./dist/index.js",
+    "./startup": "./dist/startup.js",
+    "./settings": "./dist/settings.js",
+    "./zen-proxy": "./dist/zen-proxy.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
   },
   "files": [
     "assets/screenshots/*.png",
@@ -13,7 +21,6 @@
     "src/**/*.js",
     "dist/**/*.js",
     "cordis.patch.yml",
-    "tui/cordis.patch.yml",
     "README.md",
     "README.zh.md",
     "LICENSE"
@@ -39,5 +46,18 @@
     "dsh",
     "tui",
     "terminal"
-  ]
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
 }

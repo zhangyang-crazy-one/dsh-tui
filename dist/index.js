@@ -18039,7 +18039,7 @@ var require_react_reconciler_development = __commonJS({
             finishedWork.type,
             prevProps
           );
-          var snapshot = runWithFiberInDEV(
+          var snapshot2 = runWithFiberInDEV(
             finishedWork,
             callGetSnapshotBeforeUpdates,
             current2,
@@ -18047,13 +18047,13 @@ var require_react_reconciler_development = __commonJS({
             prevState
           );
           prevProps = didWarnAboutUndefinedSnapshotBeforeUpdate;
-          void 0 !== snapshot || prevProps.has(finishedWork.type) || (prevProps.add(finishedWork.type), runWithFiberInDEV(finishedWork, function() {
+          void 0 !== snapshot2 || prevProps.has(finishedWork.type) || (prevProps.add(finishedWork.type), runWithFiberInDEV(finishedWork, function() {
             console.error(
               "%s.getSnapshotBeforeUpdate(): A snapshot value (or null) must be returned. You have returned undefined.",
               getComponentNameFromFiber(finishedWork)
             );
           }));
-          current2.__reactInternalSnapshotBeforeUpdate = snapshot;
+          current2.__reactInternalSnapshotBeforeUpdate = snapshot2;
         } catch (error51) {
           captureCommitPhaseError(finishedWork, finishedWork.return, error51);
         }
@@ -22583,9 +22583,9 @@ var require_react_reconciler_development = __commonJS({
       }, callComponentDidMountInDEV = callComponentDidMount.react_stack_bottom_frame.bind(
         callComponentDidMount
       ), callComponentDidUpdate = {
-        react_stack_bottom_frame: function(finishedWork, instance, prevProps, prevState, snapshot) {
+        react_stack_bottom_frame: function(finishedWork, instance, prevProps, prevState, snapshot2) {
           try {
-            instance.componentDidUpdate(prevProps, prevState, snapshot);
+            instance.componentDidUpdate(prevProps, prevState, snapshot2);
           } catch (error51) {
             captureCommitPhaseError(finishedWork, finishedWork.return, error51);
           }
@@ -31037,7 +31037,7 @@ function assembleStyles() {
 var ansiStyles = assembleStyles();
 var ansi_styles_default = ansiStyles;
 
-// node_modules/.pnpm/wrap-ansi@10.0.1/node_modules/wrap-ansi/index.js
+// node_modules/.pnpm/wrap-ansi@10.0.2/node_modules/wrap-ansi/index.js
 var ANSI_ESCAPE = "\x1B";
 var ANSI_ESCAPE_BELL = "\x07";
 var C1_CSI = "\x9B";
@@ -31512,8 +31512,17 @@ var exec = (string6, columns, options = {}) => {
   }
   return restoreStylesAcrossRows(rows.join("\n"));
 };
+var normalizeText = (string6) => {
+  let normalizedString = "";
+  forEachSegment(string6, (plainText) => {
+    normalizedString += plainText.normalize();
+  }, (escape3) => {
+    normalizedString += escape3;
+  });
+  return normalizedString;
+};
 function wrapAnsi(string6, columns, options) {
-  return String(string6).normalize().replaceAll("\r\n", "\n").split("\n").map((line5) => exec(expandTabs(line5), columns, options)).join("\n");
+  return normalizeText(String(string6)).replaceAll("\r\n", "\n").split("\n").map((line5) => exec(expandTabs(line5), columns, options)).join("\n");
 }
 
 // node_modules/.pnpm/terminal-size@4.0.1/node_modules/terminal-size/index.js
@@ -31680,7 +31689,7 @@ function isFullwidthCodePoint(codePoint) {
   return isFullWidth(codePoint) || isWide(codePoint);
 }
 
-// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/tokenize-ansi.js
+// node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/tokenize-ansi.js
 var ESCAPE_CODE_POINT = 27;
 var C1_DCS_CODE_POINT = 144;
 var C1_SOS_CODE_POINT = 152;
@@ -32286,7 +32295,7 @@ function tokenizeAnsi(string6, { endCharacter = Number.POSITIVE_INFINITY } = {})
   return tokens;
 }
 
-// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/index.js
+// node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/index.js
 function applySgrFragments(activeStyles, fragments) {
   for (const fragment of fragments) {
     switch (fragment.type) {
@@ -32337,82 +32346,88 @@ function shouldIncludeSgrAfterEnd(token, activeStyles) {
 function hasSgrStartFragment(token) {
   return token.fragments.some((fragment) => fragment.type === "start");
 }
-function discardPendingHyperlink(parameters) {
-  if (parameters.activeHyperlink && !parameters.activeHyperlinkHasVisibleText && parameters.activeHyperlinkOutputIndex !== void 0) {
-    const openCodeLength = parameters.activeHyperlink.code.length;
-    parameters.returnValue = parameters.returnValue.slice(0, parameters.activeHyperlinkOutputIndex) + parameters.returnValue.slice(parameters.activeHyperlinkOutputIndex + openCodeLength);
-    if (parameters.pendingSgrOutputIndex !== void 0 && parameters.pendingSgrOutputIndex > parameters.activeHyperlinkOutputIndex) {
-      parameters.pendingSgrOutputIndex -= openCodeLength;
+function discardPendingHyperlink(state) {
+  if (state.activeHyperlink && !state.activeHyperlinkHasVisibleText && state.activeHyperlinkOutputIndex !== void 0) {
+    const openCodeLength = state.activeHyperlink.code.length;
+    state.returnValue = state.returnValue.slice(0, state.activeHyperlinkOutputIndex) + state.returnValue.slice(state.activeHyperlinkOutputIndex + openCodeLength);
+    if (state.pendingSgrOutputIndex !== void 0 && state.pendingSgrOutputIndex > state.activeHyperlinkOutputIndex) {
+      state.pendingSgrOutputIndex -= openCodeLength;
     }
   }
-  parameters.activeHyperlink = void 0;
-  parameters.activeHyperlinkHasVisibleText = false;
-  parameters.activeHyperlinkOutputIndex = void 0;
+  state.activeHyperlink = void 0;
+  state.activeHyperlinkHasVisibleText = false;
+  state.activeHyperlinkOutputIndex = void 0;
 }
-function applySgrToken2(parameters) {
-  if (parameters.isPastEnd && !shouldIncludeSgrAfterEnd(parameters.token, parameters.activeStyles)) {
-    return parameters;
+function settleActiveHyperlink(state) {
+  if (state.activeHyperlinkHasVisibleText) {
+    state.returnValue += closeHyperlink(state.activeHyperlink);
+  } else {
+    discardPendingHyperlink(state);
   }
-  if (parameters.include && hasSgrStartFragment(parameters.token) && parameters.pendingSgrOutputIndex === void 0) {
-    parameters.pendingSgrOutputIndex = parameters.returnValue.length;
-    parameters.pendingSgrActiveStyles = new Map(parameters.activeStyles);
-  }
-  parameters.activeStyles = applySgrFragments(parameters.activeStyles, parameters.token.fragments);
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.code;
-  }
-  return parameters;
 }
-function applyHyperlinkToken(parameters) {
-  if (parameters.isPastEnd && (parameters.token.action !== "close" || !parameters.activeHyperlink)) {
-    return parameters;
+function applySgrToken2(state) {
+  if (state.isPastEnd && !shouldIncludeSgrAfterEnd(state.token, state.activeStyles)) {
+    return;
   }
-  if (parameters.token.action === "open") {
-    parameters.activeHyperlink = parameters.token;
-    parameters.activeHyperlinkHasVisibleText = false;
-    parameters.activeHyperlinkOutputIndex = void 0;
-    if (parameters.include) {
-      parameters.activeHyperlinkOutputIndex = parameters.returnValue.length;
-    }
-  } else if (parameters.token.action === "close") {
-    if (parameters.include && parameters.activeHyperlink && !parameters.activeHyperlinkHasVisibleText) {
-      discardPendingHyperlink(parameters);
-      return parameters;
-    }
-    parameters.activeHyperlink = void 0;
-    parameters.activeHyperlinkHasVisibleText = false;
-    parameters.activeHyperlinkOutputIndex = void 0;
+  if (state.include && hasSgrStartFragment(state.token) && state.pendingSgrOutputIndex === void 0) {
+    state.pendingSgrOutputIndex = state.returnValue.length;
+    state.pendingSgrActiveStyles = new Map(state.activeStyles);
   }
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.code;
+  state.activeStyles = applySgrFragments(state.activeStyles, state.token.fragments);
+  if (state.include) {
+    state.returnValue += state.token.code;
   }
-  return parameters;
 }
-function applyControlToken(parameters) {
-  if (!parameters.isPastEnd && parameters.include) {
-    parameters.returnValue += parameters.token.code;
+function applyHyperlinkToken(state) {
+  if (state.isPastEnd && (state.token.action !== "close" || !state.activeHyperlink)) {
+    return;
   }
-  return parameters;
+  if (state.token.action === "open") {
+    if (state.activeHyperlink) {
+      settleActiveHyperlink(state);
+    }
+    state.activeHyperlink = state.token;
+    state.activeHyperlinkHasVisibleText = false;
+    state.activeHyperlinkOutputIndex = void 0;
+    if (state.include) {
+      state.activeHyperlinkOutputIndex = state.returnValue.length;
+    }
+  } else if (state.token.action === "close") {
+    if (state.include && state.activeHyperlink && !state.activeHyperlinkHasVisibleText) {
+      discardPendingHyperlink(state);
+      return;
+    }
+    state.activeHyperlink = void 0;
+    state.activeHyperlinkHasVisibleText = false;
+    state.activeHyperlinkOutputIndex = void 0;
+  }
+  if (state.include) {
+    state.returnValue += state.token.code;
+  }
 }
-function applyCharacterToken(parameters) {
-  if (!parameters.include && parameters.position >= parameters.start && !parameters.token.isGraphemeContinuation) {
-    parameters.include = true;
-    parameters.returnValue = [...parameters.activeStyles.values()].join("");
-    if (parameters.activeHyperlink) {
-      parameters.activeHyperlinkOutputIndex = parameters.returnValue.length;
-      parameters.returnValue += parameters.activeHyperlink.code;
+function applyControlToken(state) {
+  if (!state.isPastEnd && state.include) {
+    state.returnValue += state.token.code;
+  }
+}
+function applyCharacterToken(state) {
+  if (!state.include && state.position >= state.start && !state.token.isGraphemeContinuation) {
+    state.include = true;
+    state.returnValue = [...state.activeStyles.values()].join("");
+    if (state.activeHyperlink) {
+      state.activeHyperlinkOutputIndex = state.returnValue.length;
+      state.returnValue += state.activeHyperlink.code;
     }
   }
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.value;
-    parameters.pendingSgrOutputIndex = void 0;
-    parameters.pendingSgrActiveStyles = void 0;
-    if (parameters.activeHyperlink) {
-      parameters.activeHyperlinkHasVisibleText = true;
+  if (state.include) {
+    state.returnValue += state.token.value;
+    state.pendingSgrOutputIndex = void 0;
+    state.pendingSgrActiveStyles = void 0;
+    if (state.activeHyperlink) {
+      state.activeHyperlinkHasVisibleText = true;
     }
   }
-  parameters.position += parameters.token.visibleWidth;
-  return parameters;
+  state.position += state.token.visibleWidth;
 }
 var tokenHandlers = {
   sgr: applySgrToken2,
@@ -32420,12 +32435,8 @@ var tokenHandlers = {
   control: applyControlToken,
   character: applyCharacterToken
 };
-function applyToken(parameters) {
-  const tokenHandler = tokenHandlers[parameters.token.type];
-  if (!tokenHandler) {
-    return parameters;
-  }
-  return tokenHandler(parameters);
+function applyToken(state) {
+  tokenHandlers[state.token.type]?.(state);
 }
 function createHasContinuationAheadMap(tokens) {
   const hasContinuationAhead = Array.from({ length: tokens.length }, () => false);
@@ -32451,69 +32462,49 @@ function isPastEndBoundary(token, position2, end) {
 function sliceAnsi(string6, start, end) {
   const tokens = tokenizeAnsi(string6, { endCharacter: end });
   const hasContinuationAhead = createHasContinuationAheadMap(tokens);
-  let activeStyles = /* @__PURE__ */ new Map();
-  let activeHyperlink;
-  let activeHyperlinkHasVisibleText = false;
-  let activeHyperlinkOutputIndex;
-  let pendingSgrOutputIndex;
-  let pendingSgrActiveStyles;
-  let position2 = 0;
-  let returnValue = "";
-  let include = false;
+  const state = {
+    start,
+    token: void 0,
+    isPastEnd: false,
+    activeStyles: /* @__PURE__ */ new Map(),
+    activeHyperlink: void 0,
+    activeHyperlinkHasVisibleText: false,
+    activeHyperlinkOutputIndex: void 0,
+    pendingSgrOutputIndex: void 0,
+    pendingSgrActiveStyles: void 0,
+    position: 0,
+    returnValue: "",
+    include: false
+  };
   for (const [tokenIndex, token] of tokens.entries()) {
-    let isPastEnd = isPastEndBoundary(token, position2, end);
+    let isPastEnd = isPastEndBoundary(token, state.position, end);
     if (isPastEnd && token.type !== "character" && hasContinuationAhead[tokenIndex]) {
       isPastEnd = false;
     }
     if (isPastEnd && token.type === "character" && !token.isGraphemeContinuation) {
-      if (activeHyperlink && !activeHyperlinkHasVisibleText) {
-        const hyperlinkState = {
-          activeHyperlink,
-          activeHyperlinkHasVisibleText,
-          activeHyperlinkOutputIndex,
-          pendingSgrOutputIndex,
-          returnValue
-        };
-        discardPendingHyperlink(hyperlinkState);
-        ({
-          activeHyperlink,
-          activeHyperlinkHasVisibleText,
-          activeHyperlinkOutputIndex,
-          pendingSgrOutputIndex,
-          returnValue
-        } = hyperlinkState);
+      if (state.activeHyperlink && !state.activeHyperlinkHasVisibleText) {
+        discardPendingHyperlink(state);
       }
-      if (pendingSgrOutputIndex !== void 0) {
-        returnValue = returnValue.slice(0, pendingSgrOutputIndex);
-        activeStyles = pendingSgrActiveStyles;
-        pendingSgrOutputIndex = void 0;
-        pendingSgrActiveStyles = void 0;
+      if (state.pendingSgrOutputIndex !== void 0) {
+        state.returnValue = state.returnValue.slice(0, state.pendingSgrOutputIndex);
+        state.activeStyles = state.pendingSgrActiveStyles;
+        state.pendingSgrOutputIndex = void 0;
+        state.pendingSgrActiveStyles = void 0;
       }
       break;
     }
-    ({ activeStyles, activeHyperlink, activeHyperlinkHasVisibleText, activeHyperlinkOutputIndex, pendingSgrOutputIndex, pendingSgrActiveStyles, position: position2, returnValue, include } = applyToken({
-      token,
-      isPastEnd,
-      start,
-      activeStyles,
-      activeHyperlink,
-      activeHyperlinkHasVisibleText,
-      activeHyperlinkOutputIndex,
-      pendingSgrOutputIndex,
-      pendingSgrActiveStyles,
-      position: position2,
-      returnValue,
-      include
-    }));
+    state.token = token;
+    state.isPastEnd = isPastEnd;
+    applyToken(state);
   }
-  if (!include) {
+  if (!state.include) {
     return "";
   }
-  if (activeHyperlink) {
-    returnValue += closeHyperlink(activeHyperlink);
+  if (state.activeHyperlink) {
+    settleActiveHyperlink(state);
   }
-  returnValue += undoAnsiCodes(activeStyles);
-  return returnValue;
+  state.returnValue += undoAnsiCodes(state.activeStyles);
+  return state.returnValue;
 }
 
 // node_modules/.pnpm/cli-truncate@6.1.1/node_modules/cli-truncate/index.js
@@ -35803,7 +35794,7 @@ var generateLineNumbers = (line5, around) => {
   return lineNumbers;
 };
 var codeExcerpt = (source, line5, options = {}) => {
-  var _a4;
+  var _a5;
   if (typeof source !== "string") {
     throw new TypeError("Source code is missing.");
   }
@@ -35814,7 +35805,7 @@ var codeExcerpt = (source, line5, options = {}) => {
   if (line5 > lines.length) {
     return;
   }
-  return generateLineNumbers(line5, (_a4 = options.around) !== null && _a4 !== void 0 ? _a4 : 3).filter((line6) => lines[line6 - 1] !== void 0).map((line6) => ({ line: line6, value: lines[line6 - 1] }));
+  return generateLineNumbers(line5, (_a5 = options.around) !== null && _a5 !== void 0 ? _a5 : 3).filter((line6) => lines[line6 - 1] !== void 0).map((line6) => ({ line: line6, value: lines[line6 - 1] }));
 };
 var dist_default3 = codeExcerpt;
 
@@ -44674,7 +44665,7 @@ function createTokenizer(parser, initialize, from2) {
     previous: null,
     sliceSerialize,
     sliceStream,
-    write
+    write: write2
   };
   let state = initialize.tokenize.call(context, effects);
   let expectedCode;
@@ -44682,7 +44673,7 @@ function createTokenizer(parser, initialize, from2) {
     resolveAllConstructs.push(initialize);
   }
   return context;
-  function write(slice) {
+  function write2(slice) {
     chunks = push(chunks, slice);
     main();
     if (chunks[chunks.length - 1] !== null) {
@@ -49950,6 +49941,7 @@ var zh = {
   pluginsStopProfile: "\u5FC5\u987B\u5148\u505C\u6B62\u6B64 profile \u624D\u80FD\u79FB\u9664",
   pluginsBundleInUse: "\u6B64 bundle \u6B63\u5728\u88AB\u4F7F\u7528",
   pluginsStaleApproval: "\u5F85\u5BA1\u6279\u5305\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u6838\u5BF9",
+  pluginsIncompatibleVersion: "\u63D2\u4EF6\u4E0E\u5F53\u524D DSH \u7248\u672C\u4E0D\u517C\u5BB9",
   pluginsOperationError: "\u63D2\u4EF6\u64CD\u4F5C\u5931\u8D25",
   pluginsAlreadyInstalled: "\u8BE5\u5305\u5DF2\u5B89\u88C5",
   pluginsNotFound: "\u627E\u4E0D\u5230\u8BE5\u5305",
@@ -50073,6 +50065,7 @@ var en = {
   pluginsStopProfile: "Stop this profile before removing the bundle",
   pluginsBundleInUse: "Bundle is in use",
   pluginsStaleApproval: "Pending packages changed; review approval again",
+  pluginsIncompatibleVersion: "Plugin is incompatible with the running DSH version",
   pluginsOperationError: "Plugin operation failed",
   pluginsAlreadyInstalled: "Package already installed",
   pluginsNotFound: "Package not found",
@@ -51925,8 +51918,8 @@ function createFrameMetrics(now = () => performance.now(), capacity = FRAME_METR
 
 // packages/tui/tui-render/src/frame-snapshot.ts
 var publishedSnapshot;
-function setVisibleFrameSnapshot(snapshot) {
-  publishedSnapshot = snapshot;
+function setVisibleFrameSnapshot(snapshot2) {
+  publishedSnapshot = snapshot2;
 }
 function visibleFrameSnapshot() {
   return publishedSnapshot;
@@ -52209,7 +52202,7 @@ function transformFrameChunk(chunk, tier = currentTier(), publishFrame = true) {
   return out;
 }
 function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
-  const write = stdout.write.bind(stdout);
+  const write2 = stdout.write.bind(stdout);
   const wrapped = Object.create(stdout);
   let synchronizedFrameOpen = false;
   let inkBottomRow = stdout.rows;
@@ -52239,7 +52232,7 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
         args.push(onDrain);
       }
     }
-    return write(transformed, ...args);
+    return write2(transformed, ...args);
   };
   wrapped.write = transformingWrite;
   const overlayStream = wrapped;
@@ -52439,12 +52432,12 @@ var ScreenAtlas = class {
    * shells that do not publish physical rows.
    * @param snapshot - shared visible frame from the transcript renderer.
    */
-  applyFrameSnapshot(snapshot) {
+  applyFrameSnapshot(snapshot2) {
     const previousRail = this.snapshotRail;
-    const nextRail = snapshot.geometry.rail;
+    const nextRail = snapshot2.geometry.rail;
     const sameRailArea = previousRail?.col === nextRail?.col && previousRail?.topRow === nextRail?.topRow && previousRail?.rows === nextRail?.rows;
     const unchanged = /* @__PURE__ */ new Set();
-    if (sameRailArea) for (const row of snapshot.rows) {
+    if (sameRailArea) for (const row of snapshot2.rows) {
       const previous3 = this.snapshotRows.get(row.row);
       if (previous3?.line === row.line && previous3.col === row.col) unchanged.add(row.row);
     }
@@ -52473,15 +52466,15 @@ var ScreenAtlas = class {
     }
     this.snapshotRanges = [];
     this.snapshotRows.clear();
-    this.snapshotRail = snapshot.geometry.rail;
-    this.snapshotGeometry = snapshot.geometry;
+    this.snapshotRail = snapshot2.geometry.rail;
+    this.snapshotGeometry = snapshot2.geometry;
     const saved = {
       col: this.cursorCol,
       row: this.cursorRow,
       url: this.activeUrl,
       wrap: this.wrapPending
     };
-    for (const row of snapshot.rows) {
+    for (const row of snapshot2.rows) {
       this.snapshotRows.set(row.row, row);
       if (!unchanged.has(row.row)) {
         this.cursorCol = Math.max(0, row.col - 1);
@@ -52498,7 +52491,7 @@ var ScreenAtlas = class {
         width: row.line.displayWidth
       });
     }
-    const rail = snapshot.geometry.rail;
+    const rail = snapshot2.geometry.rail;
     if (rail !== void 0) {
       for (let index2 = 0; index2 < rail.rows; index2 += 1) {
         const col = rail.col - 1;
@@ -52884,9 +52877,9 @@ function hostClipboardCommand(platform2 = process.platform, env3 = process.env) 
   }
   return void 0;
 }
-function copyText(text4, write, spawnFn = spawn, spec) {
+function copyText(text4, write2, spawnFn = spawn, spec) {
   if (text4 === "") return;
-  write(encodeOsc52(text4));
+  write2(encodeOsc52(text4));
   const helper = spec === void 0 ? hostClipboardCommand() : spec === null ? void 0 : spec;
   if (helper === void 0) return;
   try {
@@ -53074,12 +53067,12 @@ var MouseSession = class {
    * @returns chunk plus overlay and caret restore.
    */
   feedStdout(chunk) {
-    const snapshot = visibleFrameSnapshot();
-    if (snapshot === void 0) {
+    const snapshot2 = visibleFrameSnapshot();
+    if (snapshot2 === void 0) {
       this.atlas.feed(chunk);
-    } else if (snapshot.revision !== this.lastFrameRevision) {
-      this.atlas.applyFrameSnapshot(snapshot);
-      this.lastFrameRevision = snapshot.revision;
+    } else if (snapshot2.revision !== this.lastFrameRevision) {
+      this.atlas.applyFrameSnapshot(snapshot2);
+      this.lastFrameRevision = snapshot2.revision;
     }
     if (this.selection === void 0) return chunk;
     const overlay = this.atlas.selectionOverlay(
@@ -53186,16 +53179,16 @@ function attachMouseIo(options) {
       }
     };
   }
-  const write = options.stdout.write.bind(options.stdout);
+  const write2 = options.stdout.write.bind(options.stdout);
   options.stdout.write(ENABLE_SGR_MOUSE);
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
     const repaint = session.handle(event);
-    if (repaint !== "") write(repaint);
+    if (repaint !== "") write2(repaint);
   }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS);
   const wrappedStdout = Object.create(options.stdout);
   const transformingWrite = (chunk, ...args) => {
-    if (typeof chunk !== "string") return write(chunk, ...args);
-    return write(session.feedStdout(chunk), ...args);
+    if (typeof chunk !== "string") return write2(chunk, ...args);
+    return write2(session.feedStdout(chunk), ...args);
   };
   wrappedStdout.write = transformingWrite;
   const onResize = () => {
@@ -53911,9 +53904,9 @@ var MutableRevisionImpl = class {
   settle() {
     this.requireAlive();
     Object.freeze(this.buffer);
-    const snapshot = this.store.commitSettle(this.blockId, this.buffer, this.scopeKey);
+    const snapshot2 = this.store.commitSettle(this.blockId, this.buffer, this.scopeKey);
     this.alive = false;
-    return snapshot;
+    return snapshot2;
   }
   discard() {
     this.requireAlive();
@@ -54066,11 +54059,11 @@ var TranscriptRenderStoreImpl = class {
     let start = 0;
     for (let i = 0; i < index2; i += 1) {
       const id = input.blockOrder[i];
-      const snapshot = this.readBlock({ blockId: id });
-      if (snapshot === void 0) {
+      const snapshot2 = this.readBlock({ blockId: id });
+      if (snapshot2 === void 0) {
         continue;
       }
-      start += snapshot.rowCount;
+      start += snapshot2.rowCount;
     }
     const target = this.readBlock({ blockId: input.blockId });
     if (target === void 0) return void 0;
@@ -54468,8 +54461,8 @@ function createFrameArbiter(options) {
       }
     }
   }
-  function publish(snapshot) {
-    for (const listener of listeners) listener(snapshot);
+  function publish(snapshot2) {
+    for (const listener of listeners) listener(snapshot2);
   }
   if (!demandDriven) {
     timer = setIntervalFn(tickFrame, frameIntervalMs);
@@ -55256,14 +55249,14 @@ function StreamView({
       now: () => performance.now(),
       demandDriven: true
     });
-    const unsubscribe = arbiter.onPublish((snapshot) => {
-      const presented = snapshot.stream.at(-1);
+    const unsubscribe = arbiter.onPublish((snapshot2) => {
+      const presented = snapshot2.stream.at(-1);
       if (presented !== void 0) setPresentedEntryRows(presented);
-      if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
-        lastDispatchedOffset.current = snapshot.scroll.presented;
+      if (snapshot2.scroll.presented !== lastDispatchedOffset.current) {
+        lastDispatchedOffset.current = snapshot2.scroll.presented;
         dispatchViewport({
           kind: "offset",
-          offsetFromBottom: snapshot.scroll.presented
+          offsetFromBottom: snapshot2.scroll.presented
         });
       }
       if (pendingScrollInputAt.current !== void 0 && frameMetrics !== void 0) {
@@ -55273,7 +55266,7 @@ function StreamView({
         pendingScrollInputAt.current = void 0;
       }
       if (frameMetrics !== void 0) {
-        const queue = stream.getStats(snapshot.nowMs);
+        const queue = stream.getStats(snapshot2.nowMs);
         frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs);
       }
     });
@@ -60941,6 +60934,36 @@ function defineProperty(object2, key, value) {
   return Object.defineProperty(object2, key, { writable: true, value, enumerable: false });
 }
 
+// vendor/cosmokit/src/volatile.ts
+var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) {
+      throw new TypeError("volatile config objects must be plain objects or arrays");
+    }
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile(value) {
+  let current = snapshot(value);
+  return Object.freeze({
+    get: () => current,
+    [write]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile(value) {
+  return typeof value === "object" && value !== null && write in value;
+}
+
 // vendor/cosmokit/src/types.ts
 function is2(type, value) {
   if (arguments.length === 1) return (value2) => is2(type, value2);
@@ -61031,23 +61054,38 @@ function clone(source, refs = /* @__PURE__ */ new Map()) {
   return result;
 }
 function deepEqual(a, b, strict) {
-  if (a === b) return true;
-  if (!strict && isNullable(a) && isNullable(b)) return true;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object") return false;
-  if (!a || !b) return false;
-  function check3(test, then) {
-    return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
-  }
-  return check3(Array.isArray, (a2, b2) => a2.length === b2.length && a2.every((item, index2) => deepEqual(item, b2[index2]))) ?? check3(is2("Date"), (a2, b2) => a2.valueOf() === b2.valueOf()) ?? check3(is2("RegExp"), (a2, b2) => a2.source === b2.source && a2.flags === b2.flags) ?? check3(isArrayBufferLike, (a2, b2) => {
-    if (a2.byteLength !== b2.byteLength) return false;
-    const viewA = new Uint8Array(a2);
-    const viewB = new Uint8Array(b2);
-    for (let i = 0; i < viewA.length; i++) {
-      if (viewA[i] !== viewB[i]) return false;
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
+    if (!strict && isNullable(a2) && isNullable(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
     }
-    return true;
-  }) ?? Object.keys({ ...a, ...b }).every((key) => deepEqual(a[key], b[key], strict));
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index2 = 0; index2 < a3.length; index2++) {
+          if (!compare(a3[index2], b3[index2])) return false;
+        }
+        return true;
+      }) ?? check3(is2("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is2("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is2("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) {
+          if (viewA[i] !== viewB[i]) return false;
+        }
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({ ...a2, ...b2 }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
 }
 
 // vendor/cosmokit/src/string.ts
@@ -63036,6 +63074,8 @@ function bindTypertRemote(service, serviceKey, options = {}) {
   validateName("service key", serviceKey);
   const namespace = options.namespace ?? serviceKey;
   validateName("namespace", namespace);
+  const ctx = Reflect.get(service, "ctx");
+  if (ctx instanceof Context) provideInvocationAccessor(ctx);
   return Object.freeze({ service, serviceKey, namespace });
 }
 var TypertRemoteService = class extends Service {
@@ -63052,6 +63092,10 @@ var TypertRemoteService = class extends Service {
     this.typertRemote = bindTypertRemote(this, this.name, options);
   }
 };
+function provideInvocationAccessor(ctx) {
+  if (Object.hasOwn(ctx.root.reflect.props, "invocation")) return;
+  ctx.root.accessor("invocation", { get: () => void 0 });
+}
 function Remote(methodExportOrOptions, context) {
   if (typeof methodExportOrOptions === "string") {
     validateName("Remote export name", methodExportOrOptions);
@@ -63070,7 +63114,7 @@ function remoteOptionMode(options) {
   return Reflect.get(options, "mode");
 }
 function remoteDecorator(invocation, mode, exportName) {
-  return (_method, context) => {
+  return function(_method, context) {
     addMarkerInitializer(context, invocation, mode, exportName);
   };
 }
@@ -63146,7 +63190,7 @@ function hasIntrinsicConstructor(prototype, name2) {
   const constructor = descriptor?.value;
   if (typeof constructor !== "function") return false;
   try {
-    return constructor.name === name2 && constructor.prototype === prototype && Function.prototype.toString.call(constructor) === `function ${name2}() { [native code] }`;
+    return constructor.name === name2 && constructor.prototype === prototype && Function.prototype.toString.call(constructor) === Function.prototype.toString.call(name2 === "Array" ? Array : Object);
   } catch {
     return false;
   }
@@ -63314,15 +63358,25 @@ function freezeMessage(message) {
   return deepFreeze(structuredClone(message));
 }
 function createMessage(input) {
-  return freezeMessage({
+  return deepFreeze(structuredClone({
     ...input,
     id: brandString(randomUUID())
-  });
+  }));
 }
 function createUserMessage(input) {
   return createMessage({
     ...input,
     role: "user"
+  });
+}
+function createAssistantMessage(input) {
+  return createMessage({
+    role: "assistant",
+    content: input.content,
+    source: {
+      kind: "model",
+      ...input.source
+    }
   });
 }
 
@@ -63505,6 +63559,7 @@ Schema.prototype.pattern = function pattern(regexp) {
   return schema;
 };
 Schema.prototype.simplify = function simplify(value) {
+  if (isVolatile(value)) value = value.get();
   if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
   if (isNullable(value)) return value;
   if (this.type === "object" || this.type === "dict") {
@@ -63558,12 +63613,53 @@ for (const key of ["default", "link", "comment", "description", "max", "min", "s
     }
   });
 }
+Schema.prototype.volatile = function volatile() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
+};
 var resolvers = {};
+var checkedVolatile = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema(schema, path2 = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) {
+    throw new ValidationError2("volatile fields require a fixed object path without an enclosing volatile field", { path: path2 });
+  }
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) {
+    for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema(child, [...path2, key], nested, seen);
+  }
+  if (schema.sKey) validateVolatileSchema(schema.sKey, [...path2, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) {
+    validateVolatileSchema(schema.inner, [...path2, "*"], true, seen);
+  }
+  if (schema.list) {
+    for (let index2 = 0; index2 < schema.list.length; index2++) {
+      validateVolatileSchema(schema.list[index2], [...path2, String(index2)], true, seen);
+    }
+  }
+}
 Schema.extend = function extend(type, resolve5) {
   resolvers[type] = resolve5;
 };
 Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
+  if (!options[checkedVolatile]) {
+    validateVolatileSchema(schema, options.path);
+    options = { ...options, [checkedVolatile]: true };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema(schema);
+    inner.meta = { ...schema.meta, volatile: false };
+    const [value, adapted] = Schema.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile(value), adapted];
+    } catch (error51) {
+      throw new ValidationError2(error51 instanceof Error ? error51.message : String(error51), options);
+    }
+  }
   if (options.ignore?.(data, schema)) return [data];
   if (isNullable(data) && schema.type !== "lazy") {
     if (schema.meta.required) throw new ValidationError2(`missing required value`, options);
@@ -63669,6 +63765,7 @@ Schema.extend("lazy", (data, schema, options, strict) => {
   if (!schema.inner[kSchema]) {
     schema.inner = schema.builder();
     schema.inner.meta = { ...schema.meta, ...schema.inner.meta };
+    validateVolatileSchema(schema.inner, options.path, true);
   }
   return Schema.resolve(data, schema.inner, options, strict);
 });
@@ -63780,7 +63877,7 @@ function property(data, key, schema, options) {
   } catch (e) {
     if (!options?.autofix) throw e;
     delete data[key];
-    return schema.meta.default;
+    return schema.meta.volatile ? createVolatile(schema.meta.default) : schema.meta.default;
   }
 }
 Schema.extend("array", (data, { inner, meta: meta3 }, options) => {
@@ -64186,11 +64283,11 @@ function textOnlyImageText(ref) {
   return `[image omitted because this model accepts text only; attachment sha256:${digest}]`;
 }
 function contentHasImage(content3) {
-  return content3.some((block) => block.type === "image" || block.type === "tool-result" && contentHasImage(block.content));
+  return content3.some((block) => block.type === "image");
 }
 function contentHasFile(content3) {
   for (const block of content3) {
-    if (block.type === "file" || block.type === "tool-result" && contentHasFile(block.content)) return true;
+    if (block.type === "file") return true;
   }
   return false;
 }
@@ -64209,14 +64306,6 @@ function replaceFilesWithHandles(blocks, resolvePath) {
       next ??= blocks.slice(0, index2);
       next.push({ type: "text", text: fileHandleText(block.attachment, resolvePath(block.attachment)) });
       continue;
-    }
-    if (block.type === "tool-result") {
-      const content3 = replaceFilesWithHandles(block.content, resolvePath);
-      if (content3 !== block.content) {
-        next ??= blocks.slice(0, index2);
-        next.push({ ...block, content: content3 });
-        continue;
-      }
     }
     next?.push(block);
   }
@@ -64237,14 +64326,6 @@ function replaceImagesForTextModel(blocks) {
       next.push({ type: "text", text: textOnlyImageText(block.attachment) });
       continue;
     }
-    if (block.type === "tool-result") {
-      const content3 = replaceImagesForTextModel(block.content);
-      if (content3 !== block.content) {
-        next ??= blocks.slice(0, index2);
-        next.push({ ...block, content: content3 });
-        continue;
-      }
-    }
     next?.push(block);
   }
   return next ?? blocks;
@@ -64256,13 +64337,93 @@ function projectImagesForTextModel(messages) {
     return content3 === message.content ? message : { ...message, content: content3 };
   });
 }
+function withoutDeveloperMessages(messages) {
+  const retained = messages.filter((message) => message.role !== "developer");
+  return retained.length === messages.length ? messages : retained;
+}
+function toolDeclarations(tools, mode, history) {
+  const declarations = new Map(history.tools.map((tool) => [tool.name, tool]));
+  for (const update of history.updates) {
+    for (const tool of update.additions) {
+      if (!declarations.has(tool.name)) {
+        declarations.set(tool.name, { ...tool, deferLoading: true });
+      }
+    }
+  }
+  switch (mode) {
+    case "in-history":
+      return declarations;
+    case "addition-only": {
+      const activeNames = new Set(tools?.map((tool) => tool.name));
+      for (const name2 of declarations.keys()) {
+        if (!activeNames.has(name2)) declarations.delete(name2);
+      }
+      return declarations;
+    }
+    /* v8 ignore next 2 -- closed-union exhaustiveness guard */
+    default:
+      return assertNever(mode);
+  }
+}
+function projectToolUpdates(messages, tools, toolUpdate, history) {
+  if (toolUpdate === void 0) {
+    let immediateTools = tools;
+    if (tools?.some((tool) => tool.deferLoading === true)) {
+      immediateTools = tools.map(({ deferLoading: _loading, ...tool }) => tool);
+    }
+    return { messages: withoutDeveloperMessages(messages), tools: immediateTools };
+  }
+  if (history === void 0) {
+    return { messages: withoutDeveloperMessages(messages), tools };
+  }
+  const messageIds = new Set(messages.flatMap((message) => message.role === "developer" ? [message.id] : []));
+  if (history.updates.some((update) => !messageIds.has(update.messageId))) {
+    return { messages: withoutDeveloperMessages(messages), tools };
+  }
+  const declarations = toolDeclarations(tools, toolUpdate, history);
+  const updateIds = new Set(history.updates.map((update) => update.messageId));
+  const offered = new Set(history.tools.filter((tool) => !tool.deferLoading).map((tool) => tool.name));
+  const projectedMessages = [];
+  for (const message of messages) {
+    if (message.role !== "developer") {
+      projectedMessages.push(message);
+      continue;
+    }
+    if (!updateIds.has(message.id)) continue;
+    const content3 = message.content.filter((block) => {
+      switch (block.type) {
+        case "tool-addition":
+          if (!declarations.has(block.toolName) || offered.has(block.toolName)) return false;
+          offered.add(block.toolName);
+          return true;
+        case "tool-removal":
+          if (toolUpdate !== "in-history") return false;
+          return offered.delete(block.toolName);
+        default:
+          return true;
+      }
+    });
+    if (content3.length === 0) continue;
+    if (content3.length === message.content.length) {
+      projectedMessages.push(message);
+    } else {
+      projectedMessages.push({ ...message, content: content3 });
+    }
+  }
+  const unchanged = projectedMessages.length === messages.length && projectedMessages.every((message, index2) => message === messages[index2]);
+  return {
+    messages: unchanged ? messages : projectedMessages,
+    tools: [...declarations.values()]
+  };
+}
 
 // packages/llm/llm/src/attribution.ts
 import { createRequire } from "node:module";
-var version = "0.1.5-rc.2";
-try {
-  version = createRequire(import.meta.url)("../package.json").version;
-} catch {
+var { version } = createRequire(import.meta.url)("../package.json");
+
+// packages/llm/llm/src/brand.ts
+function ToolCallId(id) {
+  return brandString(id);
 }
 
 // packages/llm/llm/src/assembler.ts
@@ -64415,11 +64576,11 @@ var BlockAssembler = class {
   }
   /**
    * The assembled assistant message.
-   * @param source - producer attribution for the assembled message.
+   * @param source - provider/model attribution (without the `kind` tag) for the assembled message.
    * @returns a frozen assistant-role message over `blocks()` (same open-block assembly rules).
    */
-  message(source = { kind: "plugin", plugin: "dsh-llm/assembler" }) {
-    return createMessage({ role: "assistant", content: this.blocks(), source });
+  message(source) {
+    return createAssistantMessage({ content: this.blocks(), source });
   }
 };
 
@@ -64740,7 +64901,8 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   }
   /**
    * Discover models advertised by one registered provider. Catalog membership
-   * is advisory and never changes routing or request validation.
+   * does not constrain core routing. Catalog-driven entry points may restrict
+   * selection and submission to the advertised models.
    * @param provider - registered provider route to inspect.
    * @returns detached model metadata in adapter-preferred order.
    */
@@ -64803,6 +64965,13 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
         "INVALID_MODEL_INFO"
       );
     }
+    const toolUpdate = resolved.toolUpdate;
+    if (toolUpdate !== void 0 && toolUpdate !== "in-history" && toolUpdate !== "addition-only") {
+      throw new LlmError(
+        `adapter returned invalid tool update mode for provider "${provider}" model "${model}"`,
+        "INVALID_MODEL_INFO"
+      );
+    }
     const defaultMaxTokens = resolved.defaultMaxTokens;
     if (defaultMaxTokens !== void 0 && (!Number.isSafeInteger(defaultMaxTokens) || defaultMaxTokens <= 0)) {
       throw new LlmError(
@@ -64818,7 +64987,8 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       ...inputModalities === void 0 ? {} : { inputModalities },
       ...context === void 0 ? {} : { context: { contextWindow: context.contextWindow } },
       ...defaultMaxTokens === void 0 ? {} : { defaultMaxTokens },
-      ...resolved.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: resolved.systemPromptUpdate }
+      ...resolved.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: resolved.systemPromptUpdate },
+      ...resolved.toolUpdate === void 0 ? {} : { toolUpdate: resolved.toolUpdate }
     };
     const reasoning = resolved.reasoning;
     if (reasoning === void 0) return info;
@@ -64932,6 +65102,7 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       ...context === void 0 ? {} : { context },
       ...modelInfo.inputModalities === void 0 ? {} : { inputModalities: Object.freeze([...modelInfo.inputModalities]) },
       ...modelInfo.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: modelInfo.systemPromptUpdate },
+      ...modelInfo.toolUpdate === void 0 ? {} : { toolUpdate: modelInfo.toolUpdate },
       stream: (options) => {
         if (dispatched) {
           throw new LlmError("a prepared LLM call can only be dispatched once", "INVALID_PREPARED_CALL");
@@ -64960,8 +65131,9 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   /** Remove replay state whose historical route is owned by another adapter. */
   forAdapter(options, adapter) {
     const messages = options.messages.map((message) => {
+      if (message.role !== "assistant") return message;
       const source = message.source;
-      if (message.role !== "assistant" || source.kind !== "model" || source.replayState === void 0) return message;
+      if (source.replayState === void 0) return message;
       if (this.adapters.get(source.provider)?.adapter === adapter) return message;
       return freezeMessage({
         ...message,
@@ -65024,7 +65196,17 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       if (modelInfo.inputModalities !== void 0 && !modelInfo.inputModalities.includes("image") && projectedMessages.some((message) => contentHasImage(message.content))) {
         projectedMessages = projectImagesForTextModel(projectedMessages);
       }
-      const projectedOptions = projectedMessages === resolvedOptions.messages ? resolvedOptions : Object.isFrozen(resolvedOptions) ? deepFreeze({ ...resolvedOptions, messages: projectedMessages }) : { ...resolvedOptions, messages: projectedMessages };
+      const projectedTools = projectToolUpdates(projectedMessages, resolvedOptions.tools, modelInfo.toolUpdate, resolvedOptions.toolHistory);
+      projectedMessages = projectedTools.messages;
+      let projectedOptions = resolvedOptions;
+      if (projectedMessages !== resolvedOptions.messages || projectedTools.tools !== resolvedOptions.tools) {
+        projectedOptions = {
+          ...resolvedOptions,
+          messages: projectedMessages,
+          ...projectedTools.tools === void 0 ? {} : { tools: projectedTools.tools }
+        };
+        if (Object.isFrozen(resolvedOptions)) deepFreeze(projectedOptions);
+      }
       const stream = dispatch(this.forAdapter(projectedOptions, adapter));
       iterator = stream[Symbol.asyncIterator]();
     } catch (error51) {
@@ -65133,12 +65315,7 @@ function normalizeUsage(usage, route) {
   ]);
   if (knownPrompt === void 0) return void 0;
   let exactTotal;
-  if (totalTokens === void 0) {
-    if (cacheReadTokens === void 0 || cacheWriteTokens === void 0) return void 0;
-    const derivedTotal = safeSum([knownPrompt, outputTokens]);
-    if (derivedTotal === void 0) return void 0;
-    exactTotal = derivedTotal;
-  } else {
+  if (totalTokens !== void 0) {
     if (!isCount(totalTokens)) return void 0;
     const exactPrompt = totalTokens - outputTokens;
     if (!isCount(exactPrompt) || exactPrompt < knownPrompt) return void 0;
@@ -65146,6 +65323,11 @@ function normalizeUsage(usage, route) {
       return void 0;
     }
     exactTotal = totalTokens;
+  } else {
+    if (cacheReadTokens === void 0 || cacheWriteTokens === void 0) return void 0;
+    const derivedTotal = safeSum([knownPrompt, outputTokens]);
+    if (derivedTotal === void 0) return void 0;
+    exactTotal = derivedTotal;
   }
   return {
     inputTokens,
@@ -65596,12 +65778,12 @@ function createProjector() {
       case "tool/result": {
         if (activeTurn === void 0) return;
         commitStep();
-        const block = event.data.message.content[0];
+        const message = event.data.message;
         turnContent.push({
           kind: "tool-result",
-          callId: block.toolCallId,
-          text: block.content.filter((item) => item.type === "text").map((item) => item.text).join(""),
-          isError: block.isError ?? false,
+          callId: message.toolCallId,
+          text: message.content.map((item) => item.type === "text" ? item.text : "").join(""),
+          isError: message.isError ?? false,
           ...event.data.error === void 0 ? {} : { error: { ...event.data.error } },
           ...event.data.meta === void 0 ? {} : { meta: structuredClone(event.data.meta) }
         });
@@ -66200,6 +66382,30 @@ import { access, lstat as lstat2, readFile as readFile2, stat, writeFile as writ
 import { tmpdir } from "node:os";
 import { dirname as dirname4, resolve as resolve4 } from "node:path";
 
+// packages/core/scope/src/index.ts
+var kScope = /* @__PURE__ */ Symbol("dsh.scope");
+var carrierKeys = /* @__PURE__ */ new WeakMap();
+var scopeParents = /* @__PURE__ */ new WeakMap();
+function scopeOf(ctx) {
+  return ctx[kScope];
+}
+function scopeTarget(base, key) {
+  const baseFilter = base[Context.filter];
+  const carrier = {
+    [Context.filter](ctx) {
+      if (baseFilter !== void 0 && !baseFilter.call(base, ctx)) return false;
+      const tag = scopeOf(ctx);
+      if (tag === void 0) return true;
+      for (let cursor = key; cursor !== void 0; cursor = scopeParents.get(cursor)) {
+        if (cursor === tag) return true;
+      }
+      return false;
+    }
+  };
+  carrierKeys.set(carrier, key);
+  return carrier;
+}
+
 // packages/core/agent/src/model-selection.ts
 function sameRoute(left, right) {
   return left.provider === right.provider && left.model === right.model;
@@ -66216,8 +66422,7 @@ function modelSwitchNotice(previous3, selected) {
       text: `[model changed: assistant turns above this point were generated by ${from2}; the session continues with ${to}]`
     }],
     source: {
-      kind: "plugin",
-      plugin: "model-selection",
+      kind: "model-selection",
       form: "notice",
       summary: boundContextSummary(`${from2} \u2192 ${to}`)
     }
@@ -66284,1050 +66489,6 @@ function credentialRef(value) {
 function isCredentialRefName(value) {
   return REF_PATTERN.test(value);
 }
-
-// packages/interaction/user-questions/src/index.ts
-var UserQuestionError = class extends HarnessError {
-  constructor(message, code2, options) {
-    super(message, code2, options);
-    this.name = "UserQuestionError";
-  }
-};
-
-// packages/core/session/src/index.ts
-import { isAbsolute as isAbsolute3 } from "node:path";
-
-// packages/core/session/src/types.ts
-function SessionId(id) {
-  return brandString(id);
-}
-function SessionSeq(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
-    throw new TypeError(`SessionSeq must be a non-negative safe integer, got ${String(value)}`);
-  }
-  return brandNumber(value);
-}
-function SessionLogOffset(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
-    throw new TypeError(`SessionLogOffset must be a non-negative safe integer, got ${String(value)}`);
-  }
-  return brandNumber(value);
-}
-var SESSION_FORMAT_VERSION = 3;
-
-// packages/core/session/src/known-event-types.ts
-var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "agent-preset/selected",
-  "agent/inbox/spliced",
-  "approval/asked",
-  "approval/decided",
-  "approval/policy",
-  "assistant/attempt",
-  "assistant/message",
-  "command/done",
-  "command/run",
-  "compaction/end",
-  "compaction/prune",
-  "compaction/start",
-  "compaction/summary",
-  "deliverables/presented",
-  "feedback/message-delete",
-  "feedback/message-put",
-  "feedback/record",
-  "goal/change",
-  "hook/invoked",
-  "hook/result",
-  "image/offload",
-  "llm/retry",
-  "llm/retry-started",
-  "model/selection",
-  "permission/preset",
-  "plan/mode",
-  "request/context",
-  "request/header",
-  "sandbox/mode",
-  "schedule/change",
-  "session-log-deepseek/delivery-accepted",
-  "session/end-seed",
-  "session/title",
-  "session/title-llm-request",
-  "step/end",
-  "step/start",
-  "subagent/catalog",
-  "subagent/descriptor",
-  "subagent/model-selection-policy",
-  "system/message",
-  "team/member",
-  "team/message/delivered",
-  "team/message/queued",
-  "team/task",
-  "todo/write",
-  "tool-workflow/agent-end",
-  "tool-workflow/agent-start",
-  "tool-workflow/run-end",
-  "tool-workflow/run-start",
-  "tool/call",
-  "tool/ptc-dispatch",
-  "tool/ptc-dispatch-start",
-  "tool/result",
-  "turn/end",
-  "turn/start",
-  "user/message",
-  "web/deepseek-search-llm-request",
-  "workspace/changes"
-]);
-var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "image/offload"
-]);
-
-// packages/core/session/src/surface.ts
-var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "system/message",
-  "user/message",
-  "assistant/message",
-  "tool/result"
-]);
-function isSurfaceEligibleType(type) {
-  return SURFACE_EVENT_TYPES.has(type);
-}
-function deriveEventMessage(event, projectedMessages) {
-  const projected = projectedMessages?.get(event.seq);
-  if (projected !== void 0) return projected;
-  switch (event.type) {
-    // Ordinary prompts and injected context project in user role: the event's
-    // model-facing content stays verbatim. Do NOT re-add per-type framing
-    // (e.g. `<context>`) here: framing is caller-owned — a producer bakes it
-    // into `content`, as agent-instructions does with `<system-reminder>` — or,
-    // if reintroduced, must be driven by the event `meta` map and a dedicated
-    // renderer, keeping this projection a verbatim pass-through. See the
-    // deferred design note in
-    // ../../../../.agents/notes/implemented/simplification/2026-07-20-unwrap-injected-content-envelopes.md
-    case "user/message": {
-      return event.data;
-    }
-    // An empty-content message projects to no wire message. For
-    // system/message the node records "no system prompt" while keeping its
-    // surface position; for assistant/message the event exists only to host a
-    // max-tokens step's usage and must not inject a content-less assistant
-    // turn into the provider transcript.
-    case "system/message":
-    case "assistant/message": {
-      if (event.data.message.content.length === 0) return null;
-      return event.data.message;
-    }
-    case "tool/result": {
-      return event.data.message;
-    }
-    default:
-      return null;
-  }
-}
-function isRecord2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function validateSessionEventData(event, subject) {
-  const data = event.data;
-  if (event.type === "request/header") {
-    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
-    const header = data["header"];
-    if (!isRecord2(header)) throw new Error(`${subject} header must be an object`);
-    if (Object.hasOwn(header, "system")) throw new Error(`${subject} must omit header.system; use system/message`);
-    if (Array.isArray(header["tools"]) && header["tools"].length === 0) {
-      throw new Error(`${subject} must omit empty tools`);
-    }
-    const defaults = header["adapterDefaults"];
-    if (isRecord2(defaults) && Object.keys(defaults).length === 0) {
-      throw new Error(`${subject} must omit empty adapterDefaults`);
-    }
-  } else if (event.type === "tool/result") {
-    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
-    if (data["error"] === void 0) return;
-    const message = data["message"];
-    const content3 = isRecord2(message) ? message["content"] : void 0;
-    const block = Array.isArray(content3) ? content3[0] : void 0;
-    if (!isRecord2(block) || block["isError"] !== true) {
-      throw new Error(`${subject} error requires message content[0].isError === true`);
-    }
-  }
-}
-function createFoldState() {
-  return { nodes: [], replaceGeneration: 0, contentGeneration: 0, projectedMessages: /* @__PURE__ */ new Map(), projections: /* @__PURE__ */ new Set() };
-}
-function isEventSeq(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0);
-}
-function isReplaceOp(value) {
-  const op = value;
-  return Object.keys(op).length === 3 && Object.hasOwn(op, "op") && Object.hasOwn(op, "startSeq") && Object.hasOwn(op, "endSeq") && op["op"] === "replace" && isEventSeq(op["startSeq"]) && isEventSeq(op["endSeq"]);
-}
-function surfaceOpOf(event) {
-  const raw = event;
-  if (!isSurfaceEligibleType(event.type)) {
-    if (!KNOWN_SESSION_EVENT_TYPES.has(event.type) && event.ignorable === true) return;
-    if (raw.surfaceOp !== void 0) {
-      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry surfaceOp`);
-    }
-    if (raw.sourceEventSeqs !== void 0) {
-      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry sourceEventSeqs`);
-    }
-    return;
-  }
-  const op = raw.surfaceOp;
-  if (op === void 0) {
-    throw new Error(`session event "${event.type}" is surface-eligible and requires a surfaceOp marker`);
-  }
-  if (op === "append") return op;
-  if (op === null || typeof op !== "object" || Array.isArray(op)) {
-    throw new Error(`session event "${event.type}" carries an invalid surfaceOp`);
-  }
-  if (!isReplaceOp(op)) {
-    throw new Error(`session event "${event.type}" carries an invalid replace surfaceOp`);
-  }
-  return op;
-}
-function assertSourceEventReferences(event, shadowedSeqs) {
-  const raw = event.sourceEventSeqs;
-  if (event.type === "assistant/message" && raw !== void 0) {
-    throw new Error("assistant/message embeds its source stream and cannot carry sourceEventSeqs");
-  }
-  const sources = /* @__PURE__ */ new Set();
-  if (raw !== void 0) {
-    if (!Array.isArray(raw)) {
-      throw new Error(`sourceEventSeqs on event at seq ${event.seq} must be an array when present`);
-    }
-    if (raw.length === 0) {
-      throw new Error("sourceEventSeqs must not be empty");
-    }
-    let nonEarlierSource;
-    for (const source of raw) {
-      if (!isEventSeq(source)) {
-        throw new Error(`session event "${event.type}" sourceEventSeqs must densely contain non-negative safe integers`);
-      }
-      sources.add(source);
-      if (nonEarlierSource === void 0 && source >= event.seq) nonEarlierSource = source;
-    }
-    if (sources.size !== raw.length) {
-      throw new Error("sourceEventSeqs must not contain duplicates");
-    }
-    if (nonEarlierSource !== void 0) {
-      throw new Error(`sourceEventSeqs must reference earlier events: ${nonEarlierSource} >= current seq ${event.seq}`);
-    }
-  }
-  const missing = shadowedSeqs.filter((seq) => !sources.has(seq));
-  if (missing.length > 0) {
-    throw new Error(`surface replace: sourceEventSeqs must include every shadowed surface node; missing ${missing.join(", ")}`);
-  }
-}
-function validateSurfaceMetadata(event) {
-  const op = surfaceOpOf(event);
-  if (op !== void 0 && op !== "append" && (op.startSeq >= event.seq || op.endSeq >= event.seq)) {
-    throw new Error(`surface replace at seq ${event.seq}: startSeq and endSeq must reference earlier events`);
-  }
-  if (op !== void 0) assertSourceEventReferences(event, []);
-  return op;
-}
-function replacementRange(state, op) {
-  const startIdx = state.nodes.indexOf(op.startSeq);
-  if (startIdx === -1) {
-    throw new Error(`surface replace: start seq ${op.startSeq} not found in surface`);
-  }
-  const endIdx = state.nodes.indexOf(op.endSeq);
-  if (endIdx === -1) {
-    throw new Error(`surface replace: end seq ${op.endSeq} not found in surface`);
-  }
-  if (startIdx > endIdx) {
-    throw new Error(`surface replace: start seq ${op.startSeq} (index ${startIdx}) is after end seq ${op.endSeq} (index ${endIdx})`);
-  }
-  return {
-    startIdx,
-    endIdx,
-    shadowedSeqs: state.nodes.slice(startIdx, endIdx + 1)
-  };
-}
-function isDeepEqualJson(a, b) {
-  if (a === b) return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, i) => isDeepEqualJson(item, b[i]));
-  }
-  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
-  const aKeys = Object.keys(a);
-  const bRecord = b;
-  if (aKeys.length !== Object.keys(b).length) return false;
-  return aKeys.every((key) => Object.hasOwn(b, key) && isDeepEqualJson(a[key], bRecord[key]));
-}
-function assertToolResultRewrite(event, shadowedSeqs, events, baseSeq) {
-  if (event.type !== "tool/result") return;
-  if (shadowedSeqs.length !== 1) {
-    throw new Error("tool/result surface replacement must rewrite exactly one current node");
-  }
-  for (const originalSeq of shadowedSeqs) {
-    const original = events[originalSeq - baseSeq];
-    if (original?.type !== "tool/result") {
-      throw new Error("tool/result surface replacement must target a current tool/result");
-    }
-    const originalRest = { ...original.data };
-    const replacementRest = { ...event.data };
-    const originalResult = original.data.message.content[0];
-    const replacementResult = event.data.message.content[0];
-    originalRest["message"] = {
-      ...original.data.message,
-      content: [{ ...originalResult, content: null }]
-    };
-    replacementRest["message"] = {
-      ...event.data.message,
-      content: [{ ...replacementResult, content: null }]
-    };
-    if (!isDeepEqualJson(originalRest, replacementRest)) {
-      throw new Error("tool/result surface replacement may change only content");
-    }
-  }
-}
-function assertSystemHeadRewrite(event, state, startIdx, shadowedSeqs, events, baseSeq) {
-  if (startIdx !== 0) return;
-  const head = events[state.nodes[0] - baseSeq];
-  if (head?.type !== "system/message") return;
-  if (event.type !== "system/message" || shadowedSeqs.length !== 1) {
-    throw new Error("surface replace: node 0 holds the system prompt and may be rewritten only by a system/message over exactly that node");
-  }
-}
-function planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
-  if (event.seq !== expectedSeq) {
-    throw new Error(`session event seq ${event.seq} is not contiguous; expected ${expectedSeq}`);
-  }
-  const surfaceOp = validateSurfaceMetadata(event);
-  const projection = projections.find((item) => item.type === event.type);
-  if (projection !== void 0) {
-    return { kind: "project", projection, messages: projection.project(event, {
-      nodes: state.nodes,
-      events,
-      baseSeq,
-      messages: state.projectedMessages
-    }) };
-  }
-  if (MESSAGE_PROJECTION_EVENT_TYPES.has(event.type)) {
-    throw new Error(`session event "${event.type}" requires a message projection; load its owning plugin or supply its projection definition`);
-  }
-  if (surfaceOp === void 0) return;
-  if (surfaceOp === "append") {
-    return { kind: "append", seq: event.seq };
-  }
-  const range = replacementRange(state, surfaceOp);
-  assertSourceEventReferences(event, range.shadowedSeqs);
-  assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq);
-  assertSystemHeadRewrite(event, state, range.startIdx, range.shadowedSeqs, events, baseSeq);
-  return {
-    kind: "replace",
-    seq: event.seq,
-    start: surfaceOp.startSeq,
-    end: surfaceOp.endSeq,
-    ...range
-  };
-}
-function applySurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
-  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections);
-  return applySurfacePlan(state, plan);
-}
-function applySurfacePlan(state, plan) {
-  if (plan?.kind === "append") {
-    state.nodes.push(plan.seq);
-  } else if (plan?.kind === "replace") {
-    state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq);
-    state.replaceGeneration += 1;
-    state.contentGeneration += 1;
-  } else if (plan?.kind === "project") {
-    for (const [seq, message] of plan.messages) state.projectedMessages.set(seq, message);
-    state.projections.add(plan.projection);
-    state.contentGeneration += 1;
-  }
-  if (plan?.kind !== "replace") return;
-  return {
-    seq: plan.seq,
-    start: plan.start,
-    end: plan.end,
-    shadowedSeqs: plan.shadowedSeqs
-  };
-}
-var SurfaceManager = class {
-  /**
-   * @param log - Contiguous complete log or loaded event window.
-   * @param baseSeq - Absolute sequence of the window's first event.
-   * @param projections - live borrowed definitions; removing a used definition invalidates further reads.
-   */
-  constructor(log, baseSeq = SessionLogOffset(0), projections = []) {
-    this.log = log;
-    this.baseSeq = baseSeq;
-    this.projections = projections;
-    this._lastProcessedSeq = baseSeq === 0 ? -1 : SessionSeq(baseSeq - 1);
-  }
-  log;
-  baseSeq;
-  projections;
-  /** Shared transition state; replacement history is not retained. */
-  _state = createFoldState();
-  /** Last processed absolute seq. */
-  _lastProcessedSeq;
-  /** Candidate already validated by `validateNext`, pending exact log admission. */
-  _pendingPlan;
-  /**
-   * Validate the next candidate without mutating the committed surface.
-   * @param event - candidate event that has not entered the log yet.
-   */
-  validateNext(event) {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    const expectedSeq = SessionSeq(this.baseSeq + this.log.length);
-    this._pendingPlan = {
-      event,
-      expectedSeq,
-      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq, this.projections)
-    };
-  }
-  /** Monotonic count of folded positional replacements. */
-  get replaceGeneration() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.replaceGeneration;
-  }
-  /** Monotonic count of committed changes to existing model-visible content. */
-  get contentGeneration() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.contentGeneration;
-  }
-  /**
-   * Project one message with every committed message projection applied.
-   * @param event - message-producing or log-only event.
-   * @returns its immutable projected message, or null when it produces none.
-   */
-  deriveEventMessage(event) {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return deriveEventMessage(event, this._state.projectedMessages);
-  }
-  /** Surface event sequences in model-visible order. */
-  get nodes() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.nodes;
-  }
-  /** Fold events appended since the previous access. */
-  _processDelta() {
-    const tailSeq = this.baseSeq + this.log.length - 1;
-    for (let seq = this._lastProcessedSeq + 1; seq <= tailSeq; seq++) {
-      const index2 = seq - this.baseSeq;
-      const event = this.log[index2];
-      const pending = this._pendingPlan;
-      if (pending?.event === event && pending.expectedSeq === seq) {
-        applySurfacePlan(this._state, pending.plan);
-      } else {
-        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq, this.projections);
-      }
-      if (pending !== void 0 && pending.expectedSeq <= seq) this._pendingPlan = void 0;
-      this._lastProcessedSeq = SessionSeq(seq);
-    }
-  }
-  /** Cached messages cannot outlive the definitions that interpreted their log. */
-  _assertProjections() {
-    const candidate = this._pendingPlan;
-    const pending = candidate !== void 0 && this.log[candidate.expectedSeq - this.baseSeq] === candidate.event ? candidate.plan : void 0;
-    const required2 = pending?.kind === "project" ? [...this._state.projections, pending.projection] : this._state.projections;
-    for (const projection of required2) {
-      if (!this.projections.includes(projection)) {
-        throw new Error(`session message projection "${projection.type}" was removed or replaced; restore the session with its owning plugin`);
-      }
-    }
-  }
-};
-
-// packages/core/session/src/request-header.ts
-function canonicalHeader(header) {
-  const adapterDefaults = header.adapterDefaults;
-  return {
-    config: header.config,
-    ...adapterDefaults?.reasoningEffort === true || adapterDefaults?.maxTokens === true ? { adapterDefaults } : {},
-    ...header.tools !== void 0 && header.tools.length > 0 ? { tools: header.tools } : {}
-  };
-}
-function foldRequestHeader(events, from2) {
-  let state = from2;
-  for (const event of events) {
-    if (event.type === "request/header") state = canonicalHeader(event.data.header);
-  }
-  return state;
-}
-
-// packages/core/session/src/index.ts
-function validateSessionHeader(id, input) {
-  if (input === null || typeof input !== "object" || Array.isArray(input)) {
-    throw new Error("session header is not a plain JSON record");
-  }
-  const record2 = input;
-  if (Object.hasOwn(record2, "seedLength")) {
-    throw new Error('session header has invalid field "seedLength"');
-  }
-  if (record2.version !== SESSION_FORMAT_VERSION) {
-    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record2.version)}`);
-  }
-  if (record2.id !== id) {
-    throw new Error(`session header id "${String(record2.id)}" does not match session id "${id}"`);
-  }
-  if (typeof record2.createdAt !== "number" || !Number.isSafeInteger(record2.createdAt) || record2.createdAt < 0) {
-    throw new Error("session header createdAt must be a non-negative safe integer");
-  }
-  if (record2.cwd !== void 0) {
-    if (typeof record2.cwd !== "string") throw new Error("session header cwd must be a string");
-    if (!isAbsolute3(record2.cwd)) {
-      throw new Error(`session header cwd must be an absolute path, got "${record2.cwd}"`);
-    }
-  }
-  if (record2.parentSession !== void 0 && typeof record2.parentSession !== "string") {
-    throw new Error("session header parentSession must be a string");
-  }
-  if (typeof record2.isSeeded !== "boolean") {
-    throw new Error("session header isSeeded must be a boolean");
-  }
-  if (record2.origin !== void 0 && record2.origin !== "subagent") {
-    throw new Error('session header origin must be "subagent"');
-  }
-  if (record2.delegationDepth !== void 0 && (typeof record2.delegationDepth !== "number" || !Number.isSafeInteger(record2.delegationDepth) || record2.delegationDepth < 0)) {
-    throw new Error("session header delegationDepth must be a non-negative safe integer");
-  }
-  if (record2.agentPreset !== void 0 && typeof record2.agentPreset !== "string") {
-    throw new Error("session header agentPreset must be a string");
-  }
-  return deepFreeze(record2);
-}
-function validateRestoredSessionHeader(id, input) {
-  if (input !== null && typeof input === "object" && !Array.isArray(input)) {
-    const prototype = Reflect.getPrototypeOf(input);
-    if (prototype !== Object.prototype && prototype !== null) {
-      throw new Error("session header is not a plain JSON record");
-    }
-  }
-  return validateSessionHeader(id, input);
-}
-function snapshotSessionHeader(id, source) {
-  const input = source === void 0 ? { version: SESSION_FORMAT_VERSION, id, createdAt: Date.now(), isSeeded: false } : source;
-  const snapshot = snapshotJsonValue(input);
-  if (snapshot === void 0) throw new Error("session header is not losslessly JSON-serializable");
-  return validateSessionHeader(id, snapshot);
-}
-function assertSessionEventEnvelope(value, index2) {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-  }
-  const event = value;
-  for (const key in event) {
-    switch (key) {
-      case "type":
-      case "seq":
-      case "time":
-      case "data":
-      case "surfaceOp":
-      case "sourceEventSeqs":
-      case "ignorable":
-        break;
-      default:
-        throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-    }
-  }
-  const type = event["type"];
-  const seq = event["seq"];
-  const time3 = event["time"];
-  if (typeof type !== "string" || typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 0 || Object.is(seq, -0) || typeof time3 !== "number" || !Number.isSafeInteger(time3) || event["data"] === void 0 || event["ignorable"] !== void 0 && event["ignorable"] !== true) {
-    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-  }
-  validateSessionEventData(event, `seed ${type} at index ${index2}`);
-  switch (type) {
-    case "request/header":
-    case "system/message":
-    case "user/message":
-    case "assistant/attempt":
-    case "assistant/message":
-    case "tool/result":
-      assertCurrentLlmShape(event, index2);
-      break;
-  }
-}
-function assertCurrentLlmShape(event, index2) {
-  const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
-  if (event["type"] === "request/header") {
-    const headerRecord = record2?.["header"];
-    const config2 = headerRecord["config"];
-    if (!hasProviderModel(config2)) throw new Error(`seed request/header at index ${index2} lacks provider/model`);
-    const configRecord = config2;
-    const reasoningEffort = configRecord["reasoningEffort"];
-    if (reasoningEffort !== void 0 && (typeof reasoningEffort !== "string" || reasoningEffort.length === 0)) {
-      throw new Error(`seed request/header at index ${index2} has an invalid reasoningEffort`);
-    }
-    assertAdapterDefaults(headerRecord["adapterDefaults"], configRecord, index2);
-    const reason = record2?.["reason"];
-    if (reason !== "initial" && reason !== "resume" && reason !== "change" && reason !== "series") {
-      throw new Error(`seed request/header at index ${index2} has an invalid reason`);
-    }
-    if (record2?.["startsSeries"] !== void 0 && record2["startsSeries"] !== true) {
-      throw new Error(`seed request/header at index ${index2} has an invalid startsSeries marker`);
-    }
-  }
-  const type = event["type"];
-  if (type === "assistant/attempt") {
-    assertAssistantSettlementShape(record2, type, index2);
-    return;
-  }
-  if (!isMessageEventType(type)) return;
-  assertMessageEventShape(event, `seed ${type} at index ${index2}`);
-  if (type === "assistant/message") {
-    assertAssistantSettlementShape(record2, type, index2);
-  }
-}
-function assertAssistantSettlementShape(data, type, index2) {
-  const turn = data?.["turn"];
-  const step = data?.["step"];
-  if (typeof turn !== "number" || !Number.isSafeInteger(turn) || turn < 0 || Object.is(turn, -0) || typeof step !== "number" || !Number.isSafeInteger(step) || step < 0 || Object.is(step, -0) || !Array.isArray(data?.["stream"])) {
-    throw new Error(`seed ${type} at index ${index2} has invalid settlement fields`);
-  }
-}
-var allowedAdapterKeys = /* @__PURE__ */ new Set(["reasoningEffort", "maxTokens"]);
-function assertAdapterDefaults(value, config2, index2) {
-  if (value === void 0) return;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
-  }
-  const defaults = value;
-  if (Object.keys(defaults).some((key) => !allowedAdapterKeys.has(key)) || Object.values(defaults).some((marker) => marker !== true) || defaults["reasoningEffort"] === true && config2["reasoningEffort"] === void 0 || defaults["maxTokens"] === true && config2["maxTokens"] === void 0) {
-    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
-  }
-}
-function isMessageEventType(type) {
-  return type === "system/message" || type === "user/message" || type === "assistant/message" || type === "tool/result";
-}
-var MESSAGE_ROLE_BY_TYPE = {
-  "system/message": "system",
-  "user/message": "user",
-  "assistant/message": "assistant",
-  "tool/result": "user"
-};
-function assertMessageEventShape(event, subject) {
-  const type = event["type"];
-  if (!isMessageEventType(type)) return;
-  const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
-  const message = type === "user/message" ? record2 : record2?.["message"];
-  if (typeof message !== "object" || message === null || typeof message["id"] !== "string" || message["id"] === "") {
-    throw new Error(`${subject} lacks an identified message`);
-  }
-  const messageRecord = message;
-  const expectedRole = MESSAGE_ROLE_BY_TYPE[type];
-  if (messageRecord["role"] !== expectedRole) {
-    throw new Error(`${subject} message must have role "${expectedRole}"`);
-  }
-  const source = messageRecord["source"];
-  if (typeof source !== "object" || source === null || typeof source["kind"] !== "string" || source["kind"] === "") {
-    throw new Error(`${subject} message has invalid source`);
-  }
-  if (!Array.isArray(messageRecord["content"])) {
-    throw new Error(`${subject} message has invalid content`);
-  }
-  const sourceRecord = source;
-  if (type === "system/message") {
-    if (sourceRecord["kind"] !== "plugin" || typeof sourceRecord["plugin"] !== "string" || sourceRecord["plugin"] === "") {
-      throw new Error(`${subject} message must have plugin source`);
-    }
-    return;
-  }
-  if (type === "assistant/message") {
-    if (sourceRecord["kind"] !== "model" || !hasProviderModel(sourceRecord)) {
-      throw new Error(`${subject} message must have model source`);
-    }
-    return;
-  }
-  if (type !== "tool/result") return;
-  if (sourceRecord["kind"] !== "tool" || typeof sourceRecord["callId"] !== "string" || sourceRecord["callId"] === "") {
-    throw new Error(`${subject} message must have tool source`);
-  }
-  const content3 = messageRecord["content"];
-  const block = content3[0];
-  if (content3.length !== 1 || typeof block !== "object" || block === null || block["type"] !== "tool-result" || !Array.isArray(block["content"])) {
-    throw new Error(`${subject} message must contain one tool-result block`);
-  }
-  if (block["toolCallId"] !== sourceRecord["callId"]) {
-    throw new Error(`${subject} message has mismatched tool call ids`);
-  }
-}
-function hasProviderModel(value) {
-  if (typeof value !== "object" || value === null) return false;
-  const pair = value;
-  return typeof pair["provider"] === "string" && pair["provider"].length > 0 && typeof pair["model"] === "string" && pair["model"].length > 0;
-}
-function collectSessionCallbacks(ctx, args) {
-  return [...ctx.events.dispatch("emit", args)];
-}
-function invokeContainedSessionObservers(ctx, name2, id, args, callbacks) {
-  for (const callback of callbacks) {
-    try {
-      const returned = callback(...args);
-      void Promise.resolve(returned).catch((error51) => {
-        ctx.logger.warn(`session "${id}": ${name2} listener rejected: ${String(error51)}`);
-      });
-    } catch (error51) {
-      ctx.logger.warn(`session "${id}": ${name2} listener threw: ${String(error51)}`);
-    }
-  }
-}
-var attachments = /* @__PURE__ */ new WeakMap();
-var Session = class _Session {
-  log = [];
-  /** Single incremental owner of surface acceptance and projection state. */
-  surfaceManager;
-  /** The ordered surface over this session's event log. */
-  get surface() {
-    return this.surfaceManager;
-  }
-  /**
-   * Detached, deep-frozen creation metadata (format version, cwd, lineage,
-   * and whether fork history exists). Supplied by the store via `ctx.sessions.create()`. When a
-   * `Session` is created without a store-owned header, a minimal header is
-   * synthesized (stamped with the current {@link SESSION_FORMAT_VERSION}) so
-   * `session.header` is always present. Kept out of the event log — it is a
-   * storage concern, not replayable conversation state.
-   */
-  header;
-  /** Number of leading events inherited from this Session's fork parent. */
-  inheritedEventCount;
-  /** The session identity, derived from its durable header's single copy. */
-  get id() {
-    return this.header.id;
-  }
-  /**
-   * The first seq appended IN THIS PROCESS: the length of the constructor
-   * seed (0 without one). Events with smaller seq values entered through
-   * construction — replay, fork, or resume — and were never published on the
-   * `session/event` firehose (constructor seeds do not emit). This offset marks
-   * the constructor-input boundary for lifecycle ownership and persistence
-   * adoption; consumers that need complete canonical history still start at
-   * seq 0. Distinct from {@link inheritedEventCount}, the DURABLE
-   * fork-lineage cut: a resumed session's constructor seed is its full stored
-   * log, while the inherited count keeps the original fork value — this field is the
-   * in-process construction fact.
-   *
-   * Not persisted itself: a seeded session projects it into the log as the
-   * `session/end-seed` event, which is what a consumer reading STORED history
-   * reads. Locate the LAST such event, not necessarily one at this seq — a
-   * seed already ending in one is not re-marked, so reopening an untouched
-   * session leaves that event at a smaller seq than `firstLiveSeq`. Prefer
-   * this field in-process: it is exact before the marker reaches storage.
-   *
-   * When this lifecycle appends the marker, it occupies this seq before the
-   * store attaches and therefore does not publish either. Otherwise this seq
-   * holds an ordinary published write.
-   */
-  firstLiveSeq;
-  /**
-   * Create a detached session by validating and snapshotting borrowed seed
-   * events and storage metadata.
-   * @param id - session identity.
-   * @param seed - optional borrowed replay or fork events.
-   * @param header - optional borrowed storage metadata.
-   * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
-   * @param projections - pure interpreters for plugin-owned message changes.
-   * @returns a detached session.
-   * @throws when a seed event requires a missing message interpreter or fails validation.
-   */
-  static create(id, seed, header, inheritedEventCount, projections) {
-    return new _Session(id, seed, header, "snapshot", inheritedEventCount, projections);
-  }
-  /**
-   * Restore a detached session by adopting an independently owned or deeply frozen seed.
-   * Runtime-required event fields, event envelopes, sequence continuity, surface
-   * transitions, and header fields are validated without copying or freezing events.
-   * Embedded Assistant streams remain opaque until a stream consumer or storage
-   * verifier reads them.
-   * @param id - restored session identity.
-   * @param seed - independently owned or deeply frozen events.
-   * @param header - independently owned storage metadata.
-   * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
-   * @param eventState - aliasing state carried from the operation that produced the seed.
-   * @param projections - pure interpreters for plugin-owned message changes.
-   * @returns a restored detached session.
-   * @throws when a seed event requires a missing message interpreter or fails validation.
-   */
-  static fromRestore(id, seed, header, inheritedEventCount, eventState, projections) {
-    return new _Session(
-      id,
-      seed,
-      header,
-      eventState,
-      inheritedEventCount,
-      projections
-    );
-  }
-  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount, projections = []) {
-    this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
-    const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
-    if (seed !== void 0) {
-      for (const [index2, source] of seed.entries()) {
-        const snapshot = mode === "snapshot" ? snapshotJsonValue(source) : source;
-        if (snapshot === void 0) {
-          throw new Error(`seed event at index ${index2} is not losslessly JSON-serializable`);
-        }
-        assertSessionEventEnvelope(snapshot, index2);
-        if (snapshot.seq !== index2) {
-          throw new Error(`seed event at index ${index2} has seq ${snapshot.seq} (expected ${index2}); seed must be contiguous from 0`);
-        }
-        try {
-          this.surfaceManager.validateNext(snapshot);
-        } catch (error51) {
-          throw new Error(`invalid seed event at index ${index2}: ${error51 instanceof Error ? error51.message : "invalid surface metadata"}`);
-        }
-        this.log.push(mode === "snapshot" ? deepFreeze(snapshot) : snapshot);
-      }
-    }
-    this.firstLiveSeq = SessionLogOffset(this.log.length);
-    this.header = restoredHeader ?? snapshotSessionHeader(id, header);
-    if (this.header.isSeeded && seed === void 0) {
-      throw new Error("seeded session requires an explicit constructor seed");
-    }
-    if (this.header.isSeeded && suppliedInheritedEventCount === void 0) {
-      throw new Error("seeded session requires an inherited event count");
-    }
-    const inheritedEventCount = SessionLogOffset(suppliedInheritedEventCount ?? 0);
-    if (!this.header.isSeeded && inheritedEventCount !== 0) {
-      throw new Error("unseeded session inherited event count must be 0");
-    }
-    if (inheritedEventCount > this.log.length) {
-      throw new Error("session inherited event count exceeds its event log");
-    }
-    if (mode === "snapshot" && this.header.isSeeded && inheritedEventCount !== this.log.length) {
-      throw new Error("seeded session constructor seed must equal its inherited prefix");
-    }
-    this.inheritedEventCount = inheritedEventCount;
-    if (seed !== void 0 && mode === "snapshot" && this.header.isSeeded) {
-      this.append("session/end-seed", { inherited: true });
-    } else if (seed !== void 0 && this.log.at(-1)?.type !== "session/end-seed") {
-      this.append("session/end-seed", {});
-    }
-  }
-  /** Cached immutable full snapshot of the private append-only log. */
-  eventsSnapshot;
-  /**
-   * Return the immutable event stored at one exact sequence number.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @param seq - event sequence number.
-   * @returns the accepted event, or undefined when the log does not contain it.
-   */
-  eventAt(seq) {
-    return this.log[seq];
-  }
-  /**
-   * Materialize an immutable snapshot of a half-open event sequence range.
-   * A full current snapshot is reused until the next append; every previously
-   * returned snapshot remains stable after later appends.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @param fromSeq - non-negative inclusive sequence number; defaults to the log start.
-   * @param toSeqExclusive - non-negative exclusive sequence number; defaults to the current end.
-   * @returns a frozen array of the selected deeply frozen events.
-   */
-  snapshotEvents(fromSeq = SessionLogOffset(0), toSeqExclusive = this.seq) {
-    if (fromSeq === 0 && toSeqExclusive === this.log.length) {
-      this.eventsSnapshot ??= Object.freeze([...this.log]);
-      return this.eventsSnapshot;
-    }
-    return Object.freeze(this.log.slice(fromSeq, toSeqExclusive));
-  }
-  /**
-   * Return this Session's events after its fork-inherited prefix.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @returns a fresh array containing child-owned events in log order.
-   */
-  ownEvents() {
-    return this.snapshotEvents(this.inheritedEventCount);
-  }
-  /**
-   * Whether one existing event position is outside the fork-inherited prefix.
-   * @param seq - event position in this Session.
-   * @returns true when the event belongs to this Session rather than its parent.
-   */
-  isOwnSeq(seq) {
-    return seq >= this.inheritedEventCount && seq < this.seq;
-  }
-  /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
-  get seq() {
-    return SessionLogOffset(this.log.length);
-  }
-  /**
-   * Append one typed event to the log and synchronously notify observers via
-   * the store-owned, module-private publication hooks. The hot path never blocks
-   * on I/O — persistence plugins buffer asynchronously. Once the event enters
-   * the log, the append is committed: observer failures are logged and
-   * contained per listener, so they do not change the return value or prevent
-   * later listeners from observing the same accepted event.
-   *
-   * @param type - The event type (key of {@link SessionEventMap}).
-   * @param data - The event payload; must be JSON-serializable.
-   * @param opts - Surface metadata: `surfaceOp` controls how the event enters
-   *   the ordered surface; `sourceEventSeqs` lists the seq numbers of earlier
-   *   events this one derives from. REQUIRED for
-   *   {@link SurfaceEventType} events (every message-producing event must
-   *   declare how it joins the surface, the sole source of derived model
-   *   history) and
-   *   rejected by the compiler for non-surface types like `turn/start` or
-   *   `assistant/attempt`. Assistant messages embed their exact provider
-   *   stream and cannot cite top-level source events.
-   * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
-   *   `data` that entered the log, so reading `event.data` back sees the logged
-   *   value, never the caller's still-mutable input.
-   * @throws if `data` or surface metadata is not losslessly JSON-serializable
-   *   (BigInt, function, symbol, undefined, negative zero, non-finite number,
-   *   circular reference, sparse array, or an exotic object such as
-   *   Map/Set/Date/class instance), or when the candidate violates the
-   *   request-header empty-field or tool-error consistency rules, or the
-   *   canonical surface contract (marker shape and eligibility, unique
-   *   earlier source-event references, positional replacement validity, and complete
-   *   shadowed-node coverage). One iterative pass reads, validates, and
-   *   copies each nested value once, so a stateful getter cannot supply one value
-   *   to validation and another to storage. The event log is the durable source
-   *   of truth, so a bad event fails at the append site rather than later during
-   *   a backend flush. A synchronous internal dispatch validation failure or an
-   *   append reentered while this acceptance/publication boundary is open also
-   *   rejects before the log changes.
-   */
-  append(type, data, ...opts) {
-    const surfaceOpts = opts[0];
-    const surfaceMetadata = {
-      ...surfaceOpts?.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
-      ...surfaceOpts?.surfaceOp === void 0 ? {} : { surfaceOp: surfaceOpts.surfaceOp }
-    };
-    const dataSnapshot = snapshotJsonValue(data);
-    if (dataSnapshot === void 0) {
-      throw new Error(`session event "${type}" carries non-JSON-serializable data`);
-    }
-    const surfaceMetadataSnapshot = snapshotJsonValue(surfaceMetadata);
-    if (surfaceMetadataSnapshot === void 0) {
-      throw new Error(`session event "${type}" carries non-JSON-serializable surface metadata`);
-    }
-    const entry = attachments.get(this);
-    if (entry?.appending) {
-      throw new Error("session append cannot reenter while another append is being published");
-    }
-    const event = deepFreeze({
-      type,
-      seq: SessionSeq(this.log.length),
-      time: Date.now(),
-      data: dataSnapshot,
-      ...surfaceMetadataSnapshot
-    });
-    validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`);
-    this.surfaceManager.validateNext(event);
-    if (entry !== void 0) entry.appending = true;
-    try {
-      let callbacks;
-      const callbackArgs = [this, event];
-      if (entry !== void 0) {
-        callbacks = collectSessionCallbacks(entry.emitCtx, [entry.carrier, "session/event", ...callbackArgs]);
-      }
-      this.log.push(event);
-      this.eventsSnapshot = void 0;
-      if (callbacks !== void 0 && entry !== void 0) {
-        invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
-      }
-      return event;
-    } finally {
-      if (entry !== void 0) {
-        entry.appending = false;
-        if (entry.detachRequested && !entry.announcing) entry.detach();
-      }
-    }
-  }
-  /** Cached fold of the request-header events — see {@link requestHeader}. */
-  headerFold;
-  /** Log position (events consumed) the header fold has reached. */
-  headerFoldSeq = 0;
-  /**
-   * The {@link EpochHeader} in force after the log's last header event — the
-   * header the NEXT request will be compared against — or undefined before
-   * the first `request/header` snapshot. The live, incrementally-maintained
-   * form of `foldRequestHeader(session.snapshotEvents())`: each header event is folded
-   * once, when first seen, so a per-step read costs O(new events).
-   * @returns the folded header, or undefined when no header event exists yet.
-   */
-  requestHeader() {
-    if (this.headerFoldSeq < this.log.length) {
-      this.headerFold = deepFreeze(foldRequestHeader(this.log.slice(this.headerFoldSeq), this.headerFold));
-      this.headerFoldSeq = this.log.length;
-    }
-    return this.headerFold;
-  }
-  /** Cached fold of `request/context` events. */
-  contextFold;
-  contextFoldSeq = 0;
-  /**
-   * Return the latest resolved route metadata, or `undefined` before the first
-   * `request/context` event. Each event is folded once.
-   * @returns the latest immutable route metadata.
-   */
-  requestContext() {
-    if (this.contextFoldSeq < this.log.length) {
-      for (const event of this.log.slice(this.contextFoldSeq)) {
-        if (event.type === "request/context") this.contextFold = deepFreeze({ ...event.data });
-      }
-      this.contextFoldSeq = this.log.length;
-    }
-    return this.contextFold;
-  }
-  /** The derived-message cache: frozen projections, extended per unseen node. */
-  derived = [];
-  /** Surface position (nodes projected) the cache has reached. */
-  derivedNodes = 0;
-  /** {@link SurfaceManager.contentGeneration} the cache was built under. */
-  derivedGeneration = 0;
-  /**
-   * Derive the LLM message history by walking the ordered sequences of
-   * message-producing events maintained by `surfaceOp` markers. The
-   * surface is the single source of derived history: every message-producing
-   * append records its `surfaceOp`, so a raw event with no marker (a chunk, a
-   * turn boundary) is correctly absent, and a compaction `replace` deletes the
-   * shadowed nodes from the derivation. The projection rules are
-   * {@link deriveEventMessage}, with logged message projections applied
-   * without changing node membership or message identity.
-   *
-   * CACHED: pure tail growth costs O(new nodes); a replacement or message projection
-   * ({@link SessionSurface.contentGeneration}) rebuilds. The returned array is
-   * a fresh snapshot per call (later appends never grow an array a caller
-   * already holds); the `Message` objects in it are SHARED and **deep-frozen**.
-   * Unchanged content reuses frozen event data; projected blocks are frozen
-   * derived copies. Consumers cannot mutate the log through either form.
-   * @returns a fresh array of the shared, frozen derived history.
-   */
-  deriveMessages() {
-    const surface = this.surface;
-    const nodes = surface.nodes;
-    const generation = surface.contentGeneration;
-    if (generation !== this.derivedGeneration) {
-      this.derived = [];
-      this.derivedNodes = 0;
-      this.derivedGeneration = generation;
-    }
-    for (const seq of nodes.slice(this.derivedNodes)) {
-      const msg = this.deriveEventMessage(this.log[seq]);
-      if (msg) this.derived.push(msg);
-    }
-    this.derivedNodes = nodes.length;
-    return [...this.derived];
-  }
-  /**
-   * Project one event with all committed message projections applied.
-   * The original durable event remains unchanged.
-   * @param event - the event to project.
-   * @returns the derived message, or null when the event produces none.
-   */
-  deriveEventMessage(event) {
-    return this.surfaceManager.deriveEventMessage(event);
-  }
-};
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -67888,10 +67049,10 @@ function $constructor(name2, initializer3, params) {
   }
   Object.defineProperty(Definition, "name", { value: name2 });
   function _(def) {
-    var _a4;
+    var _a5;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
+    (_a5 = inst._zod).deferred ?? (_a5.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -68509,8 +67670,8 @@ function explicitlyAborted(x, startIndex = 0) {
 }
 function prefixIssues(path2, issues) {
   return issues.map((iss) => {
-    var _a4;
-    (_a4 = iss).path ?? (_a4.path = []);
+    var _a5;
+    (_a5 = iss).path ?? (_a5.path = []);
     iss.path.unshift(path2);
     return iss;
   });
@@ -68695,7 +67856,7 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
   const processError = (error52, path2 = []) => {
-    var _a4, _b;
+    var _a5, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, [...path2, ...issue2.path]));
@@ -68716,7 +67877,7 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
           const terminal = i === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a4 = curr.properties)[el] ?? (_a4[el] = { errors: [] });
+            (_a5 = curr.properties)[el] ?? (_a5[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -69012,10 +68173,10 @@ var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a4;
+  var _a5;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a4 = inst._zod).onattach ?? (_a4.onattach = []);
+  (_a5 = inst._zod).onattach ?? (_a5.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -69081,8 +68242,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a4;
-    (_a4 = inst2._zod.bag).multipleOf ?? (_a4.multipleOf = def.value);
+    var _a5;
+    (_a5 = inst2._zod.bag).multipleOf ?? (_a5.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -69215,9 +68376,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69243,9 +68404,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69271,9 +68432,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69301,9 +68462,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69330,9 +68491,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69359,9 +68520,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69390,7 +68551,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a4, _b;
+  var _a5, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -69401,7 +68562,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a4 = inst._zod).check ?? (_a4.check = (payload) => {
+    (_a5 = inst._zod).check ?? (_a5.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -69603,7 +68764,7 @@ var version2 = {
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a4;
+  var _a5;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -69618,7 +68779,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
+    (_a5 = inst._zod).deferred ?? (_a5.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -78761,7 +77922,7 @@ function initializeContext(params) {
   };
 }
 function process14(schema, ctx, _params = { path: [], schemaPath: [] }) {
-  var _a4;
+  var _a5;
   const def = schema._zod.def;
   const seen = ctx.seen.get(schema);
   if (seen) {
@@ -78809,7 +77970,7 @@ function process14(schema, ctx, _params = { path: [], schemaPath: [] }) {
     delete result.schema.default;
   }
   if (ctx.io === "input" && "_prefault" in result.schema)
-    (_a4 = result.schema).default ?? (_a4.default = result.schema._prefault);
+    (_a5 = result.schema).default ?? (_a5.default = result.schema._prefault);
   delete result.schema._prefault;
   const _result = ctx.seen.get(schema);
   return _result.schema;
@@ -81843,6 +81004,1720 @@ function date5(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
+// packages/core/session/src/index.ts
+import { isAbsolute as isAbsolute3 } from "node:path";
+
+// packages/core/session/src/types.ts
+function SessionId(id) {
+  return brandString(id);
+}
+function SessionSeq(value) {
+  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
+    throw new TypeError(`SessionSeq must be a non-negative safe integer, got ${String(value)}`);
+  }
+  return brandNumber(value);
+}
+function SessionLogOffset(value) {
+  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
+    throw new TypeError(`SessionLogOffset must be a non-negative safe integer, got ${String(value)}`);
+  }
+  return brandNumber(value);
+}
+var SESSION_FORMAT_VERSION = 4;
+
+// packages/core/session/src/known-event-types.ts
+var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "agent-preset/selected",
+  "agent/inbox/spliced",
+  "approval/asked",
+  "approval/decided",
+  "approval/policy",
+  "assistant/attempt",
+  "assistant/message",
+  "command/done",
+  "command/run",
+  "compaction/end",
+  "compaction/prune",
+  "compaction/start",
+  "compaction/summary",
+  "deliverables/presented",
+  "developer/message",
+  "feedback/message-delete",
+  "feedback/message-put",
+  "feedback/record",
+  "goal/change",
+  "hook/invoked",
+  "hook/result",
+  "image/offload",
+  "llm/retry",
+  "llm/retry-started",
+  "model/selection",
+  "permission/preset",
+  "plan/mode",
+  "request/context",
+  "request/header",
+  "sandbox/mode",
+  "schedule/change",
+  "session-log-deepseek/delivery-accepted",
+  "session/end-seed",
+  "session/title",
+  "session/title-llm-request",
+  "step/end",
+  "step/start",
+  "subagent/catalog",
+  "subagent/descriptor",
+  "subagent/model-selection-policy",
+  "system/message",
+  "team/member",
+  "team/message/delivered",
+  "team/message/queued",
+  "team/task",
+  "todo/write",
+  "tool-workflow/agent-end",
+  "tool-workflow/agent-start",
+  "tool-workflow/run-end",
+  "tool-workflow/run-start",
+  "tool/call",
+  "tool/ptc-dispatch",
+  "tool/ptc-dispatch-start",
+  "tool/result",
+  "turn/end",
+  "turn/start",
+  "user/message",
+  "web/deepseek-search-llm-request",
+  "workspace/changes"
+]);
+var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "image/offload"
+]);
+
+// packages/core/session/src/surface.ts
+var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "system/message",
+  "developer/message",
+  "user/message",
+  "assistant/message",
+  "tool/result"
+]);
+function isSurfaceEligibleType(type) {
+  return SURFACE_EVENT_TYPES.has(type);
+}
+function deriveEventMessage(event, projectedMessages) {
+  const projected = projectedMessages?.get(event.seq);
+  if (projected !== void 0) return projected;
+  switch (event.type) {
+    // Ordinary prompts and injected context project in user role: the event's
+    // model-facing content stays verbatim. Do NOT re-add per-type framing
+    // (e.g. `<context>`) here: framing is caller-owned — a producer bakes it
+    // into `content`, as agent-instructions does with `<system-reminder>` — or,
+    // if reintroduced, must be driven by the event `meta` map and a dedicated
+    // renderer, keeping this projection a verbatim pass-through. See the
+    // deferred design note in
+    // ../../../../.agents/notes/implemented/simplification/2026-07-20-unwrap-injected-content-envelopes.md
+    case "user/message": {
+      return event.data;
+    }
+    // Empty system and developer nodes retain their surface positions without
+    // adding wire messages. An empty assistant event hosts a max-tokens step's
+    // usage and must not inject a content-less turn into the provider transcript.
+    case "system/message":
+    case "developer/message":
+    case "assistant/message": {
+      if (event.data.message.content.length === 0) return null;
+      return event.data.message;
+    }
+    case "tool/result": {
+      return event.data.message;
+    }
+    default:
+      return null;
+  }
+}
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function validateSessionEventData(event, subject) {
+  const data = event.data;
+  if (SURFACE_EVENT_TYPES.has(event.type) && isRecord2(data)) {
+    const message = event.type === "user/message" ? data : data["message"];
+    if (isRecord2(message)) {
+      if (event.type === "developer/message" !== (message["role"] === "developer")) {
+        throw new Error(`${subject} developer/message and developer role must occur together`);
+      }
+      if (message["role"] !== "developer" && Array.isArray(message["content"]) && message["content"].some((block) => isRecord2(block) && (block["type"] === "tool-addition" || block["type"] === "tool-removal"))) {
+        throw new Error(`${subject} tool-change blocks require developer role`);
+      }
+      if (event.type === "developer/message" && Array.isArray(message["content"])) {
+        let hasAdditions = false;
+        for (const block of message["content"]) {
+          if (!isRecord2(block) || block["type"] !== "tool-addition" && block["type"] !== "tool-removal") continue;
+          if (typeof block["toolName"] !== "string" || block["toolName"].length === 0) {
+            throw new Error(`${subject} ${block["type"]} requires a nonempty toolName`);
+          }
+          if (block["type"] === "tool-addition") {
+            hasAdditions = true;
+            if (Object.hasOwn(block, "tool")) throw new Error(`${subject} tool-addition must omit inline tool definitions`);
+          }
+        }
+        if (hasAdditions ? !isEventSeq(data["headerSeq"]) : Object.hasOwn(data, "headerSeq")) {
+          throw new Error(`${subject} requires headerSeq exactly when tool additions are present`);
+        }
+      }
+    }
+  }
+  if (event.type === "request/header") {
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
+    const header = data["header"];
+    if (!isRecord2(header)) throw new Error(`${subject} header must be an object`);
+    if (Object.hasOwn(header, "system")) throw new Error(`${subject} must omit header.system; use system/message`);
+    if (Array.isArray(header["tools"]) && header["tools"].length === 0) {
+      throw new Error(`${subject} must omit empty tools`);
+    }
+    const defaults = header["adapterDefaults"];
+    if (isRecord2(defaults) && Object.keys(defaults).length === 0) {
+      throw new Error(`${subject} must omit empty adapterDefaults`);
+    }
+  } else if (event.type === "tool/result") {
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
+    if (data["error"] === void 0) return;
+    const message = data["message"];
+    if (!isRecord2(message) || message["isError"] !== true) {
+      throw new Error(`${subject} error requires message.isError === true`);
+    }
+  }
+}
+function createFoldState() {
+  return { nodes: [], replaceGeneration: 0, contentGeneration: 0, projectedMessages: /* @__PURE__ */ new Map(), projections: /* @__PURE__ */ new Set() };
+}
+function isEventSeq(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0);
+}
+function isReplaceOp(value) {
+  const op = value;
+  return Object.keys(op).length === 3 && Object.hasOwn(op, "op") && Object.hasOwn(op, "startSeq") && Object.hasOwn(op, "endSeq") && op["op"] === "replace" && isEventSeq(op["startSeq"]) && isEventSeq(op["endSeq"]);
+}
+function surfaceOpOf(event) {
+  const raw = event;
+  if (!isSurfaceEligibleType(event.type)) {
+    if (!KNOWN_SESSION_EVENT_TYPES.has(event.type) && event.ignorable === true) return;
+    if (raw.surfaceOp !== void 0) {
+      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry surfaceOp`);
+    }
+    if (raw.sourceEventSeqs !== void 0) {
+      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry sourceEventSeqs`);
+    }
+    return;
+  }
+  const op = raw.surfaceOp;
+  if (op === void 0) {
+    throw new Error(`session event "${event.type}" is surface-eligible and requires a surfaceOp marker`);
+  }
+  if (op === "append") return op;
+  if (op === null || typeof op !== "object" || Array.isArray(op)) {
+    throw new Error(`session event "${event.type}" carries an invalid surfaceOp`);
+  }
+  if (!isReplaceOp(op)) {
+    throw new Error(`session event "${event.type}" carries an invalid replace surfaceOp`);
+  }
+  return op;
+}
+function assertSourceEventReferences(event, shadowedSeqs) {
+  const raw = event.sourceEventSeqs;
+  if (event.type === "assistant/message" && raw !== void 0) {
+    throw new Error("assistant/message embeds its source stream and cannot carry sourceEventSeqs");
+  }
+  const sources = /* @__PURE__ */ new Set();
+  if (raw !== void 0) {
+    if (!Array.isArray(raw)) {
+      throw new Error(`sourceEventSeqs on event at seq ${event.seq} must be an array when present`);
+    }
+    if (raw.length === 0) {
+      throw new Error("sourceEventSeqs must not be empty");
+    }
+    let nonEarlierSource;
+    for (const source of raw) {
+      if (!isEventSeq(source)) {
+        throw new Error(`session event "${event.type}" sourceEventSeqs must densely contain non-negative safe integers`);
+      }
+      sources.add(source);
+      if (nonEarlierSource === void 0 && source >= event.seq) nonEarlierSource = source;
+    }
+    if (sources.size !== raw.length) {
+      throw new Error("sourceEventSeqs must not contain duplicates");
+    }
+    if (nonEarlierSource !== void 0) {
+      throw new Error(`sourceEventSeqs must reference earlier events: ${nonEarlierSource} >= current seq ${event.seq}`);
+    }
+  }
+  const missing = shadowedSeqs.filter((seq) => !sources.has(seq));
+  if (missing.length > 0) {
+    throw new Error(`surface replace: sourceEventSeqs must include every shadowed surface node; missing ${missing.join(", ")}`);
+  }
+}
+function assertDeveloperHeader(event, events, baseSeq) {
+  if (event.type !== "developer/message") return;
+  validateSessionEventData(event, `developer/message at seq ${event.seq}`);
+  if (event.data.headerSeq === void 0) return;
+  const headerSeq = event.data.headerSeq;
+  const headerEvent = events[headerSeq - baseSeq];
+  if (headerSeq >= event.seq || headerEvent?.type !== "request/header") {
+    throw new Error("developer/message headerSeq must reference an earlier request/header");
+  }
+  for (const block of event.data.message.content) {
+    if (block.type !== "tool-addition") continue;
+    const definitions = headerEvent.data.header.tools?.filter((tool) => tool.name === block.toolName) ?? [];
+    if (definitions.length !== 1) {
+      throw new Error(`developer/message tool-addition "${block.toolName}" must name exactly one tool in headerSeq ${headerSeq}`);
+    }
+    const definition2 = definitions[0];
+    if (typeof definition2.description !== "string" || !isRecord2(definition2.parameters)) {
+      throw new Error(`developer/message tool-addition "${block.toolName}" requires a complete tool definition in headerSeq ${headerSeq}`);
+    }
+    if (Object.hasOwn(definition2, "deferLoading") && definition2.deferLoading !== true) {
+      throw new Error("developer/message referenced tool deferLoading must be true when present");
+    }
+  }
+}
+function validateSurfaceMetadata(event) {
+  const op = surfaceOpOf(event);
+  if (op !== void 0 && op !== "append" && (op.startSeq >= event.seq || op.endSeq >= event.seq)) {
+    throw new Error(`surface replace at seq ${event.seq}: startSeq and endSeq must reference earlier events`);
+  }
+  if (op !== void 0) assertSourceEventReferences(event, []);
+  return op;
+}
+function replacementRange(state, op) {
+  const startIdx = state.nodes.indexOf(op.startSeq);
+  if (startIdx === -1) {
+    throw new Error(`surface replace: start seq ${op.startSeq} not found in surface`);
+  }
+  const endIdx = state.nodes.indexOf(op.endSeq);
+  if (endIdx === -1) {
+    throw new Error(`surface replace: end seq ${op.endSeq} not found in surface`);
+  }
+  if (startIdx > endIdx) {
+    throw new Error(`surface replace: start seq ${op.startSeq} (index ${startIdx}) is after end seq ${op.endSeq} (index ${endIdx})`);
+  }
+  return {
+    startIdx,
+    endIdx,
+    shadowedSeqs: state.nodes.slice(startIdx, endIdx + 1)
+  };
+}
+function isDeepEqualJson(a, b) {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item, i) => isDeepEqualJson(item, b[i]));
+  }
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  const aKeys = Object.keys(a);
+  const bRecord = b;
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((key) => Object.hasOwn(b, key) && isDeepEqualJson(a[key], bRecord[key]));
+}
+function assertToolResultRewrite(event, shadowedSeqs, events, baseSeq) {
+  if (event.type !== "tool/result") return;
+  if (shadowedSeqs.length !== 1) {
+    throw new Error("tool/result surface replacement must rewrite exactly one current node");
+  }
+  for (const originalSeq of shadowedSeqs) {
+    const original = events[originalSeq - baseSeq];
+    if (original?.type !== "tool/result") {
+      throw new Error("tool/result surface replacement must target a current tool/result");
+    }
+    const originalRest = { ...original.data };
+    const replacementRest = { ...event.data };
+    originalRest["message"] = {
+      ...original.data.message,
+      content: null
+    };
+    replacementRest["message"] = {
+      ...event.data.message,
+      content: null
+    };
+    if (!isDeepEqualJson(originalRest, replacementRest)) {
+      throw new Error("tool/result surface replacement may change only content");
+    }
+  }
+}
+function assertSystemHeadRewrite(event, state, startIdx, shadowedSeqs, events, baseSeq) {
+  if (startIdx !== 0) return;
+  const head = events[state.nodes[0] - baseSeq];
+  if (head?.type !== "system/message") return;
+  if (event.type !== "system/message" || shadowedSeqs.length !== 1) {
+    throw new Error("surface replace: node 0 holds the system prompt and may be rewritten only by a system/message over exactly that node");
+  }
+}
+function planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
+  if (event.seq !== expectedSeq) {
+    throw new Error(`session event seq ${event.seq} is not contiguous; expected ${expectedSeq}`);
+  }
+  const surfaceOp = validateSurfaceMetadata(event);
+  assertDeveloperHeader(event, events, baseSeq);
+  const projection = projections.find((item) => item.type === event.type);
+  if (projection !== void 0) {
+    return { kind: "project", projection, messages: projection.project(event, {
+      nodes: state.nodes,
+      events,
+      baseSeq,
+      messages: state.projectedMessages
+    }) };
+  }
+  if (MESSAGE_PROJECTION_EVENT_TYPES.has(event.type)) {
+    throw new Error(`session event "${event.type}" requires a message projection; load its owning plugin or supply its projection definition`);
+  }
+  if (surfaceOp === void 0) return;
+  if (surfaceOp === "append") {
+    return { kind: "append", seq: event.seq };
+  }
+  const range = replacementRange(state, surfaceOp);
+  assertSourceEventReferences(event, range.shadowedSeqs);
+  assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq);
+  assertSystemHeadRewrite(event, state, range.startIdx, range.shadowedSeqs, events, baseSeq);
+  return {
+    kind: "replace",
+    seq: event.seq,
+    start: surfaceOp.startSeq,
+    end: surfaceOp.endSeq,
+    ...range
+  };
+}
+function applySurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
+  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections);
+  return applySurfacePlan(state, plan);
+}
+function applySurfacePlan(state, plan) {
+  if (plan?.kind === "append") {
+    state.nodes.push(plan.seq);
+  } else if (plan?.kind === "replace") {
+    state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq);
+    state.replaceGeneration += 1;
+    state.contentGeneration += 1;
+  } else if (plan?.kind === "project") {
+    for (const [seq, message] of plan.messages) state.projectedMessages.set(seq, message);
+    state.projections.add(plan.projection);
+    state.contentGeneration += 1;
+  }
+  if (plan?.kind !== "replace") return;
+  return {
+    seq: plan.seq,
+    start: plan.start,
+    end: plan.end,
+    shadowedSeqs: plan.shadowedSeqs
+  };
+}
+var SurfaceManager = class {
+  /**
+   * @param log - Contiguous complete log or loaded event window.
+   * @param baseSeq - Absolute sequence of the window's first event.
+   * @param projections - live borrowed definitions; removing a used definition invalidates further reads.
+   */
+  constructor(log, baseSeq = SessionLogOffset(0), projections = []) {
+    this.log = log;
+    this.baseSeq = baseSeq;
+    this.projections = projections;
+    this._lastProcessedSeq = baseSeq === 0 ? -1 : SessionSeq(baseSeq - 1);
+  }
+  log;
+  baseSeq;
+  projections;
+  /** Shared transition state; replacement history is not retained. */
+  _state = createFoldState();
+  /** Last processed absolute seq. */
+  _lastProcessedSeq;
+  /** Candidate already validated by `validateNext`, pending exact log admission. */
+  _pendingPlan;
+  /**
+   * Validate the next candidate without mutating the committed surface.
+   * @param event - candidate event that has not entered the log yet.
+   */
+  validateNext(event) {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    const expectedSeq = SessionSeq(this.baseSeq + this.log.length);
+    this._pendingPlan = {
+      event,
+      expectedSeq,
+      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq, this.projections)
+    };
+  }
+  /** Monotonic count of folded positional replacements. */
+  get replaceGeneration() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.replaceGeneration;
+  }
+  /** Monotonic count of committed changes to existing model-visible content. */
+  get contentGeneration() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.contentGeneration;
+  }
+  /**
+   * Project one message with every committed message projection applied.
+   * @param event - message-producing or log-only event.
+   * @returns its immutable projected message, or null when it produces none.
+   */
+  deriveEventMessage(event) {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return deriveEventMessage(event, this._state.projectedMessages);
+  }
+  /** Surface event sequences in model-visible order. */
+  get nodes() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.nodes;
+  }
+  /** Fold events appended since the previous access. */
+  _processDelta() {
+    const tailSeq = this.baseSeq + this.log.length - 1;
+    for (let seq = this._lastProcessedSeq + 1; seq <= tailSeq; seq++) {
+      const index2 = seq - this.baseSeq;
+      const event = this.log[index2];
+      const pending = this._pendingPlan;
+      if (pending?.event === event && pending.expectedSeq === seq) {
+        applySurfacePlan(this._state, pending.plan);
+      } else {
+        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq, this.projections);
+      }
+      if (pending !== void 0 && pending.expectedSeq <= seq) this._pendingPlan = void 0;
+      this._lastProcessedSeq = SessionSeq(seq);
+    }
+  }
+  /** Cached messages cannot outlive the definitions that interpreted their log. */
+  _assertProjections() {
+    const candidate = this._pendingPlan;
+    const pending = candidate !== void 0 && this.log[candidate.expectedSeq - this.baseSeq] === candidate.event ? candidate.plan : void 0;
+    const required2 = pending?.kind === "project" ? [...this._state.projections, pending.projection] : this._state.projections;
+    for (const projection of required2) {
+      if (!this.projections.includes(projection)) {
+        throw new Error(`session message projection "${projection.type}" was removed or replaced; restore the session with its owning plugin`);
+      }
+    }
+  }
+};
+
+// packages/core/session/src/request-header.ts
+function canonicalHeader(header) {
+  const adapterDefaults = header.adapterDefaults;
+  return {
+    config: header.config,
+    ...adapterDefaults?.reasoningEffort === true || adapterDefaults?.maxTokens === true ? { adapterDefaults } : {},
+    ...header.tools !== void 0 && header.tools.length > 0 ? { tools: header.tools } : {}
+  };
+}
+function foldRequestHeader(events, from2) {
+  let state = from2;
+  for (const event of events) {
+    if (event.type === "request/header") state = canonicalHeader(event.data.header);
+  }
+  return state;
+}
+
+// packages/core/session/src/tool-history.ts
+var ToolHistoryProjection = class {
+  /** Historical declarations indexed by the header sequence referenced by additions. */
+  headers = /* @__PURE__ */ new Map();
+  /** Definitions retained in the current declaration series, including removed tools. */
+  declared = /* @__PURE__ */ new Map();
+  /** Active definitions from the latest request header. */
+  active = [];
+  /** Active names reconstructed from the baseline and recorded updates. */
+  available = /* @__PURE__ */ new Set();
+  /** Header that starts the current declaration series; absent before the first header. */
+  baselineSeq;
+  /** Immutable request snapshot of the current baseline and resolved updates. */
+  history = deepFreeze({ tools: [], updates: [] });
+  /**
+   * Consume the next committed event in log order.
+   * @param event - a session event, including inherited events during restoration.
+   */
+  apply(event) {
+    if (event.type === "request/header") {
+      const tools = event.data.header.tools ?? [];
+      this.headers.set(event.seq, tools);
+      const redeclared = tools.some((tool) => {
+        const before = this.declared.get(tool.name);
+        return before !== void 0 && JSON.stringify(before) !== JSON.stringify(tool);
+      });
+      if (this.baselineSeq === void 0 || event.data.reason === "series" || event.data.startsSeries || redeclared) {
+        this.baselineSeq = event.seq;
+        this.declared = new Map(tools.map((tool) => [tool.name, tool]));
+        this.history = deepFreeze({ tools, updates: [] });
+        this.available = new Set(tools.map((tool) => tool.name));
+      }
+      this.active = tools;
+    } else if (event.type === "developer/message") {
+      const { message, headerSeq } = event.data;
+      const definitions = headerSeq === void 0 ? [] : this.headers.get(headerSeq);
+      const additions = message.content.flatMap((block) => {
+        if (block.type !== "tool-addition") return [];
+        const tool = definitions?.find((tool2) => tool2.name === block.toolName);
+        if (tool === void 0) throw new Error(`tool history: missing definition for ${block.toolName}`);
+        return [tool];
+      });
+      for (const tool of additions) this.declared.set(tool.name, tool);
+      for (const block of message.content) {
+        if (block.type === "tool-addition") this.available.add(block.toolName);
+        else if (block.type === "tool-removal") this.available.delete(block.toolName);
+      }
+      this.history = deepFreeze({
+        tools: this.history.tools,
+        updates: [...this.history.updates, { messageId: message.id, additions }]
+      });
+    }
+  }
+  /**
+   * Read an immutable snapshot; subsequent events do not mutate it.
+   * @returns initial declarations and historically resolved additions for the current series.
+   */
+  snapshot() {
+    if (this.active.length !== this.available.size || this.active.some((tool) => !this.available.has(tool.name))) {
+      return deepFreeze({ tools: this.active, updates: [] });
+    }
+    return this.history;
+  }
+};
+
+// packages/core/session/src/repair.ts
+var TOOL_OUTCOME_UNKNOWN = "TOOL_OUTCOME_UNKNOWN";
+
+// packages/core/session/src/index.ts
+function validateSessionHeader(id, input) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("session header is not a plain JSON record");
+  }
+  const record2 = input;
+  if (Object.hasOwn(record2, "seedLength")) {
+    throw new Error('session header has invalid field "seedLength"');
+  }
+  if (record2.version !== SESSION_FORMAT_VERSION) {
+    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record2.version)}`);
+  }
+  if (record2.id !== id) {
+    throw new Error(`session header id "${String(record2.id)}" does not match session id "${id}"`);
+  }
+  if (typeof record2.createdAt !== "number" || !Number.isSafeInteger(record2.createdAt) || record2.createdAt < 0) {
+    throw new Error("session header createdAt must be a non-negative safe integer");
+  }
+  if (record2.cwd !== void 0) {
+    if (typeof record2.cwd !== "string") throw new Error("session header cwd must be a string");
+    if (!isAbsolute3(record2.cwd)) {
+      throw new Error(`session header cwd must be an absolute path, got "${record2.cwd}"`);
+    }
+  }
+  if (record2.parentSession !== void 0 && typeof record2.parentSession !== "string") {
+    throw new Error("session header parentSession must be a string");
+  }
+  if (typeof record2.isSeeded !== "boolean") {
+    throw new Error("session header isSeeded must be a boolean");
+  }
+  if (record2.origin !== void 0 && record2.origin !== "subagent") {
+    throw new Error('session header origin must be "subagent"');
+  }
+  if (record2.delegationDepth !== void 0 && (typeof record2.delegationDepth !== "number" || !Number.isSafeInteger(record2.delegationDepth) || record2.delegationDepth < 0)) {
+    throw new Error("session header delegationDepth must be a non-negative safe integer");
+  }
+  if (record2.agentPreset !== void 0 && typeof record2.agentPreset !== "string") {
+    throw new Error("session header agentPreset must be a string");
+  }
+  return deepFreeze(record2);
+}
+function validateRestoredSessionHeader(id, input) {
+  if (input !== null && typeof input === "object" && !Array.isArray(input)) {
+    const prototype = Reflect.getPrototypeOf(input);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new Error("session header is not a plain JSON record");
+    }
+  }
+  return validateSessionHeader(id, input);
+}
+function snapshotSessionHeader(id, source) {
+  const input = source === void 0 ? { version: SESSION_FORMAT_VERSION, id, createdAt: Date.now(), isSeeded: false } : source;
+  const snapshot2 = snapshotJsonValue(input);
+  if (snapshot2 === void 0) throw new Error("session header is not losslessly JSON-serializable");
+  return validateSessionHeader(id, snapshot2);
+}
+function assertSessionEventEnvelope(value, index2) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+  }
+  const event = value;
+  for (const key in event) {
+    switch (key) {
+      case "type":
+      case "seq":
+      case "time":
+      case "data":
+      case "surfaceOp":
+      case "sourceEventSeqs":
+      case "ignorable":
+        break;
+      default:
+        throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+    }
+  }
+  const type = event["type"];
+  const seq = event["seq"];
+  const time3 = event["time"];
+  if (typeof type !== "string" || typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 0 || Object.is(seq, -0) || typeof time3 !== "number" || !Number.isSafeInteger(time3) || event["data"] === void 0 || event["ignorable"] !== void 0 && event["ignorable"] !== true) {
+    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+  }
+  validateSessionEventData(event, `seed ${type} at index ${index2}`);
+  switch (type) {
+    case "request/header":
+    case "developer/message":
+    case "system/message":
+    case "user/message":
+    case "assistant/attempt":
+    case "assistant/message":
+    case "tool/result":
+      assertCurrentLlmShape(event, index2);
+      break;
+  }
+}
+function assertCurrentLlmShape(event, index2) {
+  const data = event["data"];
+  const record2 = typeof data === "object" && data !== null ? data : void 0;
+  if (event["type"] === "request/header") {
+    const headerRecord = record2?.["header"];
+    const config2 = headerRecord["config"];
+    if (!hasProviderModel(config2)) throw new Error(`seed request/header at index ${index2} lacks provider/model`);
+    const configRecord = config2;
+    const reasoningEffort = configRecord["reasoningEffort"];
+    if (reasoningEffort !== void 0 && (typeof reasoningEffort !== "string" || reasoningEffort.length === 0)) {
+      throw new Error(`seed request/header at index ${index2} has an invalid reasoningEffort`);
+    }
+    assertAdapterDefaults(headerRecord["adapterDefaults"], configRecord, index2);
+    const reason = record2?.["reason"];
+    if (reason !== "initial" && reason !== "resume" && reason !== "change" && reason !== "series") {
+      throw new Error(`seed request/header at index ${index2} has an invalid reason`);
+    }
+    if (record2?.["startsSeries"] !== void 0 && record2["startsSeries"] !== true) {
+      throw new Error(`seed request/header at index ${index2} has an invalid startsSeries marker`);
+    }
+  }
+  const type = event["type"];
+  if (type === "assistant/attempt") {
+    assertAssistantSettlementShape(record2, type, index2);
+    return;
+  }
+  if (!isMessageEventType(type)) return;
+  assertMessageEventShape(event, `seed ${type} at index ${index2}`);
+  if (type === "assistant/message") {
+    assertAssistantSettlementShape(record2, type, index2);
+  }
+}
+function assertAssistantSettlementShape(data, type, index2) {
+  const turn = data?.["turn"];
+  const step = data?.["step"];
+  if (typeof turn !== "number" || !Number.isSafeInteger(turn) || turn < 0 || Object.is(turn, -0) || typeof step !== "number" || !Number.isSafeInteger(step) || step < 0 || Object.is(step, -0) || !Array.isArray(data?.["stream"])) {
+    throw new Error(`seed ${type} at index ${index2} has invalid settlement fields`);
+  }
+}
+var allowedAdapterKeys = /* @__PURE__ */ new Set(["reasoningEffort", "maxTokens"]);
+function assertAdapterDefaults(value, config2, index2) {
+  if (value === void 0) return;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
+  }
+  const defaults = value;
+  if (Object.keys(defaults).some((key) => !allowedAdapterKeys.has(key)) || Object.values(defaults).some((marker) => marker !== true) || defaults["reasoningEffort"] === true && config2["reasoningEffort"] === void 0 || defaults["maxTokens"] === true && config2["maxTokens"] === void 0) {
+    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
+  }
+}
+function isMessageEventType(type) {
+  return type === "developer/message" || type === "system/message" || type === "user/message" || type === "assistant/message" || type === "tool/result";
+}
+var MESSAGE_ROLE_BY_TYPE = {
+  "system/message": "system",
+  "developer/message": "developer",
+  "user/message": "user",
+  "assistant/message": "assistant",
+  "tool/result": "tool"
+};
+function assertMessageEventShape(event, subject) {
+  const type = event["type"];
+  if (!isMessageEventType(type)) return;
+  const data = event["data"];
+  const record2 = typeof data === "object" && data !== null ? data : void 0;
+  const message = type === "user/message" ? record2 : record2?.["message"];
+  if (typeof message !== "object" || message === null || typeof message["id"] !== "string" || message["id"] === "") {
+    throw new Error(`${subject} lacks an identified message`);
+  }
+  const messageRecord = message;
+  const expectedRole = MESSAGE_ROLE_BY_TYPE[type];
+  if (messageRecord["role"] !== expectedRole) {
+    throw new Error(`${subject} message must have role "${expectedRole}"`);
+  }
+  const source = messageRecord["source"];
+  if (typeof source !== "object" || source === null || typeof source["kind"] !== "string" || source["kind"] === "") {
+    throw new Error(`${subject} message has invalid source`);
+  }
+  if (!Array.isArray(messageRecord["content"])) {
+    throw new Error(`${subject} message has invalid content`);
+  }
+  const sourceRecord = source;
+  if (type === "system/message") {
+    if (sourceRecord["kind"] !== "system-prompt") {
+      throw new Error(`${subject} message must have system-prompt source`);
+    }
+    return;
+  }
+  if (type === "assistant/message") {
+    if (sourceRecord["kind"] !== "model" || !hasProviderModel(sourceRecord)) {
+      throw new Error(`${subject} message must have model source`);
+    }
+    return;
+  }
+  if (type !== "tool/result") return;
+  if (sourceRecord["kind"] !== "tool" || typeof sourceRecord["callId"] !== "string" || sourceRecord["callId"] === "") {
+    throw new Error(`${subject} message must have tool source`);
+  }
+  if (messageRecord["toolCallId"] !== sourceRecord["callId"]) {
+    throw new Error(`${subject} message has mismatched tool call ids`);
+  }
+}
+function hasProviderModel(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const pair = value;
+  return typeof pair["provider"] === "string" && pair["provider"].length > 0 && typeof pair["model"] === "string" && pair["model"].length > 0;
+}
+function collectSessionCallbacks(ctx, args) {
+  return [...ctx.events.dispatch("emit", args)];
+}
+function invokeContainedSessionObservers(ctx, name2, id, args, callbacks) {
+  for (const callback of callbacks) {
+    try {
+      const returned = callback(...args);
+      void Promise.resolve(returned).catch((error51) => {
+        ctx.logger.warn(`session "${id}": ${name2} listener rejected: ${String(error51)}`);
+      });
+    } catch (error51) {
+      ctx.logger.warn(`session "${id}": ${name2} listener threw: ${String(error51)}`);
+    }
+  }
+}
+var attachments = /* @__PURE__ */ new WeakMap();
+var Session = class _Session {
+  log = [];
+  /** Single incremental owner of surface acceptance and projection state. */
+  surfaceManager;
+  /** The ordered surface over this session's event log. */
+  get surface() {
+    return this.surfaceManager;
+  }
+  /**
+   * Detached, deep-frozen creation metadata (format version, cwd, lineage,
+   * and whether fork history exists). Supplied by the store via `ctx.sessions.create()`. When a
+   * `Session` is created without a store-owned header, a minimal header is
+   * synthesized (stamped with the current {@link SESSION_FORMAT_VERSION}) so
+   * `session.header` is always present. Kept out of the event log — it is a
+   * storage concern, not replayable conversation state.
+   */
+  header;
+  /** Number of leading events inherited from this Session's fork parent. */
+  inheritedEventCount;
+  /** The session identity, derived from its durable header's single copy. */
+  get id() {
+    return this.header.id;
+  }
+  /**
+   * The constructor seed length (0 without one), before any marker appended
+   * during construction. Seed events never publish on `session/event`. A
+   * marker appended before the store attaches occupies this seq without
+   * publishing either; otherwise this seq is available for the next append.
+   *
+   * This in-process offset is not persisted. A fork seed can already contain
+   * the child's inherited marker and synthetic closers, so its child-owned
+   * history starts at {@link inheritedEventCount}, before this offset. A
+   * resumed Session's seed contains its full stored log, while its inherited
+   * count keeps the durable fork cut. Consumers needing complete canonical
+   * history start at seq 0.
+   */
+  firstLiveSeq;
+  /**
+   * First event produced for this object lifecycle. A new fork includes its
+   * child-owned seed marker and closers; a restored Session starts after its
+   * complete stored prefix. This in-process capture offset is not persisted.
+   */
+  firstLifecycleSeq;
+  /**
+   * Create a detached session by validating and snapshotting borrowed seed
+   * events and storage metadata.
+   * @param id - session identity.
+   * @param seed - optional borrowed replay or fork events.
+   * @param header - optional borrowed storage metadata.
+   * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
+   * @param projections - pure interpreters for plugin-owned message changes.
+   * @returns a detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
+   */
+  static create(id, seed, header, inheritedEventCount, projections) {
+    return new _Session(id, seed, header, "snapshot", inheritedEventCount, projections);
+  }
+  /**
+   * Restore a detached session by adopting an independently owned or deeply frozen seed.
+   * Runtime-required event fields, event envelopes, sequence continuity, surface
+   * transitions, and header fields are validated without copying or freezing events.
+   * Embedded Assistant streams remain opaque until a stream consumer or storage
+   * verifier reads them.
+   * @param id - restored session identity.
+   * @param seed - independently owned or deeply frozen events.
+   * @param header - independently owned storage metadata.
+   * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
+   * @param eventState - aliasing state carried from the operation that produced the seed.
+   * @param projections - pure interpreters for plugin-owned message changes.
+   * @returns a restored detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
+   */
+  static fromRestore(id, seed, header, inheritedEventCount, eventState, projections) {
+    return new _Session(
+      id,
+      seed,
+      header,
+      eventState,
+      inheritedEventCount,
+      projections
+    );
+  }
+  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount, projections = []) {
+    this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
+    const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
+    if (seed !== void 0) {
+      for (const [index2, source] of seed.entries()) {
+        const snapshot2 = mode === "snapshot" ? snapshotJsonValue(source) : source;
+        if (snapshot2 === void 0) {
+          throw new Error(`seed event at index ${index2} is not losslessly JSON-serializable`);
+        }
+        assertSessionEventEnvelope(snapshot2, index2);
+        if (snapshot2.seq !== index2) {
+          throw new Error(`seed event at index ${index2} has seq ${snapshot2.seq} (expected ${index2}); seed must be contiguous from 0`);
+        }
+        try {
+          this.surfaceManager.validateNext(snapshot2);
+        } catch (error51) {
+          throw new Error(`invalid seed event at index ${index2}: ${error51 instanceof Error ? error51.message : "invalid surface metadata"}`);
+        }
+        this.log.push(mode === "snapshot" ? deepFreeze(snapshot2) : snapshot2);
+      }
+    }
+    this.firstLiveSeq = SessionLogOffset(this.log.length);
+    this.header = restoredHeader ?? snapshotSessionHeader(id, header);
+    if (this.header.isSeeded && seed === void 0) {
+      throw new Error("seeded session requires an explicit constructor seed");
+    }
+    if (this.header.isSeeded && suppliedInheritedEventCount === void 0) {
+      throw new Error("seeded session requires an inherited event count");
+    }
+    const inheritedEventCount = SessionLogOffset(suppliedInheritedEventCount ?? 0);
+    if (!this.header.isSeeded && inheritedEventCount !== 0) {
+      throw new Error("unseeded session inherited event count must be 0");
+    }
+    if (inheritedEventCount > this.log.length) {
+      throw new Error("session inherited event count exceeds its event log");
+    }
+    const seedMarker = this.log[inheritedEventCount];
+    const markedSeed = seedMarker?.type === "session/end-seed" && seedMarker.data.inherited === true;
+    if (mode === "snapshot" && this.header.isSeeded && inheritedEventCount !== this.log.length && !markedSeed) {
+      throw new Error("seeded session constructor seed must equal its inherited prefix or mark its inherited cut");
+    }
+    if (markedSeed && this.log.slice(inheritedEventCount + 1).some((event) => event.type === "session/end-seed" && event.data.inherited === true)) {
+      throw new Error("session inherited event count must identify the final inherited marker");
+    }
+    this.inheritedEventCount = inheritedEventCount;
+    this.firstLifecycleSeq = mode === "snapshot" && this.header.isSeeded ? inheritedEventCount : this.firstLiveSeq;
+    if (seed !== void 0 && mode === "snapshot" && this.header.isSeeded && !markedSeed) {
+      this.append("session/end-seed", { inherited: true });
+    } else if (seed !== void 0 && !(mode === "snapshot" && this.header.isSeeded) && this.log.at(-1)?.type !== "session/end-seed") {
+      this.append("session/end-seed", {});
+    }
+  }
+  /** Cached immutable full snapshot of the private append-only log. */
+  eventsSnapshot;
+  /**
+   * Return the immutable event stored at one exact sequence number.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @param seq - event sequence number.
+   * @returns the accepted event, or undefined when the log does not contain it.
+   */
+  eventAt(seq) {
+    return this.log[seq];
+  }
+  /**
+   * Materialize an immutable snapshot of a half-open event sequence range.
+   * A full current snapshot is reused until the next append; every previously
+   * returned snapshot remains stable after later appends.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @param fromSeq - non-negative inclusive sequence number; defaults to the log start.
+   * @param toSeqExclusive - non-negative exclusive sequence number; defaults to the current end.
+   * @returns a frozen array of the selected deeply frozen events.
+   */
+  snapshotEvents(fromSeq = SessionLogOffset(0), toSeqExclusive = this.seq) {
+    if (fromSeq === 0 && toSeqExclusive === this.log.length) {
+      this.eventsSnapshot ??= Object.freeze([...this.log]);
+      return this.eventsSnapshot;
+    }
+    return Object.freeze(this.log.slice(fromSeq, toSeqExclusive));
+  }
+  /**
+   * Return this Session's events after its fork-inherited prefix.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @returns a fresh array containing child-owned events in log order.
+   */
+  ownEvents() {
+    return this.snapshotEvents(this.inheritedEventCount);
+  }
+  /**
+   * Whether one existing event position is outside the fork-inherited prefix.
+   * @param seq - event position in this Session.
+   * @returns true when the event belongs to this Session rather than its parent.
+   */
+  isOwnSeq(seq) {
+    return seq >= this.inheritedEventCount && seq < this.seq;
+  }
+  /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
+  get seq() {
+    return SessionLogOffset(this.log.length);
+  }
+  /**
+   * Append one typed event to the log and synchronously notify observers via
+   * the store-owned, module-private publication hooks. The hot path never blocks
+   * on I/O — persistence plugins buffer asynchronously. Once the event enters
+   * the log, the append is committed: observer failures are logged and
+   * contained per listener, so they do not change the return value or prevent
+   * later listeners from observing the same accepted event.
+   *
+   * @param type - The event type (key of {@link SessionEventMap}).
+   * @param data - The event payload; must be JSON-serializable.
+   * @param opts - Surface metadata: `surfaceOp` controls how the event enters
+   *   the ordered surface; `sourceEventSeqs` lists the seq numbers of earlier
+   *   events this one derives from. REQUIRED for
+   *   {@link SurfaceEventType} events (every message-producing event must
+   *   declare how it joins the surface, the sole source of derived model
+   *   history) and
+   *   rejected by the compiler for non-surface types like `turn/start` or
+   *   `assistant/attempt`. Assistant messages embed their exact provider
+   *   stream and cannot cite top-level source events.
+   * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
+   *   `data` that entered the log, so reading `event.data` back sees the logged
+   *   value, never the caller's still-mutable input.
+   * @throws if `data` or surface metadata is not losslessly JSON-serializable
+   *   (BigInt, function, symbol, undefined, negative zero, non-finite number,
+   *   circular reference, sparse array, or an exotic object such as
+   *   Map/Set/Date/class instance), or when the candidate violates the
+   *   request-header empty-field or tool-error consistency rules, or the
+   *   canonical surface contract (marker shape and eligibility, unique
+   *   earlier source-event references, positional replacement validity, and complete
+   *   shadowed-node coverage). One iterative pass reads, validates, and
+   *   copies each nested value once, so a stateful getter cannot supply one value
+   *   to validation and another to storage. The event log is the durable source
+   *   of truth, so a bad event fails at the append site rather than later during
+   *   a backend flush. A synchronous internal dispatch validation failure or an
+   *   append reentered while this acceptance/publication boundary is open also
+   *   rejects before the log changes.
+   */
+  append(type, data, ...opts) {
+    const surfaceOpts = opts[0];
+    const surfaceMetadata = {
+      ...surfaceOpts?.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
+      ...surfaceOpts?.surfaceOp === void 0 ? {} : { surfaceOp: surfaceOpts.surfaceOp }
+    };
+    const dataSnapshot = snapshotJsonValue(data);
+    if (dataSnapshot === void 0) {
+      throw new Error(`session event "${type}" carries non-JSON-serializable data`);
+    }
+    const surfaceMetadataSnapshot = snapshotJsonValue(surfaceMetadata);
+    if (surfaceMetadataSnapshot === void 0) {
+      throw new Error(`session event "${type}" carries non-JSON-serializable surface metadata`);
+    }
+    const entry = attachments.get(this);
+    if (entry?.appending) {
+      throw new Error("session append cannot reenter while another append is being published");
+    }
+    const event = deepFreeze({
+      type,
+      seq: SessionSeq(this.log.length),
+      time: Date.now(),
+      data: dataSnapshot,
+      ...surfaceMetadataSnapshot
+    });
+    validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`);
+    this.surfaceManager.validateNext(event);
+    if (entry !== void 0) entry.appending = true;
+    try {
+      let callbacks;
+      const callbackArgs = [this, event];
+      if (entry !== void 0) {
+        callbacks = collectSessionCallbacks(entry.emitCtx, [entry.carrier, "session/event", ...callbackArgs]);
+      }
+      this.log.push(event);
+      this.eventsSnapshot = void 0;
+      if (callbacks !== void 0 && entry !== void 0) {
+        invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
+      }
+      return event;
+    } finally {
+      if (entry !== void 0) {
+        entry.appending = false;
+        if (entry.detachRequested && !entry.announcing) entry.detach();
+      }
+    }
+  }
+  /** Cached fold of the request-header events — see {@link requestHeader}. */
+  headerFold;
+  /** Log position (events consumed) the header fold has reached. */
+  headerFoldSeq = 0;
+  /**
+   * The {@link EpochHeader} in force after the log's last header event — the
+   * header the NEXT request will be compared against — or undefined before
+   * the first `request/header` snapshot. The live, incrementally-maintained
+   * form of `foldRequestHeader(session.snapshotEvents())`: each header event is folded
+   * once, when first seen, so a per-step read costs O(new events).
+   * @returns the folded header, or undefined when no header event exists yet.
+   */
+  requestHeader() {
+    if (this.headerFoldSeq < this.log.length) {
+      this.headerFold = deepFreeze(foldRequestHeader(this.log.slice(this.headerFoldSeq), this.headerFold));
+      this.headerFoldSeq = this.log.length;
+    }
+    return this.headerFold;
+  }
+  /** Cached fold of `request/context` events. */
+  contextFold;
+  contextFoldSeq = 0;
+  /**
+   * Return the latest resolved route metadata, or `undefined` before the first
+   * `request/context` event. Each event is folded once.
+   * @returns the latest immutable route metadata.
+   */
+  requestContext() {
+    if (this.contextFoldSeq < this.log.length) {
+      for (const event of this.log.slice(this.contextFoldSeq)) {
+        if (event.type === "request/context") this.contextFold = deepFreeze({ ...event.data });
+      }
+      this.contextFoldSeq = this.log.length;
+    }
+    return this.contextFold;
+  }
+  /** Cached historical tool definitions and updates for request projection. */
+  toolHistoryProjection = new ToolHistoryProjection();
+  /** Index of the next committed event not yet consumed by the tool-history fold. */
+  toolHistorySeq = 0;
+  /**
+   * Fold unseen committed events into capability-independent tool history.
+   * Initial access reconstructs inherited history; later reads consume only new events.
+   * @returns an immutable snapshot for LLM request projection, including historical addition definitions.
+   */
+  toolHistory() {
+    for (const event of this.log.slice(this.toolHistorySeq)) this.toolHistoryProjection.apply(event);
+    this.toolHistorySeq = this.log.length;
+    return this.toolHistoryProjection.snapshot();
+  }
+  /** The derived-message cache: frozen projections, extended per unseen node. */
+  derived = [];
+  /** Surface position (nodes projected) the cache has reached. */
+  derivedNodes = 0;
+  /** {@link SurfaceManager.contentGeneration} the cache was built under. */
+  derivedGeneration = 0;
+  /**
+   * Derive the LLM message history by walking the ordered sequences of
+   * message-producing events maintained by `surfaceOp` markers. The
+   * surface is the single source of derived history: every message-producing
+   * append records its `surfaceOp`, so a raw event with no marker (a chunk, a
+   * turn boundary) is correctly absent, and a compaction `replace` deletes the
+   * shadowed nodes from the derivation. The projection rules are
+   * {@link deriveEventMessage}, with logged message projections applied
+   * without changing node membership or message identity.
+   *
+   * CACHED: pure tail growth costs O(new nodes); a replacement or message projection
+   * ({@link SessionSurface.contentGeneration}) rebuilds. The returned array is
+   * a fresh snapshot per call (later appends never grow an array a caller
+   * already holds); the `Message` objects in it are SHARED and **deep-frozen**.
+   * Unchanged content reuses frozen event data; projected blocks are frozen
+   * derived copies. Consumers cannot mutate the log through either form.
+   * @returns a fresh array of the shared, frozen derived history.
+   */
+  deriveMessages() {
+    const surface = this.surface;
+    const nodes = surface.nodes;
+    const generation = surface.contentGeneration;
+    if (generation !== this.derivedGeneration) {
+      this.derived = [];
+      this.derivedNodes = 0;
+      this.derivedGeneration = generation;
+    }
+    for (const seq of nodes.slice(this.derivedNodes)) {
+      const msg = this.deriveEventMessage(this.log[seq]);
+      if (msg) this.derived.push(msg);
+    }
+    this.derivedNodes = nodes.length;
+    return [...this.derived];
+  }
+  /**
+   * Project one event with all committed message projections applied.
+   * The original durable event remains unchanged.
+   * @param event - the event to project.
+   * @returns the derived message, or null when the event produces none.
+   */
+  deriveEventMessage(event) {
+    return this.surfaceManager.deriveEventMessage(event);
+  }
+};
+
+// packages/interaction/user-questions/src/projection.ts
+var ASK_USER_QUESTION_TOOL = "ask_user_question";
+var TIMED_WAIT_PARAMETER = "timeout";
+var toolOptionSchema = external_exports.object({
+  label: external_exports.string(),
+  description: external_exports.string().optional()
+}).loose();
+var toolQuestionSchema = external_exports.object({
+  id: external_exports.string(),
+  question: external_exports.string(),
+  header: external_exports.string().optional(),
+  options: external_exports.array(toolOptionSchema).optional(),
+  multi_select: external_exports.boolean().optional()
+}).loose();
+var toolArgumentsSchema = external_exports.object({
+  questions: external_exports.array(toolQuestionSchema).min(1)
+}).loose();
+var optionSchema = external_exports.object({
+  label: external_exports.string(),
+  description: external_exports.string().optional()
+}).strict().transform((option) => ({
+  label: option.label,
+  ...option.description === void 0 ? {} : { description: option.description }
+}));
+var questionSchema = external_exports.object({
+  id: external_exports.string(),
+  question: external_exports.string(),
+  detail: external_exports.string().optional(),
+  header: external_exports.string().optional(),
+  options: external_exports.array(optionSchema).optional(),
+  multiSelect: external_exports.boolean().optional()
+}).strict().transform((question) => ({
+  id: question.id,
+  question: question.question,
+  ...question.detail === void 0 ? {} : { detail: question.detail },
+  ...question.header === void 0 ? {} : { header: question.header },
+  ...question.options === void 0 ? {} : { options: question.options },
+  ...question.multiSelect === void 0 ? {} : { multiSelect: question.multiSelect }
+}));
+var pendingQuestionsSchema = external_exports.array(external_exports.object({
+  callId: external_exports.string().min(1).transform(ToolCallId),
+  questions: external_exports.array(questionSchema).min(1),
+  state: external_exports.enum(["open", "continued"])
+}).strict()).superRefine((active, context) => {
+  if (new Set(active.map((question) => question.callId)).size !== active.length) {
+    context.addIssue({ code: "custom", message: "callIds must be unique" });
+  }
+});
+var answerSchema = external_exports.object({
+  id: external_exports.string(),
+  selected: external_exports.array(external_exports.string()),
+  custom: external_exports.string().optional()
+}).strict().transform((answer) => ({
+  id: answer.id,
+  selected: answer.selected,
+  ...answer.custom === void 0 ? {} : { custom: answer.custom }
+}));
+var settledQuestionsSchema = external_exports.array(external_exports.object({
+  callId: external_exports.string().min(1).transform(ToolCallId),
+  answers: external_exports.array(answerSchema)
+}).strict());
+var projectionViewSchema = external_exports.object({
+  active: pendingQuestionsSchema,
+  settled: settledQuestionsSchema
+}).strict();
+var answerBatchSchema = external_exports.object({ answers: external_exports.array(answerSchema) }).loose();
+var emptyView = { active: [], settled: [] };
+var initialFold = { timed: false, questions: emptyView };
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isTimedAskUserQuestionSchema(tool) {
+  if (tool.name !== ASK_USER_QUESTION_TOOL) return false;
+  const properties = tool.parameters["properties"];
+  return isRecord3(properties) && TIMED_WAIT_PARAMETER in properties;
+}
+function questionsOf(argumentsText) {
+  let parsed;
+  try {
+    parsed = JSON.parse(argumentsText);
+  } catch (error51) {
+    void error51;
+    return null;
+  }
+  const result = toolArgumentsSchema.safeParse(parsed);
+  if (!result.success) return null;
+  return result.data.questions.map((question) => ({
+    id: question.id,
+    question: question.question,
+    ...question.header === void 0 ? {} : { header: question.header },
+    ...question.options === void 0 ? {} : {
+      options: question.options.map((option) => ({
+        label: option.label,
+        ...option.description === void 0 ? {} : { description: option.description }
+      }))
+    },
+    ...question.multi_select === void 0 ? {} : { multiSelect: question.multi_select }
+  }));
+}
+function isPendingResult(content3) {
+  const text4 = content3.find((block) => block.type === "text");
+  if (text4 === void 0) return false;
+  try {
+    const parsed = JSON.parse(text4.text);
+    return typeof parsed === "object" && parsed !== null && parsed.pending === true;
+  } catch (error51) {
+    void error51;
+    return false;
+  }
+}
+function answerBatchOf(content3) {
+  const text4 = content3.find((block) => block.type === "text");
+  if (text4 === void 0) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text4.text);
+  } catch (error51) {
+    void error51;
+    return null;
+  }
+  const result = answerBatchSchema.safeParse(parsed);
+  return result.success ? result.data.answers : null;
+}
+function settleQuestion(view, callId, answers) {
+  const question = view.active.find((item) => item.callId === callId);
+  if (question === void 0) return view;
+  return {
+    active: view.active.filter((item) => item.callId !== callId),
+    settled: [...view.settled, { callId: question.callId, answers }]
+  };
+}
+function applyUserQuestionEvent(fold, event) {
+  const view = fold.questions;
+  switch (event.type) {
+    case "request/header": {
+      const tools = event.data.header.tools;
+      const timed = Array.isArray(tools) && tools.some((tool) => isRecord3(tool) && typeof tool.name === "string" && isRecord3(tool.parameters) && isTimedAskUserQuestionSchema({ name: tool.name, parameters: tool.parameters }));
+      return timed === fold.timed ? fold : { ...fold, timed };
+    }
+    case "tool/call": {
+      if (!fold.timed || event.data.name !== ASK_USER_QUESTION_TOOL) return fold;
+      const questions = questionsOf(event.data.arguments);
+      if (questions === null) return fold;
+      const callId = event.data.callId;
+      return {
+        ...fold,
+        questions: {
+          ...view,
+          active: [...view.active.filter((question) => question.callId !== callId), { callId, questions, state: "open" }]
+        }
+      };
+    }
+    case "tool/result": {
+      const callId = event.data.message.toolCallId;
+      if (!view.active.some((question) => question.callId === callId)) return fold;
+      if (isPendingResult(event.data.message.content) || event.data.error?.code === TOOL_OUTCOME_UNKNOWN) {
+        return {
+          ...fold,
+          questions: {
+            ...view,
+            active: view.active.map((question) => question.callId === callId ? { ...question, state: "continued" } : question)
+          }
+        };
+      }
+      const answers = event.data.error === void 0 && event.data.message.isError !== true ? answerBatchOf(event.data.message.content) : null;
+      return {
+        ...fold,
+        questions: answers === null ? { ...view, active: view.active.filter((question) => question.callId !== callId) } : settleQuestion(view, callId, answers)
+      };
+    }
+    case "tool/ptc-dispatch": {
+      if (event.data.name !== ASK_USER_QUESTION_TOOL || event.data.isError || !isPendingResult(event.data.content)) return fold;
+      const questions = questionsOf(JSON.stringify(event.data.arguments));
+      if (questions === null) return fold;
+      const callId = event.data.subCallId;
+      return {
+        ...fold,
+        questions: {
+          ...view,
+          active: [...view.active.filter((question) => question.callId !== callId), { callId, questions, state: "continued" }]
+        }
+      };
+    }
+    case "user/message": {
+      const source = event.data.source;
+      if (source.kind !== "user-question-reply") return fold;
+      const questions = settleQuestion(view, source.callId, answerBatchOf(event.data.content) ?? []);
+      return questions === view ? fold : { ...fold, questions };
+    }
+    default:
+      return fold;
+  }
+}
+var userQuestionProjectionDefinition = {
+  key: "userQuestions",
+  stateSchema: external_exports.object({
+    inheritedEventCount: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).transform(SessionLogOffset),
+    timed: external_exports.boolean(),
+    questions: projectionViewSchema
+  }).strict(),
+  init: (_header, inheritedEventCount) => ({ inheritedEventCount, ...initialFold }),
+  apply: (state, event) => {
+    if (event.seq < state.inheritedEventCount) return state;
+    const fold = applyUserQuestionEvent(state, event);
+    return fold === state ? state : { ...state, ...fold };
+  },
+  wire: { viewSchema: projectionViewSchema, view: (state) => state.questions },
+  stateVersion: 2
+};
+
+// packages/interaction/user-questions/src/timed-wait.ts
+var TimedQuestionWait = class {
+  /**
+   * @param deadline - Host-clock deadline used while no Client holds the wait.
+   * @param parent - Calling Turn's cancellation signal.
+   * @param timeout - Business error used to settle an unattended wait.
+   */
+  constructor(deadline, parent, timeout) {
+    this.deadline = deadline;
+    this.parent = parent;
+    this.timeout = timeout;
+    parent?.addEventListener("abort", this.parentAborted, { once: true });
+    if (parent?.aborted === true) this.parentAborted();
+    else this.schedule();
+  }
+  deadline;
+  parent;
+  timeout;
+  controller = new AbortController();
+  completion = Promise.withResolvers();
+  claims = /* @__PURE__ */ new Set();
+  timer;
+  /** Cancellation shared with the foreground waterfall, not with the calling Turn. */
+  get signal() {
+    return this.controller.signal;
+  }
+  /** Settles when the wait is cancelled, expires, or is disposed. */
+  get done() {
+    return this.completion.promise;
+  }
+  parentAborted = () => {
+    this.close(this.parent?.reason);
+  };
+  schedule() {
+    clearTimeout(this.timer);
+    this.timer = void 0;
+    if (this.signal.aborted || this.claims.size > 0) return;
+    this.timer = setTimeout(() => {
+      this.close(this.timeout);
+    }, Math.max(0, this.deadline - Date.now()));
+  }
+  /**
+   * Hold the wait for one answer UI until its stream closes or the question settles.
+   * @param signal - This business stream's cancellation lifetime.
+   * @returns One remaining-duration frame; completion releases the claim.
+   */
+  async *attach(signal) {
+    if (signal.aborted || this.signal.aborted) return;
+    if (this.claims.size === 0 && Date.now() >= this.deadline) {
+      this.close(this.timeout);
+      return;
+    }
+    const ended = Promise.withResolvers();
+    const release = () => {
+      if (!this.claims.delete(release)) return;
+      signal.removeEventListener("abort", release);
+      this.signal.removeEventListener("abort", release);
+      ended.resolve();
+      this.schedule();
+    };
+    this.claims.add(release);
+    signal.addEventListener("abort", release, { once: true });
+    this.signal.addEventListener("abort", release, { once: true });
+    this.schedule();
+    try {
+      yield { remainingMs: Math.max(0, this.deadline - Date.now()) };
+      await ended.promise;
+    } finally {
+      release();
+    }
+  }
+  /**
+   * Release timers, parent cancellation, and all Client claims.
+   * @param reason - Cancellation delivered to the foreground waterfall.
+   */
+  close(reason) {
+    if (this.signal.aborted) return;
+    clearTimeout(this.timer);
+    this.timer = void 0;
+    this.parent?.removeEventListener("abort", this.parentAborted);
+    this.controller.abort(reason);
+    this.completion.resolve();
+  }
+};
+
+// packages/interaction/user-questions/src/index.ts
+var UserQuestionError = class extends HarnessError {
+  constructor(message, code2, options) {
+    super(message, code2, options);
+    this.name = "UserQuestionError";
+  }
+};
+function abortedQuestion(cause) {
+  return new UserQuestionError(
+    "ask_user_question was aborted before the user answered",
+    "ASK_ABORTED",
+    cause === void 0 ? void 0 : { cause }
+  );
+}
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function restoreUserQuestionError(reason) {
+  if (reason instanceof UserQuestionError) return reason;
+  if (isRecord4(reason) && reason.name === "UserQuestionError" && typeof reason.message === "string" && typeof reason.code === "string") {
+    return new UserQuestionError(reason.message, reason.code, { cause: reason });
+  }
+  return reason;
+}
+var _attachWait_dec, _answer_dec, _a4, _init2;
+var UserQuestionService = class extends (_a4 = TypertRemoteService, _answer_dec = [Remote], _attachWait_dec = [Remote({ mode: "stream" })], _a4) {
+  constructor(ctx) {
+    super(ctx, "userQuestions");
+    __runInitializers(_init2, 5, this);
+    __publicField(this, "waits", /* @__PURE__ */ new Map());
+    __publicField(this, "queuedReplies", /* @__PURE__ */ new WeakMap());
+    ctx.inject(["sessionProjections"], (projectionCtx) => {
+      projectionCtx.sessionProjections.register(userQuestionProjectionDefinition);
+    });
+    ctx.effect(() => () => {
+      for (const calls of this.waits.values()) {
+        for (const wait of calls.values()) wait.close(abortedQuestion());
+      }
+      this.waits.clear();
+    }, "userQuestions: foreground waits");
+    ctx.on("agent/inbox/claimed", ({ agent, message, turn }) => {
+      const source = message.source;
+      if (source.kind !== "user-question-reply") return;
+      const calls = this.queuedReplies.get(agent.session) ?? /* @__PURE__ */ new Map();
+      const reply = calls.get(source.callId);
+      if (reply === void 0) {
+        calls.set(source.callId, { messageId: message.id, claimedTurn: turn });
+        this.queuedReplies.set(agent.session, calls);
+      } else if (reply.messageId === message.id) {
+        reply.claimedTurn = turn;
+      }
+    }, { global: true });
+    ctx.on("agent/inbox/discarded", ({ agent, message }) => {
+      const source = message.source;
+      if (source.kind === "user-question-reply") this.releaseReply(agent.session, source.callId, message.id);
+    }, { global: true });
+    ctx.on("session/event", (session, event) => {
+      if (event.type === "user/message") {
+        const source = event.data.source;
+        if (source.kind === "user-question-reply") this.releaseReply(session, source.callId, event.data.id);
+      } else if (event.type === "turn/end") {
+        const calls = this.queuedReplies.get(session);
+        if (calls === void 0) return;
+        for (const [callId, reply] of calls) {
+          if (reply.claimedTurn === event.data.turn) calls.delete(callId);
+        }
+      }
+    }, { global: true });
+  }
+  releaseReply(session, callId, messageId) {
+    const calls = this.queuedReplies.get(session);
+    if (calls?.get(callId)?.messageId !== messageId) return;
+    calls.delete(callId);
+  }
+  assertLiveRoot(agent) {
+    const agents = this.ctx.get("agents");
+    if (agents === void 0 || agents.get(agent.id) !== agent) {
+      throw new UserQuestionError(
+        "human interaction requires the exact live calling agent when an agent is supplied",
+        "CALLER_NOT_LIVE"
+      );
+    }
+    if (!agents.roots().includes(agent)) {
+      throw new UserQuestionError(
+        "human interaction is unavailable while the calling agent is owned by another live agent; include the unresolved question or decision in the child agent's final result",
+        "DELEGATED_CALLER"
+      );
+    }
+  }
+  continued(agent) {
+    const state = this.ctx.get("sessionProjections")?.stateOf(agent.session, "userQuestions");
+    return (state?.questions.active ?? []).filter((question) => question.state === "continued");
+  }
+  answer(agent, callId, answer) {
+    this.assertLiveRoot(agent);
+    const question = this.continued(agent).find((item) => item.callId === callId);
+    if (question === void 0) return false;
+    const queued = this.queuedReplies.get(agent.session);
+    const matches = (message2) => message2.source.kind === "user-question-reply" && message2.source.callId === callId;
+    if (queued?.has(callId) || agent.inbox.nextTurn.some(matches) || agent.inbox.nextStep.some(matches)) {
+      throw new UserQuestionError("a reply is already queued for this question", "REPLY_QUEUED");
+    }
+    const answered = new Set(answer.answers.map((item) => item.id));
+    if (answered.size !== answer.answers.length || question.questions.length !== answer.answers.length || !question.questions.every((item) => answered.has(item.id))) {
+      throw new UserQuestionError(
+        `the answer batch for ${callId} must name each of its ${String(question.questions.length)} questions exactly once`,
+        "BAD_ANSWER"
+      );
+    }
+    const message = createUserMessage({
+      source: { kind: "user-question-reply", callId, outcome: "answered" },
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          kind: "answer_to_pending_question",
+          tool: "ask_user_question",
+          callId,
+          questions: question.questions,
+          answers: answer.answers
+        })
+      }]
+    });
+    const calls = queued ?? /* @__PURE__ */ new Map();
+    calls.set(callId, { messageId: message.id });
+    this.queuedReplies.set(agent.session, calls);
+    try {
+      agent.steer(message);
+    } catch (error51) {
+      this.releaseReply(agent.session, callId, message.id);
+      throw error51;
+    }
+    return true;
+  }
+  async *attachWait(agent, callId, signal) {
+    this.assertLiveRoot(agent);
+    const wait = this.waits.get(agent)?.get(callId);
+    if (wait !== void 0) yield* wait.attach(signal);
+  }
+  /**
+   * Foreground wait whose first settlement the Client decides: the Client
+   * rejects with `ASK_TIMED_OUT` when its countdown ends, and this method maps
+   * that code to the pending result.
+   * @param request - Questions, live owner agent, and abort signal.
+   * @param callId - Tool call identity the Client card is keyed by.
+   * @param timeoutMs - Positive foreground wait in milliseconds.
+   * @returns The answer when it arrives inside the window, otherwise a pending
+   *   result, also when no connected Client claimed the request by the deadline.
+   * @throws {UserQuestionError} `BAD_TIMEOUT` for a non-integer, non-positive,
+   *   or oversized wait.
+   */
+  async askTimed(request, callId, timeoutMs) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2147483647) {
+      throw new UserQuestionError("timeout must fit a positive platform timer", "BAD_TIMEOUT");
+    }
+    this.assertLiveRoot(request.agent);
+    const calls = this.waits.get(request.agent) ?? /* @__PURE__ */ new Map();
+    if (calls.has(callId)) throw new UserQuestionError("the question call already has a foreground wait", "DUPLICATE_WAIT");
+    const wait = new TimedQuestionWait(
+      Date.now() + timeoutMs,
+      request.signal,
+      new UserQuestionError("ask_user_question timed out before the user answered", "ASK_TIMED_OUT")
+    );
+    calls.set(callId, wait);
+    this.waits.set(request.agent, calls);
+    try {
+      try {
+        return await this.ask({ ...request, signal: wait.signal, wait: { callId, timed: true } });
+      } catch (error51) {
+        if (wait.signal.aborted) throw wait.signal.reason;
+        if (error51 instanceof UserQuestionError && error51.code === "NO_PROVIDER") {
+          await wait.done;
+          throw wait.signal.reason;
+        }
+        throw error51;
+      }
+    } catch (error51) {
+      if (error51 instanceof UserQuestionError && error51.code === "ASK_TIMED_OUT") return { pending: true, callId };
+      if (wait.signal.aborted) throw abortedQuestion(error51);
+      throw error51;
+    } finally {
+      wait.close(abortedQuestion());
+      calls.delete(callId);
+      if (calls.size === 0) this.waits.delete(request.agent);
+    }
+  }
+  /**
+   * Ask the scoped answerer waterfall and wait for the user's answer.
+   *
+   * When a caller supplies an agent, human interaction is valid only for the
+   * exact live runtime root. Runtime ownership, not durable session lineage,
+   * decides this boundary: an owned child has no human answerer and would
+   * block forever, while a lineage-bearing session resumed as a new runtime
+   * root may ask normally.
+   *
+   * @param request Questions, owner agent, and abort signal.
+   * @returns The answer chosen or typed by the human.
+   * @throws {UserQuestionError} code `ASK_ABORTED` when the supplied signal
+   *   is already or becomes aborted, `CALLER_NOT_LIVE` when a supplied agent
+   *   is not the registry's exact live instance, or `DELEGATED_CALLER` when
+   *   that live agent is owned by another agent.
+   */
+  async ask(request) {
+    if (request.signal?.aborted) {
+      throw abortedQuestion();
+    }
+    if (request.questions.length === 0) {
+      throw new UserQuestionError("ask_user_question requires at least one question", "EMPTY_QUESTIONS");
+    }
+    const agent = request.agent;
+    if (agent !== void 0) this.assertLiveRoot(agent);
+    for (const question of request.questions) {
+      const intent = question.intent;
+      if (intent === void 0) continue;
+      if (!(question.options ?? []).some((option) => option.label === intent.approve)) {
+        throw new UserQuestionError(
+          `question ${question.id} declares intent ${intent.kind} whose approve label ${JSON.stringify(intent.approve)} names none of its options`,
+          "BAD_INTENT"
+        );
+      }
+      if (question.detail === void 0) {
+        throw new UserQuestionError(
+          `question ${question.id} declares intent ${intent.kind} without the detail it reviews`,
+          "BAD_INTENT"
+        );
+      }
+    }
+    const noAnswerer = () => Promise.reject(new UserQuestionError(
+      "no user-questions answerer accepted the request",
+      "NO_PROVIDER"
+    ));
+    try {
+      return await (agent === void 0 ? this.ctx.waterfall("user-questions/request", request, noAnswerer) : this.ctx.waterfall(
+        scopeTarget(agent, agent),
+        "user-questions/request",
+        { ...request, agent },
+        noAnswerer
+      ));
+    } catch (error51) {
+      const restored = restoreUserQuestionError(error51);
+      if (restored instanceof UserQuestionError) throw restored;
+      if (request.signal?.aborted) {
+        throw abortedQuestion(error51);
+      }
+      throw restored;
+    }
+  }
+};
+_init2 = __decoratorStart(_a4);
+__decorateElement(_init2, 1, "answer", _answer_dec, UserQuestionService);
+__decorateElement(_init2, 1, "attachWait", _attachWait_dec, UserQuestionService);
+__decoratorMetadata(_init2, UserQuestionService);
+__publicField(UserQuestionService, "Config", src_default2.object({}));
+
 // packages/session/session-title/src/normalize.ts
 var OSC_SEQUENCE = /(?:\u001B\]|\u009D)(?:(?!\u0007|\u001B\\)[\s\S])*(?:\u0007|\u001B\\|$)/gu;
 var CSI_SEQUENCE = /(?:\u001B\[|\u009B)[0-?]*[ -/]*[@-~]/gu;
@@ -82085,9 +82960,9 @@ var SessionTitleService = class extends Service {
       messageSeqs: [],
       source: { kind: "user" }
     });
-    const snapshot = this.get(session);
-    if (snapshot === void 0) throw new Error("renamed title failed to fold");
-    return snapshot;
+    const snapshot2 = this.get(session);
+    if (snapshot2 === void 0) throw new Error("renamed title failed to fold");
+    return snapshot2;
   }
   /**
    * Explicitly retry the registered provider, or materialize the built-in
@@ -82512,10 +83387,10 @@ function toolCallBlock(event) {
   });
 }
 function toolResultBlock(event) {
-  const result = event.data.message.content[0];
+  const result = event.data.message;
   const record2 = {
     callId: escapeContent(result.toolCallId),
-    result: escapeContent(result.content.filter((block) => block.type === "text").map((block) => block.text).join("")),
+    result: escapeContent(result.content.map((block) => block.type === "text" ? block.text : "").join("")),
     isError: result.isError ?? false,
     ...event.data.error === void 0 ? {} : {
       error: {
@@ -82821,7 +83696,7 @@ function stringifySettingValue(value) {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (value === null) return "null";
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? "";
 }
 function parseSettingValue(current, draft) {
   if (Array.isArray(current) || isPlainObject3(current) || current === null) {
@@ -83173,20 +84048,23 @@ var FEEDBACK_COPY = {
 function feedbackCopy(key) {
   return FEEDBACK_COPY[key];
 }
+function plainLiveConfig(value) {
+  if (typeof value !== "object" || value === null) return value;
+  if (/* @__PURE__ */ Symbol.for("cosmokit.volatile.write") in value) {
+    return plainLiveConfig(value.get());
+  }
+  if (Array.isArray(value)) return value.map(plainLiveConfig);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return void 0;
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, plainLiveConfig(child)]));
+}
+function entryConfig(ctx, ns) {
+  const entry = ctx.get("configEditor")?.entries().find((row) => row.options.id === ns);
+  return entry?.fiber === void 0 ? void 0 : plainLiveConfig(entry.fiber.config);
+}
 var DANGER_PRESET = "danger-full-access";
 var TUI_SETTINGS_NS = "tui";
 var ONBOARDING_KEY = "DEEPSEEK_API_KEY";
-var TuiUserSettings = src_default2.object({
-  colorTier: src_default2.union(["truecolor", "256", "16", "none"]),
-  submitOnEnter: src_default2.boolean().default(true),
-  notify: src_default2.union(["off", "attention", "every-turn"]).default("attention"),
-  notifyQuietInputSeconds: src_default2.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
-  brandAnimation: src_default2.union(["auto", "on", "off"]).default("auto"),
-  scrollbar: src_default2.boolean().default(true),
-  locale: src_default2.union(["zh-CN", "en-US"]).default("zh-CN"),
-  reasoning: src_default2.boolean().default(false),
-  statusDetails: src_default2.boolean().default(false)
-});
 var PRESENTATION_DEFAULTS = {
   reasoning: false,
   scrollbar: true,
@@ -83287,7 +84165,7 @@ var liveRuntimeLifecycles = /* @__PURE__ */ new Set();
 var runtimeLifecycleObservers = /* @__PURE__ */ new Set();
 function observeTuiRuntimeLifecycle(observer) {
   runtimeLifecycleObservers.add(observer);
-  for (const snapshot of liveRuntimeLifecycles) observer(snapshot);
+  for (const snapshot2 of liveRuntimeLifecycles) observer(snapshot2);
   return () => {
     runtimeLifecycleObservers.delete(observer);
   };
@@ -83593,8 +84471,8 @@ var RuntimeController = class _RuntimeController {
     this.disposePluginEvents = () => {
       for (const dispose of pluginDisposers) dispose();
     };
-    this.disposeJobsChanged = jobs?.onJobsChanged(() => {
-      this.emit();
+    this.disposeJobsChanged = jobs?.events.subscribe({ owners: "scope" }, (event) => {
+      if (event.type !== "output") this.emit();
     });
     const workflowDisposers = [
       ctx.on("workflow/start", (info) => {
@@ -83832,7 +84710,6 @@ var RuntimeController = class _RuntimeController {
   feedbackSeq = 0;
   workflowOverlayOpen = false;
   /** Live `tui` section reader installed by {@link installSettingsSection}. */
-  readTuiSettings;
   /** Last recorded turn ending, consumed by the idle-time notification summary. */
   lastTurnEnd;
   /** Epoch ms of the most recent local keypress; drives the quiet-window suppression. */
@@ -84054,8 +84931,7 @@ var RuntimeController = class _RuntimeController {
    * @returns max live children (8) and max depth (1) unless the user raised them.
    */
   subagentLimits() {
-    const settings = this.ctx.get("settings");
-    const section = settings === void 0 ? void 0 : settings.get("subagent");
+    const section = entryConfig(this.ctx, "subagent");
     const maxActive = fieldOf(section, "maxActiveSubagents");
     const maxDepth = fieldOf(section, "maxDepth");
     return {
@@ -84648,7 +85524,7 @@ var RuntimeController = class _RuntimeController {
     if (agent === void 0) return void 0;
     const jobs = this.ctx.get("jobs");
     if (jobs === void 0) return void 0;
-    return jobs.list(agent).filter((job) => job.status === "running" || job.status === "stopping").map((job) => ({
+    return jobs.list(agent.session.id).filter((job) => job.status === "running" || job.status === "stopping").map((job) => ({
       id: String(job.id),
       status: job.status,
       label: job.label
@@ -84807,11 +85683,23 @@ var RuntimeController = class _RuntimeController {
     return this.ctx.get("tools");
   }
   /**
+   * Read the live `tui` settings published by the companion settings plugin.
+   * @returns the current snapshot, or undefined when the plugin is not composed.
+   */
+  tuiSettings() {
+    return this.ctx.get("tuiSettings")?.get();
+  }
+  /** Apply a saved color-tier override over the mount-time detected tier. */
+  applyColorTierSetting() {
+    const tier = this.tuiSettings()?.colorTier;
+    if (tier !== void 0) applyTheme(tier);
+  }
+  /**
    * Return whether Enter sends a chat message.
    * @returns false when the `tui` section sets `submitOnEnter` to false.
    */
   getSubmitOnEnter() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.submitOnEnter !== false;
   }
   /**
@@ -84819,7 +85707,7 @@ var RuntimeController = class _RuntimeController {
    * @returns `auto` when no explicit value is configured.
    */
   getBrandAnimation() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.brandAnimation ?? "auto";
   }
   /**
@@ -84841,11 +85729,11 @@ var RuntimeController = class _RuntimeController {
    * @returns the saved locale, or the Chinese product default.
    */
   getLocale() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.locale ?? "zh-CN";
   }
   presentationFlag(field) {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return this.presentationOverrides.get(field)?.value ?? section?.[field] ?? PRESENTATION_DEFAULTS[field];
   }
   /** Apply immediately, serialize persistence, and let only the latest write settle its override. */
@@ -85087,13 +85975,18 @@ var RuntimeController = class _RuntimeController {
       case "stale-approval":
         key = "pluginsStaleApproval";
         break;
+      case "incompatible-version":
+        key = "pluginsIncompatibleVersion";
+        break;
       case "operation-error":
         key = "pluginsOperationError";
         break;
       default:
         return assertNever(error51.code, "pluginsError");
     }
-    return tuiCopy(key, this.getLocale()) + (error51.diagnostic ? `: ${error51.diagnostic}` : "");
+    const incompatible = (error51.incompatible ?? []).map((plugin) => `${plugin.name}@${plugin.version} (${Object.entries(plugin.peers).map(([peer, range]) => `${peer} ${range}`).join(", ")})`).join("; ");
+    const detail = [error51.diagnostic, incompatible].filter((part) => part !== void 0 && part !== "").join(" \xB7 ");
+    return tuiCopy(key, this.getLocale()) + (detail === "" ? "" : `: ${detail}`);
   }
   /** Localize the service's package failure category. */
   pluginsFailure(kind) {
@@ -85218,7 +86111,7 @@ var RuntimeController = class _RuntimeController {
     this.pluginsInspection = void 0;
     this.updatePlugins({ inspecting: true, inspection: [], error: void 0 });
     try {
-      const result = await manager.inspect(spec, this.lifecycleAbort.signal);
+      const result = await manager.inspect(spec, {}, this.lifecycleAbort.signal);
       if (this.closed) return;
       this.pluginsInspection = result;
       if (result.status === "refused") {
@@ -85262,7 +86155,7 @@ var RuntimeController = class _RuntimeController {
     });
     const run2 = async () => {
       try {
-        const inspected = await manager.inspect(spec, this.lifecycleAbort.signal);
+        const inspected = await manager.inspect(spec, {}, this.lifecycleAbort.signal);
         if (this.closed) return;
         if (inspected.status === "refused") {
           this.pluginsInspection = inspected;
@@ -85504,7 +86397,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents === void 0 || this.session === void 0) return;
     try {
-      const entries = await subagents.listChildren(this.session.id, signal);
+      const entries = (await subagents.listDescendants(this.session.id, signal)).filter((entry) => entry.depth === 1);
       const rows = await this.enrichAgentHubRows(entries, signal);
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = rows;
@@ -85529,7 +86422,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents === void 0) return;
     try {
-      const entries = await subagents.listChildren(SessionId(childId), signal);
+      const entries = (await subagents.listDescendants(SessionId(childId), signal)).filter((entry) => entry.depth === 1);
       const rows = await this.enrichAgentHubRows(entries, signal);
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = rows;
@@ -85573,21 +86466,21 @@ var RuntimeController = class _RuntimeController {
     }
     return Promise.all(rows.map(async (row) => {
       signal.throwIfAborted();
-      let snapshot;
+      let snapshot2;
       const live = this.ctx.sessions.get(row.id);
       const projections = this.ctx.get("sessionProjections");
       if (live === void 0) {
         const header = coldHeaders.get(row.id);
         if (cache4 === void 0 || persistence === void 0 || header === void 0) return row;
         try {
-          snapshot = cache4.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS);
-          if (snapshot === void 0) {
+          snapshot2 = cache4.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS);
+          if (snapshot2 === void 0) {
             if (persistenceHasOpen(persistence)) {
               const handle = await persistence.open(row.id, "read", { signal });
               try {
                 signal.throwIfAborted();
                 const events = (await handle.read(0, void 0, { signal })).events;
-                snapshot = cache4.coldSnapshot(handle.header, SessionLogOffset(0), events);
+                snapshot2 = cache4.coldSnapshot(handle.header, SessionLogOffset(0), events);
               } finally {
                 await handle.close();
               }
@@ -85595,7 +86488,7 @@ var RuntimeController = class _RuntimeController {
               const borrowed = await persistence.borrowSession(row.id, signal);
               try {
                 signal.throwIfAborted();
-                snapshot = cache4.coldSnapshot(
+                snapshot2 = cache4.coldSnapshot(
                   borrowed.inspection.meta,
                   SessionLogOffset(borrowed.inspection.inheritedEventCount ?? 0),
                   borrowed.inspection.events
@@ -85611,10 +86504,10 @@ var RuntimeController = class _RuntimeController {
         }
       } else {
         if (projections === void 0) return row;
-        snapshot = projections.snapshot(live);
+        snapshot2 = projections.snapshot(live);
       }
-      if (snapshot === void 0) return row;
-      return { ...row, ...hubMetricsOf(snapshot.values, row.activity, now) };
+      if (snapshot2 === void 0) return row;
+      return { ...row, ...hubMetricsOf(snapshot2.values, row.activity, now) };
     }));
   }
   /**
@@ -86404,7 +87297,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Resolve the notification settings section, defaulting when no section is stored. */
   notifySettings() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return {
       mode: section?.notify ?? "attention",
       quietInputSeconds: section?.notifyQuietInputSeconds ?? DEFAULT_NOTIFY_QUIET_INPUT_SECONDS
@@ -86781,7 +87674,7 @@ var RuntimeController = class _RuntimeController {
     }
     await this.createOrResume();
     if (this.closed || this.agentHandle === void 0) return;
-    this.installTuiSettings();
+    this.applyColorTierSetting();
     if (this.config.task === "") await this.maybeOpenOnboarding();
     this.emit();
     const parked = this.pending;
@@ -87023,15 +87916,15 @@ var RuntimeController = class _RuntimeController {
     };
   }
   /** Restore the prior tuple after any pre-commit failure. */
-  restoreBoundState(snapshot) {
-    this.liveHandle = snapshot.liveHandle;
-    this.agent = snapshot.agent;
-    this.agentHandle = snapshot.agentHandle;
-    this.session = snapshot.session;
-    this.projector = snapshot.projector;
-    this.modelSelectionRef = snapshot.modelSelectionRef;
-    this.badge = snapshot.badge;
-    this.machine = snapshot.machine;
+  restoreBoundState(snapshot2) {
+    this.liveHandle = snapshot2.liveHandle;
+    this.agent = snapshot2.agent;
+    this.agentHandle = snapshot2.agentHandle;
+    this.session = snapshot2.session;
+    this.projector = snapshot2.projector;
+    this.modelSelectionRef = snapshot2.modelSelectionRef;
+    this.badge = snapshot2.badge;
+    this.machine = snapshot2.machine;
   }
   /** Publish one internal phase change to the render loop. */
   setTransition(state) {
@@ -87462,9 +88355,10 @@ var RuntimeController = class _RuntimeController {
   readSettingsRows() {
     const settings = this.ctx.get("settings");
     if (settings === void 0) return [];
+    const descriptors = settings.describe({ redactSecrets: true });
     const rows = settingsRowsFromDescribe(
-      settings.describe({ redactSecrets: true }),
-      (ns) => settings.get(ns),
+      descriptors,
+      (ns) => descriptors.find((form) => form.ns === ns)?.value,
       { expandProviders: true }
     );
     return [...rows, ...credentialSettingRows(
@@ -87486,8 +88380,8 @@ var RuntimeController = class _RuntimeController {
       const ref = profile["apiKeyEnv"];
       if (typeof ref === "string" && isCredentialRefName(ref)) names.add(ref);
     };
-    collect(settings.get("llm-deepseek"));
-    const piAi = settings.get("llm-pi-ai");
+    collect(entryConfig(this.ctx, "llm-deepseek"));
+    const piAi = entryConfig(this.ctx, "llm-pi-ai");
     if (typeof piAi === "object" && piAi !== null && !Array.isArray(piAi)) {
       const providers = piAi["providers"];
       if (typeof providers === "object" && providers !== null && !Array.isArray(providers)) {
@@ -87588,7 +88482,7 @@ var RuntimeController = class _RuntimeController {
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
-        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : fieldOf(settings.get(row.namespace), row.field),
+        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : fieldOf(settings.describe().find((form) => String(form.ns) === row.namespace)?.value, row.field),
         value,
         this.catalogProviderIds(row.namespace)
       );
@@ -87605,6 +88499,7 @@ var RuntimeController = class _RuntimeController {
       try {
         await settings.update(row.namespace, createSettingsPatch(row.field, parsed));
         if (this.closed) return;
+        if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting();
         this.settingsOpen = false;
         this.settingsEditing = false;
         this.settingsOnboarding = false;
@@ -87848,7 +88743,7 @@ var RuntimeController = class _RuntimeController {
         if (this.closed) return;
         const settings = this.ctx.get("settings");
         if (settings !== void 0) {
-          const ds = settings.get("llm-deepseek");
+          const ds = entryConfig(this.ctx, "llm-deepseek");
           if (typeof ds?.apiKeyEnv === "string" && ds.apiKeyEnv.startsWith("sk-")) {
             await settings.update("llm-deepseek", { apiKeyEnv: "DEEPSEEK_API_KEY" });
           }
@@ -87909,25 +88804,6 @@ var RuntimeController = class _RuntimeController {
     this.settingsUpdateError = void 0;
     this.setFeedback("\u2713 \u5DF2\u91CD\u8F7D\u8BBE\u7F6E");
     this.refreshConfiguredCredentials();
-  }
-  /**
-   * Register the `tui` user-settings section when the host exposes `register`.
-   * Unit stubs that only implement `describe`/`get`/`update` are left alone.
-   */
-  installTuiSettings() {
-    this.ctx.inject(["settings"], (settingsCtx) => {
-      if (typeof settingsCtx.settings.installSection !== "function") return;
-      settingsCtx.settings.installSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
-        setSource: (read) => {
-          this.readTuiSettings = read;
-        },
-        onChange: () => {
-          const next = this.readTuiSettings?.();
-          if (next?.colorTier !== void 0) applyTheme(next.colorTier);
-          this.emit();
-        }
-      });
-    });
   }
   /**
    * Open the API-key configuration overlay directly from /key or /login.
@@ -88237,7 +89113,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents !== void 0 && this.agentHandle !== void 0 && this.session !== void 0) {
       try {
-        const entries = await subagents.listChildren(this.session.id, signal);
+        const entries = (await subagents.listDescendants(this.session.id, signal)).filter((entry) => entry.depth === 1);
         for (const entry of entries) {
           if (entry.kind !== "child" || entry.activity !== "running") continue;
           const name2 = entry.mode === "continuable" ? entry.label : entry.label ?? entry.id;
@@ -89006,10 +89882,10 @@ async function frameStatsTarget(input) {
   return absolute;
 }
 async function writeFrameStatsFile(path2, probe, io, brandProbe, frameMetrics) {
-  const snapshot = frameStatsSnapshot(probe);
+  const snapshot2 = frameStatsSnapshot(probe);
   const brandSnapshot = brandProbe === void 0 ? createFrameProbe().snapshot() : frameStatsSnapshot(brandProbe);
   const payload = {
-    renderMs: snapshot,
+    renderMs: snapshot2,
     brandRenderMs: brandSnapshot,
     pacing: { commits: probe.commits, elapsedMs: probe.elapsedMs() },
     brandRevealTimers: activeBrandRevealTimerCount(),

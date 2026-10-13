@@ -19,6 +19,7 @@ import {
 function descriptor(ns: string, secrets: SettingsDescriptor['secrets'] = []): SettingsDescriptor {
   return {
     ns: ns as SettingsDescriptor['ns'],
+    autoGenerate: true,
     schema: {},
     value: {},
     revision: 0,
@@ -522,5 +523,13 @@ describe('subagent / vision settings rows', () => {
       .toBe('text, image (支持视觉)')
     expect(stringifySettingsFieldValue('llm-pi-ai', 'providers.acme.defaultInput', ['text']))
       .toBe('text (仅文本)')
+  })
+})
+
+describe('stringifySettingValue', () => {
+  it('renders an unset optional field as empty text instead of undefined', () => {
+    expect(stringifySettingValue(undefined)).toBe('')
+    expect(settingsRowsFromDescribe([descriptor('llm-deepseek')], () => ({ baseURL: undefined })))
+      .toEqual([{ namespace: 'llm-deepseek', field: 'baseURL', value: '' }])
   })
 })

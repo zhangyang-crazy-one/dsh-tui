@@ -393,14 +393,11 @@ describe('createProjector', () => {
         step: 1,
         message: {
           id: 'tool-message-1',
-          role: 'user',
+          role: 'tool',
           source: { kind: 'tool', callId: 'call-1' },
-          content: [{
-            type: 'tool-result',
-            toolCallId: 'call-1',
-            content: [{ type: 'text', text: 'file contents' }],
-            isError: false,
-          }],
+          toolCallId: 'call-1',
+          content: [{ type: 'text', text: 'file contents' }],
+          isError: false,
         },
         error: { name: 'ToolWarning', code: 'PARTIAL' },
         meta: { presentation: 'diff' },
@@ -569,13 +566,10 @@ describe('createProjector', () => {
       step: 1,
       message: {
         id: 'tool-1',
-        role: 'user',
+        role: 'tool',
         source: { kind: 'tool', callId: 'c1' },
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'c1',
-          content: [{ type: 'text', text: 'ok' }],
-        }],
+        toolCallId: 'c1',
+        content: [{ type: 'text', text: 'ok' }],
       },
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))
@@ -626,13 +620,10 @@ describe('createProjector', () => {
       step: 1,
       message: {
         id: 'tool-1',
-        role: 'user',
+        role: 'tool',
         source: { kind: 'tool', callId: 'c1' },
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'c1',
-          content: [{ type: 'text', text: 'ok' }],
-        }],
+        toolCallId: 'c1',
+        content: [{ type: 'text', text: 'ok' }],
       },
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))
@@ -986,7 +977,7 @@ describe('createProjector', () => {
     projector.pushStreamFrame({ type: 'chunk', time: 1600, chunk: { type: 'text-delta', index: 1, text: 'hel' } })
     const live = projector.snapshot().activeTurn
     expect(live?.assistantText).toBe('hel')
-    expect(live?.content.find(item => item.kind === 'reasoning')).toMatchObject({ durationMs: 1500 })
+    expect(live?.content?.find(item => item.kind === 'reasoning')).toMatchObject({ durationMs: 1500 })
   })
 
   it('drops an abandoned attempt and lets a retry replace its partial', () => {

@@ -688,15 +688,14 @@ export function createProjector(): Projector {
       case 'tool/result': {
         if (activeTurn === undefined) return
         commitStep()
-        const block = event.data.message.content[0]
+        const message = event.data.message
         turnContent.push({
           kind: 'tool-result',
-          callId: block.toolCallId,
-          text: block.content
-            .filter(item => item.type === 'text')
-            .map(item => item.text)
+          callId: message.toolCallId,
+          text: message.content
+            .map(item => item.type === 'text' ? item.text : '')
             .join(''),
-          isError: block.isError ?? false,
+          isError: message.isError ?? false,
           ...event.data.error === undefined ? {} : { error: { ...event.data.error } },
           ...event.data.meta === undefined ? {} : { meta: structuredClone(event.data.meta) },
         })

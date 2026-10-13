@@ -36,7 +36,7 @@ function patchRows(path: string): PatchRow[] {
 /** The TUI patch's insert rows. */
 function insertRows(): PatchRow[] {
   const root = fileURLToPath(new URL('..', import.meta.url))
-  const parsed = patchRows(resolve(root, 'cordis.patch.yml'))
+  const parsed = patchRows(resolve(root, '../cordis.patch.yml'))
   return (parsed as { insert?: PatchRow[] }[]).flatMap(block => block.insert ?? [])
 }
 
@@ -61,7 +61,7 @@ describe('deepseek-tui message-feedback patch rows', () => {
     const root = fileURLToPath(new URL('..', import.meta.url))
     const assembled = composeEntries([
       patchRows(resolve(root, '../../bundle/base/cordis.patch.yml')),
-      patchRows(resolve(root, 'cordis.patch.yml')),
+      patchRows(resolve(root, '../cordis.patch.yml')),
     ])
     const ids = [
       'storage',

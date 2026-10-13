@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tui",
-  "version": "0.1.6-alpha.2",
+  "version": "0.2.0-rc.2",
   "type": "module",
   "license": "MIT",
   "description": "The dsh terminal-surface bundle: the deepseek-tui patch layer over dsh-base plus the runtime glue plugin (terminal guard, signal hooks, echo driver). No Host, HTTP, or browser layer.",
@@ -21,19 +21,22 @@
     },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./settings": {
+      "types": "./lib/types/user-settings.d.ts",
+      "default": "./lib/user-settings.js"
+    }
   },
   "files": [
+    "cordis.patch.yml",
     "lib/index.js",
     "lib/invariant.js",
     "lib/startup.js",
-    "cordis.patch.yml",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "lib/user-settings.js"
   ],
   "dependencies": {
     "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-llm-anthropic": "workspace:^",
-    "@deepseek-ai/dsh-llm-openai": "workspace:^",
     "@deepseek-ai/dsh-message-feedback": "workspace:^",
     "@deepseek-ai/dsh-session-stats": "workspace:^",
     "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
@@ -58,7 +61,6 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
     "@deepseek-ai/dsh-permission-presets": "workspace:^",
-    "@deepseek-ai/dsh-plugin-manager": "workspace:^",
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-persistence": "workspace:^",
@@ -73,10 +75,10 @@
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-user-approval": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^"
+    "@deepseek-ai/dsh-workflow": "workspace:^",
+    "@deepseek-ai/dsh-config-editor": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-plugin-manager": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/cordis-plugin-loader": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
@@ -108,7 +110,8 @@
     "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
     "@deepseek-ai/dsh-user-approval": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^"
+    "@deepseek-ai/dsh-workflow": "workspace:^",
+    "@deepseek-ai/dsh-config-editor": "workspace:^"
   },
   "dsh": {
     "bundle": {

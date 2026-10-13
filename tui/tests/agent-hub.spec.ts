@@ -40,7 +40,7 @@ const roots: string[] = []
 
 /** Minimal persisted lifecycle header for one cold Hub child. */
 function header(id: SessionId, createdAt = 1): SessionHeader {
-  return { version: 3, id, createdAt, isSeeded: false }
+  return { version: 4, id, createdAt, isSeeded: false }
 }
 
 afterEach(async () => {
@@ -78,7 +78,7 @@ interface HubBench {
 
 /** Mount core services plus optional Hub backends. */
 async function bench(options: {
-  listChildren?: (id: SessionId) => Promise<SubagentListEntry[]>
+  listChildren?: (id: SessionId, signal?: AbortSignal) => Promise<SubagentListEntry[]>
   inspect?: (id: SessionId) => Promise<{ meta: unknown; events: readonly unknown[] }>
   liveChildIds?: readonly SessionId[]
   liveSnapshot?: (session: Session) => ProjectionSnapshot
@@ -108,7 +108,12 @@ async function bench(options: {
     } as never)
   }
   if (options.listChildren !== undefined) {
-    ctx.provide('subagents', { listChildren: options.listChildren } as never)
+    const listChildren = options.listChildren
+    // dsh 0.2 serves classified rows through listDescendants; direct children are depth 1.
+    ctx.provide('subagents', {
+      listDescendants: async (id: SessionId, signal?: AbortSignal) =>
+        (await listChildren(id, signal)).map(entry => ({ ...entry, parentId: id, depth: 1 })),
+    } as never)
   }
   if (options.inspect !== undefined || options.listHeaders !== undefined || options.borrowSession !== undefined) {
     ctx.provide('sessionPersistence', {
@@ -228,7 +233,7 @@ describe('Agent Hub controller', () => {
         ])
       })
       expect(liveSnapshot).toHaveBeenCalledWith(ctx.sessions.get(liveId))
-      expect(cachedSnapshot).toHaveBeenCalledExactlyOnceWith(coldHeader, SessionLogOffset(0), [
+      expect(cachedSnapshot).toHaveBeenCalledExactlyOnceWith(coldHeader, [
         'tokenUsage',
         'contextPressure',
         'subagentTiming',
@@ -466,7 +471,7 @@ describe('Agent Hub controller', () => {
       },
       {
         type: 'user/message', seq: SessionSeq(2), time: 2,
-        data: createUserMessage({ content: [{ type: 'text', text: 'hidden' }], source: { kind: 'plugin', plugin: 'x', form: 'instructions' } }),
+        data: createUserMessage({ content: [{ type: 'text', text: 'hidden' }], source: { kind: 'skill-invocation', name: 'x', form: 'instructions' } }),
         surfaceOp: 'append',
       },
       {
@@ -758,7 +763,10 @@ describe('Agent Hub controller', () => {
   it('reads live settings overrides instead of caching the default cap', async () => {
     const { ctx, controller } = await bench({ listChildren: async () => [] })
     const subagent = { maxActiveSubagents: 8, maxDepth: 1 }
-    ctx.provide('settings', { get: (ns: unknown) => ns === 'subagent' ? subagent : undefined } as never)
+    // dsh 0.2 reads non-volatile limits from the live Loader entry config.
+    ctx.provide('configEditor', {
+      entries: () => [{ options: { id: 'subagent' }, fiber: { config: subagent } }],
+    } as never)
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().open).toBe(true) })

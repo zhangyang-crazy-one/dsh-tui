@@ -30,7 +30,9 @@ import type { RelaunchHost } from './reload-argv.ts'
 import { editDraftExternally, resolveEditorCommand } from './external-editor.ts'
 import type { EditorCommand, EditorSpawn } from './external-editor.ts'
 import { DEFAULT_NOTIFY_QUIET_INPUT_SECONDS, decideNotify } from './notify.ts'
-import type { NotifyDecision, NotifyMode, NotifySettings } from './notify.ts'
+import type { TuiUserSettings } from './user-settings.ts'
+import type {} from '@deepseek-ai/dsh-config-editor'
+import type { NotifyDecision, NotifySettings } from './notify.ts'
 import { constants } from 'node:fs'
 import type { Stats } from 'node:fs'
 import { access, lstat, readFile, stat, writeFile } from 'node:fs/promises'
@@ -328,6 +330,37 @@ function feedbackCopy(key: FeedbackKey): string {
   return FEEDBACK_COPY[key]
 }
 
+/**
+ * Unwrap cosmokit volatile references (shared protocol symbol) into plain data.
+ * @param value - a parsed plugin config value.
+ * @returns the same shape with every volatile reference replaced by its snapshot.
+ */
+function plainLiveConfig(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  if (Symbol.for('cosmokit.volatile.write') in value) {
+    return plainLiveConfig((value as { get(): unknown }).get())
+  }
+  if (Array.isArray(value)) return value.map(plainLiveConfig)
+  // Parsed configs may hold class instances or Context references; only
+  // plain data is a settings value, and opaque objects may be cyclic.
+  const prototype: unknown = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) return undefined
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, plainLiveConfig(child)]))
+}
+
+/**
+ * Read one Loader entry's effective config. dsh 0.2 dropped the settings
+ * `get(ns)` read: forms expose only volatile fields, so non-volatile values
+ * (subagent limits, credential references) come from the live entry.
+ * @param ctx - context exposing the profile config editor.
+ * @param ns - Loader entry id (the settings namespace).
+ * @returns the plain config, or undefined when the entry is not composed.
+ */
+function entryConfig(ctx: Context, ns: string): unknown {
+  const entry = ctx.get('configEditor')?.entries().find(row => row.options.id === ns)
+  return entry?.fiber === undefined ? undefined : plainLiveConfig(entry.fiber.config)
+}
+
 /** Host table key that requires a second Enter before execute (D-03 / D-08). */
 const DANGER_PRESET = 'danger-full-access'
 
@@ -336,40 +369,6 @@ const TUI_SETTINGS_NS = 'tui'
 
 /** First-run credential the idle boot overlay collects. */
 const ONBOARDING_KEY = 'DEEPSEEK_API_KEY'
-
-/** TUI-owned user settings: color, input, notification, and brand presentation. */
-interface TuiUserSettings {
-  /** Locale for terminal presentation controls. */
-  locale?: TuiLocale
-  /** Whether thinking text is visible throughout the transcript. */
-  reasoning?: boolean
-  /** Whether the footer displays full metrics instead of one quiet row. */
-  statusDetails?: boolean
-  /** Optional override of the mount-time detected color tier. */
-  colorTier?: 'truecolor' | '256' | '16' | 'none'
-  /** When false, Enter inserts a newline and Ctrl+Enter sends. */
-  submitOnEnter?: boolean
-  /** Desktop notification policy (TERM-05): off, attention events only, or legacy per-turn popup. */
-  notify?: NotifyMode
-  /** Local input within this many seconds downgrades desktop notifications to bell. */
-  notifyQuietInputSeconds?: number
-  /** Generated FishLogo reveal mode (TERM-11). */
-  brandAnimation?: 'auto' | 'on' | 'off'
-  /** Whether overflowing conversation history displays a scrollbar. */
-  scrollbar?: boolean
-}
-
-const TuiUserSettings: z<TuiUserSettings> = z.object({
-  colorTier: z.union(['truecolor', '256', '16', 'none'] as const),
-  submitOnEnter: z.boolean().default(true),
-  notify: z.union(['off', 'attention', 'every-turn'] as const).default('attention'),
-  notifyQuietInputSeconds: z.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
-  brandAnimation: z.union(['auto', 'on', 'off'] as const).default('auto'),
-  scrollbar: z.boolean().default(true),
-  locale: z.union(['zh-CN', 'en-US'] as const).default('zh-CN'),
-  reasoning: z.boolean().default(false),
-  statusDetails: z.boolean().default(false),
-})
 
 type PresentationFlag = 'reasoning' | 'scrollbar' | 'statusDetails'
 const PRESENTATION_DEFAULTS: Readonly<Record<PresentationFlag, boolean>> = {
@@ -1238,7 +1237,6 @@ export class RuntimeController implements TuiController {
   private feedbackSeq = 0
   private workflowOverlayOpen = false
   /** Live `tui` section reader installed by {@link installSettingsSection}. */
-  private readTuiSettings: (() => TuiUserSettings) | undefined
   /** Last recorded turn ending, consumed by the idle-time notification summary. */
   private lastTurnEnd:
     | {
@@ -1423,10 +1421,11 @@ export class RuntimeController implements TuiController {
       }),
     ]
     this.disposePluginEvents = () => { for (const dispose of pluginDisposers) dispose() }
-    this.disposeJobsChanged = jobs?.onJobsChanged(() => {
-      // The registry already contains listener throws; emit() only drops
-      // caches and schedules listeners.
-      this.emit()
+    // The HUD shows lifecycle state only; output events carry no row change.
+    // The registry contains listener throws; emit() only drops caches and
+    // schedules listeners.
+    this.disposeJobsChanged = jobs?.events.subscribe({ owners: 'scope' }, (event) => {
+      if (event.type !== 'output') this.emit()
     })
     const workflowDisposers = [
       ctx.on('workflow/start', (info) => {
@@ -1631,8 +1630,7 @@ export class RuntimeController implements TuiController {
    * @returns max live children (8) and max depth (1) unless the user raised them.
    */
   private subagentLimits(): { maxActiveSubagents: number; maxDepth: number } {
-    const settings = this.ctx.get('settings')
-    const section = settings === undefined ? undefined : settings.get('subagent')
+    const section = entryConfig(this.ctx, 'subagent')
     const maxActive = fieldOf(section, 'maxActiveSubagents')
     const maxDepth = fieldOf(section, 'maxDepth')
     return {
@@ -2303,7 +2301,7 @@ export class RuntimeController implements TuiController {
     if (agent === undefined) return undefined
     const jobs = this.ctx.get('jobs')
     if (jobs === undefined) return undefined
-    return jobs.list(agent).filter(job => job.status === 'running' || job.status === 'stopping').map(job => ({
+    return jobs.list(agent.session.id).filter(job => job.status === 'running' || job.status === 'stopping').map(job => ({
       id: String(job.id),
       status: job.status,
       label: job.label,
@@ -2497,12 +2495,25 @@ export class RuntimeController implements TuiController {
   }
 
   /**
+   * Read the live `tui` settings published by the companion settings plugin.
+   * @returns the current snapshot, or undefined when the plugin is not composed.
+   */
+  private tuiSettings(): TuiUserSettings | undefined {
+    return this.ctx.get('tuiSettings')?.get()
+  }
+
+  /** Apply a saved color-tier override over the mount-time detected tier. */
+  private applyColorTierSetting(): void {
+    const tier = this.tuiSettings()?.colorTier
+    if (tier !== undefined) applyTheme(tier)
+  }
+
+  /**
    * Return whether Enter sends a chat message.
    * @returns false when the `tui` section sets `submitOnEnter` to false.
    */
   getSubmitOnEnter(): boolean {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.submitOnEnter !== false
   }
 
@@ -2511,8 +2522,7 @@ export class RuntimeController implements TuiController {
    * @returns `auto` when no explicit value is configured.
    */
   getBrandAnimation(): 'auto' | 'on' | 'off' {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.brandAnimation ?? 'auto'
   }
 
@@ -2537,14 +2547,12 @@ export class RuntimeController implements TuiController {
    * @returns the saved locale, or the Chinese product default.
    */
   getLocale(): TuiLocale {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return section?.locale ?? 'zh-CN'
   }
 
   private presentationFlag(field: PresentationFlag): boolean {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return this.presentationOverrides.get(field)?.value ?? section?.[field] ?? PRESENTATION_DEFAULTS[field]
   }
 
@@ -2778,10 +2786,16 @@ export class RuntimeController implements TuiController {
       case 'stop-profile': key = 'pluginsStopProfile'; break
       case 'bundle-in-use': key = 'pluginsBundleInUse'; break
       case 'stale-approval': key = 'pluginsStaleApproval'; break
+      case 'incompatible-version': key = 'pluginsIncompatibleVersion'; break
       case 'operation-error': key = 'pluginsOperationError'; break
       default: return assertNever(error.code, 'pluginsError')
     }
-    return tuiCopy(key, this.getLocale()) + (error.diagnostic ? `: ${error.diagnostic}` : '')
+    // The running DSH version rejects these packages' peer ranges.
+    const incompatible = (error.incompatible ?? [])
+      .map(plugin => `${plugin.name}@${plugin.version} (${Object.entries(plugin.peers).map(([peer, range]) => `${peer} ${range}`).join(', ')})`)
+      .join('; ')
+    const detail = [error.diagnostic, incompatible].filter(part => part !== undefined && part !== '').join(' · ')
+    return tuiCopy(key, this.getLocale()) + (detail === '' ? '' : `: ${detail}`)
   }
 
   /** Localize the service's package failure category. */
@@ -2859,7 +2873,7 @@ export class RuntimeController implements TuiController {
     this.pluginsInspection = undefined
     this.updatePlugins({ inspecting: true, inspection: [], error: undefined })
     try {
-      const result = await manager.inspect(spec, this.lifecycleAbort.signal)
+      const result = await manager.inspect(spec, {}, this.lifecycleAbort.signal)
       if (this.closed) return
       this.pluginsInspection = result
       if (result.status === 'refused') {
@@ -2887,7 +2901,7 @@ export class RuntimeController implements TuiController {
     const run = async (): Promise<void> => {
       try {
         // Reinspect retries, including build approval, before any package-manager invocation.
-        const inspected = await manager.inspect(spec, this.lifecycleAbort.signal)
+        const inspected = await manager.inspect(spec, {}, this.lifecycleAbort.signal)
         if (this.closed) return
         if (inspected.status === 'refused') {
           this.pluginsInspection = inspected
@@ -3123,7 +3137,7 @@ export class RuntimeController implements TuiController {
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined || this.session === undefined) return
     try {
-      const entries = await subagents.listChildren(this.session.id, signal)
+      const entries = (await subagents.listDescendants(this.session.id, signal)).filter(entry => entry.depth === 1)
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
@@ -3149,7 +3163,7 @@ export class RuntimeController implements TuiController {
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined) return
     try {
-      const entries = await subagents.listChildren(SessionId(childId), signal)
+      const entries = (await subagents.listDescendants(SessionId(childId), signal)).filter(entry => entry.depth === 1)
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
@@ -3206,7 +3220,7 @@ export class RuntimeController implements TuiController {
         const header = coldHeaders.get(row.id)
         if (cache === undefined || persistence === undefined || header === undefined) return row
         try {
-          snapshot = cache.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS)
+          snapshot = cache.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS)
           if (snapshot === undefined) {
             if (persistenceHasOpen(persistence)) {
               // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
@@ -4093,8 +4107,7 @@ export class RuntimeController implements TuiController {
 
   /** Resolve the notification settings section, defaulting when no section is stored. */
   private notifySettings(): NotifySettings {
-    const section = this.readTuiSettings?.()
-      ?? (this.ctx.get('settings')?.get(TUI_SETTINGS_NS) as TuiUserSettings | undefined)
+    const section = this.tuiSettings()
     return {
       mode: section?.notify ?? 'attention',
       quietInputSeconds: section?.notifyQuietInputSeconds ?? DEFAULT_NOTIFY_QUIET_INPUT_SECONDS,
@@ -4512,7 +4525,7 @@ export class RuntimeController implements TuiController {
     }
     await this.createOrResume()
     if (this.closed || this.agentHandle === undefined) return
-    this.installTuiSettings()
+    this.applyColorTierSetting()
     if (this.config.task === '') await this.maybeOpenOnboarding()
     this.emit()
     const parked = this.pending
@@ -5261,9 +5274,11 @@ export class RuntimeController implements TuiController {
   private readSettingsRows(): SettingsFieldRow[] {
     const settings = this.ctx.get('settings')
     if (settings === undefined) return []
+    // Rows are the volatile form fields: the only ones dsh 0.2 lets settings write.
+    const descriptors = settings.describe({ redactSecrets: true })
     const rows = settingsRowsFromDescribe(
-      settings.describe({ redactSecrets: true }),
-      ns => settings.get(ns),
+      descriptors,
+      ns => descriptors.find(form => form.ns === ns)?.value,
       { expandProviders: true },
     )
     return [...rows, ...credentialSettingRows(
@@ -5286,8 +5301,8 @@ export class RuntimeController implements TuiController {
       const ref = (profile as Record<string, unknown>)['apiKeyEnv']
       if (typeof ref === 'string' && isCredentialRefName(ref)) names.add(ref)
     }
-    collect(settings.get('llm-deepseek'))
-    const piAi = settings.get('llm-pi-ai')
+    collect(entryConfig(this.ctx, 'llm-deepseek'))
+    const piAi = entryConfig(this.ctx, 'llm-pi-ai')
     if (typeof piAi === 'object' && piAi !== null && !Array.isArray(piAi)) {
       const providers = (piAi as Record<string, unknown>)['providers']
       if (typeof providers === 'object' && providers !== null && !Array.isArray(providers)) {
@@ -5399,7 +5414,7 @@ export class RuntimeController implements TuiController {
         row.field,
         row.field === 'providers'
           ? this.rawUserProviders(row.namespace) ?? {}
-          : fieldOf(settings.get(row.namespace), row.field),
+          : fieldOf(settings.describe().find(form => String(form.ns) === row.namespace)?.value, row.field),
         value,
         this.catalogProviderIds(row.namespace),
       )
@@ -5416,6 +5431,7 @@ export class RuntimeController implements TuiController {
       try {
         await settings.update(row.namespace, createSettingsPatch(row.field, parsed))
         if (this.closed) return
+        if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting()
         this.settingsOpen = false
         this.settingsEditing = false
         this.settingsOnboarding = false
@@ -5715,7 +5731,7 @@ export class RuntimeController implements TuiController {
         if (this.closed) return
         const settings = this.ctx.get('settings')
         if (settings !== undefined) {
-          const ds = settings.get('llm-deepseek') as Record<string, unknown> | undefined
+          const ds = entryConfig(this.ctx, 'llm-deepseek') as Record<string, unknown> | undefined
           if (typeof ds?.apiKeyEnv === 'string' && ds.apiKeyEnv.startsWith('sk-')) {
             await settings.update('llm-deepseek', { apiKeyEnv: 'DEEPSEEK_API_KEY' })
           }
@@ -5782,25 +5798,6 @@ export class RuntimeController implements TuiController {
     this.refreshConfiguredCredentials()
   }
 
-  /**
-   * Register the `tui` user-settings section when the host exposes `register`.
-   * Unit stubs that only implement `describe`/`get`/`update` are left alone.
-   */
-  private installTuiSettings(): void {
-    this.ctx.inject(['settings'], (settingsCtx) => {
-      if (typeof settingsCtx.settings.installSection !== 'function') return
-      settingsCtx.settings.installSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
-        setSource: (read) => {
-          this.readTuiSettings = read
-        },
-        onChange: () => {
-          const next = this.readTuiSettings?.()
-          if (next?.colorTier !== undefined) applyTheme(next.colorTier)
-          this.emit()
-        },
-      })
-    })
-  }
 
   /**
    * Open the API-key configuration overlay directly from /key or /login.
@@ -6157,7 +6154,7 @@ export class RuntimeController implements TuiController {
       && this.session !== undefined
     ) {
       try {
-        const entries = await subagents.listChildren(this.session.id, signal)
+        const entries = (await subagents.listDescendants(this.session.id, signal)).filter(entry => entry.depth === 1)
         for (const entry of entries) {
           if (entry.kind !== 'child' || entry.activity !== 'running') continue
           const name = entry.mode === 'continuable'

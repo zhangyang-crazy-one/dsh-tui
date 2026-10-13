@@ -47,7 +47,7 @@ function round(
   assistantText: string,
   base: number,
 ): SessionEvent[] {
-  const seq = (turn - 1) * 4
+  const seq = (turn - 1) * 6
   return [
     { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
@@ -60,9 +60,10 @@ function round(
       }),
       surfaceOp: 'append',
     },
+    { type: 'step/start', seq: SessionSeq(seq + 2), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'assistant/message',
-      seq: SessionSeq(seq + 2),
+      seq: SessionSeq(seq + 3),
       time: base + 2,
       data: {
         turn,
@@ -75,9 +76,10 @@ function round(
       },
       surfaceOp: 'append',
     },
+    { type: 'step/end', seq: SessionSeq(seq + 4), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'turn/end',
-      seq: SessionSeq(seq + 3),
+      seq: SessionSeq(seq + 5),
       time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },
@@ -732,6 +734,7 @@ describe('session resume', () => {
       }),
       { surfaceOp: 'append' },
     )
+    live?.append('step/start', { turn: 3, step: 1 })
     live?.append(
       'assistant/message',
       {
@@ -745,6 +748,7 @@ describe('session resume', () => {
       },
       { surfaceOp: 'append' },
     )
+    live?.append('step/end', { turn: 3, step: 1 })
     live?.append('turn/end', { turn: 3, reason: { kind: 'completed' } })
     await vi.waitFor(() => {
       expect(controller.getModel().history).toHaveLength(6)

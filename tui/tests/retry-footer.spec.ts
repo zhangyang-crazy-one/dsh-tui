@@ -26,7 +26,7 @@ async function fixture(): Promise<Fixture> {
     () => {},
   )
   const state = controller as unknown as {
-    readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' }
+    tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' }
     commitCandidate(candidate: {
       handle: { agent: Agent; dispose(): Promise<void> }
       projector: ReturnType<typeof createProjector>
@@ -37,7 +37,7 @@ async function fixture(): Promise<Fixture> {
       badge: string
     }): void
   }
-  state.readTuiSettings = () => ({ notify: 'off' })
+  state.tuiSettings = () => ({ notify: 'off' })
   const bind = (session: Session): void => {
     const projector = createProjector()
     projector.seed(session.snapshotEvents())

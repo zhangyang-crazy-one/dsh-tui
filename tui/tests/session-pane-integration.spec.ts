@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, open, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
   Agent,
@@ -123,7 +123,7 @@ function seedLog(title: string, base: number): SessionEvent[] {
       type: 'session/title',
       seq: SessionSeq(1),
       time: base + 2,
-      data: { title, messageSeqs: [], source: { kind: 'fallback' } },
+      data: { title, messageSeqs: [], source: { kind: 'user' } },
     },
     {
       type: 'turn/end',
@@ -250,6 +250,13 @@ async function bench(root: string, options: BenchOptions = {}): Promise<Bench> {
   })
   if (options.stubPersistence === undefined) {
     await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+    // dsh 0.2 persistence archives instead of deleting; model a backend that
+    // still exposes physical deletion so the K6 confirm flow stays covered.
+    Object.assign(ctx.sessionPersistence, {
+      delete: async (id: SessionId) => {
+        await rm(dirname(logPath(root, undefined, id, 'none')), { recursive: true, force: true })
+      },
+    })
   } else {
     ctx.provide(
       'sessionPersistence',
