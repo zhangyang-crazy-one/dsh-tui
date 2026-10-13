@@ -1,5 +1,5 @@
 ---
-description: "Installable source-runtime launcher and public source mirror for the DeepSeek Harness terminal interface."
+description: "DeepSeek Harness terminal interface: a dsh plugin bundle plus its launcher."
 kind: "package-group"
 ---
 
@@ -13,7 +13,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@crazyhappyone/dsh-tui` provides the `dsh-tui` command for running and safely updating the DeepSeek Harness terminal interface. The launcher manages a dedicated DSH source checkout, so it never pulls, resets, stashes, or cleans a contributor's development checkout. This public repository also mirrors the `packages/tui/` bundle and renderer sources for review. DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
+`@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
 ## Table of Contents
 
@@ -51,7 +51,7 @@ The unscoped `dsh-tui` package belongs to another maintainer. This project publi
 `dsh-tui` supports two runtime modes:
 
 ### Mode A: Lightweight Mode (Recommended, Zero-Clone)
-Install the official core engine and the TUI launcher globally (dozens of MB):
+Install the official engine and the TUI launcher globally:
 
 ```text
 npm install --global @deepseek-ai/dsh
@@ -60,11 +60,18 @@ dsh-tui probe
 dsh-tui
 ```
 
-In this mode, the launcher automatically detects the installed `dsh` executable and mounts the bundled prebuilt TUI extension without cloning the 2GB monorepo.
+The first launch runs `dsh plugin --profile tui add <package directory>`, which links this package into the `tui` profile after `@deepseek-ai/dsh-base`; later launches find it there and run `dsh --profile tui` directly. Without the launcher, the same two dsh commands work by hand:
 
-Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a three-second timeout. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable; probing establishes executability, not compatibility with older Harness releases.
+```text
+dsh plugin --profile tui add @crazyhappyone/dsh-tui@next
+dsh --profile tui
+```
 
-Lightweight launch uses `dsh --profile tui --patch <bundled-patch>` with a custom `tui` profile containing only `@deepseek-ai/dsh-base` and `patchReload: startup`. Existing profile manifests are preserved. The patch supplies the terminal runtime; the current `headless` profile adds its own runner and is not used. This release composition follows Harness `0.1.6-alpha.2`.
+Installing as a bundle matters in dsh 0.2: `/settings` edits are written to the profile's own patch layer, which applies after bundle layers. A `--patch` overlay would apply after the profile layer and dsh refuses settings writes to rows such an overlay owns.
+
+Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a ten-second timeout, which covers a cold first start. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable.
+
+The bundle targets the dsh `0.2` release line (built against `0.2.1-alpha.2`, also verified on `0.2.0-rc.2`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
 
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:
@@ -132,15 +139,26 @@ If dependency refresh fails after a fast-forward, the runtime stays at the repor
 <a id="relationship-to-dsh"></a>
 ## Relationship to DSH
 
-The TUI is a DSH profile layer, not a separate agent runtime:
+The TUI is a dsh plugin bundle, not a fork or a separate agent runtime:
 
 ```text
-@deepseek-ai/dsh-base
-  └─ @deepseek-ai/dsh-tui          profile patch, terminal lifecycle, controller
-       └─ @deepseek-ai/dsh-tui-render   Ink projection and terminal I/O
+@deepseek-ai/dsh-base                  dsh core bundle (agents, sessions, tools)
+  └─ @crazyhappyone/dsh-tui             this bundle: cordis.patch.yml + dist/*
+       ├─ tui-startup  (./startup)      command-line provider (task, --resume, --cwd)
+       ├─ tui          (./settings)     volatile TUI preferences shown in /settings
+       ├─ tui-runtime  (./runtime)      terminal lifecycle and controller
+       └─ zen-proxy    (./zen-proxy)    optional OpenCode Zen header proxy
 ```
 
-The integration source lives on the private [`feat/deepseek-tui` DSH branch](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui). Changes that affect DSH services, profile composition, assembled CLI snapshots, or Agent Notes belong in that monorepo and follow its architecture, testing, and documentation rules.
+Rows name plugins through the package's `exports`, so a settings edit records a portable row name in the profile patch. The bundle also inserts the published dsh plugins `session-stats`, `message-feedback`, `tool-ask-user`, `workspace-changes`, and a loopback `webserver` for the account sign-in callback, and overrides `system-prompt`, `tools`, `session-query-sqlite`, and `session-title-llm`.
+
+### DeepSeek account, models, and working directory
+
+- `/login` opens the DeepSeek account page when dsh mounts the `deepseek-account` service: Enter starts browser sign-in, `o` reopens the authorization link, `c` cancels, and the page shows the profile and balance once signed in. The browser returns to the bundle's `webserver` row on `127.0.0.1` with an OS-assigned port. Over SSH the page prints the `ssh -L` forward instead of opening a browser; pin `port` on the `webserver` row so the forward stays stable. Without the account service, `/login` and `/key` open the API-key editor.
+- `/logout` signs out after confirmation; stored API keys remain.
+- `/model` lists `deepseek-account` and `deepseek-official` with the step that makes their models available (`/login` or `/key`) while their catalogs are empty, and refuses to select such a row.
+- `/cd [path]` shows or changes the Session working directory on dsh 0.2.1 and later. The header, `@` mentions, and `/files` follow it, and the model receives the change notice; existing shells keep their own directories.
+- `/plugins` lists official bundles in their own group. An official catalog entry whose files are not installed is marked installable, and Space opens the install preview for its exact target.
 
 ### OpenCode Zen free models
 
@@ -152,20 +170,21 @@ localhost proxy that injects the official OpenCode client headers Zen requires
 `400 MissingSessionID` / `429 FreeUsageLimitError` because dsh always sends its
 own attribution `User-Agent`.
 
-To use it, point the provider at the proxy in `settings.yaml` (or the TUI
-`/settings` provider form) and keep the key in credentials:
+To use it, add a provider through the TUI `/settings` provider form (or the
+profile's `cordis.patch.yml`) pointing at the proxy, and keep the key in credentials:
 
 ```yaml
-llm-pi-ai:
-  providers:
-    opencode:
-      api: openai-completions
-      baseURL: http://127.0.0.1:4097/v1
-      apiKeyEnv: OPENCODE_API_KEY
+- id: llm-pi-ai
+  config:
+    providers:
+      opencode:
+        api: openai-completions
+        baseURL: http://127.0.0.1:4097/v1
+        apiKeyEnv: OPENCODE_API_KEY
 ```
 
-The proxy listens on `127.0.0.1:4097` only; remove the `zen-proxy` row from
-`cordis.patch.yml` to disable it.
+The proxy listens on `127.0.0.1:4097` only; add `- id: zen-proxy` with
+`disabled: true` to the profile's `cordis.patch.yml` to turn it off.
 
 -----
 
@@ -174,7 +193,7 @@ The proxy listens on `127.0.0.1:4097` only; remove the `zen-proxy` row from
 
 | Package | DSH shape | Responsibility |
 |---|---|---|
-| [`tui/`](tui/README.md) | Profile bundle plus runtime plugin | Composes the terminal layer over `dsh-base`, owns the live terminal session, and maps user actions to DSH services |
+| [`tui/`](tui/README.md) | Runtime, startup, and settings plugins | Composes the terminal layer over `dsh-base`, owns the live terminal session, and maps user actions to DSH services |
 | [`plugins/zen-proxy/`](https://github.com/zhangyang-crazy-one/dsh-zen-proxy) | Vendored plugin (bundled as `dist/zen-proxy.js`) | In-process OpenAI-compatible proxy injecting OpenCode Zen client headers; mounted in `cordis.patch.yml` |
 | [`tui-render/`](tui-render/README.md) | Library | Projects controller state through Ink without owning agents, persistence, or model requests |
 
@@ -183,11 +202,15 @@ The proxy listens on `127.0.0.1:4097` only; remove the `zen-proxy` row from
 <a id="development-workflow"></a>
 ## Development workflow
 
-With the matching `../deepseek-harness` checkout and its build dependencies installed, run `npm run build`. This invokes its supported `scripts/build-dsh-tui-bundle.ts`, mirrors the TUI sources, validates bundle imports, and generates both release patches from `packages/tui/tui/cordis.patch.yml`, changing only bundled plugin paths. Run `npm test` and `npm run pack:check` before release.
+`tui/` and `tui-render/` compile against an upstream dsh checkout at the tag named by `COMPATIBLE_DSH_VERSION` in `src/launcher.js`:
 
-Implement TUI behavior in the complete DSH checkout, run the checks selected by the changed behavior, and export the confirmed `packages/tui/` tree here. Develop the launcher in this repository with `npm test`; test installation through a packed tarball rather than a workspace link.
+```text
+git clone --branch dsh-v0.2.1-alpha.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
+(cd ../deepseek-harness && pnpm install)
+npm run build          # or DSH_SOURCE=/path/to/checkout npm run build
+```
 
-The launcher runtime must remain separate from the development checkout. To test against another source safely, point `DSH_TUI_RUNTIME_DIR` at a temporary absolute directory and configure `DSH_TUI_SOURCE_URL` and `DSH_TUI_SOURCE_REF`.
+`npm run build` copies the plugin packages and `cordis.patch.yml` into the checkout's `packages/tui/` workspace, bundles `dist/index.js`, `dist/startup.js`, `dist/settings.js`, and `dist/zen-proxy.js` with esbuild, and import-checks each output. Run the plugin tests from the checkout with `npx vitest run packages/tui`, and the launcher tests here with `npm test`; run `npm run pack:check` before release. Test installation through a packed tarball or `dsh plugin --profile <name> add <this directory>`.
 
 -----
 
@@ -225,6 +248,10 @@ The `Publish npm` workflow runs tests and packed-package verification again befo
 - **No automatic conflict resolution** — dirty or non-fast-forward runtime history requires explicit human action or a new runtime directory.
 - **Runtime update is not launcher update** — `dsh-tui update` refreshes DSH source and dependencies; npm updates the launcher package.
 - **Integration owns release readiness** — launcher success does not replace the DSH branch's behavior, snapshot, build, or hygiene checks.
+- **Source mode targets the legacy integration branch** — `--source` boots the `deepseek-tui` profile of the configured DSH checkout (default `feat/deepseek-tui`, dsh 0.1.6); it does not use this 0.2 bundle.
+- **No scheduled reminders** — `@deepseek-ai/dsh-schedule` requires the Web host's Session controller, so the TUI composition does not mount it and preset `schedule_*` tools stay inactive.
+- **Account sign-in needs a reachable Platform** — sign-in reports `no-response` when the host cannot reach `platform.deepseek.com`; use `/key` in that case.
+- **No physical session deletion on dsh 0.2** — 0.2 session persistence archives instead of deleting, and the TUI composition mounts no workspace archive service, so the session list reports deletion as unavailable.
 
 <a id="dev-note"></a>
 ## Dev Note

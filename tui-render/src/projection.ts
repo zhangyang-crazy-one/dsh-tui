@@ -25,12 +25,14 @@
  * Session identity before calling this module. The projection API receives no
  * Session object and therefore cannot verify Session identity.
  *
- * Durable replay and live delivery use the same fold through {@link Projector.seed} and {@link Projector.push}.
+ * Committed events fold through {@link Projector.seed} and {@link Projector.push};
+ * transient assistant frames enter through {@link Projector.pushStreamFrame}.
  * @module @deepseek-ai/dsh-tui-render/projection
  */
 
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
+import type {} from '@deepseek-ai/dsh-workspace-changes/types'
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import type { ToolCallId, ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
@@ -38,13 +40,6 @@ import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
 import type { WorkspaceChangesCardView } from './workspace-changes-card.ts'
-
-declare module '@deepseek-ai/dsh-session' {
-  interface SessionEventMap {
-    'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
-    'workspace/changes': { turn: number }
-  }
-}
 
 /** One tool call observed inside the active turn. */
 export interface ProjectedToolCall {
@@ -240,10 +235,77 @@ export interface Projector {
    */
   seed(events?: readonly SessionEvent[]): void
   /**
+   * Fold one transient `agent/assistant-stream` frame into the active step so
+   * text and reasoning render while the model is still streaming. The durable
+   * `assistant/message` that follows replaces the partial step exactly.
+   * @param frame - an ordered frame from the bound Agent; ignored between turns.
+   */
+  pushStreamFrame(frame: LiveStreamFrame): void
+  /**
    * Read the current projection without copying the frozen history array.
    * @returns the latest history, active turn, render status, and fold-display state.
    */
   snapshot(): ViewModel
+}
+
+/**
+ * Structural subset of the runtime's `AssistantStreamFrame` that the live fold
+ * reads. Kept local so the render layer needs no dependency on the agent package.
+ */
+export type LiveStreamFrame =
+  | Readonly<{ type: 'start' }>
+  | Readonly<{ type: 'chunk'; time: number; chunk: StreamChunk }>
+  | Readonly<{ type: 'end'; outcome: Readonly<{ kind: string }> }>
+
+/** One durable stream record; only the timing fields are read here. */
+type TimedStreamRecord = Readonly<{
+  type: string
+  index?: number
+  time0?: number
+  time?: number
+  dt?: readonly number[]
+}>
+
+/**
+ * Derive each reasoning block's wall duration from a durable timed stream.
+ * A block runs from its first reasoning chunk to the next non-reasoning
+ * record (or its own last chunk when nothing follows).
+ * @param stream - the `assistant/message` embedded stream, when present.
+ * @returns durations in block order; empty when the stream is absent or untimed.
+ */
+export function reasoningDurationsFromStream(stream: unknown): number[] {
+  if (!Array.isArray(stream)) return []
+  const records = stream as readonly TimedStreamRecord[]
+  const startOf = (record: TimedStreamRecord): number | undefined =>
+    record.time0 ?? record.time
+  const durations: number[] = []
+  let blockIndex: number | undefined
+  let blockStart = 0
+  let blockEnd = 0
+  const close = (end: number): void => {
+    if (blockIndex === undefined) return
+    durations.push(Math.max(0, end - blockStart))
+    blockIndex = undefined
+  }
+  for (const record of records) {
+    const start = startOf(record)
+    if (typeof start !== 'number') continue
+    if (record.type === 'reasoning-chunks') {
+      const end = start + (record.dt ?? []).reduce((sum, gap) => sum + gap, 0)
+      if (blockIndex !== undefined && record.index === blockIndex) {
+        blockEnd = end
+        continue
+      }
+      close(start)
+      blockIndex = record.index ?? -1
+      blockStart = start
+      blockEnd = end
+    } else if (record.type !== 'chunk') {
+      close(start)
+    }
+  }
+  close(blockEnd)
+  return durations
 }
 
 /** Assistant blocks split into visible/reasoning content and live tool calls. */
@@ -272,16 +334,21 @@ function projectUserContent(blocks: readonly ContentBlock[]): string {
 }
 
 /** Project one step's assistant blocks without promoting merge extensions into terminal text. */
-function projectAssistantBlocks(blocks: readonly ContentBlock[]): ProjectedAssistantBlocks {
+function projectAssistantBlocks(
+  blocks: readonly ContentBlock[],
+  reasoningDurations: readonly number[] = [],
+): ProjectedAssistantBlocks {
   const content: ProjectedTurnContent[] = []
   const toolCalls: ProjectedToolCall[] = []
+  let reasoningOrdinal = 0
   for (const block of blocks) {
     switch (block.type) {
       case 'text':
         content.push({ kind: 'text', text: block.text })
         break
       case 'reasoning':
-        content.push({ kind: 'reasoning', text: block.text, durationMs: 0 })
+        content.push({ kind: 'reasoning', text: block.text, durationMs: reasoningDurations[reasoningOrdinal] ?? 0 })
+        reasoningOrdinal += 1
         break
       case 'tool-call':
         toolCalls.push({
@@ -466,10 +533,13 @@ export function createProjector(): Projector {
       const start = reasoningStarts[index] as number
       const end = reasoningEnds[index] ?? turnEventAt
       index += 1
+      // A duration read from the durable timed stream is exact; event-time
+      // stamping is the live estimate (and the only source for legacy logs).
+      const durable = item.durationMs ?? 0
       return {
         kind: 'reasoning' as const,
         text: item.text,
-        durationMs: Math.max(0, end - start),
+        durationMs: durable > 0 ? durable : Math.max(0, end - start),
       }
     })
     reasoningStarts.length = index
@@ -504,8 +574,8 @@ export function createProjector(): Projector {
     updateActiveTurn()
   }
 
-  function replaceStep(blocks: readonly ContentBlock[]): void {
-    const projected = projectAssistantBlocks(blocks)
+  function replaceStep(blocks: readonly ContentBlock[], reasoningDurations?: readonly number[]): void {
+    const projected = projectAssistantBlocks(blocks, reasoningDurations)
     stepContent = projected.content
     stepToolCalls = projected.toolCalls
     stepCommitted = false
@@ -554,16 +624,12 @@ export function createProjector(): Projector {
         appendHistory({ id: event.seq, kind: 'user', text, timestamp: event.time })
         return
       }
-      case 'assistant/chunk': {
-        if (activeTurn === undefined) return
-        assembler ??= new BlockAssembler()
-        assembler.push(event.data.chunk)
-        replaceStep(assembler.blocks())
-        return
-      }
       case 'assistant/message': {
         if (activeTurn !== undefined) {
-          replaceStep(event.data.message.content)
+          replaceStep(
+            event.data.message.content,
+            reasoningDurationsFromStream((event.data as { stream?: unknown }).stream),
+          )
           commitStep()
           lastUsageOutputTokens = event.data.usage?.outputTokens
           lastStepWallMs = Math.max(0, event.time - stepStartedAt)
@@ -610,15 +676,14 @@ export function createProjector(): Projector {
       case 'tool/result': {
         if (activeTurn === undefined) return
         commitStep()
-        const block = event.data.message.content[0]
+        const message = event.data.message
         turnContent.push({
           kind: 'tool-result',
-          callId: block.toolCallId,
-          text: block.content
-            .filter(item => item.type === 'text')
-            .map(item => item.text)
+          callId: message.toolCallId,
+          text: message.content
+            .map(item => item.type === 'text' ? item.text : '')
             .join(''),
-          isError: block.isError ?? false,
+          isError: message.isError ?? false,
           ...event.data.error === undefined ? {} : { error: { ...event.data.error } },
           ...event.data.meta === undefined ? {} : { meta: structuredClone(event.data.meta) },
         })
@@ -704,8 +769,32 @@ export function createProjector(): Projector {
     }
   }
 
+  function pushStreamFrame(frame: LiveStreamFrame): void {
+    if (activeTurn === undefined) return
+    switch (frame.type) {
+      case 'start':
+        // A fresh attempt (including a retry) replaces any uncommitted partial.
+        assembler = new BlockAssembler()
+        replaceStep([])
+        return
+      case 'chunk':
+        assembler ??= new BlockAssembler()
+        turnEventAt = Math.max(turnEventAt, frame.time)
+        assembler.push(frame.chunk)
+        replaceStep(assembler.blocks())
+        return
+      case 'end':
+        // A committed attempt is settled by its durable event, which already
+        // replaced this partial; an abandoned one leaves no durable content.
+        if (frame.outcome.kind !== 'committed' && !stepCommitted) replaceStep([])
+        assembler = undefined
+        return
+    }
+  }
+
   return {
     push,
+    pushStreamFrame,
     seed(events?: readonly SessionEvent[]) {
       if (!events || !Array.isArray(events)) return
       for (const event of events) push(event)

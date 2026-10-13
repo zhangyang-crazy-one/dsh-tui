@@ -12,9 +12,6 @@
 
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
@@ -26,7 +23,7 @@ import LlmRuntime from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
-import { FileSettingsProvider } from '@deepseek-ai/dsh-settings-file'
+import * as jsYaml from 'js-yaml'
 import type { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { RuntimeController } from '../src/index.ts'
 
@@ -101,8 +98,8 @@ interface Harness {
   ctx: Context
   controller: RuntimeController
   server: ProbeServer
-  /** Path to the YAML document the FileSettingsProvider writes to. */
-  yamlPath: string
+  /** The profile-layer `llm-pi-ai` section as YAML; empty when nothing was written. */
+  layer: () => string
   cleanup: () => Promise<void>
 }
 
@@ -122,21 +119,19 @@ async function harness(options: {
    */
   readonly presetCredential?: boolean
 } = {}): Promise<Harness> {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-tui-autodisc-'))
-  const yamlPath = join(dir, 'settings.yaml')
-  await writeFile(yamlPath, '')
-  return harnessInDir(dir, yamlPath, await probeServer(), options)
+  return harnessWith(await probeServer(), options)
 }
 
 /**
- * Mount the controller against a pre-populated YAML document. Used by the
- * re-interrogate test which seeds the document before the controller loads.
+ * Mount the controller over an in-memory profile layer. dsh 0.2 writes
+ * settings into the profile patch through `settings.update` and reads the
+ * effective section from the live Loader entry, so the double keeps one
+ * `llm-pi-ai` section that both sides observe.
  */
-async function harnessInDir(
-  dir: string,
-  yamlPath: string,
+async function harnessWith(
   server: ProbeServer,
   options: { readonly presetCredential?: boolean } = {},
+  seed?: Record<string, unknown>,
 ): Promise<Harness> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
@@ -147,9 +142,17 @@ async function harnessInDir(
   })
   await ctx.plugin(CommandRuntime)
   await ctx.plugin(LlmRuntime)
-  await ctx.plugin(FileSettingsProvider, { path: yamlPath, watch: false })
   await ctx.plugin(LlmPiAi, {})
-  void options
+  let section: Record<string, unknown> | undefined = seed
+  ctx.provide('settings', {
+    describe: () => [{ ns: 'llm-pi-ai', user: section ?? {}, value: { providers: {}, ...section } }],
+    update: async (_ns: string, patch: Record<string, unknown>) => {
+      section = { ...section, ...structuredClone(patch) }
+    },
+  } as never)
+  ctx.provide('configEditor', {
+    entries: () => [{ options: { id: 'llm-pi-ai' }, fiber: { config: { providers: {}, ...section } } }],
+  } as never)
 
   const stored = new Map<string, string>()
   // Pre-seed the credential the auto-discover path will resolve. Using
@@ -196,12 +199,11 @@ async function harnessInDir(
     ctx,
     controller,
     server,
-    yamlPath,
+    layer: () => section === undefined ? '' : jsYaml.dump({ 'llm-pi-ai': section }),
     cleanup: async () => {
       await controller.dispose()
       await ctx.fiber.dispose()
       await server.close()
-      await rm(dir, { recursive: true, force: true })
     },
   }
 }
@@ -218,7 +220,7 @@ afterEach(() => {
 
 describe('TUI provider auto-discover apply path', () => {
   it('writes discovered models into the user-layer providers dict when models= is empty', async () => {
-    const { controller, server, yamlPath, cleanup } = await harness()
+    const { controller, server, layer, cleanup } = await harness()
     try {
       // Open the providers overlay; the [+ 添加 Provider] row carries the
       // seeded multi-line template, which is what the user types into.
@@ -248,7 +250,7 @@ describe('TUI provider auto-discover apply path', () => {
       // The user-layer providers dict now carries the discovered profile,
       // and the schema-defaulted fields (compat, defaultContextWindow, etc.)
       // are not materialized — only the fields the parser emitted.
-      const yaml = await readFile(yamlPath, 'utf8')
+      const yaml = layer()
       expect(yaml).toContain('my-gw:')
       expect(yaml).toContain('apiKeyEnv: MY_GW_API_KEY')
       expect(yaml).toContain('displayName: my-gw')
@@ -268,7 +270,7 @@ describe('TUI provider auto-discover apply path', () => {
   })
 
   it('surfaces the endpoint refusal on the overlay and writes nothing to settings', async () => {
-    const { controller, server, yamlPath, cleanup } = await harness()
+    const { controller, server, layer, cleanup } = await harness()
     try {
       server.setNext({ status: 500, body: JSON.stringify({ error: 'upstream down' }) })
 
@@ -293,7 +295,7 @@ describe('TUI provider auto-discover apply path', () => {
       expect(controller.getSettingsPane().updateError).toMatch(/500/)
 
       // Nothing was persisted; the YAML document is empty.
-      const yaml = await readFile(yamlPath, 'utf8')
+      const yaml = layer()
       expect(yaml.trim()).toBe('')
     } finally {
       await cleanup()
@@ -301,7 +303,7 @@ describe('TUI provider auto-discover apply path', () => {
   })
 
   it('treats a 401 with no stored credential as a missing-key prompt', async () => {
-    const { controller, server, yamlPath, cleanup } = await harness({
+    const { controller, server, layer, cleanup } = await harness({
       presetCredential: false,
     })
     try {
@@ -325,7 +327,7 @@ describe('TUI provider auto-discover apply path', () => {
       await waitFor(() => controller.getSettingsPane().updateError !== undefined, 2_000)
       expect(controller.getSettingsPane().updateError).toMatch(/401/)
       expect(controller.getSettingsPane().updateError).toMatch(/\/key/)
-      const yaml = await readFile(yamlPath, 'utf8')
+      const yaml = layer()
       expect(yaml.trim()).toBe('')
     } finally {
       await cleanup()
@@ -333,7 +335,7 @@ describe('TUI provider auto-discover apply path', () => {
   })
 
   it('refuses to write when the endpoint returns an empty model list', async () => {
-    const { controller, server, yamlPath, cleanup } = await harness()
+    const { controller, server, layer, cleanup } = await harness()
     try {
       server.setNext({ status: 200, body: JSON.stringify({ data: [] }) })
 
@@ -354,7 +356,7 @@ describe('TUI provider auto-discover apply path', () => {
 
       await waitFor(() => controller.getSettingsPane().updateError !== undefined, 2_000)
       expect(controller.getSettingsPane().updateError).toMatch(/未返回任何模型/)
-      const yaml = await readFile(yamlPath, 'utf8')
+      const yaml = layer()
       expect(yaml.trim()).toBe('')
     } finally {
       await cleanup()
@@ -362,27 +364,19 @@ describe('TUI provider auto-discover apply path', () => {
   })
 
   it('re-interrogates the endpoint when the providers.<route>.models row is set to auto', async () => {
-    // Open the server first so its URL is known, then write the seed YAML,
-    // then mount the controller. The FileSettingsProvider (watch: false) reads
-    // the document once during plugin init, so the seed must be on disk
-    // before the controller starts.
     const server = await probeServer()
-    const dir = await mkdtemp(join(tmpdir(), 'dsh-tui-autodisc-'))
-    const yamlPath = join(dir, 'settings.yaml')
-    const seed = [
-      'llm-pi-ai:',
-      '  providers:',
-      '    my-gw:',
-      '      api: openai-completions',
-      `      baseURL: ${server.url}/v1`,
-      '      apiKeyEnv: MY_GW_API_KEY',
-      '      displayName: my-gw',
-      '      models:',
-      '        - id: stale',
-      '',
-    ].join('\n')
-    await writeFile(yamlPath, seed)
-    const { controller, yamlPath: yamlAfter, cleanup } = await harnessInDir(dir, yamlPath, server)
+    const seed = {
+      providers: {
+        'my-gw': {
+          api: 'openai-completions',
+          baseURL: `${server.url}/v1`,
+          apiKeyEnv: 'MY_GW_API_KEY',
+          displayName: 'my-gw',
+          models: [{ id: 'stale' }],
+        },
+      },
+    }
+    const { controller, layer, cleanup } = await harnessWith(server, {}, seed)
     try {
       server.setNext({ status: 200, body: JSON.stringify({ data: [{ id: 'gamma' }, { id: 'delta' }] }) })
 
@@ -397,7 +391,7 @@ describe('TUI provider auto-discover apply path', () => {
       controller.dispatch({ kind: 'settings-apply', value: 'auto' })
 
       await waitFor(() => !controller.getSettingsPane().open, 2_000)
-      const yaml = await readFile(yamlAfter, 'utf8')
+      const yaml = layer()
       expect(yaml).toContain('id: gamma')
       expect(yaml).toContain('id: delta')
       expect(yaml).not.toContain('id: stale')

@@ -69,7 +69,7 @@ function deferred<T>(): {
 
 /** One completed turn whose user prompt carries a distinct keyword. */
 function round(turn: number, keyword: string, base: number): SessionEvent[] {
-  const seq = (turn - 1) * 4
+  const seq = (turn - 1) * 6
   return [
     { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
@@ -82,9 +82,10 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
       }),
       surfaceOp: 'append',
     },
+    { type: 'step/start', seq: SessionSeq(seq + 2), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'assistant/message',
-      seq: SessionSeq(seq + 2),
+      seq: SessionSeq(seq + 3),
       time: base + 2,
       data: {
         turn,
@@ -97,9 +98,10 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
       },
       surfaceOp: 'append',
     },
+    { type: 'step/end', seq: SessionSeq(seq + 4), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'turn/end',
-      seq: SessionSeq(seq + 3),
+      seq: SessionSeq(seq + 5),
       time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },

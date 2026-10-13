@@ -406,7 +406,11 @@ export const PROVIDER_TEMPLATES: readonly ProviderTemplate[] = [
   },
 ]
 
-/** Format a models list into a comma-separated string for display or editing. */
+/**
+ * Format a models list into a comma-separated string for display or editing.
+ * @param models - configured model entries or an absent value.
+ * @returns comma-separated model identifiers, or empty text for a non-array.
+ */
 export function formatModelsList(models: unknown): string {
   if (!Array.isArray(models)) return ''
   return models
@@ -420,7 +424,11 @@ export function formatModelsList(models: unknown): string {
     .join(', ')
 }
 
-/** Parse a comma-separated or JSON string into an array of model profile objects. */
+/**
+ * Parse comma-separated identifiers or JSON model entries.
+ * @param draft - model identifiers or a JSON array.
+ * @returns model profile entries; empty input returns an empty array.
+ */
 export function parseModelsList(draft: string): Array<{ id: string }> {
   const trimmed = draft.trim()
   if (trimmed === '') return []
@@ -461,18 +469,19 @@ export function stringifySettingValue(value: unknown): string {
   if (typeof value === 'string') return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (value === null) return 'null'
-  return JSON.stringify(value)
+  // JSON.stringify yields undefined for an unset optional field.
+  return JSON.stringify(value) ?? ''
 }
 
-/**
- * Parse a composer draft back into the field's JSON type.
- * @param current - the resolved value used to pick the parser.
- * @param draft - composer text.
- * @returns a JSON-compatible patch value.
- */
 /** JSON-compatible parsed settings value. */
 export type ParsedSettingValue = string | number | boolean | object | null | undefined
 
+/**
+ * Parse a composer draft into the field's JSON type.
+ * @param current - resolved value used to pick the parser.
+ * @param draft - composer text.
+ * @returns JSON-compatible patch value.
+ */
 export function parseSettingValue(current: unknown, draft: string): ParsedSettingValue {
   if (Array.isArray(current) || isPlainObject(current) || current === null) {
     try {
@@ -538,6 +547,7 @@ export function stringifySettingsFieldValue(
  * @param namespace - settings namespace.
  * @param field - top-level field name.
  * @param current - resolved field value used by generic parsers.
+ * @param draft - composer text to parse.
  * @param knownProviders - route keys the llm directory exposes for this namespace, so a
  *   catalog provider can be added by name; absence only narrows that suggestion.
  * @returns the JSON-compatible persisted value.
@@ -683,7 +693,8 @@ export function parseSettingsFieldValue(
  * Flatten registered settings sections into overlay rows.
  * Secret fields named in `describe({ redactSecrets: true }).secrets` are omitted.
  * @param descriptors - host descriptors, typically from `describe()`.
- * @param read - resolve one namespace's current value (`settings.get`).
+ * @param read - resolve one namespace's current value.
+ * @param options - whether provider records expand into individual editable fields.
  * @returns rows in {@link LEADING_NAMESPACES} order, then remaining namespaces.
  */
 export function settingsRowsFromDescribe(

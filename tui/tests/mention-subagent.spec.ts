@@ -74,7 +74,11 @@ async function bench(
   })
   await ctx.plugin(CommandRuntime)
   if (listChildren !== undefined) {
-    ctx.provide('subagents', { listChildren } as never)
+    // dsh 0.2 serves classified rows through listDescendants; direct children are depth 1.
+    ctx.provide('subagents', {
+      listDescendants: async (id: SessionId, signal?: AbortSignal) =>
+        (await listChildren(id, signal)).map((entry: object) => ({ ...entry, parentId: id, depth: 1 })),
+    } as never)
   }
   ctx.agents.setFactory({
     async createAgent(

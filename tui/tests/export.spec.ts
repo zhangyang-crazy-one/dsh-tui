@@ -183,13 +183,10 @@ describe('renderSessionMarkdown', () => {
           step: 1,
           message: {
             id: 'tool-default' as never,
-            role: 'user',
+            role: 'tool',
             source: { kind: 'tool', callId },
-            content: [{
-              type: 'tool-result',
-              toolCallId: callId,
-              content: [{ type: 'text', text: 'ok' }],
-            }],
+            toolCallId: callId,
+            content: [{ type: 'text', text: 'ok' }],
           },
         },
         surfaceOp: 'append',
@@ -209,10 +206,9 @@ describe('renderSessionMarkdown', () => {
         data: createUserMessage({
           content: [{ type: 'text', text: 'INTERNAL-CONTEXT-SENTINEL' }],
           source: {
-            kind: 'plugin',
-            plugin: 'test',
-            form: 'snapshot',
-            sections: [],
+            kind: 'skill-invocation',
+            name: 'test',
+            form: 'instructions',
           },
         }),
         surfaceOp: 'append',
@@ -477,7 +473,7 @@ describe('renderSessionMarkdown', () => {
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'internal runtime context' }],
-          source: { kind: 'plugin', plugin: 'test', form: 'snapshot', sections: [] },
+          source: { kind: 'skill-invocation', name: 'x', form: 'instructions' },
         }),
         surfaceOp: 'append',
       },
@@ -511,7 +507,7 @@ describe('renderSessionMarkdown', () => {
         data: {
           turn: 1,
           step: 1,
-          message: createSystemMessage('# System Prompt', '@deepseek-ai/dsh-test'),
+          message: createSystemMessage('# System Prompt'),
         },
         surfaceOp: 'append',
       },

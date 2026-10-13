@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 interface CacheEntry {
   readonly branch: string | undefined
@@ -41,7 +41,7 @@ export function detectGitBranch(cwd: string): string | undefined {
           const match = /gitdir:\s*(.+)/u.exec(gitContent)
           if (match?.[1]) {
             const gitDir = match[1].trim()
-            headPath = join(dir, gitDir, 'HEAD')
+            headPath = resolve(dir, gitDir, 'HEAD')
           }
         }
         if (headPath && existsSync(headPath)) {

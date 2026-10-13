@@ -143,6 +143,7 @@ describe('command directory', () => {
     // The palette shows the registry commands plus local export/files/help/model/reload/settings,
     // with exactly one export entry (the Web placeholder is filtered).
     expect(controller.commands.map(command => command.name)).toEqual([
+      'cd',
       'compact',
       'export',
       'feedback',
@@ -150,9 +151,11 @@ describe('command directory', () => {
       'help',
       'key',
       'login',
+      'logout',
       'model',
       'new',
       'permission',
+      'plugins',
       'reasoning',
       'reload',
       'resume',
@@ -163,27 +166,27 @@ describe('command directory', () => {
     ])
     expect(controller.commands.find(command => command.name === 'compact')).toEqual({
       name: 'compact',
-      description: 'Compact older conversation history',
+      description: '压缩较早的对话历史',
     })
     expect(controller.commands.find(command => command.name === 'permission')).toEqual({
       name: 'permission',
-      description: 'Switch the permission preset (sandbox mode + approval policy)',
+      description: '切换权限预设（沙箱模式 + 审批策略）',
     })
     expect(controller.commands.find(command => command.name === 'settings')).toEqual({
       name: 'settings',
-      description: 'Edit settings, catalogs, and General',
+      description: '编辑设置、模型目录与通用选项',
     })
     expect(controller.commands.find(command => command.name === 'new')).toEqual({
       name: 'new',
-      description: 'Start a new session',
+      description: '开始新会话',
     })
     expect(controller.commands.find(command => command.name === 'reload')).toEqual({
       name: 'reload',
-      description: 'Relaunch this process and resume the session',
+      description: '重启进程并恢复当前会话',
     })
     expect(controller.commands.find(command => command.name === 'resume')).toEqual({
       name: 'resume',
-      description: 'Switch or resume a session',
+      description: '切换或恢复会话',
     })
     await ctx.fiber.dispose()
   })
@@ -201,7 +204,7 @@ describe('command directory', () => {
     await vi.waitFor(() => {
       const help = controller.getHelpPane()
       expect(help.open).toBe(true)
-      expect(help.lines.join('\n')).toContain('Export this session to a Markdown file')
+      expect(help.lines.join('\n')).toContain('导出当前会话为 Markdown 文件')
     })
     expect(controller.getHelpPane().lines.join('\n')).not.toContain('ZIP archive')
     await ctx.fiber.dispose()
@@ -512,8 +515,8 @@ describe('/help', () => {
       const help = controller.getHelpPane()
       expect(help.open).toBe(true)
       const sheet = help.lines.join('\n')
-      expect(sheet).toContain('/feedback — Record feedback 输入: <text>')
-      expect(sheet).toContain('/export — Export this session to a Markdown file')
+      expect(sheet).toContain('/feedback — 记录对本会话的反馈 输入: <text>')
+      expect(sheet).toContain('/export — 导出当前会话为 Markdown 文件')
     })
     const sheet = controller.getHelpPane().lines.join('\n')
     // The old `✓ ` success-color workaround is gone: the sheet is a pane now.
@@ -536,8 +539,8 @@ describe('/help', () => {
     expect(sheet).toContain('/settings 设置')
     expect(sheet).toContain('/resume 会话')
     expect(sheet).toContain('/reload 重载')
-    expect(sheet).toContain('/resume — Switch or resume a session')
-    expect(sheet).toContain('/reload — Relaunch this process and resume the session')
+    expect(sheet).toContain('/resume — 切换或恢复会话')
+    expect(sheet).toContain('/reload — 重启进程并恢复当前会话')
     await ctx.fiber.dispose()
   })
 
@@ -603,6 +606,50 @@ describe('listMentions', () => {
       expect.objectContaining({ kind: 'skill', name: 'fetch-weather' }),
     ])
     expect(await controller.listMentions(root, 'zzz')).toEqual([])
+    await ctx.fiber.dispose()
+  })
+})
+
+describe('session working directory', () => {
+  /** Fake only the working-directory service; controller dispatch and the Session are real. */
+  function provideWorkingDirectory(ctx: Context, initial: string) {
+    const directories = new Map<Session, string>()
+    const service = {
+      get: vi.fn((session: Session) => directories.get(session) ?? initial),
+      set: vi.fn(async (agent: Agent, path: string) => {
+        if (path === 'missing') throw new Error(`working-directory: directory does not exist: "${path}"`)
+        const next = join(service.get(agent.session), path)
+        directories.set(agent.session, next)
+        return next
+      }),
+    }
+    ctx.provide('workingDirectory', service as unknown as Context['workingDirectory'])
+    return service
+  }
+
+  it('reports the launch cwd without the service and refuses /cd', async () => {
+    const { ctx, controller } = await bench('/launch')
+    await controller.start()
+    expect(controller.getCwd()).toBe('/launch')
+    controller.dispatch({ kind: 'command', query: 'cd src' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✗ 当前 dsh 未提供会话工作目录服务'))
+    await ctx.fiber.dispose()
+  })
+
+  it('shows, changes, and reports failures for the bound Session directory', async () => {
+    const { ctx, controller } = await bench('/launch')
+    const service = provideWorkingDirectory(ctx, '/project')
+    await controller.start()
+    expect(controller.getCwd()).toBe('/project')
+    controller.dispatch({ kind: 'command', query: 'cd' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('工作目录: /project'))
+    controller.dispatch({ kind: 'command', query: 'cd packages' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✓ 工作目录已切换: /project/packages'))
+    expect(service.set).toHaveBeenCalledWith(expect.anything(), 'packages', expect.any(AbortSignal))
+    expect(controller.getCwd()).toBe('/project/packages')
+    controller.dispatch({ kind: 'command', query: 'cd missing' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✗ working-directory: directory does not exist: "missing"'))
+    expect(controller.getCwd()).toBe('/project/packages')
     await ctx.fiber.dispose()
   })
 })

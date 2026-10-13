@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Command-line entry for the dsh-tui source-runtime launcher. */
 
-import { lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { lstatSync, mkdirSync, readFileSync } from 'node:fs'
 import { constants, homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -32,7 +32,9 @@ function run(command, args, options = {}) {
     shell: false,
     timeout: options.timeoutMs,
     killSignal: 'SIGKILL',
-    stdio: options.stdio === 'inherit' ? 'inherit' : capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    stdio: options.stdio === 'inherit' ? 'inherit'
+      : options.stdio === 'output' ? ['ignore', 'inherit', 'inherit']
+        : capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
   })
   if (result.error !== undefined) {
     return { status: 1, stdout: '', stderr: result.error.message }
@@ -78,7 +80,6 @@ try {
       inspectPath,
       makeDirectory: path => mkdirSync(path, { recursive: true, mode: 0o700 }),
       readText: path => readFileSync(path, 'utf8'),
-      writeText: (path, content) => writeFileSync(path, content, 'utf8'),
       run,
       writeOut: text => process.stdout.write(text),
       writeError: text => process.stderr.write(text),

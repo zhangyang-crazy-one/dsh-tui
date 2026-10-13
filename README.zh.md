@@ -1,5 +1,5 @@
 ---
-description: "DeepSeek Harness 终端界面的可安装源码运行时 launcher 与公开源码镜像。"
+description: "DeepSeek Harness 终端界面：一个 dsh 插件 bundle 及其 launcher。"
 kind: "package-group"
 ---
 
@@ -13,7 +13,7 @@ kind: "package-group"
 
 ## 概述
 
-`@crazyhappyone/dsh-tui` 提供 `dsh-tui` 命令，用于运行和安全更新 DeepSeek Harness 终端界面。Launcher 管理专用 DSH 源码 checkout，因此不会 pull、reset、stash 或 clean 贡献者的开发 checkout。本公开仓库还镜像 `packages/tui/` bundle 与 renderer 源码以供审查。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
+`@crazyhappyone/dsh-tui` 是 DeepSeek Harness（dsh）的终端界面，以 dsh **插件 bundle** 加 `dsh-tui` launcher 的形式发布。包声明了 `dsh.bundle`，因此 dsh 会像安装其他插件一样把它装进 profile；launcher 只负责自动完成这一安装并启动 profile。本仓库拥有插件源码（`tui/`、`tui-render/`）。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
 ## 目录
 
@@ -51,7 +51,7 @@ kind: "package-group"
 `dsh-tui` 支持两种运行模式：
 
 ### 模式 A：轻量模式（推荐，零 Clone 秒开）
-只需通过 npm 全局安装官方核心引擎与 TUI launcher（仅数十 MB），即可直接运行：
+全局安装官方引擎与 TUI launcher：
 
 ```text
 npm install --global @deepseek-ai/dsh
@@ -60,7 +60,18 @@ dsh-tui probe
 dsh-tui
 ```
 
-在此模式下，launcher 会自动探测全局 `dsh`，并挂载预构建的 TUI 扩展，无需克隆 2GB 的 monorepo 仓库。
+首次启动会执行 `dsh plugin --profile tui add <包目录>`，把本包链接进 `tui` profile，排在 `@deepseek-ai/dsh-base` 之后；之后的启动检测到已安装，直接执行 `dsh --profile tui`。不使用 launcher 时，也可以手动执行同样的两条 dsh 命令：
+
+```text
+dsh plugin --profile tui add @crazyhappyone/dsh-tui@next
+dsh --profile tui
+```
+
+在 dsh 0.2 中以 bundle 方式安装是必需的：`/settings` 的修改写入 profile 自己的 patch 层，该层在 bundle 层之后生效；而 `--patch` overlay 位于 profile 层之后，dsh 会拒绝对此类 overlay 所拥有的行写入设置。
+
+探测顺序为绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包；每个探测子进程限时十秒，以覆盖冷启动。显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用 launcher 的 Node 执行。
+
+本 bundle 面向 dsh `0.2` 发布线（基于 `0.2.1-alpha.2` 构建，并在 `0.2.0-rc.2` 上验证）。包把 `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` 声明为可选 peer，因此手动安装时由 dsh 自身的插件兼容性检查把关；launcher 会拒绝其他引擎发布线并给出确切的安装命令，设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过 launcher 的检查。
 
 ### 模式 B：源码模式（开发者调试）
 若需对 TUI 或 DSH 底层代码进行修改与调试：
@@ -128,15 +139,26 @@ dsh-tui update
 <a id="relationship-to-dsh"></a>
 ## 与 DSH 的关系
 
-TUI 是 DSH profile 层，而不是独立的 agent 运行时：
+TUI 是 dsh 插件 bundle，不是 fork，也不是独立的 agent 运行时：
 
 ```text
-@deepseek-ai/dsh-base
-  └─ @deepseek-ai/dsh-tui          profile patch, terminal lifecycle, controller
-       └─ @deepseek-ai/dsh-tui-render   Ink projection and terminal I/O
+@deepseek-ai/dsh-base                  dsh 核心 bundle（agent、会话、工具）
+  └─ @crazyhappyone/dsh-tui             本 bundle：cordis.patch.yml + dist/*
+       ├─ tui-startup  (./startup)      命令行 provider（任务、--resume、--cwd）
+       ├─ tui          (./settings)     /settings 中可编辑的 TUI 偏好（volatile）
+       ├─ tui-runtime  (./runtime)      终端生命周期与控制器
+       └─ zen-proxy    (./zen-proxy)    可选的 OpenCode Zen 请求头代理
 ```
 
-集成源码位于 private [`feat/deepseek-tui` DSH 分支](https://github.com/zhangyang-crazy-one/deepseek-harness/tree/feat/deepseek-tui/packages/tui)。影响 DSH 服务、profile 组合、组装后 CLI snapshot 或 Agent Note 的变更归该 monorepo 所有，并遵循其中的架构、测试与文档规则。
+各行通过包的 `exports` 引用插件，因此设置修改会在 profile patch 中记录可移植的行名。本 bundle 还插入已发布的 dsh 插件 `session-stats`、`message-feedback`、`tool-ask-user`、`workspace-changes`，以及用于账号登录回调的回环 `webserver`，并覆盖 `system-prompt`、`tools`、`session-query-sqlite` 与 `session-title-llm`。
+
+### DeepSeek 账号、模型与工作目录
+
+- 当 dsh 挂载 `deepseek-account` 服务时，`/login` 打开 DeepSeek 账号页：Enter 发起浏览器登录，`o` 重新打开授权链接，`c` 取消；登录后页面显示账号资料与余额。浏览器回调到本 bundle 的 `webserver` 行，监听 `127.0.0.1` 上由系统分配的端口。通过 SSH 使用时，页面显示 `ssh -L` 端口转发命令而不打开浏览器；在 `webserver` 行固定 `port` 可让转发保持稳定。未挂载账号服务时，`/login` 与 `/key` 打开 API 密钥编辑器。
+- `/logout` 确认后退出登录，已保存的 API 密钥保留。
+- `/model` 在 `deepseek-account` 与 `deepseek-official` 目录为空时列出它们，并注明使模型可用的步骤（`/login` 或 `/key`），且拒绝选中此类行。
+- `/cd [路径]` 在 dsh 0.2.1 及以后版本查看或切换会话工作目录。顶栏、`@` 提及与 `/files` 随之切换，模型会收到变更通知；已有 shell 保留各自的目录。
+- `/plugins` 将官方 bundle 单独分组。文件尚未安装的官方目录条目标记为可安装，按 Space 打开其精确安装目标的安装预览。
 
 ### OpenCode Zen 免费模型
 
@@ -148,19 +170,20 @@ fork 自 [Yee-h/dsh-zen-proxy](https://github.com/Yee-h/dsh-zen-proxy)）：进�
 `400 MissingSessionID` / `429 FreeUsageLimitError`，因为 dsh 始终发送自己的
 attribution `User-Agent`。
 
-使用方法：在 `settings.yaml`（或 TUI `/settings` provider 表单）中把 provider
-指向该代理，并把密钥放在 credentials 中：
+使用方法：通过 TUI `/settings` provider 表单（或 profile 的 `cordis.patch.yml`）
+添加一个指向该代理的 provider，并把密钥放在 credentials 中：
 
 ```yaml
-llm-pi-ai:
-  providers:
-    opencode:
-      api: openai-completions
-      baseURL: http://127.0.0.1:4097/v1
-      apiKeyEnv: OPENCODE_API_KEY
+- id: llm-pi-ai
+  config:
+    providers:
+      opencode:
+        api: openai-completions
+        baseURL: http://127.0.0.1:4097/v1
+        apiKeyEnv: OPENCODE_API_KEY
 ```
 
-代理只监听 `127.0.0.1:4097`；从 `cordis.patch.yml` 删除 `zen-proxy` 行即可禁用。
+代理只监听 `127.0.0.1:4097`；在 profile 的 `cordis.patch.yml` 中加入 `- id: zen-proxy` 并设置 `disabled: true` 即可关闭。
 
 -----
 
@@ -169,7 +192,7 @@ llm-pi-ai:
 
 | 包 | DSH 形态 | 职责 |
 |---|---|---|
-| [`tui/`](tui/README.zh.md) | Profile bundle 与运行时插件 | 在 `dsh-base` 上组合终端层、拥有 live 终端会话，并将用户动作映射到 DSH 服务 |
+| [`tui/`](tui/README.zh.md) | 运行时、启动与设置插件 | 在 `dsh-base` 上组合终端层、拥有 live 终端会话，并将用户动作映射到 DSH 服务 |
 | [`plugins/zen-proxy/`](https://github.com/zhangyang-crazy-one/dsh-zen-proxy) | Vendored 插件（打包为 `dist/zen-proxy.js`） | 进程内 OpenAI 兼容代理，注入 OpenCode Zen 客户端头；在 `cordis.patch.yml` 中挂载 |
 | [`tui-render/`](tui-render/README.zh.md) | Library | 通过 Ink 投影控制器状态，但不拥有 agent、持久化或模型请求 |
 
@@ -178,15 +201,15 @@ llm-pi-ai:
 <a id="development-workflow"></a>
 ## 开发工作流
 
-在相邻的 `../deepseek-harness` checkout 安装构建依赖后，运行 `npm run build`。该命令调用现有 `scripts/build-dsh-tui-bundle.ts`，镜像 TUI 源码并检查 bundle 导入，再从 `packages/tui/tui/cordis.patch.yml` 生成两份发布 patch，仅替换预构建插件的路径。发布前运行 `npm test` 和 `npm run pack:check`。
+`tui/` 与 `tui-render/` 基于上游 dsh checkout 编译，版本为 `src/launcher.js` 中 `COMPATIBLE_DSH_VERSION` 指定的 tag：
 
-轻量启动按绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包依次探测，每个探测子进程限时三秒；显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用当前 Node 执行，探测成功仅表示可执行，不保证旧版 Harness 兼容。
+```text
+git clone --branch dsh-v0.2.1-alpha.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
+(cd ../deepseek-harness && pnpm install)
+npm run build          # 或 DSH_SOURCE=/path/to/checkout npm run build
+```
 
-轻量模式执行 `dsh --profile tui --patch <bundled-patch>`；首次创建的 `tui` profile 仅含 `@deepseek-ai/dsh-base`，设置 `patchReload: startup`，已有 manifest 保持不变。发布 patch 提供终端运行时，并与 Harness `0.1.6-alpha.2` 对齐。当前 `headless` profile 会添加独立 runner，因此不用于轻量启动；源码模式继续使用 `deepseek-tui`。
-
-在完整 DSH checkout 中实现 TUI 行为，运行受变更行为影响的检查，并将确认后的 `packages/tui/` tree 导出到这里。在本仓库中使用 `npm test` 开发 launcher；通过 packed tarball 测试安装，不使用 workspace link。
-
-Launcher runtime 必须与开发 checkout 分离。要安全测试其他源码，请将 `DSH_TUI_RUNTIME_DIR` 指向临时绝对目录，并配置 `DSH_TUI_SOURCE_URL` 与 `DSH_TUI_SOURCE_REF`。
+`npm run build` 把插件包与 `cordis.patch.yml` 复制进 checkout 的 `packages/tui/` workspace，用 esbuild 打包 `dist/index.js`、`dist/startup.js`、`dist/settings.js` 与 `dist/zen-proxy.js`，并逐个检查导入。插件测试在 checkout 中运行 `npx vitest run packages/tui`，launcher 测试在本仓库运行 `npm test`；发布前运行 `npm run pack:check`。通过 packed tarball 或 `dsh plugin --profile <name> add <本目录>` 测试安装。
 
 -----
 
@@ -224,6 +247,10 @@ gh release create v0.1.0-alpha.4 --prerelease --generate-notes
 - **不自动解决冲突** — dirty 或 non-fast-forward runtime history 需要显式人工操作或新的运行时目录。
 - **运行时更新不是 launcher 更新** — `dsh-tui update` 刷新 DSH 源码与依赖；npm 更新 launcher package。
 - **集成分支拥有发布就绪状态** — launcher 成功不能替代 DSH 分支的行为、snapshot、build 或 hygiene 检查。
+- **源码模式面向旧集成分支** — `--source` 启动所配置 DSH checkout 的 `deepseek-tui` profile（默认 `feat/deepseek-tui`，dsh 0.1.6），不使用本 0.2 bundle。
+- **不支持定时提醒** — `@deepseek-ai/dsh-schedule` 依赖 Web host 的会话控制器，因此 TUI 组合不挂载它，预设中的 `schedule_*` 工具保持未激活。
+- **账号登录需要可访问的 Platform** — 主机无法访问 `platform.deepseek.com` 时登录报告 `no-response`（服务无响应），此时请使用 `/key`。
+- **dsh 0.2 不支持物理删除会话** — 0.2 的会话持久化以归档代替删除，而 TUI 组合未挂载 workspace 归档服务，因此会话列表会提示无法删除。
 
 <a id="dev-note"></a>
 ## 开发备注

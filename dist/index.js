@@ -957,21 +957,21 @@ var require_react_development = __commonJS({
         );
         actScopeDepth = prevActScopeDepth;
       }
-      function recursivelyFlushAsyncActWork(returnValue, resolve5, reject) {
+      function recursivelyFlushAsyncActWork(returnValue, resolve6, reject) {
         var queue = ReactSharedInternals.actQueue;
         if (null !== queue)
           if (0 !== queue.length)
             try {
               flushActQueue(queue);
               enqueueTask(function() {
-                return recursivelyFlushAsyncActWork(returnValue, resolve5, reject);
+                return recursivelyFlushAsyncActWork(returnValue, resolve6, reject);
               });
               return;
             } catch (error51) {
               ReactSharedInternals.thrownErrors.push(error51);
             }
           else ReactSharedInternals.actQueue = null;
-        0 < ReactSharedInternals.thrownErrors.length ? (queue = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, reject(queue)) : resolve5(returnValue);
+        0 < ReactSharedInternals.thrownErrors.length ? (queue = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, reject(queue)) : resolve6(returnValue);
       }
       function flushActQueue(queue) {
         if (!isFlushing) {
@@ -1158,7 +1158,7 @@ var require_react_development = __commonJS({
             ));
           });
           return {
-            then: function(resolve5, reject) {
+            then: function(resolve6, reject) {
               didAwaitActCall = true;
               thenable.then(
                 function(returnValue) {
@@ -1168,7 +1168,7 @@ var require_react_development = __commonJS({
                       flushActQueue(queue), enqueueTask(function() {
                         return recursivelyFlushAsyncActWork(
                           returnValue,
-                          resolve5,
+                          resolve6,
                           reject
                         );
                       });
@@ -1182,7 +1182,7 @@ var require_react_development = __commonJS({
                       ReactSharedInternals.thrownErrors.length = 0;
                       reject(_thrownError);
                     }
-                  } else resolve5(returnValue);
+                  } else resolve6(returnValue);
                 },
                 function(error51) {
                   popActScope(prevActQueue, prevActScopeDepth);
@@ -1204,15 +1204,15 @@ var require_react_development = __commonJS({
         if (0 < ReactSharedInternals.thrownErrors.length)
           throw callback = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, callback;
         return {
-          then: function(resolve5, reject) {
+          then: function(resolve6, reject) {
             didAwaitActCall = true;
             0 === prevActScopeDepth ? (ReactSharedInternals.actQueue = queue, enqueueTask(function() {
               return recursivelyFlushAsyncActWork(
                 returnValue$jscomp$0,
-                resolve5,
+                resolve6,
                 reject
               );
-            })) : resolve5(returnValue$jscomp$0);
+            })) : resolve6(returnValue$jscomp$0);
           }
         };
       };
@@ -3294,8 +3294,8 @@ var require_react_reconciler_production = __commonJS({
           currentEntangledActionThenable = {
             status: "pending",
             value: void 0,
-            then: function(resolve5) {
-              entangledListeners.push(resolve5);
+            then: function(resolve6) {
+              entangledListeners.push(resolve6);
             }
           };
         }
@@ -3318,8 +3318,8 @@ var require_react_reconciler_production = __commonJS({
           status: "pending",
           value: null,
           reason: null,
-          then: function(resolve5) {
-            listeners.push(resolve5);
+          then: function(resolve6) {
+            listeners.push(resolve6);
           }
         };
         thenable.then(
@@ -12918,8 +12918,8 @@ var require_react_reconciler_development = __commonJS({
           currentEntangledActionThenable = {
             status: "pending",
             value: void 0,
-            then: function(resolve5) {
-              entangledListeners.push(resolve5);
+            then: function(resolve6) {
+              entangledListeners.push(resolve6);
             }
           };
         }
@@ -12942,8 +12942,8 @@ var require_react_reconciler_development = __commonJS({
           status: "pending",
           value: null,
           reason: null,
-          then: function(resolve5) {
-            listeners.push(resolve5);
+          then: function(resolve6) {
+            listeners.push(resolve6);
           }
         };
         thenable.then(
@@ -18039,7 +18039,7 @@ var require_react_reconciler_development = __commonJS({
             finishedWork.type,
             prevProps
           );
-          var snapshot = runWithFiberInDEV(
+          var snapshot2 = runWithFiberInDEV(
             finishedWork,
             callGetSnapshotBeforeUpdates,
             current2,
@@ -18047,13 +18047,13 @@ var require_react_reconciler_development = __commonJS({
             prevState
           );
           prevProps = didWarnAboutUndefinedSnapshotBeforeUpdate;
-          void 0 !== snapshot || prevProps.has(finishedWork.type) || (prevProps.add(finishedWork.type), runWithFiberInDEV(finishedWork, function() {
+          void 0 !== snapshot2 || prevProps.has(finishedWork.type) || (prevProps.add(finishedWork.type), runWithFiberInDEV(finishedWork, function() {
             console.error(
               "%s.getSnapshotBeforeUpdate(): A snapshot value (or null) must be returned. You have returned undefined.",
               getComponentNameFromFiber(finishedWork)
             );
           }));
-          current2.__reactInternalSnapshotBeforeUpdate = snapshot;
+          current2.__reactInternalSnapshotBeforeUpdate = snapshot2;
         } catch (error51) {
           captureCommitPhaseError(finishedWork, finishedWork.return, error51);
         }
@@ -22583,9 +22583,9 @@ var require_react_reconciler_development = __commonJS({
       }, callComponentDidMountInDEV = callComponentDidMount.react_stack_bottom_frame.bind(
         callComponentDidMount
       ), callComponentDidUpdate = {
-        react_stack_bottom_frame: function(finishedWork, instance, prevProps, prevState, snapshot) {
+        react_stack_bottom_frame: function(finishedWork, instance, prevProps, prevState, snapshot2) {
           try {
-            instance.componentDidUpdate(prevProps, prevState, snapshot);
+            instance.componentDidUpdate(prevProps, prevState, snapshot2);
           } catch (error51) {
             captureCommitPhaseError(finishedWork, finishedWork.return, error51);
           }
@@ -24255,9 +24255,9 @@ var require_react_reconciler = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js
 var require_constants2 = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -24278,9 +24278,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants2();
     var FastBuffer = Buffer[Symbol.species];
@@ -24353,9 +24353,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -24403,9 +24403,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -24532,7 +24532,7 @@ var require_permessage_deflate = __commonJS({
       acceptAsServer(offers) {
         const opts = this._options;
         const accepted = offers.find((params) => {
-          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && !params.client_max_window_bits) {
+          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && (typeof params.client_max_window_bits === "number" ? opts.clientMaxWindowBits > params.client_max_window_bits : !params.client_max_window_bits)) {
             return false;
           }
           return true;
@@ -24758,14 +24758,14 @@ var require_permessage_deflate = __commonJS({
       }
     };
     module.exports = PerMessageDeflate2;
-    function deflateOnData(chunk) {
-      this[kBuffers].push(chunk);
-      this[kTotalLength] += chunk.length;
+    function deflateOnData(chunk2) {
+      this[kBuffers].push(chunk2);
+      this[kTotalLength] += chunk2.length;
     }
-    function inflateOnData(chunk) {
-      this[kTotalLength] += chunk.length;
+    function inflateOnData(chunk2) {
+      this[kTotalLength] += chunk2.length;
       if (this[kPerMessageDeflate]._maxPayload < 1 || this[kTotalLength] <= this[kPerMessageDeflate]._maxPayload) {
-        this[kBuffers].push(chunk);
+        this[kBuffers].push(chunk2);
         return;
       }
       this[kError] = new RangeError("Max payload size exceeded");
@@ -24786,9 +24786,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js
 var require_validation = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants2();
@@ -24987,9 +24987,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -25052,6 +25052,7 @@ var require_receiver = __commonJS({
         this._opcode = 0;
         this._totalPayloadLength = 0;
         this._messageLength = 0;
+        this._numFragments = 0;
         this._fragments = [];
         this._errored = false;
         this._loop = false;
@@ -25065,7 +25066,7 @@ var require_receiver = __commonJS({
        * @param {Function} cb Callback
        * @private
        */
-      _write(chunk, encoding, cb) {
+      _write(chunk2, encoding, cb) {
         if (this._opcode === 8 && this._state == GET_INFO) return cb();
         if (this._maxBufferedChunks > 0 && this._buffers.length >= this._maxBufferedChunks) {
           cb(
@@ -25079,8 +25080,8 @@ var require_receiver = __commonJS({
           );
           return;
         }
-        this._bufferedBytes += chunk.length;
-        this._buffers.push(chunk);
+        this._bufferedBytes += chunk2.length;
+        this._buffers.push(chunk2);
         this.startLoop(cb);
       }
       /**
@@ -25402,23 +25403,23 @@ var require_receiver = __commonJS({
           this.controlMessage(data, cb);
           return;
         }
+        if (this._maxFragments > 0 && ++this._numFragments > this._maxFragments) {
+          const error51 = this.createError(
+            RangeError,
+            "Too many message fragments",
+            false,
+            1008,
+            "WS_ERR_TOO_MANY_BUFFERED_PARTS"
+          );
+          cb(error51);
+          return;
+        }
         if (this._compressed) {
           this._state = INFLATING;
           this.decompress(data, cb);
           return;
         }
         if (data.length) {
-          if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-            const error51 = this.createError(
-              RangeError,
-              "Too many message fragments",
-              false,
-              1008,
-              "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-            );
-            cb(error51);
-            return;
-          }
           this._messageLength = this._totalPayloadLength;
           this._fragments.push(data);
         }
@@ -25448,17 +25449,6 @@ var require_receiver = __commonJS({
               cb(error51);
               return;
             }
-            if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-              const error51 = this.createError(
-                RangeError,
-                "Too many message fragments",
-                false,
-                1008,
-                "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-              );
-              cb(error51);
-              return;
-            }
             this._fragments.push(buf);
           }
           this.dataMessage(cb);
@@ -25481,6 +25471,7 @@ var require_receiver = __commonJS({
         this._totalPayloadLength = 0;
         this._messageLength = 0;
         this._fragmented = 0;
+        this._numFragments = 0;
         this._fragments = [];
         if (this._opcode === 2) {
           let data;
@@ -25619,9 +25610,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -26112,9 +26103,9 @@ var require_sender = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants2();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -26341,9 +26332,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function push3(dest, name2, elem) {
@@ -26494,9 +26485,9 @@ var require_extension = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var https = __require("https");
@@ -26981,8 +26972,8 @@ var require_websocket = __commonJS({
         autoPong: true,
         closeTimeout: CLOSE_TIMEOUT,
         protocolVersion: protocolVersions[1],
-        maxBufferedChunks: 1024 * 1024,
-        maxFragments: 128 * 1024,
+        maxBufferedChunks: 256 * 1024,
+        maxFragments: 16 * 1024,
         maxPayload: 100 * 1024 * 1024,
         skipUTF8Validation: false,
         perMessageDeflate: true,
@@ -27354,8 +27345,8 @@ var require_websocket = __commonJS({
       this.removeListener("end", socketOnEnd);
       websocket._readyState = WebSocket2.CLOSING;
       if (!this._readableState.endEmitted && !websocket._closeFrameReceived && !websocket._receiver._writableState.errorEmitted && this._readableState.length !== 0) {
-        const chunk = this.read(this._readableState.length);
-        websocket._receiver.write(chunk);
+        const chunk2 = this.read(this._readableState.length);
+        websocket._receiver.write(chunk2);
       }
       websocket._receiver.end();
       this[kWebSocket] = void 0;
@@ -27367,8 +27358,8 @@ var require_websocket = __commonJS({
         websocket._receiver.on("finish", receiverOnFinish);
       }
     }
-    function socketOnData(chunk) {
-      if (!this[kWebSocket]._receiver.write(chunk)) {
+    function socketOnData(chunk2) {
+      if (!this[kWebSocket]._receiver.write(chunk2)) {
         this.pause();
       }
     }
@@ -27390,9 +27381,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -27471,14 +27462,14 @@ var require_stream = __commonJS({
       duplex._read = function() {
         if (ws.isPaused) ws.resume();
       };
-      duplex._write = function(chunk, encoding, callback) {
+      duplex._write = function(chunk2, encoding, callback) {
         if (ws.readyState === ws.CONNECTING) {
           ws.once("open", function open2() {
-            duplex._write(chunk, encoding, callback);
+            duplex._write(chunk2, encoding, callback);
           });
           return;
         }
-        ws.send(chunk, callback);
+        ws.send(chunk2, callback);
       };
       duplex.on("end", duplexOnEnd);
       duplex.on("error", duplexOnError);
@@ -27488,9 +27479,9 @@ var require_stream = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function parse4(header) {
@@ -27533,9 +27524,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var http = __require("http");
@@ -27569,9 +27560,9 @@ var require_websocket_server = __commonJS({
        *     called
        * @param {Function} [options.handleProtocols] A hook to handle protocols
        * @param {String} [options.host] The hostname where to bind the server
-       * @param {Number} [options.maxBufferedChunks=1048576] The maximum number of
+       * @param {Number} [options.maxBufferedChunks=262144] The maximum number of
        *     buffered data chunks
-       * @param {Number} [options.maxFragments=131072] The maximum number of message
+       * @param {Number} [options.maxFragments=16384] The maximum number of message
        *     fragments
        * @param {Number} [options.maxPayload=104857600] The maximum allowed message
        *     size
@@ -27594,8 +27585,8 @@ var require_websocket_server = __commonJS({
         options = {
           allowSynchronousEvents: true,
           autoPong: true,
-          maxBufferedChunks: 1024 * 1024,
-          maxFragments: 128 * 1024,
+          maxBufferedChunks: 256 * 1024,
+          maxFragments: 16 * 1024,
           maxPayload: 100 * 1024 * 1024,
           skipUTF8Validation: false,
           perMessageDeflate: false,
@@ -27934,10 +27925,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server, wrapper_default;
 var init_wrapper = __esm({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs"() {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -28031,22 +28022,22 @@ var init_devtools = __esm({
     init_devtools_window_polyfill();
     init_wrapper();
     init_react_devtools_core_stub();
-    isDevToolsReachable = async () => new Promise((resolve5) => {
+    isDevToolsReachable = async () => new Promise((resolve6) => {
       const socket = new wrapper_default("ws://localhost:8097");
       const timeout = setTimeout(() => {
         socket.terminate();
-        resolve5(false);
+        resolve6(false);
       }, 2e3);
       timeout.unref();
       socket.on("open", () => {
         clearTimeout(timeout);
         socket.terminate();
-        resolve5(true);
+        resolve6(true);
       });
       socket.on("error", () => {
         clearTimeout(timeout);
         socket.terminate();
-        resolve5(false);
+        resolve6(false);
       });
     });
     if (await isDevToolsReachable()) {
@@ -31037,7 +31028,7 @@ function assembleStyles() {
 var ansiStyles = assembleStyles();
 var ansi_styles_default = ansiStyles;
 
-// node_modules/.pnpm/wrap-ansi@10.0.1/node_modules/wrap-ansi/index.js
+// node_modules/.pnpm/wrap-ansi@10.0.2/node_modules/wrap-ansi/index.js
 var ANSI_ESCAPE = "\x1B";
 var ANSI_ESCAPE_BELL = "\x07";
 var C1_CSI = "\x9B";
@@ -31512,8 +31503,17 @@ var exec = (string6, columns, options = {}) => {
   }
   return restoreStylesAcrossRows(rows.join("\n"));
 };
+var normalizeText = (string6) => {
+  let normalizedString = "";
+  forEachSegment(string6, (plainText) => {
+    normalizedString += plainText.normalize();
+  }, (escape3) => {
+    normalizedString += escape3;
+  });
+  return normalizedString;
+};
 function wrapAnsi(string6, columns, options) {
-  return String(string6).normalize().replaceAll("\r\n", "\n").split("\n").map((line5) => exec(expandTabs(line5), columns, options)).join("\n");
+  return normalizeText(String(string6)).replaceAll("\r\n", "\n").split("\n").map((line5) => exec(expandTabs(line5), columns, options)).join("\n");
 }
 
 // node_modules/.pnpm/terminal-size@4.0.1/node_modules/terminal-size/index.js
@@ -31680,7 +31680,7 @@ function isFullwidthCodePoint(codePoint) {
   return isFullWidth(codePoint) || isWide(codePoint);
 }
 
-// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/tokenize-ansi.js
+// node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/tokenize-ansi.js
 var ESCAPE_CODE_POINT = 27;
 var C1_DCS_CODE_POINT = 144;
 var C1_SOS_CODE_POINT = 152;
@@ -32286,7 +32286,7 @@ function tokenizeAnsi(string6, { endCharacter = Number.POSITIVE_INFINITY } = {})
   return tokens;
 }
 
-// node_modules/.pnpm/slice-ansi@9.0.0/node_modules/slice-ansi/index.js
+// node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/index.js
 function applySgrFragments(activeStyles, fragments) {
   for (const fragment of fragments) {
     switch (fragment.type) {
@@ -32337,82 +32337,88 @@ function shouldIncludeSgrAfterEnd(token, activeStyles) {
 function hasSgrStartFragment(token) {
   return token.fragments.some((fragment) => fragment.type === "start");
 }
-function discardPendingHyperlink(parameters) {
-  if (parameters.activeHyperlink && !parameters.activeHyperlinkHasVisibleText && parameters.activeHyperlinkOutputIndex !== void 0) {
-    const openCodeLength = parameters.activeHyperlink.code.length;
-    parameters.returnValue = parameters.returnValue.slice(0, parameters.activeHyperlinkOutputIndex) + parameters.returnValue.slice(parameters.activeHyperlinkOutputIndex + openCodeLength);
-    if (parameters.pendingSgrOutputIndex !== void 0 && parameters.pendingSgrOutputIndex > parameters.activeHyperlinkOutputIndex) {
-      parameters.pendingSgrOutputIndex -= openCodeLength;
+function discardPendingHyperlink(state) {
+  if (state.activeHyperlink && !state.activeHyperlinkHasVisibleText && state.activeHyperlinkOutputIndex !== void 0) {
+    const openCodeLength = state.activeHyperlink.code.length;
+    state.returnValue = state.returnValue.slice(0, state.activeHyperlinkOutputIndex) + state.returnValue.slice(state.activeHyperlinkOutputIndex + openCodeLength);
+    if (state.pendingSgrOutputIndex !== void 0 && state.pendingSgrOutputIndex > state.activeHyperlinkOutputIndex) {
+      state.pendingSgrOutputIndex -= openCodeLength;
     }
   }
-  parameters.activeHyperlink = void 0;
-  parameters.activeHyperlinkHasVisibleText = false;
-  parameters.activeHyperlinkOutputIndex = void 0;
+  state.activeHyperlink = void 0;
+  state.activeHyperlinkHasVisibleText = false;
+  state.activeHyperlinkOutputIndex = void 0;
 }
-function applySgrToken2(parameters) {
-  if (parameters.isPastEnd && !shouldIncludeSgrAfterEnd(parameters.token, parameters.activeStyles)) {
-    return parameters;
+function settleActiveHyperlink(state) {
+  if (state.activeHyperlinkHasVisibleText) {
+    state.returnValue += closeHyperlink(state.activeHyperlink);
+  } else {
+    discardPendingHyperlink(state);
   }
-  if (parameters.include && hasSgrStartFragment(parameters.token) && parameters.pendingSgrOutputIndex === void 0) {
-    parameters.pendingSgrOutputIndex = parameters.returnValue.length;
-    parameters.pendingSgrActiveStyles = new Map(parameters.activeStyles);
-  }
-  parameters.activeStyles = applySgrFragments(parameters.activeStyles, parameters.token.fragments);
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.code;
-  }
-  return parameters;
 }
-function applyHyperlinkToken(parameters) {
-  if (parameters.isPastEnd && (parameters.token.action !== "close" || !parameters.activeHyperlink)) {
-    return parameters;
+function applySgrToken2(state) {
+  if (state.isPastEnd && !shouldIncludeSgrAfterEnd(state.token, state.activeStyles)) {
+    return;
   }
-  if (parameters.token.action === "open") {
-    parameters.activeHyperlink = parameters.token;
-    parameters.activeHyperlinkHasVisibleText = false;
-    parameters.activeHyperlinkOutputIndex = void 0;
-    if (parameters.include) {
-      parameters.activeHyperlinkOutputIndex = parameters.returnValue.length;
-    }
-  } else if (parameters.token.action === "close") {
-    if (parameters.include && parameters.activeHyperlink && !parameters.activeHyperlinkHasVisibleText) {
-      discardPendingHyperlink(parameters);
-      return parameters;
-    }
-    parameters.activeHyperlink = void 0;
-    parameters.activeHyperlinkHasVisibleText = false;
-    parameters.activeHyperlinkOutputIndex = void 0;
+  if (state.include && hasSgrStartFragment(state.token) && state.pendingSgrOutputIndex === void 0) {
+    state.pendingSgrOutputIndex = state.returnValue.length;
+    state.pendingSgrActiveStyles = new Map(state.activeStyles);
   }
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.code;
+  state.activeStyles = applySgrFragments(state.activeStyles, state.token.fragments);
+  if (state.include) {
+    state.returnValue += state.token.code;
   }
-  return parameters;
 }
-function applyControlToken(parameters) {
-  if (!parameters.isPastEnd && parameters.include) {
-    parameters.returnValue += parameters.token.code;
+function applyHyperlinkToken(state) {
+  if (state.isPastEnd && (state.token.action !== "close" || !state.activeHyperlink)) {
+    return;
   }
-  return parameters;
+  if (state.token.action === "open") {
+    if (state.activeHyperlink) {
+      settleActiveHyperlink(state);
+    }
+    state.activeHyperlink = state.token;
+    state.activeHyperlinkHasVisibleText = false;
+    state.activeHyperlinkOutputIndex = void 0;
+    if (state.include) {
+      state.activeHyperlinkOutputIndex = state.returnValue.length;
+    }
+  } else if (state.token.action === "close") {
+    if (state.include && state.activeHyperlink && !state.activeHyperlinkHasVisibleText) {
+      discardPendingHyperlink(state);
+      return;
+    }
+    state.activeHyperlink = void 0;
+    state.activeHyperlinkHasVisibleText = false;
+    state.activeHyperlinkOutputIndex = void 0;
+  }
+  if (state.include) {
+    state.returnValue += state.token.code;
+  }
 }
-function applyCharacterToken(parameters) {
-  if (!parameters.include && parameters.position >= parameters.start && !parameters.token.isGraphemeContinuation) {
-    parameters.include = true;
-    parameters.returnValue = [...parameters.activeStyles.values()].join("");
-    if (parameters.activeHyperlink) {
-      parameters.activeHyperlinkOutputIndex = parameters.returnValue.length;
-      parameters.returnValue += parameters.activeHyperlink.code;
+function applyControlToken(state) {
+  if (!state.isPastEnd && state.include) {
+    state.returnValue += state.token.code;
+  }
+}
+function applyCharacterToken(state) {
+  if (!state.include && state.position >= state.start && !state.token.isGraphemeContinuation) {
+    state.include = true;
+    state.returnValue = [...state.activeStyles.values()].join("");
+    if (state.activeHyperlink) {
+      state.activeHyperlinkOutputIndex = state.returnValue.length;
+      state.returnValue += state.activeHyperlink.code;
     }
   }
-  if (parameters.include) {
-    parameters.returnValue += parameters.token.value;
-    parameters.pendingSgrOutputIndex = void 0;
-    parameters.pendingSgrActiveStyles = void 0;
-    if (parameters.activeHyperlink) {
-      parameters.activeHyperlinkHasVisibleText = true;
+  if (state.include) {
+    state.returnValue += state.token.value;
+    state.pendingSgrOutputIndex = void 0;
+    state.pendingSgrActiveStyles = void 0;
+    if (state.activeHyperlink) {
+      state.activeHyperlinkHasVisibleText = true;
     }
   }
-  parameters.position += parameters.token.visibleWidth;
-  return parameters;
+  state.position += state.token.visibleWidth;
 }
 var tokenHandlers = {
   sgr: applySgrToken2,
@@ -32420,12 +32426,8 @@ var tokenHandlers = {
   control: applyControlToken,
   character: applyCharacterToken
 };
-function applyToken(parameters) {
-  const tokenHandler = tokenHandlers[parameters.token.type];
-  if (!tokenHandler) {
-    return parameters;
-  }
-  return tokenHandler(parameters);
+function applyToken(state) {
+  tokenHandlers[state.token.type]?.(state);
 }
 function createHasContinuationAheadMap(tokens) {
   const hasContinuationAhead = Array.from({ length: tokens.length }, () => false);
@@ -32451,69 +32453,49 @@ function isPastEndBoundary(token, position2, end) {
 function sliceAnsi(string6, start, end) {
   const tokens = tokenizeAnsi(string6, { endCharacter: end });
   const hasContinuationAhead = createHasContinuationAheadMap(tokens);
-  let activeStyles = /* @__PURE__ */ new Map();
-  let activeHyperlink;
-  let activeHyperlinkHasVisibleText = false;
-  let activeHyperlinkOutputIndex;
-  let pendingSgrOutputIndex;
-  let pendingSgrActiveStyles;
-  let position2 = 0;
-  let returnValue = "";
-  let include = false;
+  const state = {
+    start,
+    token: void 0,
+    isPastEnd: false,
+    activeStyles: /* @__PURE__ */ new Map(),
+    activeHyperlink: void 0,
+    activeHyperlinkHasVisibleText: false,
+    activeHyperlinkOutputIndex: void 0,
+    pendingSgrOutputIndex: void 0,
+    pendingSgrActiveStyles: void 0,
+    position: 0,
+    returnValue: "",
+    include: false
+  };
   for (const [tokenIndex, token] of tokens.entries()) {
-    let isPastEnd = isPastEndBoundary(token, position2, end);
+    let isPastEnd = isPastEndBoundary(token, state.position, end);
     if (isPastEnd && token.type !== "character" && hasContinuationAhead[tokenIndex]) {
       isPastEnd = false;
     }
     if (isPastEnd && token.type === "character" && !token.isGraphemeContinuation) {
-      if (activeHyperlink && !activeHyperlinkHasVisibleText) {
-        const hyperlinkState = {
-          activeHyperlink,
-          activeHyperlinkHasVisibleText,
-          activeHyperlinkOutputIndex,
-          pendingSgrOutputIndex,
-          returnValue
-        };
-        discardPendingHyperlink(hyperlinkState);
-        ({
-          activeHyperlink,
-          activeHyperlinkHasVisibleText,
-          activeHyperlinkOutputIndex,
-          pendingSgrOutputIndex,
-          returnValue
-        } = hyperlinkState);
+      if (state.activeHyperlink && !state.activeHyperlinkHasVisibleText) {
+        discardPendingHyperlink(state);
       }
-      if (pendingSgrOutputIndex !== void 0) {
-        returnValue = returnValue.slice(0, pendingSgrOutputIndex);
-        activeStyles = pendingSgrActiveStyles;
-        pendingSgrOutputIndex = void 0;
-        pendingSgrActiveStyles = void 0;
+      if (state.pendingSgrOutputIndex !== void 0) {
+        state.returnValue = state.returnValue.slice(0, state.pendingSgrOutputIndex);
+        state.activeStyles = state.pendingSgrActiveStyles;
+        state.pendingSgrOutputIndex = void 0;
+        state.pendingSgrActiveStyles = void 0;
       }
       break;
     }
-    ({ activeStyles, activeHyperlink, activeHyperlinkHasVisibleText, activeHyperlinkOutputIndex, pendingSgrOutputIndex, pendingSgrActiveStyles, position: position2, returnValue, include } = applyToken({
-      token,
-      isPastEnd,
-      start,
-      activeStyles,
-      activeHyperlink,
-      activeHyperlinkHasVisibleText,
-      activeHyperlinkOutputIndex,
-      pendingSgrOutputIndex,
-      pendingSgrActiveStyles,
-      position: position2,
-      returnValue,
-      include
-    }));
+    state.token = token;
+    state.isPastEnd = isPastEnd;
+    applyToken(state);
   }
-  if (!include) {
+  if (!state.include) {
     return "";
   }
-  if (activeHyperlink) {
-    returnValue += closeHyperlink(activeHyperlink);
+  if (state.activeHyperlink) {
+    settleActiveHyperlink(state);
   }
-  returnValue += undoAnsiCodes(activeStyles);
-  return returnValue;
+  state.returnValue += undoAnsiCodes(state.activeStyles);
+  return state.returnValue;
 }
 
 // node_modules/.pnpm/cli-truncate@6.1.1/node_modules/cli-truncate/index.js
@@ -35639,8 +35621,8 @@ var parseKeypresses = (input) => {
 var createInputParser = () => {
   let pending = "";
   return {
-    push(chunk) {
-      const parsedInput = parseKeypresses(pending + chunk);
+    push(chunk2) {
+      const parsedInput = parseKeypresses(pending + chunk2);
       pending = parsedInput.pending;
       return parsedInput.events;
     },
@@ -35803,7 +35785,7 @@ var generateLineNumbers = (line5, around) => {
   return lineNumbers;
 };
 var codeExcerpt = (source, line5, options = {}) => {
-  var _a4;
+  var _a5;
   if (typeof source !== "string") {
     throw new TypeError("Source code is missing.");
   }
@@ -35814,7 +35796,7 @@ var codeExcerpt = (source, line5, options = {}) => {
   if (line5 > lines.length) {
     return;
   }
-  return generateLineNumbers(line5, (_a4 = options.around) !== null && _a4 !== void 0 ? _a4 : 3).filter((line6) => lines[line6 - 1] !== void 0).map((line6) => ({ line: line6, value: lines[line6 - 1] }));
+  return generateLineNumbers(line5, (_a5 = options.around) !== null && _a5 !== void 0 ? _a5 : 3).filter((line6) => lines[line6 - 1] !== void 0).map((line6) => ({ line: line6, value: lines[line6 - 1] }));
 };
 var dist_default3 = codeExcerpt;
 
@@ -36172,9 +36154,9 @@ function App({ children, stdin, stdout, stderr, writeToStdout, writeToStderr, ex
   }, [clearPendingInputFlush, emitInput]);
   const handleReadable = (0, import_react15.useCallback)(() => {
     clearPendingInputFlush();
-    let chunk;
-    while ((chunk = stdin.read()) !== null) {
-      const inputEvents = inputParserRef.current.push(chunk);
+    let chunk2;
+    while ((chunk2 = stdin.read()) !== null) {
+      const inputEvents = inputParserRef.current.push(chunk2);
       for (const event of inputEvents) {
         if (typeof event === "string") {
           emitInput(event);
@@ -36577,8 +36559,8 @@ var kittyModifiers = {
 var noop = () => {
 };
 var textEncoder = new TextEncoder();
-var yieldImmediate = async () => new Promise((resolve5) => {
-  setImmediate(resolve5);
+var yieldImmediate = async () => new Promise((resolve6) => {
+  setImmediate(resolve6);
 });
 var kittyQueryEscapeByte = 27;
 var kittyQueryOpenBracketByte = 91;
@@ -36795,8 +36777,8 @@ var Ink = class {
       };
     }
     this.initKittyKeyboard();
-    this.exitPromise = new Promise((resolve5, reject) => {
-      this.resolveExitPromise = resolve5;
+    this.exitPromise = new Promise((resolve6, reject) => {
+      this.resolveExitPromise = resolve6;
       this.rejectExitPromise = reject;
     });
     void this.exitPromise.catch(noop);
@@ -37107,9 +37089,9 @@ var Ink = class {
     settleThrottle(this.throttledOnRender, canWriteToStdout);
     settleThrottle(this.throttledLog, canWriteToStdout);
     if (canWriteToStdout && hasWritableState) {
-      await new Promise((resolve5) => {
+      await new Promise((resolve6) => {
         this.options.stdout.write("", () => {
-          resolve5();
+          resolve6();
         });
       });
       return;
@@ -37195,8 +37177,8 @@ var Ink = class {
   async awaitNextRender() {
     if (!this.nextRenderCommit) {
       let resolveRender;
-      const promise2 = new Promise((resolve5) => {
-        resolveRender = resolve5;
+      const promise2 = new Promise((resolve6) => {
+        resolveRender = resolve6;
       });
       this.nextRenderCommit = { promise: promise2, resolve: resolveRender };
     }
@@ -37283,8 +37265,8 @@ var Ink = class {
       }
     };
     const onData = (data) => {
-      const chunk = typeof data === "string" ? textEncoder.encode(data) : data;
-      for (const byte of chunk) {
+      const chunk2 = typeof data === "string" ? textEncoder.encode(data) : data;
+      for (const byte of chunk2) {
         responseBuffer.push(byte);
       }
       if (hasCompleteKittyQueryResponse(responseBuffer)) {
@@ -38070,14 +38052,25 @@ function escapeContent(text4) {
   ).replace(/\u001B/g, "\\x1b");
 }
 var EMOJI_OR_PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
+function isNarrowSymbol(code2) {
+  return code2 >= 9472 && code2 <= 9631 || code2 >= 160 && code2 <= 255 && code2 !== 169 && code2 !== 173 && code2 !== 174 || code2 >= 8208 && code2 <= 8231 || code2 >= 8240 && code2 <= 8251;
+}
 function displayWidth(text4) {
   if (text4 === "") return 0;
   let cols = 0;
   let simple = true;
   for (let i = 0; i < text4.length; i += 1) {
     const code2 = text4.charCodeAt(i);
-    if (code2 >= 32 && code2 <= 126) {
+    if (code2 >= 32 && code2 <= 126 || isNarrowSymbol(code2)) {
       cols += 1;
+    } else if (code2 === 27 && text4.charCodeAt(i + 1) === 91) {
+      let end = i + 2;
+      while (end < text4.length && /[0-9;:]/u.test(text4[end])) end += 1;
+      if (text4[end] !== "m") {
+        simple = false;
+        break;
+      }
+      i = end;
     } else if (code2 >= 19968 && code2 <= 40959 || code2 >= 13312 && code2 <= 19903 || code2 >= 12288 && code2 <= 12351 || code2 >= 65281 && code2 <= 65376) {
       cols += 2;
     } else {
@@ -41454,10 +41447,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve5 = constructs2[index2].resolveAll;
-    if (resolve5 && !called.includes(resolve5)) {
-      events = resolve5(events, context);
-      called.push(resolve5);
+    const resolve6 = constructs2[index2].resolveAll;
+    if (resolve6 && !called.includes(resolve6)) {
+      events = resolve6(events, context);
+      called.push(resolve6);
     }
   }
   return events;
@@ -44503,19 +44496,19 @@ function resolveAllLineSuffixes(events, context) {
       let size = 0;
       let tabs;
       while (index2--) {
-        const chunk = chunks[index2];
-        if (typeof chunk === "string") {
-          bufferIndex = chunk.length;
-          while (chunk.charCodeAt(bufferIndex - 1) === 32) {
+        const chunk2 = chunks[index2];
+        if (typeof chunk2 === "string") {
+          bufferIndex = chunk2.length;
+          while (chunk2.charCodeAt(bufferIndex - 1) === 32) {
             size++;
             bufferIndex--;
           }
           if (bufferIndex) break;
           bufferIndex = -1;
-        } else if (chunk === -2) {
+        } else if (chunk2 === -2) {
           tabs = true;
           size++;
-        } else if (chunk === -1) {
+        } else if (chunk2 === -1) {
         } else {
           index2++;
           break;
@@ -44663,7 +44656,7 @@ function createTokenizer(parser, initialize, from2) {
     previous: null,
     sliceSerialize,
     sliceStream,
-    write
+    write: write2
   };
   let state = initialize.tokenize.call(context, effects);
   let expectedCode;
@@ -44671,7 +44664,7 @@ function createTokenizer(parser, initialize, from2) {
     resolveAllConstructs.push(initialize);
   }
   return context;
-  function write(slice) {
+  function write2(slice) {
     chunks = push(chunks, slice);
     main();
     if (chunks[chunks.length - 1] !== null) {
@@ -44710,17 +44703,17 @@ function createTokenizer(parser, initialize, from2) {
   function main() {
     let chunkIndex;
     while (point3._index < chunks.length) {
-      const chunk = chunks[point3._index];
-      if (typeof chunk === "string") {
+      const chunk2 = chunks[point3._index];
+      if (typeof chunk2 === "string") {
         chunkIndex = point3._index;
         if (point3._bufferIndex < 0) {
           point3._bufferIndex = 0;
         }
-        while (point3._index === chunkIndex && point3._bufferIndex < chunk.length) {
-          go(chunk.charCodeAt(point3._bufferIndex));
+        while (point3._index === chunkIndex && point3._bufferIndex < chunk2.length) {
+          go(chunk2.charCodeAt(point3._bufferIndex));
         }
       } else {
-        go(chunk);
+        go(chunk2);
       }
     }
   }
@@ -44916,11 +44909,11 @@ function serializeChunks(chunks, expandTabs2) {
   const result = [];
   let atTab;
   while (++index2 < chunks.length) {
-    const chunk = chunks[index2];
+    const chunk2 = chunks[index2];
     let value;
-    if (typeof chunk === "string") {
-      value = chunk;
-    } else switch (chunk) {
+    if (typeof chunk2 === "string") {
+      value = chunk2;
+    } else switch (chunk2) {
       case -5: {
         value = "\r";
         break;
@@ -44943,10 +44936,10 @@ function serializeChunks(chunks, expandTabs2) {
         break;
       }
       default: {
-        value = String.fromCharCode(chunk);
+        value = String.fromCharCode(chunk2);
       }
     }
-    atTab = chunk === -2;
+    atTab = chunk2 === -2;
     result.push(value);
   }
   return result.join("");
@@ -46251,7 +46244,7 @@ function previous2(match, email3) {
   (!email3 || code2 !== 47);
 }
 
-// node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0/node_modules/mdast-util-gfm-footnote/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0_supports-color@9.4.0/node_modules/mdast-util-gfm-footnote/lib/index.js
 footnoteReference.peek = footnoteReferencePeek;
 function enterFootnoteCallString() {
   this.buffer();
@@ -46325,7 +46318,7 @@ function gfmFootnoteFromMarkdown() {
   };
 }
 
-// node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
 handleDelete.peek = peekDelete;
 function gfmStrikethroughFromMarkdown() {
   return {
@@ -46357,7 +46350,7 @@ function peekDelete() {
   return "~";
 }
 
-// node_modules/.pnpm/mdast-util-gfm-table@2.0.0/node_modules/mdast-util-gfm-table/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-table@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-table/lib/index.js
 function gfmTableFromMarkdown() {
   return {
     enter: {
@@ -46417,7 +46410,7 @@ function replace($0, $1) {
   return $1 === "|" ? $1 : $0;
 }
 
-// node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
 function gfmTaskListItemFromMarkdown() {
   return {
     exit: {
@@ -46464,7 +46457,7 @@ function exitParagraphWithTaskListItem(token) {
   this.exit(token);
 }
 
-// node_modules/.pnpm/mdast-util-gfm@3.1.0/node_modules/mdast-util-gfm/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm@3.1.0_supports-color@9.4.0/node_modules/mdast-util-gfm/lib/index.js
 function gfmFromMarkdown() {
   return [
     gfmAutolinkLiteralFromMarkdown(),
@@ -46910,7 +46903,7 @@ function resolveToPotentialGfmFootnoteCall(events, context) {
     start: Object.assign({}, marker.end),
     end: Object.assign({}, events[events.length - 1][1].start)
   };
-  const chunk = {
+  const chunk2 = {
     type: "chunkString",
     contentType: "string",
     start: Object.assign({}, string6.start),
@@ -46929,8 +46922,8 @@ function resolveToPotentialGfmFootnoteCall(events, context) {
     ["exit", marker, context],
     // Everything in between.
     ["enter", string6, context],
-    ["enter", chunk, context],
-    ["exit", chunk, context],
+    ["enter", chunk2, context],
+    ["exit", chunk2, context],
     ["exit", string6, context],
     // The ending (`]`, properly parsed and labelled).
     events[events.length - 2],
@@ -49265,10 +49258,10 @@ var TableScanner = class {
    * @param chunk - new source bytes (may end mid-line).
    * @returns the latest {@link TableScannerSnapshot}.
    */
-  feed(chunk) {
-    if (chunk === "") return this.snapshot();
-    this.buffer += chunk;
-    this.totalFed += chunk.length;
+  feed(chunk2) {
+    if (chunk2 === "") return this.snapshot();
+    this.buffer += chunk2;
+    this.totalFed += chunk2.length;
     this.processLines(false);
     return this.snapshot();
   }
@@ -49903,6 +49896,50 @@ var zh = {
   pluginsDisabled: "\u5DF2\u7981\u7528",
   pluginsDeclared: "\u4EC5\u58F0\u660E \xB7 \u65E0\u8FD0\u884C\u6761\u76EE",
   pluginsOptional: "\u53EF\u9009",
+  accountTitle: "DeepSeek \u8D26\u53F7",
+  accountUnavailable: "\u5F53\u524D dsh \u672A\u63D0\u4F9B DeepSeek \u8D26\u53F7\u767B\u5F55\uFF1B\u53EF\u6539\u7528 API \u5BC6\u94A5",
+  accountLoading: "\u6B63\u5728\u8BFB\u53D6\u8D26\u53F7\u72B6\u6001\u2026",
+  accountSignedOut: "\u672A\u767B\u5F55",
+  accountSignedIn: "\u5DF2\u767B\u5F55",
+  accountBalance: "\u4F59\u989D",
+  accountPhaseInitializing: "\u6B63\u5728\u53D1\u8D77\u767B\u5F55\u2026",
+  accountPhaseWaiting: "\u7B49\u5F85\u6D4F\u89C8\u5668\u6388\u6743\u2026",
+  accountPhaseExchanging: "\u6B63\u5728\u6362\u53D6\u767B\u5F55\u51ED\u636E\u2026",
+  accountPhaseCommitting: "\u6B63\u5728\u4FDD\u5B58\u767B\u5F55\u51ED\u636E\u2026",
+  accountPhaseSucceeded: "\u767B\u5F55\u6210\u529F",
+  accountPhaseCancelled: "\u767B\u5F55\u5DF2\u53D6\u6D88",
+  accountPhaseExpired: "\u767B\u5F55\u5DF2\u8FC7\u671F",
+  accountPhaseFailed: "\u767B\u5F55\u5931\u8D25",
+  accountErrorNoResponse: "\u670D\u52A1\u65E0\u54CD\u5E94",
+  accountErrorNetwork: "\u7F51\u7EDC\u6216\u8D26\u53F7\u4FE1\u606F\u8BF7\u6C42\u5931\u8D25",
+  accountErrorProtocol: "\u6388\u6743\u6570\u636E\u65E0\u6548",
+  accountErrorExpired: "\u6388\u6743\u5DF2\u8FC7\u671F",
+  accountErrorStorage: "\u672C\u5730\u51ED\u636E\u4FDD\u5B58\u5931\u8D25",
+  accountModelHint: "\u7528 /model \u9009\u62E9 deepseek-account \u6A21\u578B",
+  accountOpenLink: "\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\u4EE5\u4E0B\u94FE\u63A5\u5B8C\u6210\u767B\u5F55\uFF1A",
+  accountForward: "\u8FDC\u7A0B\u4F1A\u8BDD\u9700\u5148\u8F6C\u53D1\u56DE\u8C03\u7AEF\u53E3",
+  accountCallbackUnavailable: "\u767B\u5F55\u56DE\u8C03\u670D\u52A1\u672A\u542F\u52A8\uFF08\u7F3A\u5C11 webserver \u884C\uFF09",
+  accountSignOutConfirm: "\u786E\u8BA4\u9000\u51FA DeepSeek \u8D26\u53F7\uFF1FAPI \u5BC6\u94A5\u4F1A\u4FDD\u7559\u3002",
+  accountSignedOutDone: "\u5DF2\u9000\u51FA DeepSeek \u8D26\u53F7",
+  accountSignInRequired: "\u9700\u8981\u767B\u5F55 DeepSeek \u8D26\u53F7 \xB7 /login",
+  accountSessionExpired: "DeepSeek \u8D26\u53F7\u767B\u5F55\u5DF2\u5931\u6548 \xB7 /login",
+  accountSignInHint: "Enter \u767B\u5F55",
+  accountOpenHint: "o \u6253\u5F00\u6D4F\u89C8\u5668",
+  accountCancelHint: "c \u53D6\u6D88\u767B\u5F55",
+  accountSignOutHint: "x \u9000\u51FA\u767B\u5F55",
+  accountApiKeyHint: "k \u4F7F\u7528 API \u5BC6\u94A5",
+  accountCloseHint: "Esc \u5173\u95ED",
+  accountConfirmHint: "y \u786E\u8BA4 \xB7 n \u53D6\u6D88",
+  accountBusyHint: "\u5904\u7406\u4E2D\u2026",
+  cdUnavailable: "\u5F53\u524D dsh \u672A\u63D0\u4F9B\u4F1A\u8BDD\u5DE5\u4F5C\u76EE\u5F55\u670D\u52A1",
+  cdCurrent: "\u5DE5\u4F5C\u76EE\u5F55",
+  cdChanged: "\u5DE5\u4F5C\u76EE\u5F55\u5DF2\u5207\u6362",
+  pluginsOfficialGroup: "\u5B98\u65B9\u63D2\u4EF6",
+  pluginsOfficial: "\u5B98\u65B9",
+  pluginsCatalog: "\u53EF\u5B89\u88C5",
+  pluginsNotInstalled: "\u672A\u5B89\u88C5",
+  pluginsMissingFiles: "\u6587\u4EF6\u7F3A\u5931",
+  pluginsInstallTarget: "\u5B89\u88C5\u76EE\u6807",
   pluginsNotRemovable: "\u4E0D\u53EF\u79FB\u9664",
   pluginsOverrides: "\u8986\u76D6\u884C",
   pluginsHint: "\u2191\u2193 \u9009\u62E9 \xB7 Space \u542F\u505C \xB7 i \u5B89\u88C5 \xB7 d \u79FB\u9664 \xB7 Esc \u5173\u95ED",
@@ -49939,6 +49976,7 @@ var zh = {
   pluginsStopProfile: "\u5FC5\u987B\u5148\u505C\u6B62\u6B64 profile \u624D\u80FD\u79FB\u9664",
   pluginsBundleInUse: "\u6B64 bundle \u6B63\u5728\u88AB\u4F7F\u7528",
   pluginsStaleApproval: "\u5F85\u5BA1\u6279\u5305\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u6838\u5BF9",
+  pluginsIncompatibleVersion: "\u63D2\u4EF6\u4E0E\u5F53\u524D DSH \u7248\u672C\u4E0D\u517C\u5BB9",
   pluginsOperationError: "\u63D2\u4EF6\u64CD\u4F5C\u5931\u8D25",
   pluginsAlreadyInstalled: "\u8BE5\u5305\u5DF2\u5B89\u88C5",
   pluginsNotFound: "\u627E\u4E0D\u5230\u8BE5\u5305",
@@ -49972,6 +50010,8 @@ var zh = {
   settingsSaveFailed: "\u2717 \u663E\u793A\u8BBE\u7F6E\u672A\u4FDD\u5B58 \xB7 \u8BF7\u91CD\u8BD5",
   inputHint: "\u8F93\u5165\u6D88\u606F",
   sendHint: "Enter \u53D1\u9001",
+  commandModeHint: "\u547D\u4EE4 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u6267\u884C \xB7 Esc \u53D6\u6D88",
+  mentionModeHint: "\u63D0\u53CA \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u63D2\u5165 \xB7 Esc \u53D6\u6D88",
   arguments: "\u53C2\u6570",
   result: "\u7ED3\u679C",
   diagnostics: "\u8BCA\u65AD\u5143\u6570\u636E",
@@ -50024,6 +50064,50 @@ var en = {
   pluginsDisabled: "Disabled",
   pluginsDeclared: "Declaration only \xB7 no live entry",
   pluginsOptional: "Optional",
+  accountTitle: "DeepSeek account",
+  accountUnavailable: "This dsh does not provide DeepSeek account sign-in; use an API key instead",
+  accountLoading: "Reading account state\u2026",
+  accountSignedOut: "Signed out",
+  accountSignedIn: "Signed in",
+  accountBalance: "Balance",
+  accountPhaseInitializing: "Starting sign-in\u2026",
+  accountPhaseWaiting: "Waiting for browser authorization\u2026",
+  accountPhaseExchanging: "Exchanging the authorization\u2026",
+  accountPhaseCommitting: "Saving the sign-in\u2026",
+  accountPhaseSucceeded: "Signed in successfully",
+  accountPhaseCancelled: "Sign-in cancelled",
+  accountPhaseExpired: "Sign-in expired",
+  accountPhaseFailed: "Sign-in failed",
+  accountErrorNoResponse: "the service did not respond",
+  accountErrorNetwork: "network or account request failed",
+  accountErrorProtocol: "invalid authorization data",
+  accountErrorExpired: "authorization expired",
+  accountErrorStorage: "could not save the local credential",
+  accountModelHint: "Use /model to choose a deepseek-account model",
+  accountOpenLink: "Open this link in a browser to sign in:",
+  accountForward: "Remote sessions must forward the callback port first",
+  accountCallbackUnavailable: "The sign-in callback server is not running (no webserver row)",
+  accountSignOutConfirm: "Sign out of the DeepSeek account? API keys are kept.",
+  accountSignedOutDone: "Signed out of the DeepSeek account",
+  accountSignInRequired: "DeepSeek account sign-in required \xB7 /login",
+  accountSessionExpired: "DeepSeek account sign-in expired \xB7 /login",
+  accountSignInHint: "Enter Sign in",
+  accountOpenHint: "o Open browser",
+  accountCancelHint: "c Cancel sign-in",
+  accountSignOutHint: "x Sign out",
+  accountApiKeyHint: "k Use API key",
+  accountCloseHint: "Esc Close",
+  accountConfirmHint: "y Confirm \xB7 n Cancel",
+  accountBusyHint: "Working\u2026",
+  cdUnavailable: "This dsh does not provide the session working-directory service",
+  cdCurrent: "Working directory",
+  cdChanged: "Working directory changed",
+  pluginsOfficialGroup: "Official plugins",
+  pluginsOfficial: "Official",
+  pluginsCatalog: "Available to install",
+  pluginsNotInstalled: "Not installed",
+  pluginsMissingFiles: "Files missing",
+  pluginsInstallTarget: "Install target",
   pluginsNotRemovable: "Not removable",
   pluginsOverrides: "Overrides",
   pluginsHint: "\u2191\u2193 Select \xB7 Space Toggle \xB7 i Install \xB7 d Remove \xB7 Esc Close",
@@ -50060,6 +50144,7 @@ var en = {
   pluginsStopProfile: "Stop this profile before removing the bundle",
   pluginsBundleInUse: "Bundle is in use",
   pluginsStaleApproval: "Pending packages changed; review approval again",
+  pluginsIncompatibleVersion: "Plugin is incompatible with the running DSH version",
   pluginsOperationError: "Plugin operation failed",
   pluginsAlreadyInstalled: "Package already installed",
   pluginsNotFound: "Package not found",
@@ -50093,6 +50178,8 @@ var en = {
   settingsSaveFailed: "\u2717 Display setting was not saved \xB7 Retry",
   inputHint: "Type a message",
   sendHint: "Enter to send",
+  commandModeHint: "Command \xB7 \u2191\u2193 select \xB7 Enter run \xB7 Esc cancel",
+  mentionModeHint: "Mention \xB7 \u2191\u2193 select \xB7 Enter insert \xB7 Esc cancel",
   arguments: "Arguments",
   result: "Result",
   diagnostics: "Diagnostic metadata",
@@ -51674,7 +51761,7 @@ function collapseStickyText(text4) {
   return text4.replace(/\s+/gu, " ").trim();
 }
 function formatStickyThinkingLabel(range) {
-  return `\u{1F4AD} \u601D\u8003\u4E2D (\u7B2C ${String(range.turnOrdinal)} \u8F6E \xB7 ${(range.durationMs / 1e3).toFixed(1)}s) \xB7 [Ctrl+O \u6298\u53E0]`;
+  return `\u{1F4AD} \u601D\u8003 (\u7B2C ${String(range.turnOrdinal)} \u8F6E \xB7 ${(range.durationMs / 1e3).toFixed(1)}s) \xB7 [Ctrl+O \u6298\u53E0]`;
 }
 function formatStickyToolLabel(range) {
   const title = collapseStickyText(range.title);
@@ -51910,8 +51997,8 @@ function createFrameMetrics(now = () => performance.now(), capacity = FRAME_METR
 
 // packages/tui/tui-render/src/frame-snapshot.ts
 var publishedSnapshot;
-function setVisibleFrameSnapshot(snapshot) {
-  publishedSnapshot = snapshot;
+function setVisibleFrameSnapshot(snapshot2) {
+  publishedSnapshot = snapshot2;
 }
 function visibleFrameSnapshot() {
   return publishedSnapshot;
@@ -52167,8 +52254,8 @@ function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
   }
   writer(bytes);
 }
-function transformFrameChunk(chunk, tier = currentTier(), publishFrame = true) {
-  let out = chunk;
+function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true) {
+  let out = chunk2;
   const on = bgSequence(tier);
   if (on !== "") {
     if (out.includes("\x1B")) {
@@ -52194,16 +52281,16 @@ function transformFrameChunk(chunk, tier = currentTier(), publishFrame = true) {
   return out;
 }
 function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
-  const write = stdout.write.bind(stdout);
+  const write2 = stdout.write.bind(stdout);
   const wrapped = Object.create(stdout);
   let synchronizedFrameOpen = false;
   let inkBottomRow = stdout.rows;
-  const transformingWrite = (chunk, ...args) => {
-    if (typeof chunk === "string" && chunk.includes(START_SYNC)) synchronizedFrameOpen = true;
-    if (typeof chunk === "string" && chunk.includes(END_SYNC)) synchronizedFrameOpen = false;
-    const inkChunk = typeof chunk === "string" && stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(chunk) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${chunk}` : chunk;
+  const transformingWrite = (chunk2, ...args) => {
+    if (typeof chunk2 === "string" && chunk2.includes(START_SYNC)) synchronizedFrameOpen = true;
+    if (typeof chunk2 === "string" && chunk2.includes(END_SYNC)) synchronizedFrameOpen = false;
+    const inkChunk = typeof chunk2 === "string" && stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(chunk2) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${chunk2}` : chunk2;
     const transformed = typeof inkChunk === "string" ? transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen) : inkChunk;
-    if (typeof chunk === "string" && chunk.includes("\n")) inkBottomRow = Math.min(stdout.rows, chunk.split("\n").length);
+    if (typeof chunk2 === "string" && chunk2.includes("\n")) inkBottomRow = Math.min(stdout.rows, chunk2.split("\n").length);
     return writeMeasured(transformed, ...args);
   };
   const writeMeasured = (transformed, ...args) => {
@@ -52224,16 +52311,16 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
         args.push(onDrain);
       }
     }
-    return write(transformed, ...args);
+    return write2(transformed, ...args);
   };
   wrapped.write = transformingWrite;
   const overlayStream = wrapped;
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk) => writeMeasured(chunk);
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2) => writeMeasured(chunk2);
   return wrapped;
 }
 var TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
-function countWrittenCells(chunk) {
-  const printable = chunk.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
+function countWrittenCells(chunk2) {
+  const printable = chunk2.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
   return printable.split("\n").reduce((cells, line5) => cells + displayWidth(line5), 0);
 }
 
@@ -52333,10 +52420,10 @@ var ScreenAtlas = class {
    * Consume one stdout chunk, holding incomplete ESC prefixes.
    * @param chunk - bytes written to the terminal.
    */
-  feed(chunk) {
+  feed(chunk2) {
     this.snapshotRows.clear();
     this.snapshotRail = void 0;
-    const text4 = this.leftover + chunk;
+    const text4 = this.leftover + chunk2;
     this.leftover = "";
     const segments = GRAPHEME2.segment(text4)[Symbol.iterator]();
     let segment2 = segments.next();
@@ -52424,12 +52511,12 @@ var ScreenAtlas = class {
    * shells that do not publish physical rows.
    * @param snapshot - shared visible frame from the transcript renderer.
    */
-  applyFrameSnapshot(snapshot) {
+  applyFrameSnapshot(snapshot2) {
     const previousRail = this.snapshotRail;
-    const nextRail = snapshot.geometry.rail;
+    const nextRail = snapshot2.geometry.rail;
     const sameRailArea = previousRail?.col === nextRail?.col && previousRail?.topRow === nextRail?.topRow && previousRail?.rows === nextRail?.rows;
     const unchanged = /* @__PURE__ */ new Set();
-    if (sameRailArea) for (const row of snapshot.rows) {
+    if (sameRailArea) for (const row of snapshot2.rows) {
       const previous3 = this.snapshotRows.get(row.row);
       if (previous3?.line === row.line && previous3.col === row.col) unchanged.add(row.row);
     }
@@ -52458,15 +52545,15 @@ var ScreenAtlas = class {
     }
     this.snapshotRanges = [];
     this.snapshotRows.clear();
-    this.snapshotRail = snapshot.geometry.rail;
-    this.snapshotGeometry = snapshot.geometry;
+    this.snapshotRail = snapshot2.geometry.rail;
+    this.snapshotGeometry = snapshot2.geometry;
     const saved = {
       col: this.cursorCol,
       row: this.cursorRow,
       url: this.activeUrl,
       wrap: this.wrapPending
     };
-    for (const row of snapshot.rows) {
+    for (const row of snapshot2.rows) {
       this.snapshotRows.set(row.row, row);
       if (!unchanged.has(row.row)) {
         this.cursorCol = Math.max(0, row.col - 1);
@@ -52483,7 +52570,7 @@ var ScreenAtlas = class {
         width: row.line.displayWidth
       });
     }
-    const rail = snapshot.geometry.rail;
+    const rail = snapshot2.geometry.rail;
     if (rail !== void 0) {
       for (let index2 = 0; index2 < rail.rows; index2 += 1) {
         const col = rail.col - 1;
@@ -52539,7 +52626,11 @@ var ScreenAtlas = class {
     }
     return { top: 1, bottom: this.height };
   }
-  /** Clamp screen point to selectable transcript rows and valid columns. */
+  /**
+   * Clamp a screen point to selectable transcript rows and valid columns.
+   * @param point - 1-based terminal coordinates.
+   * @returns coordinates inside the selectable transcript.
+   */
   clampToTranscript(point3) {
     const { top, bottom } = this.transcriptBounds;
     return {
@@ -52547,7 +52638,13 @@ var ScreenAtlas = class {
       row: Math.max(top, Math.min(bottom, point3.row))
     };
   }
-  /** Plain text for a horizontal slice of one row with rail excluded. */
+  /**
+   * Plain text for a horizontal slice of one row, excluding the rail.
+   * @param row - 1-based terminal row.
+   * @param fromCol - first inclusive 1-based column.
+   * @param toCol - last inclusive 1-based column.
+   * @returns row text with trailing spaces removed.
+   */
   extractRowText(row, fromCol = 1, toCol = this.width) {
     let line5 = "";
     for (let col = fromCol; col <= toCol; col++) {
@@ -52869,9 +52966,9 @@ function hostClipboardCommand(platform2 = process.platform, env3 = process.env) 
   }
   return void 0;
 }
-function copyText(text4, write, spawnFn = spawn, spec) {
+function copyText(text4, write2, spawnFn = spawn, spec) {
   if (text4 === "") return;
-  write(encodeOsc52(text4));
+  write2(encodeOsc52(text4));
   const helper = spec === void 0 ? hostClipboardCommand() : spec === null ? void 0 : spec;
   if (helper === void 0) return;
   try {
@@ -53058,22 +53155,22 @@ var MouseSession = class {
    * @param chunk - bytes about to hit the terminal.
    * @returns chunk plus overlay and caret restore.
    */
-  feedStdout(chunk) {
-    const snapshot = visibleFrameSnapshot();
-    if (snapshot === void 0) {
-      this.atlas.feed(chunk);
-    } else if (snapshot.revision !== this.lastFrameRevision) {
-      this.atlas.applyFrameSnapshot(snapshot);
-      this.lastFrameRevision = snapshot.revision;
+  feedStdout(chunk2) {
+    const snapshot2 = visibleFrameSnapshot();
+    if (snapshot2 === void 0) {
+      this.atlas.feed(chunk2);
+    } else if (snapshot2.revision !== this.lastFrameRevision) {
+      this.atlas.applyFrameSnapshot(snapshot2);
+      this.lastFrameRevision = snapshot2.revision;
     }
-    if (this.selection === void 0) return chunk;
+    if (this.selection === void 0) return chunk2;
     const overlay = this.atlas.selectionOverlay(
       this.selection.start,
       this.selection.end
     );
-    if (overlay === "") return chunk;
+    if (overlay === "") return chunk2;
     this.paintedSelection = this.selection;
-    return `${chunk}${overlay}${publishedCaretBytes()}`;
+    return `${chunk2}${overlay}${publishedCaretBytes()}`;
   }
   /**
    * Resize the atlas to the live terminal size.
@@ -53154,8 +53251,8 @@ function attachMouseIo(options) {
     columns: options.stdout.columns,
     rows: options.stdout.rows,
     copyText: (text4) => {
-      copyText(text4, (chunk) => {
-        options.stdout.write(chunk);
+      copyText(text4, (chunk2) => {
+        options.stdout.write(chunk2);
       });
     },
     onScroll: notifyMouseScroll
@@ -53171,16 +53268,16 @@ function attachMouseIo(options) {
       }
     };
   }
-  const write = options.stdout.write.bind(options.stdout);
+  const write2 = options.stdout.write.bind(options.stdout);
   options.stdout.write(ENABLE_SGR_MOUSE);
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
     const repaint = session.handle(event);
-    if (repaint !== "") write(repaint);
+    if (repaint !== "") write2(repaint);
   }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS);
   const wrappedStdout = Object.create(options.stdout);
-  const transformingWrite = (chunk, ...args) => {
-    if (typeof chunk !== "string") return write(chunk, ...args);
-    return write(session.feedStdout(chunk), ...args);
+  const transformingWrite = (chunk2, ...args) => {
+    if (typeof chunk2 !== "string") return write2(chunk2, ...args);
+    return write2(session.feedStdout(chunk2), ...args);
   };
   wrappedStdout.write = transformingWrite;
   const onResize = () => {
@@ -53216,12 +53313,12 @@ function wrapStdin(raw, onMouse, wheelRows) {
   };
   let buffer = "";
   let flushTimer;
-  const onData = (chunk) => {
+  const onData = (chunk2) => {
     if (flushTimer !== void 0) {
       clearTimeout(flushTimer);
       flushTimer = void 0;
     }
-    buffer += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+    buffer += typeof chunk2 === "string" ? chunk2 : chunk2.toString("utf8");
     const consumed = consumeMouseStdin(buffer);
     buffer = consumed.rest;
     let wheelDelta = 0;
@@ -53896,9 +53993,9 @@ var MutableRevisionImpl = class {
   settle() {
     this.requireAlive();
     Object.freeze(this.buffer);
-    const snapshot = this.store.commitSettle(this.blockId, this.buffer, this.scopeKey);
+    const snapshot2 = this.store.commitSettle(this.blockId, this.buffer, this.scopeKey);
     this.alive = false;
-    return snapshot;
+    return snapshot2;
   }
   discard() {
     this.requireAlive();
@@ -54051,11 +54148,11 @@ var TranscriptRenderStoreImpl = class {
     let start = 0;
     for (let i = 0; i < index2; i += 1) {
       const id = input.blockOrder[i];
-      const snapshot = this.readBlock({ blockId: id });
-      if (snapshot === void 0) {
+      const snapshot2 = this.readBlock({ blockId: id });
+      if (snapshot2 === void 0) {
         continue;
       }
-      start += snapshot.rowCount;
+      start += snapshot2.rowCount;
     }
     const target = this.readBlock({ blockId: input.blockId });
     if (target === void 0) return void 0;
@@ -54453,8 +54550,8 @@ function createFrameArbiter(options) {
       }
     }
   }
-  function publish(snapshot) {
-    for (const listener of listeners) listener(snapshot);
+  function publish(snapshot2) {
+    for (const listener of listeners) listener(snapshot2);
   }
   if (!demandDriven) {
     timer = setIntervalFn(tickFrame, frameIntervalMs);
@@ -55241,14 +55338,14 @@ function StreamView({
       now: () => performance.now(),
       demandDriven: true
     });
-    const unsubscribe = arbiter.onPublish((snapshot) => {
-      const presented = snapshot.stream.at(-1);
+    const unsubscribe = arbiter.onPublish((snapshot2) => {
+      const presented = snapshot2.stream.at(-1);
       if (presented !== void 0) setPresentedEntryRows(presented);
-      if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
-        lastDispatchedOffset.current = snapshot.scroll.presented;
+      if (snapshot2.scroll.presented !== lastDispatchedOffset.current) {
+        lastDispatchedOffset.current = snapshot2.scroll.presented;
         dispatchViewport({
           kind: "offset",
-          offsetFromBottom: snapshot.scroll.presented
+          offsetFromBottom: snapshot2.scroll.presented
         });
       }
       if (pendingScrollInputAt.current !== void 0 && frameMetrics !== void 0) {
@@ -55258,7 +55355,7 @@ function StreamView({
         pendingScrollInputAt.current = void 0;
       }
       if (frameMetrics !== void 0) {
-        const queue = stream.getStats(snapshot.nowMs);
+        const queue = stream.getStats(snapshot2.nowMs);
         frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs);
       }
     });
@@ -56852,7 +56949,8 @@ function ModelPane({
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: !highlighted, children: escapeContent(row.name) }),
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: !highlighted, children: highlighted ? ` ${styled(escapeContent(row.provider), "fgDim")}` : ` ${escapeContent(row.provider)}` }),
-        row.current ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") }) : null
+        row.current ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") }) : null,
+        row.unavailable === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent(` \xB7 ${row.unavailable}`), "fgDim") })
       ] }, row.id);
     }),
     status !== "loading" && status !== "error" && rows.length > MODEL_WINDOW ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: true, children: windowHint }) : null,
@@ -56867,13 +56965,22 @@ function HelpPane({ lines, offset }) {
   const maxOffset2 = Math.max(0, lines.length - HELP_WINDOW);
   const safeOffset = Math.min(offset, maxOffset2);
   const visible = lines.slice(safeOffset, safeOffset + HELP_WINDOW);
+  const below = Math.max(0, lines.length - safeOffset - HELP_WINDOW);
   return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
     safeOffset > 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { dimColor: true, children: [
       "\u2026 \u8FD8\u6709 ",
       safeOffset,
       " \u884C"
     ] }) : null,
-    visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: escapeContent(line5) }, safeOffset + index2)),
+    visible.map((line5, index2) => (
+      // An empty Text collapses to zero rows; a space keeps section gaps.
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: line5 === "" ? " " : escapeContent(line5) }, safeOffset + index2)
+    )),
+    below > 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { dimColor: true, children: [
+      "\u2026 \u4E0B\u65B9\u8FD8\u6709 ",
+      below,
+      " \u884C"
+    ] }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc/Enter \u5173\u95ED"), "fgDim") })
   ] });
 }
@@ -57654,14 +57761,17 @@ function InputBar({
   const leftPrefix = "\u2502 ";
   const placeholder = tuiCopy("inputHint", locale);
   const sendHint = tuiCopy("sendHint", locale);
-  const leftHint = `\u203A ${placeholder} \xB7 ${sendHint}`;
+  const modeHint = commandMode ? tuiCopy("commandModeHint", locale) : mentionMode ? tuiCopy("mentionModeHint", locale) : void 0;
+  const leftHint = modeHint === void 0 ? `\u203A ${placeholder} \xB7 ${sendHint}` : `\u203A ${modeHint}`;
   const leftWidth = displayWidth(leftPrefix + leftHint);
   const chipWidth = chipText !== "" ? displayWidth(chipText) : 0;
   const canFitChip = chipWidth > 0 && leftWidth + chipWidth + 2 <= columns;
   const headerParts = [
     styled(escapeContent(leftPrefix), "accentText"),
-    styled(escapeContent(`\u203A ${placeholder}`), "fg"),
-    styled(escapeContent(` \xB7 ${sendHint}`), "fgDim"),
+    ...modeHint === void 0 ? [
+      styled(escapeContent(`\u203A ${placeholder}`), "fg"),
+      styled(escapeContent(` \xB7 ${sendHint}`), "fgDim")
+    ] : [styled(escapeContent(`\u203A ${modeHint}`), "accent")],
     ...canFitChip ? [
       " ".repeat(Math.max(1, columns - leftWidth - chipWidth)),
       styled(escapeContent(chipText), "fgDim")
@@ -57690,14 +57800,11 @@ function InputBar({
             sourceColumn += width;
             return styled(visible, token.kind === "command" || token.kind === "mention" ? "accent" : token.kind === "image" ? "fgDim" : "fg");
           });
-          const last = lineIndex === lines.length - 1;
           return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
             styled(escapeContent("\u2502 "), "accentText"),
             styled(escapeContent(lineIndex === 0 ? "> " : "  "), "accentText"),
             ...window2.hiddenPrefix ? [styled("\u2039", "fgDim")] : [],
-            ...tokenParts,
-            ...last && commandMode ? [styled(escapeContent(" /"), "fgDim")] : [],
-            ...last && mentionMode ? [styled(escapeContent(" @"), "fgDim")] : []
+            ...tokenParts
           ], "inputBg", columns) }, lineIndex);
         })
       ]
@@ -58084,7 +58191,7 @@ function formatQuietStatusRow(view, columns) {
 
 // packages/tui/tui-render/src/git-branch.ts
 import { existsSync as existsSync2, readFileSync as readFileSync2, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 var branchCache = /* @__PURE__ */ new Map();
 var CACHE_TTL_MS = 2e3;
 function detectGitBranch(cwd2) {
@@ -58109,7 +58216,7 @@ function detectGitBranch(cwd2) {
           const match = /gitdir:\s*(.+)/u.exec(gitContent);
           if (match?.[1]) {
             const gitDir = match[1].trim();
-            headPath = join(dir, gitDir, "HEAD");
+            headPath = resolve(dir, gitDir, "HEAD");
           }
         }
         if (headPath && existsSync2(headPath)) {
@@ -58456,9 +58563,10 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
   } else {
     if (state.loading) lines.push({ text: copy("pluginsLoading") });
     if (!state.loading && state.rows.length === 0) lines.push({ text: copy("pluginsEmpty") });
-    for (const group of ["supplied", "owned"]) {
+    for (const group of ["official", "supplied", "owned"]) {
       const rows = state.rows.map((row, index2) => ({ row, index: index2 })).filter(({ row }) => row.group === group);
-      lines.push({ text: copy(group === "supplied" ? "pluginsSupplied" : "pluginsOwned") });
+      if (group === "official" && rows.length === 0) continue;
+      lines.push({ text: copy(group === "official" ? "pluginsOfficialGroup" : group === "supplied" ? "pluginsSupplied" : "pluginsOwned") });
       for (const { row, index: index2 } of rows) {
         const selected2 = index2 === state.selectedIndex;
         lines.push({ text: `${selected2 ? "\u203A" : " "} ${row.label}`, selected: selected2 });
@@ -58485,8 +58593,80 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
   return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint), children: visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintRow([styled(clean(line5.text), "selected" in line5 && line5.selected ? "accent" : "fg")]) }, index2)) });
 }
 
-// packages/tui/tui-render/src/feedback-pane.tsx
+// packages/tui/tui-render/src/account-pane.tsx
 var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
+var EMPTY_ACCOUNT_PANE = {
+  open: false,
+  available: false,
+  status: "unknown",
+  busy: false,
+  confirmSignOut: false
+};
+var ACTIVE_PHASES = /* @__PURE__ */ new Set(["initializing", "waiting-browser", "exchanging", "committing"]);
+function accountAttemptActive(phase) {
+  return phase !== void 0 && ACTIVE_PHASES.has(phase);
+}
+function chunk(text4, width) {
+  const size = Math.max(8, width);
+  const rows = [];
+  for (let index2 = 0; index2 < text4.length; index2 += size) rows.push(text4.slice(index2, index2 + size));
+  return rows;
+}
+function AccountPane({ state, locale = "zh-CN", maxCols }) {
+  if (!state.open) return null;
+  const copy = (key) => tuiCopy(key, locale);
+  const width = Math.max(1, maxCols);
+  const lines = [];
+  const active = accountAttemptActive(state.phase);
+  let hint;
+  if (!state.available) {
+    lines.push({ text: copy("accountUnavailable"), token: "fgDim" });
+    hint = [copy("accountApiKeyHint"), copy("accountCloseHint")].join(" \xB7 ");
+  } else if (state.confirmSignOut) {
+    lines.push({ text: copy("accountSignOutConfirm"), token: "fg" });
+    hint = copy("accountConfirmHint");
+  } else {
+    const statusKey = state.status === "credential-stored" ? "accountSignedIn" : state.status === "signed-out" ? "accountSignedOut" : "accountLoading";
+    lines.push({ text: copy(statusKey), token: state.status === "credential-stored" ? "accent" : "fg" });
+    if (state.profile !== void 0) lines.push({ text: state.profile, token: "fg" });
+    if (state.balance !== void 0) lines.push({ text: `${copy("accountBalance")}: ${state.balance}`, token: "fg" });
+    if (state.phase !== void 0 && !(state.phase === "succeeded" && state.status === "credential-stored")) {
+      const phaseKey = {
+        "initializing": "accountPhaseInitializing",
+        "waiting-browser": "accountPhaseWaiting",
+        "exchanging": "accountPhaseExchanging",
+        "committing": "accountPhaseCommitting",
+        "succeeded": "accountPhaseSucceeded",
+        "cancelled": "accountPhaseCancelled",
+        "expired": "accountPhaseExpired",
+        "failed": "accountPhaseFailed"
+      }[state.phase];
+      const reason = state.errorCode === void 0 ? "" : `: ${copy({
+        "no-response": "accountErrorNoResponse",
+        "network": "accountErrorNetwork",
+        "protocol": "accountErrorProtocol",
+        "expired": "accountErrorExpired",
+        "storage": "accountErrorStorage"
+      }[state.errorCode])}`;
+      lines.push({ text: copy(phaseKey) + reason, token: state.phase === "failed" || state.phase === "expired" ? "error" : "fgDim" });
+    }
+    if (state.phase === "succeeded" && state.status === "credential-stored") lines.push({ text: copy("accountModelHint"), token: "fgDim" });
+    if (state.phase === "waiting-browser" && state.authorizeUrl !== void 0) {
+      lines.push({ text: copy("accountOpenLink"), token: "fg" });
+      for (const row of chunk(state.authorizeUrl, width)) lines.push({ text: row, token: "accent", wrap: true });
+      if (state.forward !== void 0) {
+        lines.push({ text: `${copy("accountForward")}:`, token: "fgDim" });
+        for (const row of chunk(state.forward, width)) lines.push({ text: row, token: "fg", wrap: true });
+      }
+    }
+    hint = (active ? [state.phase === "waiting-browser" ? copy("accountOpenHint") : void 0, copy("accountCancelHint"), copy("accountCloseHint")] : state.status === "credential-stored" ? [copy("accountSignOutHint"), copy("accountCloseHint")] : [copy("accountSignInHint"), copy("accountApiKeyHint"), copy("accountCloseHint")]).filter((value) => value !== void 0).join(" \xB7 ");
+    if (state.busy) hint = copy("accountBusyHint");
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error, children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token)]) }, index2)) });
+}
+
+// packages/tui/tui-render/src/feedback-pane.tsx
+var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_FEEDBACK_PANE = {
   open: false,
   hasTarget: false,
@@ -58502,10 +58682,10 @@ function FeedbackPane({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (!state.hasTarget) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
       OverlayShell,
       {
         title: "\u53CD\u9988",
@@ -58519,13 +58699,13 @@ function FeedbackPane({
   const rows = [
     { key: "positive", label: "\u8D5E" },
     { key: "negative", label: "\u8E29" }
-  ].map((row) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { children: paintRow([
+  ].map((row) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { children: paintRow([
     styled(
       escapeContent(`${row.label}${state.rating === row.key ? " \xB7 \u5F53\u524D" : ""}`),
       state.rating === row.key ? "fg" : "fgDim"
     )
   ]) }, row.key));
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(
     OverlayShell,
     {
       title: "\u53CD\u9988",
@@ -58575,7 +58755,7 @@ function toolDetailsKeyAction(key, info) {
 }
 
 // packages/tui/tui-render/src/tool-details-pane.tsx
-var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_TOOL_DETAILS_PANE = Object.freeze({
   open: false,
   cards: [],
@@ -58612,21 +58792,21 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
     }
     lines.push(truncateDisplay(`${state.page + 1} \xB7 ${page.remainingLines} ${tuiCopy("remaining", locale)} \xB7 d ${tuiCopy("diagnostics", locale)} ${tuiCopy(state.diagnostics ? "on" : "off", locale)}`, columns));
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime27.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: heading }),
-    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
+  return /* @__PURE__ */ (0, import_jsx_runtime28.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: heading }),
+    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
+    /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
   ] });
 }
 
 // packages/tui/tui-render/src/queue-chip.tsx
-var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
 function queueChipText(count) {
   return count <= 0 ? void 0 : `\u5F85\u53D1 ${String(count)} \xB7 \u2191 \u53D6\u51FA`;
 }
 function QueueChip({ count }) {
   const text4 = queueChipText(count);
-  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
+  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
 }
 
 // packages/tui/tui-render/src/loop.tsx
@@ -58643,6 +58823,18 @@ function hasControlCodepoint(value) {
     if (code2 <= 31 || code2 === 127) return true;
   }
   return false;
+}
+function splitInputBurst(key, keyInfo) {
+  if (key.length < 2 || keyInfo.ctrl || keyInfo.meta || !/[\r\n]/u.test(key)) return void 0;
+  const text4 = key.replace(/\r\n?/gu, "\n");
+  if (hasControlCodepoint(text4.replace(/[\n\t]/gu, ""))) return void 0;
+  if (/^\n+$/u.test(text4)) return { kind: "submit", text: "" };
+  const body = text4.endsWith("\n") ? text4.slice(0, -1) : text4;
+  if (text4.endsWith("\n") && !body.includes("\n")) return { kind: "submit", text: body };
+  return { kind: "paste", text: body };
+}
+function isNavigationBurst(key, keyInfo) {
+  return key.length > 1 && !keyInfo.ctrl && !keyInfo.meta && /^[jk]+$/u.test(key);
 }
 function isTextInput(key, keyInfo) {
   return key.length > 0 && !keyInfo.ctrl && !keyInfo.meta && !key.startsWith("[") && !hasControlCodepoint(key);
@@ -58829,6 +59021,20 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
   selectedCandidate: void 0
 }, queuedDraft = {}, compaction = { available: false }, inputHistory = []) {
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
+  if (overlays.account?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const account = overlays.account;
+    const send = (input) => holdComposer(state, { kind: "account-input", input });
+    if (keyInfo.escape) return send({ kind: "close" });
+    if (keyInfo.ctrl && key === "c") return holdComposer(state, { kind: "sigint" });
+    if (keyInfo.ctrl || keyInfo.meta || account.busy) return { kind: "none" };
+    if (account.confirmSignOut) return key === "y" ? send({ kind: "confirm" }) : key === "n" ? send({ kind: "dismiss" }) : { kind: "none" };
+    if (accountAttemptActive(account.phase)) {
+      return key === "o" ? send({ kind: "open-url" }) : key === "c" ? send({ kind: "cancel" }) : { kind: "none" };
+    }
+    if (account.status === "credential-stored") return key === "x" ? send({ kind: "sign-out" }) : { kind: "none" };
+    if (keyInfo.return && account.available) return send({ kind: "sign-in" });
+    return key === "k" ? send({ kind: "api-key" }) : { kind: "none" };
+  }
   if (overlays.plugins?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
     const plugins = overlays.plugins;
     const send = (input) => holdComposer(state, { kind: "plugins-input", input });
@@ -59572,6 +59778,23 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
       renaming: state.renaming
     };
   }
+  if (keyInfo.ctrl && (key === "u" || key === "w") && !modelPane.open && !search2.open && !helpPane.open) {
+    const caret = clampCaretIndex(state.text, state.caretIndex);
+    const before = state.text.slice(0, caret);
+    const start = key === "u" ? before.lastIndexOf("\n") + 1 : before.replace(/\S*\s*$/u, "").length;
+    const text4 = state.text.slice(0, start) + state.text.slice(caret);
+    return {
+      kind: "dispatch",
+      action: { kind: "none" },
+      text: text4,
+      commandQuery: text4.startsWith("/") ? text4.slice(1) : void 0,
+      prefixG: false,
+      renaming: state.renaming,
+      caretIndex: start,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft
+    };
+  }
   if (keyInfo.leftArrow || keyInfo.rightArrow) {
     const caret = clampCaretIndex(state.text, state.caretIndex);
     return {
@@ -59910,6 +60133,10 @@ function TuiLoop({
     (callback) => controller.subscribe(callback),
     () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE
   );
+  const accountPane = (0, import_react40.useSyncExternalStore)(
+    (callback) => controller.subscribe(callback),
+    () => controller.getAccountPane?.() ?? EMPTY_ACCOUNT_PANE
+  );
   const agentHubPane = (0, import_react40.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAgentHubPane()
@@ -60030,6 +60257,8 @@ function TuiLoop({
   const settingsPaneRef = (0, import_react40.useRef)(settingsPane);
   const pluginsPaneRef = (0, import_react40.useRef)(pluginsPane);
   pluginsPaneRef.current = pluginsPane;
+  const accountPaneRef = (0, import_react40.useRef)(accountPane);
+  accountPaneRef.current = accountPane;
   settingsPaneRef.current = settingsPane;
   const agentHubPaneRef = (0, import_react40.useRef)(agentHubPane);
   agentHubPaneRef.current = agentHubPane;
@@ -60114,14 +60343,37 @@ function TuiLoop({
       setMouseRailListener(void 0);
     };
   }, [controller, frameMetrics, issueViewportCommand]);
-  use_input_default((key, keyInfo) => {
+  const syncPaneRef = (ref, read) => {
+    if (read !== void 0) ref.current = read();
+  };
+  const handleKey = (key, keyInfo) => {
     frameMetrics?.recordInputEvent();
+    syncPaneRef(paneRef, controller.getSessionPane?.bind(controller));
+    syncPaneRef(searchRef, controller.getSearchPane?.bind(controller));
+    syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller));
+    syncPaneRef(modelPaneRef, controller.getModelPane?.bind(controller));
+    syncPaneRef(helpPaneRef, controller.getHelpPane?.bind(controller));
+    syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller));
+    syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller));
+    syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller));
+    syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller));
+    syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller));
+    syncPaneRef(pluginsPaneRef, controller.getPluginsPane?.bind(controller));
+    syncPaneRef(accountPaneRef, controller.getAccountPane?.bind(controller));
+    syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller));
+    syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller));
+    syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller));
+    syncPaneRef(feedbackPaneRef, controller.getFeedbackPane?.bind(controller));
+    syncPaneRef(workflowOverlayRef, controller.getWorkflowOverlay?.bind(controller));
+    syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller));
+    syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller));
     controller.noteUserActivity();
     if (toolDetailsPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
       if (keyInfo.ctrl && key === "c") controller.dispatch({ kind: "sigint" });
       else {
         const input = toolDetailsKeyAction(key, keyInfo);
         if (input !== void 0) controller.dispatch({ kind: "tool-details", input, ...toolDetailsSizeRef.current });
+        else if (isNavigationBurst(key, keyInfo)) for (const char of key) handleKey(char, keyInfo);
       }
       return;
     }
@@ -60161,6 +60413,7 @@ function TuiLoop({
       {
         agentHub: { open: agentHubPaneRef.current.open },
         plugins: pluginsPaneRef.current,
+        account: accountPaneRef.current,
         planDirectory: { open: planDirectoryPaneRef.current.open },
         workspace: {
           open: workspacePaneRef.current.open,
@@ -60188,6 +60441,10 @@ function TuiLoop({
       { available: (model.compactionDividers?.length ?? 0) > 0 },
       inputHistory
     );
+    if (effect.kind === "none" && isNavigationBurst(key, keyInfo)) {
+      for (const char of key) handleKey(char, keyInfo);
+      return;
+    }
     if (effect.kind === "dispatch") {
       const action = effect.action;
       if (isSessionTransitionAction(action) && isSessionTransitionStatus(feedbackRef.current)) {
@@ -60271,6 +60528,17 @@ function TuiLoop({
     } : current;
     stateRef.current = next;
     setState(next);
+  };
+  use_input_default((key, keyInfo) => {
+    const burst = splitInputBurst(key, keyInfo);
+    if (burst === void 0) {
+      handleKey(key, keyInfo);
+    } else if (burst.kind === "paste") {
+      handlePaste(burst.text);
+    } else {
+      if (burst.text !== "") handleKey(burst.text, { ...keyInfo, return: false });
+      handleKey("", { ...keyInfo, return: true });
+    }
   });
   const insertImageToken = (token) => {
     const current = stateRef.current;
@@ -60290,7 +60558,7 @@ function TuiLoop({
     stateRef.current = next;
     setState(next);
   };
-  use_paste_default((pasted) => {
+  const handlePaste = (pasted) => {
     controller.noteUserActivity();
     if (pluginsPaneRef.current.open) {
       if (pluginsPaneRef.current.mode === "input") controller.dispatch({
@@ -60332,7 +60600,8 @@ function TuiLoop({
     };
     stateRef.current = next;
     setState(next);
-  });
+  };
+  use_paste_default(handlePaste);
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
   const mentionQuery = activeMentionQuery(state.text);
   const mentionMode = mentionQuery !== void 0 && !state.mentionDismissed;
@@ -60508,7 +60777,7 @@ function TuiLoop({
       ))
     );
   }
-  const viewportMotionPaused = pane.open || pluginsPane.open || search2.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
+  const viewportMotionPaused = pane.open || pluginsPane.open || accountPane.open || search2.open || timelineOpen || modelPane.open || helpPane.open || toolDetailsPane.open || approvalPane.open || askUserPane.open || permissionPane.open || settingsPane.open || agentHubPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open || planReviewPane.open;
   const brandBlocked = state.text !== "" || model.status !== "idle" || viewportMotionPaused;
   const brandLifecycleAllowed = !brandBlocked && (brandAnimationMode === "on" || brandAnimationMode === "auto" && brandAutoEligible);
   if (brandRevealStartedRef.current && !brandLifecycleAllowed) {
@@ -60604,10 +60873,12 @@ function TuiLoop({
     ] : [],
     (0, import_react40.createElement)(Box_default, { key: "conversation-gap", width: "100%", height: 1, flexShrink: 0 })
   );
-  const overlayBrowseOpen = agentHubPane.open || pluginsPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open;
+  const overlayBrowseOpen = agentHubPane.open || pluginsPane.open || accountPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open;
   let content3;
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content3 = conversation;
+  } else if (accountPane.open) {
+    content3 = (0, import_react40.createElement)(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) });
   } else if (pluginsPane.open) {
     content3 = (0, import_react40.createElement)(PluginsPane, {
       state: pluginsPane,
@@ -60879,6 +61150,36 @@ function defineProperty(object2, key, value) {
   return Object.defineProperty(object2, key, { writable: true, value, enumerable: false });
 }
 
+// vendor/cosmokit/src/volatile.ts
+var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) {
+      throw new TypeError("volatile config objects must be plain objects or arrays");
+    }
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile(value) {
+  let current = snapshot(value);
+  return Object.freeze({
+    get: () => current,
+    [write]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile(value) {
+  return typeof value === "object" && value !== null && write in value;
+}
+
 // vendor/cosmokit/src/types.ts
 function is2(type, value) {
   if (arguments.length === 1) return (value2) => is2(type, value2);
@@ -60969,23 +61270,38 @@ function clone(source, refs = /* @__PURE__ */ new Map()) {
   return result;
 }
 function deepEqual(a, b, strict) {
-  if (a === b) return true;
-  if (!strict && isNullable(a) && isNullable(b)) return true;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object") return false;
-  if (!a || !b) return false;
-  function check3(test, then) {
-    return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
-  }
-  return check3(Array.isArray, (a2, b2) => a2.length === b2.length && a2.every((item, index2) => deepEqual(item, b2[index2]))) ?? check3(is2("Date"), (a2, b2) => a2.valueOf() === b2.valueOf()) ?? check3(is2("RegExp"), (a2, b2) => a2.source === b2.source && a2.flags === b2.flags) ?? check3(isArrayBufferLike, (a2, b2) => {
-    if (a2.byteLength !== b2.byteLength) return false;
-    const viewA = new Uint8Array(a2);
-    const viewB = new Uint8Array(b2);
-    for (let i = 0; i < viewA.length; i++) {
-      if (viewA[i] !== viewB[i]) return false;
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
+    if (!strict && isNullable(a2) && isNullable(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
     }
-    return true;
-  }) ?? Object.keys({ ...a, ...b }).every((key) => deepEqual(a[key], b[key], strict));
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index2 = 0; index2 < a3.length; index2++) {
+          if (!compare(a3[index2], b3[index2])) return false;
+        }
+        return true;
+      }) ?? check3(is2("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is2("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is2("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) {
+          if (viewA[i] !== viewB[i]) return false;
+        }
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({ ...a2, ...b2 }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
 }
 
 // vendor/cosmokit/src/string.ts
@@ -62055,8 +62371,8 @@ var Fiber = class {
     let inFlight;
     let removeWrapper = () => false;
     const waitForSetup = () => {
-      setupBarrier ??= new Promise((resolve5, reject) => {
-        resolveSetup = resolve5;
+      setupBarrier ??= new Promise((resolve6, reject) => {
+        resolveSetup = resolve6;
         rejectSetup = reject;
       });
       return setupBarrier;
@@ -62610,14 +62926,14 @@ function Inject(name2, config2) {
   };
 }
 ((Inject2) => {
-  function resolve5(inject2, result = /* @__PURE__ */ Object.create(null)) {
+  function resolve6(inject2, result = /* @__PURE__ */ Object.create(null)) {
     if (!inject2) return result;
     if (Array.isArray(inject2)) {
       for (const name2 of inject2) {
         result[name2] = null;
       }
     } else if (Reflect.has(inject2, symbols.checkProto)) {
-      Object.assign(result, resolve5(Object.getPrototypeOf(inject2)));
+      Object.assign(result, resolve6(Object.getPrototypeOf(inject2)));
       for (const name2 of Object.keys(inject2)) {
         result[name2] = inject2[name2] ?? null;
       }
@@ -62628,7 +62944,7 @@ function Inject(name2, config2) {
     }
     return result;
   }
-  Inject2.resolve = resolve5;
+  Inject2.resolve = resolve6;
 })(Inject || (Inject = {}));
 var RegistryService = class {
   constructor(ctx) {
@@ -62974,6 +63290,8 @@ function bindTypertRemote(service, serviceKey, options = {}) {
   validateName("service key", serviceKey);
   const namespace = options.namespace ?? serviceKey;
   validateName("namespace", namespace);
+  const ctx = Reflect.get(service, "ctx");
+  if (ctx instanceof Context) provideInvocationAccessor(ctx);
   return Object.freeze({ service, serviceKey, namespace });
 }
 var TypertRemoteService = class extends Service {
@@ -62990,6 +63308,10 @@ var TypertRemoteService = class extends Service {
     this.typertRemote = bindTypertRemote(this, this.name, options);
   }
 };
+function provideInvocationAccessor(ctx) {
+  if (Object.hasOwn(ctx.root.reflect.props, "invocation")) return;
+  ctx.root.accessor("invocation", { get: () => void 0 });
+}
 function Remote(methodExportOrOptions, context) {
   if (typeof methodExportOrOptions === "string") {
     validateName("Remote export name", methodExportOrOptions);
@@ -63008,7 +63330,7 @@ function remoteOptionMode(options) {
   return Reflect.get(options, "mode");
 }
 function remoteDecorator(invocation, mode, exportName) {
-  return (_method, context) => {
+  return function(_method, context) {
     addMarkerInitializer(context, invocation, mode, exportName);
   };
 }
@@ -63074,6 +63396,629 @@ function validateName(subject, value) {
   }
 }
 
+// packages/util/values/src/partial-json.ts
+var SIMPLE_ESCAPES = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "	"
+};
+var CONTENT_ESCAPE = /[\\\u0000-\u001f]/u;
+function isWhitespace(c) {
+  return c === " " || c === "\n" || c === "\r" || c === "	";
+}
+function isHex(c) {
+  return c >= "0" && c <= "9" || c >= "a" && c <= "f" || c >= "A" && c <= "F";
+}
+var PartialArguments = class _PartialArguments {
+  /** The view of a call with no arguments available. */
+  static EMPTY = _PartialArguments.fromObject({});
+  /**
+   * View finished argument text without scanning it until a reader asks.
+   * @param text - the complete argument JSON text.
+   * @returns a sealed view.
+   */
+  static fromText(text4) {
+    const view = new _PartialArguments();
+    view.append(text4);
+    view.sealed = true;
+    return view;
+  }
+  /**
+   * View an already parsed argument payload, such as a PTC dispatch object.
+   * @param value - the parsed argument value.
+   * @returns a sealed view; a non-object payload has no fields.
+   */
+  static fromObject(value) {
+    const view = new _PartialArguments();
+    view.object = typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+    view.sealed = true;
+    return view;
+  }
+  /**
+   * The source: text so far or a parsed object, plus whether it can still grow.
+   * These are the only enumerable fields, so two views over the same source
+   * compare equal structurally however far each has been read.
+   */
+  chunks = [];
+  object;
+  sealed = false;
+  // Scan progress, located fields, and remembered reads are caches over the source.
+  #ends = [];
+  #size = 0;
+  #consumed = 0;
+  #mode = "root";
+  #escape = false;
+  #keyStart = 0;
+  #keyEscaped = false;
+  #key = "";
+  #current = null;
+  #nestedEnds = [];
+  #nestedInString = false;
+  #invalidAt;
+  #invalidValue = false;
+  #entries = /* @__PURE__ */ new Map();
+  #order = [];
+  #reads = /* @__PURE__ */ new Map();
+  /** Whether this view rejects further appends; does not scan text or register reads. */
+  get isSealed() {
+    return this.sealed;
+  }
+  /** Whether indexing or a content read found invalid JSON; unread value contents are not validated. */
+  get invalid() {
+    this.scan();
+    return this.#mode === "invalid" || this.#invalidValue;
+  }
+  /**
+   * Retain streamed argument text without scanning or comparing observed answers.
+   * @param fragment - the text following every fragment appended before.
+   */
+  append(fragment) {
+    if (this.sealed) throw new Error("PartialArguments: cannot append to a sealed view");
+    if (fragment.length === 0) return;
+    this.chunks.push(fragment);
+    this.#size += fragment.length;
+    this.#ends.push(this.#size);
+  }
+  /**
+   * Reconcile a streamed prefix with authoritative complete text without joining the fragments.
+   * @param text - the final argument text, which replaces missing or conflicting deltas.
+   * @returns this view sealed with its caches retained when every character matches; otherwise a new sealed view.
+   */
+  settle(text4) {
+    if (this.object !== void 0 || text4.length !== this.#size) return _PartialArguments.fromText(text4);
+    let offset = 0;
+    for (const chunk2 of this.chunks) {
+      if (!text4.startsWith(chunk2, offset)) return _PartialArguments.fromText(text4);
+      offset += chunk2.length;
+    }
+    this.chunks = text4.length === 0 ? [] : [text4];
+    this.#ends = text4.length === 0 ? [] : [text4.length];
+    this.sealed = true;
+    return this;
+  }
+  /**
+   * Compare observed answers and advance their publication baseline. Unread views remain unscanned.
+   * @returns whether any observed answer changed since its first read or the preceding refresh.
+   */
+  refresh() {
+    if (this.#reads.size === 0) return false;
+    this.scan();
+    let changed = false;
+    let completions = false;
+    for (const read of this.#reads.values()) {
+      if (read.completion) {
+        completions = true;
+        continue;
+      }
+      changed = this.refreshRead(read) || changed;
+    }
+    if (completions) {
+      for (const read of this.#reads.values()) if (read.completion) changed = this.refreshRead(read) || changed;
+    }
+    if (this.sealed) this.#reads.clear();
+    return changed;
+  }
+  refreshRead(read) {
+    const now = read.answer();
+    if (Object.is(now, read.last)) return false;
+    read.last = now;
+    return true;
+  }
+  /**
+   * Check whether no further fields can arrive.
+   * @returns whether the outer object closed, indexing failed, or the view is sealed; unread values are not validated.
+   */
+  closed() {
+    return this.remember("closed", "", () => this.closedNow());
+  }
+  /**
+   * List discovered fields in first-appearance order.
+   * @returns top-level keys seen so far, in first-appearance order.
+   */
+  keys() {
+    return this.remember("keys", "", () => this.keysNow(), (keys) => keys.length);
+  }
+  /**
+   * Check whether a top-level field has appeared.
+   * @param key - argument name.
+   * @returns whether the field has appeared (a string opened or another value began).
+   */
+  has(key) {
+    return this.remember("has", key, () => this.hasNow(key));
+  }
+  /**
+   * Check whether a field's closing delimiter has arrived, without validating its contents.
+   * @param key - argument name.
+   * @returns whether its delimiter arrived and no content reader has reported an error for this value.
+   */
+  complete(key) {
+    return this.remember("complete", key, () => this.completeNow(key));
+  }
+  /**
+   * Read string length without materializing its text.
+   * @param key - argument name.
+   * @param options - change granularity for a streaming string.
+   * @returns decoded UTF-16 length of the string field so far; undefined when absent or not a string.
+   */
+  stringLength(key, options) {
+    const step = Math.max(1, Math.floor(options?.step ?? 1));
+    const offset = options?.offset ?? 0;
+    return this.remember(
+      `length:${step}:${offset}`,
+      key,
+      () => this.lengthNow(key),
+      (length) => length === void 0 ? void 0 : Math.ceil((length + offset) / step)
+    );
+  }
+  /**
+   * Check a string against a decoded UTF-16 length limit without materializing it.
+   * @param key - argument name.
+   * @param maxLength - decoded UTF-16 limit, floored to at least zero.
+   * @returns whether the string is longer than the limit; false when absent or not a string.
+   */
+  stringExceeds(key, maxLength) {
+    const limit = Math.max(0, Math.floor(maxLength));
+    return this.remember(
+      `exceeds:${limit}`,
+      key,
+      () => (this.lengthNow(key, limit + 1) ?? 0) > limit
+    );
+  }
+  /**
+   * Read a decoded string, including a streaming prefix.
+   * @param key - argument name.
+   * @returns the string field's decoded text so far; undefined when absent or not a string.
+   */
+  text(key) {
+    return this.remember("text", key, () => this.textNow(key));
+  }
+  /**
+   * Read at most the first decoded UTF-16 units of a string.
+   * @param key - argument name.
+   * @param maxLength - maximum decoded UTF-16 length, floored to at least one.
+   * @returns the bounded string prefix; undefined when absent or not a string.
+   */
+  textPrefix(key, maxLength) {
+    const limit = Math.max(1, Math.floor(maxLength));
+    return this.remember(
+      `prefix:${limit}`,
+      key,
+      () => this.textPrefixNow(key, limit)
+    );
+  }
+  /**
+   * Read a completed non-string argument.
+   * @param key - argument name.
+   * @returns the parsed non-string value once it closed; undefined while open, absent, or a string.
+   */
+  value(key) {
+    return this.remember("value", key, () => this.valueNow(key));
+  }
+  /** Answer a question and, on a streaming view, remember it for change detection. */
+  remember(kind, key, read, comparison) {
+    this.scan();
+    const result = read();
+    if (!this.sealed) {
+      const id = `${kind}/${key}`;
+      if (!this.#reads.has(id)) {
+        this.#reads.set(id, {
+          completion: kind === "complete",
+          answer: comparison === void 0 ? read : () => comparison(read()),
+          last: comparison === void 0 ? result : comparison(result)
+        });
+      }
+    }
+    return result;
+  }
+  closedNow() {
+    return this.sealed || this.#mode === "closed" || this.#mode === "invalid";
+  }
+  keysNow() {
+    return this.object === void 0 ? this.#order : Object.keys(this.object);
+  }
+  hasNow(key) {
+    return this.object === void 0 ? this.#entries.has(key) : Object.hasOwn(this.object, key);
+  }
+  completeNow(key) {
+    if (this.object !== void 0) return Object.hasOwn(this.object, key);
+    const entry = this.#entries.get(key);
+    return entry !== void 0 && entry.end >= 0 && (entry.kind === "string" ? entry.invalidAt === void 0 : !entry.invalid);
+  }
+  lengthNow(key, limit = Number.POSITIVE_INFINITY) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field.length : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    if (entry.text !== void 0 && entry.text.at === entry.end) return entry.text.length;
+    const read = entry.length ??= { at: entry.start, length: 0, text: "" };
+    this.readString(entry, read, limit, false);
+    return read.length;
+  }
+  textNow(key) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    if (entry.text === void 0 && entry.end >= 0 && entry.needsDecoding && entry.invalidAt === void 0) {
+      let text4;
+      try {
+        text4 = JSON.parse(`"${this.slice(entry.start, entry.end)}"`);
+      } catch (_error) {
+      }
+      if (text4 !== void 0) entry.text = { at: entry.end, length: text4.length, text: text4 };
+    }
+    const read = entry.text ??= { at: entry.start, length: 0, text: "" };
+    this.readString(entry, read, Number.POSITIVE_INFINITY, true);
+    return read.text;
+  }
+  textPrefixNow(key, maxLength) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field.slice(0, maxLength) : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    const prefixes = entry.prefixes ??= /* @__PURE__ */ new Map();
+    let read = prefixes.get(maxLength);
+    if (read === void 0) {
+      read = { at: entry.start, length: 0, text: "" };
+      prefixes.set(maxLength, read);
+    }
+    this.readString(entry, read, maxLength, true);
+    return read.text;
+  }
+  valueNow(key) {
+    if (this.object !== void 0) {
+      if (!Object.hasOwn(this.object, key)) return void 0;
+      const field = this.object[key];
+      return typeof field === "string" ? void 0 : field;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "value" || entry.end < 0 || entry.invalid) return void 0;
+    if (entry.parsed === void 0) {
+      try {
+        entry.parsed = JSON.parse(this.slice(entry.start, entry.end));
+      } catch (_error) {
+        entry.invalid = true;
+        this.#invalidValue = true;
+      }
+    }
+    return entry.parsed;
+  }
+  chunkAt(at) {
+    let low = 0;
+    let high = this.#ends.length;
+    while (low < high) {
+      const mid = low + high >>> 1;
+      if (this.#ends[mid] <= at) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  }
+  /** Materialize only a requested range, never the cumulative source. */
+  slice(start, end) {
+    if (start >= end) return "";
+    const first = this.chunkAt(start);
+    const last = this.chunkAt(end - 1);
+    const base = first === 0 ? 0 : this.#ends[first - 1];
+    if (first === last) return this.chunks[first].slice(start - base, end - base);
+    const parts = [this.chunks[first].slice(start - base)];
+    for (let i = first + 1; i < last; i++) parts.push(this.chunks[i]);
+    parts.push(this.chunks[last].slice(0, end - this.#ends[last - 1]));
+    return parts.join("");
+  }
+  readString(entry, read, limit, materialize) {
+    const end = Math.min(
+      entry.end < 0 ? this.#consumed : entry.end,
+      entry.invalidAt ?? Number.POSITIVE_INFINITY,
+      this.#invalidAt ?? Number.POSITIVE_INFINITY
+    );
+    if (!entry.needsDecoding) {
+      const length = Math.min(end - read.at, limit - read.length);
+      if (length <= 0) return;
+      if (materialize) read.text += this.slice(read.at, read.at + length);
+      read.at += length;
+      read.length += length;
+      return;
+    }
+    let chunkIndex = this.chunkAt(read.at);
+    while (read.at < end && read.length < limit) {
+      const base = chunkIndex === 0 ? 0 : this.#ends[chunkIndex - 1];
+      const chunk2 = this.chunks[chunkIndex];
+      const remaining = chunk2.slice(read.at - base, Math.min(chunk2.length, end - base));
+      const boundary = remaining.search(CONTENT_ESCAPE);
+      const length = Math.min(boundary < 0 ? remaining.length : boundary, limit - read.length);
+      if (length > 0) {
+        if (materialize) read.text += remaining.slice(0, length);
+        read.at += length;
+        read.length += length;
+        if (read.at === base + chunk2.length) chunkIndex++;
+        continue;
+      }
+      const type = remaining.length > 1 ? remaining[1] : read.at + 1 < end ? this.chunks[chunkIndex + 1][0] : void 0;
+      let decoded;
+      let width = 2;
+      if (remaining[0] === "\\" && type === void 0 && entry.end < 0) return;
+      if (remaining[0] === "\\" && type === "u") {
+        const hex3 = this.slice(read.at + 2, Math.min(end, read.at + 6));
+        let valid = true;
+        for (let i = 0; i < hex3.length; i++) if (!isHex(hex3[i])) valid = false;
+        if (valid) {
+          if (hex3.length < 4 && entry.end < 0) return;
+          if (hex3.length === 4) decoded = String.fromCharCode(Number.parseInt(hex3, 16));
+        }
+        width = 6;
+      } else if (remaining[0] === "\\" && type !== void 0) {
+        decoded = SIMPLE_ESCAPES[type];
+      }
+      if (decoded === void 0) {
+        entry.invalidAt = read.at;
+        this.#invalidValue = true;
+        return;
+      }
+      if (materialize) read.text += decoded;
+      read.length++;
+      read.at += width;
+      while (chunkIndex < this.chunks.length && read.at >= this.#ends[chunkIndex]) chunkIndex++;
+    }
+  }
+  /** Locate new field ranges without decoding or parsing their contents. */
+  scan() {
+    if (this.object !== void 0 || this.#consumed === this.#size) return;
+    for (let i = this.chunkAt(this.#consumed); i < this.chunks.length && this.#invalidAt === void 0; i++) {
+      const pending = this.chunks[i];
+      const base = i === 0 ? 0 : this.#ends[i - 1];
+      for (let index2 = this.#consumed - base; index2 < pending.length && this.#mode !== "invalid"; index2++) {
+        if (this.#mode === "string" || this.#mode === "nested" && this.#nestedInString) {
+          const end = this.stringBoundary(pending, index2);
+          this.#consumed += end - index2;
+          index2 = end;
+          if (index2 === pending.length) break;
+        }
+        this.step(pending[index2], this.#consumed);
+        this.#consumed++;
+      }
+    }
+  }
+  /** Only raw quotes and their preceding backslash runs can terminate a string. */
+  stringBoundary(fragment, start) {
+    let at = start;
+    while (true) {
+      const quote = fragment.indexOf('"', at);
+      const end = quote < 0 ? fragment.length : quote;
+      if (this.#mode === "string") {
+        const entry = this.#current;
+        if (!entry.needsDecoding && CONTENT_ESCAPE.test(fragment.slice(at, end))) entry.needsDecoding = true;
+      }
+      let slashStart = end;
+      while (slashStart > at && fragment[slashStart - 1] === "\\") slashStart--;
+      const escaped = (end - slashStart) % 2 === 1 !== (slashStart === at && this.#escape);
+      this.#escape = quote < 0 && escaped;
+      if (quote < 0 || !escaped) return end;
+      at = quote + 1;
+    }
+  }
+  step(c, at) {
+    switch (this.#mode) {
+      case "root":
+        if (isWhitespace(c)) return;
+        if (c === "{") {
+          this.#mode = "key-or-end";
+          return;
+        }
+        this.fail();
+        return;
+      case "key-or-end":
+        if (isWhitespace(c)) return;
+        if (c === "}") {
+          this.#mode = "closed";
+          return;
+        }
+        if (c === '"') {
+          this.beginKey(at);
+          return;
+        }
+        this.fail();
+        return;
+      case "key-only":
+        if (isWhitespace(c)) return;
+        if (c === '"') {
+          this.beginKey(at);
+          return;
+        }
+        this.fail();
+        return;
+      case "key":
+        this.stepKey(c, at);
+        return;
+      case "colon":
+        if (isWhitespace(c)) return;
+        if (c === ":") {
+          this.#mode = "value";
+          return;
+        }
+        this.fail();
+        return;
+      case "value":
+        this.beginValue(c, at);
+        return;
+      case "string": {
+        const entry = this.#current;
+        entry.end = at;
+        this.#current = null;
+        this.#mode = "comma-or-end";
+        return;
+      }
+      case "scalar":
+        this.stepScalar(c, at);
+        return;
+      case "nested":
+        this.stepNested(c, at);
+        return;
+      case "comma-or-end":
+        if (isWhitespace(c)) return;
+        if (c === ",") {
+          this.#mode = "key-only";
+          return;
+        }
+        if (c === "}") {
+          this.#mode = "closed";
+          return;
+        }
+        this.fail();
+        return;
+      case "closed":
+        if (isWhitespace(c)) return;
+        this.fail();
+        return;
+      /* v8 ignore next 2 -- scan() stops stepping once the view is invalid. */
+      case "invalid":
+        return;
+      /* v8 ignore next 2 -- Every scanner mode has a handler above. */
+      default:
+        assertNever(this.#mode);
+    }
+  }
+  fail() {
+    this.#invalidAt = this.#consumed;
+    this.#mode = "invalid";
+    this.#current = null;
+  }
+  beginKey(at) {
+    this.#mode = "key";
+    this.#keyStart = at + 1;
+    this.#keyEscaped = false;
+    this.#escape = false;
+  }
+  stepKey(c, at) {
+    if (c < " ") {
+      this.fail();
+      return;
+    }
+    if (this.#escape) {
+      this.#escape = false;
+      return;
+    }
+    if (c === "\\") {
+      this.#escape = true;
+      this.#keyEscaped = true;
+      return;
+    }
+    if (c !== '"') return;
+    const raw = this.slice(this.#keyStart, at);
+    if (this.#keyEscaped) {
+      try {
+        this.#key = JSON.parse(`"${raw}"`);
+      } catch (_error) {
+        this.fail();
+        return;
+      }
+    } else {
+      this.#key = raw;
+    }
+    this.#mode = "colon";
+  }
+  open(entry) {
+    if (!this.#entries.has(this.#key)) this.#order.push(this.#key);
+    this.#entries.set(this.#key, entry);
+    this.#current = entry;
+  }
+  beginValue(c, at) {
+    if (isWhitespace(c)) return;
+    if (c === '"') {
+      this.open({
+        kind: "string",
+        start: at + 1,
+        end: -1,
+        needsDecoding: false,
+        invalidAt: void 0,
+        length: void 0,
+        text: void 0,
+        prefixes: void 0
+      });
+      this.#escape = false;
+      this.#mode = "string";
+      return;
+    }
+    if (c === "}" || c === "," || c === ":" || c === "]") {
+      this.fail();
+      return;
+    }
+    this.open({ kind: "value", start: at, end: -1, parsed: void 0, invalid: false });
+    if (c === "{" || c === "[") {
+      this.#mode = "nested";
+      this.#nestedEnds = [c === "{" ? "}" : "]"];
+      this.#nestedInString = false;
+      this.#escape = false;
+      return;
+    }
+    this.#mode = "scalar";
+  }
+  stepScalar(c, at) {
+    if (c !== "," && c !== "}" && !isWhitespace(c)) return;
+    this.closeValue(at);
+    this.#mode = c === "," ? "key-only" : c === "}" ? "closed" : "comma-or-end";
+  }
+  stepNested(c, at) {
+    if (this.#nestedInString) {
+      this.#nestedInString = false;
+      return;
+    }
+    if (c === '"') {
+      this.#nestedInString = true;
+      return;
+    }
+    if (c === "{" || c === "[") {
+      this.#nestedEnds.push(c === "{" ? "}" : "]");
+      return;
+    }
+    if (c === "}" || c === "]") {
+      if (this.#nestedEnds.pop() !== c) {
+        this.fail();
+        return;
+      }
+      if (this.#nestedEnds.length === 0) {
+        this.closeValue(at + 1);
+        this.#mode = "comma-or-end";
+      }
+    }
+  }
+  closeValue(end) {
+    const entry = this.#current;
+    entry.end = end;
+    this.#current = null;
+  }
+};
+
 // packages/util/values/src/index.ts
 function assertNever(value, context) {
   const rendered = JSON.stringify(value) ?? String(value);
@@ -63084,7 +64029,7 @@ function hasIntrinsicConstructor(prototype, name2) {
   const constructor = descriptor?.value;
   if (typeof constructor !== "function") return false;
   try {
-    return constructor.name === name2 && constructor.prototype === prototype && Function.prototype.toString.call(constructor) === `function ${name2}() { [native code] }`;
+    return constructor.name === name2 && constructor.prototype === prototype && Function.prototype.toString.call(constructor) === Function.prototype.toString.call(name2 === "Array" ? Array : Object);
   } catch {
     return false;
   }
@@ -63252,15 +64197,25 @@ function freezeMessage(message) {
   return deepFreeze(structuredClone(message));
 }
 function createMessage(input) {
-  return freezeMessage({
+  return deepFreeze(structuredClone({
     ...input,
     id: brandString(randomUUID())
-  });
+  }));
 }
 function createUserMessage(input) {
   return createMessage({
     ...input,
     role: "user"
+  });
+}
+function createAssistantMessage(input) {
+  return createMessage({
+    role: "assistant",
+    content: input.content,
+    source: {
+      kind: "model",
+      ...input.source
+    }
   });
 }
 
@@ -63443,6 +64398,7 @@ Schema.prototype.pattern = function pattern(regexp) {
   return schema;
 };
 Schema.prototype.simplify = function simplify(value) {
+  if (isVolatile(value)) value = value.get();
   if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
   if (isNullable(value)) return value;
   if (this.type === "object" || this.type === "dict") {
@@ -63496,12 +64452,53 @@ for (const key of ["default", "link", "comment", "description", "max", "min", "s
     }
   });
 }
-var resolvers = {};
-Schema.extend = function extend(type, resolve5) {
-  resolvers[type] = resolve5;
+Schema.prototype.volatile = function volatile() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
 };
-Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
+var resolvers = {};
+var checkedVolatile = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema(schema, path2 = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) {
+    throw new ValidationError2("volatile fields require a fixed object path without an enclosing volatile field", { path: path2 });
+  }
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) {
+    for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema(child, [...path2, key], nested, seen);
+  }
+  if (schema.sKey) validateVolatileSchema(schema.sKey, [...path2, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) {
+    validateVolatileSchema(schema.inner, [...path2, "*"], true, seen);
+  }
+  if (schema.list) {
+    for (let index2 = 0; index2 < schema.list.length; index2++) {
+      validateVolatileSchema(schema.list[index2], [...path2, String(index2)], true, seen);
+    }
+  }
+}
+Schema.extend = function extend(type, resolve6) {
+  resolvers[type] = resolve6;
+};
+Schema.resolve = function resolve2(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
+  if (!options[checkedVolatile]) {
+    validateVolatileSchema(schema, options.path);
+    options = { ...options, [checkedVolatile]: true };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema(schema);
+    inner.meta = { ...schema.meta, volatile: false };
+    const [value, adapted] = Schema.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile(value), adapted];
+    } catch (error51) {
+      throw new ValidationError2(error51 instanceof Error ? error51.message : String(error51), options);
+    }
+  }
   if (options.ignore?.(data, schema)) return [data];
   if (isNullable(data) && schema.type !== "lazy") {
     if (schema.meta.required) throw new ValidationError2(`missing required value`, options);
@@ -63607,6 +64604,7 @@ Schema.extend("lazy", (data, schema, options, strict) => {
   if (!schema.inner[kSchema]) {
     schema.inner = schema.builder();
     schema.inner.meta = { ...schema.meta, ...schema.inner.meta };
+    validateVolatileSchema(schema.inner, options.path, true);
   }
   return Schema.resolve(data, schema.inner, options, strict);
 });
@@ -63718,7 +64716,7 @@ function property(data, key, schema, options) {
   } catch (e) {
     if (!options?.autofix) throw e;
     delete data[key];
-    return schema.meta.default;
+    return schema.meta.volatile ? createVolatile(schema.meta.default) : schema.meta.default;
   }
 }
 Schema.extend("array", (data, { inner, meta: meta3 }, options) => {
@@ -64124,11 +65122,11 @@ function textOnlyImageText(ref) {
   return `[image omitted because this model accepts text only; attachment sha256:${digest}]`;
 }
 function contentHasImage(content3) {
-  return content3.some((block) => block.type === "image" || block.type === "tool-result" && contentHasImage(block.content));
+  return content3.some((block) => block.type === "image");
 }
 function contentHasFile(content3) {
   for (const block of content3) {
-    if (block.type === "file" || block.type === "tool-result" && contentHasFile(block.content)) return true;
+    if (block.type === "file") return true;
   }
   return false;
 }
@@ -64147,14 +65145,6 @@ function replaceFilesWithHandles(blocks, resolvePath) {
       next ??= blocks.slice(0, index2);
       next.push({ type: "text", text: fileHandleText(block.attachment, resolvePath(block.attachment)) });
       continue;
-    }
-    if (block.type === "tool-result") {
-      const content3 = replaceFilesWithHandles(block.content, resolvePath);
-      if (content3 !== block.content) {
-        next ??= blocks.slice(0, index2);
-        next.push({ ...block, content: content3 });
-        continue;
-      }
     }
     next?.push(block);
   }
@@ -64175,14 +65165,6 @@ function replaceImagesForTextModel(blocks) {
       next.push({ type: "text", text: textOnlyImageText(block.attachment) });
       continue;
     }
-    if (block.type === "tool-result") {
-      const content3 = replaceImagesForTextModel(block.content);
-      if (content3 !== block.content) {
-        next ??= blocks.slice(0, index2);
-        next.push({ ...block, content: content3 });
-        continue;
-      }
-    }
     next?.push(block);
   }
   return next ?? blocks;
@@ -64194,13 +65176,93 @@ function projectImagesForTextModel(messages) {
     return content3 === message.content ? message : { ...message, content: content3 };
   });
 }
+function withoutDeveloperMessages(messages) {
+  const retained = messages.filter((message) => message.role !== "developer");
+  return retained.length === messages.length ? messages : retained;
+}
+function toolDeclarations(tools, mode, history) {
+  const declarations = new Map(history.tools.map((tool) => [tool.name, tool]));
+  for (const update of history.updates) {
+    for (const tool of update.additions) {
+      if (!declarations.has(tool.name)) {
+        declarations.set(tool.name, { ...tool, deferLoading: true });
+      }
+    }
+  }
+  switch (mode) {
+    case "in-history":
+      return declarations;
+    case "addition-only": {
+      const activeNames = new Set(tools?.map((tool) => tool.name));
+      for (const name2 of declarations.keys()) {
+        if (!activeNames.has(name2)) declarations.delete(name2);
+      }
+      return declarations;
+    }
+    /* v8 ignore next 2 -- closed-union exhaustiveness guard */
+    default:
+      return assertNever(mode);
+  }
+}
+function projectToolUpdates(messages, tools, toolUpdate, history) {
+  if (toolUpdate === void 0) {
+    let immediateTools = tools;
+    if (tools?.some((tool) => tool.deferLoading === true)) {
+      immediateTools = tools.map(({ deferLoading: _loading, ...tool }) => tool);
+    }
+    return { messages: withoutDeveloperMessages(messages), tools: immediateTools };
+  }
+  if (history === void 0) {
+    return { messages: withoutDeveloperMessages(messages), tools };
+  }
+  const messageIds = new Set(messages.flatMap((message) => message.role === "developer" ? [message.id] : []));
+  if (history.updates.some((update) => !messageIds.has(update.messageId))) {
+    return { messages: withoutDeveloperMessages(messages), tools };
+  }
+  const declarations = toolDeclarations(tools, toolUpdate, history);
+  const updateIds = new Set(history.updates.map((update) => update.messageId));
+  const offered = new Set(history.tools.filter((tool) => !tool.deferLoading).map((tool) => tool.name));
+  const projectedMessages = [];
+  for (const message of messages) {
+    if (message.role !== "developer") {
+      projectedMessages.push(message);
+      continue;
+    }
+    if (!updateIds.has(message.id)) continue;
+    const content3 = message.content.filter((block) => {
+      switch (block.type) {
+        case "tool-addition":
+          if (!declarations.has(block.toolName) || offered.has(block.toolName)) return false;
+          offered.add(block.toolName);
+          return true;
+        case "tool-removal":
+          if (toolUpdate !== "in-history") return false;
+          return offered.delete(block.toolName);
+        default:
+          return true;
+      }
+    });
+    if (content3.length === 0) continue;
+    if (content3.length === message.content.length) {
+      projectedMessages.push(message);
+    } else {
+      projectedMessages.push({ ...message, content: content3 });
+    }
+  }
+  const unchanged = projectedMessages.length === messages.length && projectedMessages.every((message, index2) => message === messages[index2]);
+  return {
+    messages: unchanged ? messages : projectedMessages,
+    tools: [...declarations.values()]
+  };
+}
 
 // packages/llm/llm/src/attribution.ts
 import { createRequire } from "node:module";
-var version = "0.1.5-rc.2";
-try {
-  version = createRequire(import.meta.url)("../package.json").version;
-} catch {
+var { version } = createRequire(import.meta.url)("../package.json");
+
+// packages/llm/llm/src/brand.ts
+function ToolCallId(id) {
+  return brandString(id);
 }
 
 // packages/llm/llm/src/assembler.ts
@@ -64214,13 +65276,13 @@ var BlockAssembler = class {
    * Feed one chunk into the assembly state.
    * @param chunk - the next raw chunk, in stream order.
    */
-  push(chunk) {
-    switch (chunk.type) {
+  push(chunk2) {
+    switch (chunk2.type) {
       case "block-start": {
-        if (!this.partials.has(chunk.index)) {
-          this.order.push(chunk.index);
-          this.partials.set(chunk.index, {
-            blockType: chunk.blockType,
+        if (!this.partials.has(chunk2.index)) {
+          this.order.push(chunk2.index);
+          this.partials.set(chunk2.index, {
+            blockType: chunk2.blockType,
             text: "",
             toolCallArguments: ""
           });
@@ -64229,36 +65291,36 @@ var BlockAssembler = class {
       }
       case "text-delta":
       case "reasoning-delta": {
-        const partial2 = this.ensure(chunk.index, chunk.type === "text-delta" ? "text" : "reasoning");
+        const partial2 = this.ensure(chunk2.index, chunk2.type === "text-delta" ? "text" : "reasoning");
         if (partial2.block) return;
-        partial2.text += chunk.text;
+        partial2.text += chunk2.text;
         return;
       }
       case "tool-call-delta": {
-        const partial2 = this.ensure(chunk.index, "tool-call");
+        const partial2 = this.ensure(chunk2.index, "tool-call");
         if (partial2.block) return;
-        partial2.toolCallId = chunk.id;
-        if (chunk.name) partial2.toolCallName = chunk.name;
-        partial2.toolCallArguments += chunk.argumentsDelta;
+        partial2.toolCallId = chunk2.id;
+        if (chunk2.name) partial2.toolCallName = chunk2.name;
+        partial2.toolCallArguments += chunk2.argumentsDelta;
         return;
       }
       case "block-end": {
-        const partial2 = this.ensure(chunk.index, chunk.block.type);
+        const partial2 = this.ensure(chunk2.index, chunk2.block.type);
         if (partial2.block) return;
-        partial2.block = chunk.block;
+        partial2.block = chunk2.block;
         return;
       }
       case "usage": {
-        this._usage = chunk.usage;
+        this._usage = chunk2.usage;
         return;
       }
       case "finish": {
-        this._finish = chunk.reason;
-        this._replayState = chunk.replayState;
+        this._finish = chunk2.reason;
+        this._replayState = chunk2.replayState;
         return;
       }
       default:
-        return assertNever(chunk, "BlockAssembler.push");
+        return assertNever(chunk2, "BlockAssembler.push");
     }
   }
   ensure(index2, blockType) {
@@ -64353,11 +65415,11 @@ var BlockAssembler = class {
   }
   /**
    * The assembled assistant message.
-   * @param source - producer attribution for the assembled message.
+   * @param source - provider/model attribution (without the `kind` tag) for the assembled message.
    * @returns a frozen assistant-role message over `blocks()` (same open-block assembly rules).
    */
-  message(source = { kind: "plugin", plugin: "dsh-llm/assembler" }) {
-    return createMessage({ role: "assistant", content: this.blocks(), source });
+  message(source) {
+    return createAssistantMessage({ content: this.blocks(), source });
   }
 };
 
@@ -64414,7 +65476,6 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   }
   /** Notify topology observers without letting one broken listener veto the commit. */
   emitAdaptersUpdated() {
-    let invariantFailure;
     for (const listener of this.ctx.events.dispatch("emit", ["llm/adapters-updated"])) {
       try {
         const returned = listener();
@@ -64424,14 +65485,9 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
           });
         }
       } catch (error51) {
-        if (error51?.code === "INVARIANT") {
-          invariantFailure ??= error51;
-          continue;
-        }
         this.warnAdaptersListenerFailure(error51);
       }
     }
-    if (invariantFailure !== void 0) throw invariantFailure;
   }
   /** Contained-listener diagnostic shared by the sync and async failure paths. */
   warnAdaptersListenerFailure(error51) {
@@ -64678,7 +65734,8 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   }
   /**
    * Discover models advertised by one registered provider. Catalog membership
-   * is advisory and never changes routing or request validation.
+   * does not constrain core routing. Catalog-driven entry points may restrict
+   * selection and submission to the advertised models.
    * @param provider - registered provider route to inspect.
    * @returns detached model metadata in adapter-preferred order.
    */
@@ -64741,6 +65798,13 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
         "INVALID_MODEL_INFO"
       );
     }
+    const toolUpdate = resolved.toolUpdate;
+    if (toolUpdate !== void 0 && toolUpdate !== "in-history" && toolUpdate !== "addition-only") {
+      throw new LlmError(
+        `adapter returned invalid tool update mode for provider "${provider}" model "${model}"`,
+        "INVALID_MODEL_INFO"
+      );
+    }
     const defaultMaxTokens = resolved.defaultMaxTokens;
     if (defaultMaxTokens !== void 0 && (!Number.isSafeInteger(defaultMaxTokens) || defaultMaxTokens <= 0)) {
       throw new LlmError(
@@ -64756,7 +65820,8 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       ...inputModalities === void 0 ? {} : { inputModalities },
       ...context === void 0 ? {} : { context: { contextWindow: context.contextWindow } },
       ...defaultMaxTokens === void 0 ? {} : { defaultMaxTokens },
-      ...resolved.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: resolved.systemPromptUpdate }
+      ...resolved.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: resolved.systemPromptUpdate },
+      ...resolved.toolUpdate === void 0 ? {} : { toolUpdate: resolved.toolUpdate }
     };
     const reasoning = resolved.reasoning;
     if (reasoning === void 0) return info;
@@ -64847,20 +65912,29 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
    * Resolve one call under its current adapter registration. The returned
    * one-shot handle keeps that registration across header logging and dispatch,
    * so HMR cannot combine one adapter's capability result with another adapter.
-   * @param config - provider/model route and optional request controls.
+   * An optional synchronous callback selects concrete controls using captured
+   * model metadata. Defaults and validation apply to its result. Callback
+   * failures and cancellation reject preparation before dispatch.
+   * @param config - provider/model route and optional concrete request controls.
    * @param signal - optional cancellation for adapter-owned capability lookup.
+   * @param configure - pure control selection, called once before defaults and validation.
    * @returns a prepared config and its registration-bound stream entry point.
    */
-  async prepareCall(config2, signal) {
-    const registration = this.registration(config2.provider);
-    const adapterCall = await registration.adapter.prepareCall(config2.provider, config2.model, signal);
-    const modelInfo = this.normalizeModelInfo(registration, config2.model, adapterCall.model);
-    const resolved = this.resolveCallWithInfo(config2, modelInfo);
+  async prepareCall(config2, signal, configure2) {
+    signal?.throwIfAborted();
+    const { provider, model, ...controls } = config2;
+    const registration = this.registration(provider);
+    const adapterCall = await registration.adapter.prepareCall(provider, model, signal);
+    signal?.throwIfAborted();
+    const modelInfo = this.normalizeModelInfo(registration, model, adapterCall.model);
+    const proposed = configure2 === void 0 ? config2 : { ...configure2(deepFreeze(structuredClone(controls)), deepFreeze(modelInfo)), provider, model };
+    signal?.throwIfAborted();
+    const resolved = this.resolveCallWithInfo(proposed, modelInfo);
     const resolvedConfig = deepFreeze(structuredClone(resolved.config));
     const context = resolved.context === void 0 ? void 0 : deepFreeze(structuredClone(resolved.context));
     const adapterDefaults = deepFreeze({
-      ...config2.reasoningEffort === void 0 && resolvedConfig.reasoningEffort !== void 0 ? { reasoningEffort: true } : {},
-      ...config2.maxTokens === void 0 && resolvedConfig.maxTokens !== void 0 ? { maxTokens: true } : {}
+      ...proposed.reasoningEffort === void 0 && resolvedConfig.reasoningEffort !== void 0 ? { reasoningEffort: true } : {},
+      ...proposed.maxTokens === void 0 && resolvedConfig.maxTokens !== void 0 ? { maxTokens: true } : {}
     });
     let dispatched = false;
     return Object.freeze({
@@ -64870,6 +65944,7 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       ...context === void 0 ? {} : { context },
       ...modelInfo.inputModalities === void 0 ? {} : { inputModalities: Object.freeze([...modelInfo.inputModalities]) },
       ...modelInfo.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: modelInfo.systemPromptUpdate },
+      ...modelInfo.toolUpdate === void 0 ? {} : { toolUpdate: modelInfo.toolUpdate },
       stream: (options) => {
         if (dispatched) {
           throw new LlmError("a prepared LLM call can only be dispatched once", "INVALID_PREPARED_CALL");
@@ -64898,8 +65973,9 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   /** Remove replay state whose historical route is owned by another adapter. */
   forAdapter(options, adapter) {
     const messages = options.messages.map((message) => {
+      if (message.role !== "assistant") return message;
       const source = message.source;
-      if (message.role !== "assistant" || source.kind !== "model" || source.replayState === void 0) return message;
+      if (source.replayState === void 0) return message;
       if (this.adapters.get(source.provider)?.adapter === adapter) return message;
       return freezeMessage({
         ...message,
@@ -64962,7 +66038,17 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
       if (modelInfo.inputModalities !== void 0 && !modelInfo.inputModalities.includes("image") && projectedMessages.some((message) => contentHasImage(message.content))) {
         projectedMessages = projectImagesForTextModel(projectedMessages);
       }
-      const projectedOptions = projectedMessages === resolvedOptions.messages ? resolvedOptions : Object.isFrozen(resolvedOptions) ? deepFreeze({ ...resolvedOptions, messages: projectedMessages }) : { ...resolvedOptions, messages: projectedMessages };
+      const projectedTools = projectToolUpdates(projectedMessages, resolvedOptions.tools, modelInfo.toolUpdate, resolvedOptions.toolHistory);
+      projectedMessages = projectedTools.messages;
+      let projectedOptions = resolvedOptions;
+      if (projectedMessages !== resolvedOptions.messages || projectedTools.tools !== resolvedOptions.tools) {
+        projectedOptions = {
+          ...resolvedOptions,
+          messages: projectedMessages,
+          ...projectedTools.tools === void 0 ? {} : { tools: projectedTools.tools }
+        };
+        if (Object.isFrozen(resolvedOptions)) deepFreeze(projectedOptions);
+      }
       const stream = dispatch(this.forAdapter(projectedOptions, adapter));
       iterator = stream[Symbol.asyncIterator]();
     } catch (error51) {
@@ -65071,12 +66157,7 @@ function normalizeUsage(usage, route) {
   ]);
   if (knownPrompt === void 0) return void 0;
   let exactTotal;
-  if (totalTokens === void 0) {
-    if (cacheReadTokens === void 0 || cacheWriteTokens === void 0) return void 0;
-    const derivedTotal = safeSum([knownPrompt, outputTokens]);
-    if (derivedTotal === void 0) return void 0;
-    exactTotal = derivedTotal;
-  } else {
+  if (totalTokens !== void 0) {
     if (!isCount(totalTokens)) return void 0;
     const exactPrompt = totalTokens - outputTokens;
     if (!isCount(exactPrompt) || exactPrompt < knownPrompt) return void 0;
@@ -65084,6 +66165,11 @@ function normalizeUsage(usage, route) {
       return void 0;
     }
     exactTotal = totalTokens;
+  } else {
+    if (cacheReadTokens === void 0 || cacheWriteTokens === void 0) return void 0;
+    const derivedTotal = safeSum([knownPrompt, outputTokens]);
+    if (derivedTotal === void 0) return void 0;
+    exactTotal = derivedTotal;
   }
   return {
     inputTokens,
@@ -65241,6 +66327,39 @@ function latestAssistantCopyTarget(history) {
   const code2 = lastFencedCode(message.text);
   return code2 === void 0 ? { kind: "message", text: message.text } : { kind: "code", text: code2 };
 }
+function reasoningDurationsFromStream(stream) {
+  if (!Array.isArray(stream)) return [];
+  const records = stream;
+  const startOf = (record2) => record2.time0 ?? record2.time;
+  const durations = [];
+  let blockIndex;
+  let blockStart = 0;
+  let blockEnd = 0;
+  const close = (end) => {
+    if (blockIndex === void 0) return;
+    durations.push(Math.max(0, end - blockStart));
+    blockIndex = void 0;
+  };
+  for (const record2 of records) {
+    const start = startOf(record2);
+    if (typeof start !== "number") continue;
+    if (record2.type === "reasoning-chunks") {
+      const end = start + (record2.dt ?? []).reduce((sum, gap) => sum + gap, 0);
+      if (blockIndex !== void 0 && record2.index === blockIndex) {
+        blockEnd = end;
+        continue;
+      }
+      close(start);
+      blockIndex = record2.index ?? -1;
+      blockStart = start;
+      blockEnd = end;
+    } else if (record2.type !== "chunk") {
+      close(start);
+    }
+  }
+  close(blockEnd);
+  return durations;
+}
 function projectUserContent(blocks) {
   let imageOrdinal = 0;
   return blocks.map((block) => {
@@ -65257,16 +66376,18 @@ function projectUserContent(blocks) {
     }
   }).join("");
 }
-function projectAssistantBlocks(blocks) {
+function projectAssistantBlocks(blocks, reasoningDurations = []) {
   const content3 = [];
   const toolCalls = [];
+  let reasoningOrdinal = 0;
   for (const block of blocks) {
     switch (block.type) {
       case "text":
         content3.push({ kind: "text", text: block.text });
         break;
       case "reasoning":
-        content3.push({ kind: "reasoning", text: block.text, durationMs: 0 });
+        content3.push({ kind: "reasoning", text: block.text, durationMs: reasoningDurations[reasoningOrdinal] ?? 0 });
+        reasoningOrdinal += 1;
         break;
       case "tool-call":
         toolCalls.push({
@@ -65362,10 +66483,11 @@ function createProjector() {
       const start = reasoningStarts[index2];
       const end = reasoningEnds[index2] ?? turnEventAt;
       index2 += 1;
+      const durable = item.durationMs ?? 0;
       return {
         kind: "reasoning",
         text: item.text,
-        durationMs: Math.max(0, end - start)
+        durationMs: durable > 0 ? durable : Math.max(0, end - start)
       };
     });
     reasoningStarts.length = index2;
@@ -65393,8 +66515,8 @@ function createProjector() {
     stepCommitted = true;
     updateActiveTurn();
   }
-  function replaceStep(blocks) {
-    const projected = projectAssistantBlocks(blocks);
+  function replaceStep(blocks, reasoningDurations) {
+    const projected = projectAssistantBlocks(blocks, reasoningDurations);
     stepContent = projected.content;
     stepToolCalls = projected.toolCalls;
     stepCommitted = false;
@@ -65442,16 +66564,12 @@ function createProjector() {
         appendHistory({ id: event.seq, kind: "user", text: text4, timestamp: event.time });
         return;
       }
-      case "assistant/chunk": {
-        if (activeTurn === void 0) return;
-        assembler ??= new BlockAssembler();
-        assembler.push(event.data.chunk);
-        replaceStep(assembler.blocks());
-        return;
-      }
       case "assistant/message": {
         if (activeTurn !== void 0) {
-          replaceStep(event.data.message.content);
+          replaceStep(
+            event.data.message.content,
+            reasoningDurationsFromStream(event.data.stream)
+          );
           commitStep();
           lastUsageOutputTokens = event.data.usage?.outputTokens;
           lastStepWallMs = Math.max(0, event.time - stepStartedAt);
@@ -65495,12 +66613,12 @@ function createProjector() {
       case "tool/result": {
         if (activeTurn === void 0) return;
         commitStep();
-        const block = event.data.message.content[0];
+        const message = event.data.message;
         turnContent.push({
           kind: "tool-result",
-          callId: block.toolCallId,
-          text: block.content.filter((item) => item.type === "text").map((item) => item.text).join(""),
-          isError: block.isError ?? false,
+          callId: message.toolCallId,
+          text: message.content.map((item) => item.type === "text" ? item.text : "").join(""),
+          isError: message.isError ?? false,
           ...event.data.error === void 0 ? {} : { error: { ...event.data.error } },
           ...event.data.meta === void 0 ? {} : { meta: structuredClone(event.data.meta) }
         });
@@ -65582,8 +66700,28 @@ ${formattedError}` });
       }
     }
   }
+  function pushStreamFrame(frame) {
+    if (activeTurn === void 0) return;
+    switch (frame.type) {
+      case "start":
+        assembler = new BlockAssembler();
+        replaceStep([]);
+        return;
+      case "chunk":
+        assembler ??= new BlockAssembler();
+        turnEventAt = Math.max(turnEventAt, frame.time);
+        assembler.push(frame.chunk);
+        replaceStep(assembler.blocks());
+        return;
+      case "end":
+        if (frame.outcome.kind !== "committed" && !stepCommitted) replaceStep([]);
+        assembler = void 0;
+        return;
+    }
+  }
   return {
     push: push3,
+    pushStreamFrame,
     seed(events) {
       if (!events || !Array.isArray(events)) return;
       for (const event of events) push3(event);
@@ -65603,13 +66741,13 @@ ${formattedError}` });
 }
 
 // packages/tui/tui-render/src/todo-hud.tsx
-var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
-
-// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
 
-// packages/tui/tui-render/src/workflow-hud.tsx
+// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime31 = __toESM(require_jsx_runtime(), 1);
+
+// packages/tui/tui-render/src/workflow-hud.tsx
+var import_jsx_runtime32 = __toESM(require_jsx_runtime(), 1);
 
 // packages/tui/tui-render/src/interaction-state.ts
 function reduceInteraction(state, event) {
@@ -65743,7 +66881,7 @@ function relaunchProcess(argv, host) {
     stdio: "inherit",
     env: host.env
   });
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     let settled = false;
     child.on("error", (error51) => {
       if (settled) return;
@@ -65753,7 +66891,7 @@ function relaunchProcess(argv, host) {
     child.on("close", (code2, signal) => {
       if (settled) return;
       settled = true;
-      resolve5(exitStatus(code2, signal));
+      resolve6(exitStatus(code2, signal));
     });
   });
 }
@@ -65861,7 +66999,7 @@ import {
   readFile,
   rm
 } from "node:fs/promises";
-import { dirname as dirname2, join as join2, resolve as resolve2 } from "node:path";
+import { dirname as dirname2, join as join2, resolve as resolve3 } from "node:path";
 function parseEditorWords(value) {
   const words = [];
   let current = "";
@@ -65925,7 +67063,7 @@ async function createEditorFile(root, content3) {
   return path2;
 }
 async function validateEditorFile(root, path2) {
-  if (dirname2(resolve2(path2)) !== resolve2(root)) {
+  if (dirname2(resolve3(path2)) !== resolve3(root)) {
     throw new Error("editor draft escaped its private directory");
   }
   const stat2 = await lstat(path2, { bigint: true });
@@ -66074,10 +67212,34 @@ function truncateCodePoints(text4, limit) {
 }
 
 // packages/tui/tui/src/index.ts
-import { constants as constants2 } from "node:fs";
+import { constants as constants2, readFileSync as readFileSync3 } from "node:fs";
 import { access, lstat as lstat2, readFile as readFile2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname as dirname4, resolve as resolve4 } from "node:path";
+import { dirname as dirname4, resolve as resolve5 } from "node:path";
+
+// packages/core/scope/src/index.ts
+var kScope = /* @__PURE__ */ Symbol("dsh.scope");
+var carrierKeys = /* @__PURE__ */ new WeakMap();
+var scopeParents = /* @__PURE__ */ new WeakMap();
+function scopeOf(ctx) {
+  return ctx[kScope];
+}
+function scopeTarget(base, key) {
+  const baseFilter = base[Context.filter];
+  const carrier = {
+    [Context.filter](ctx) {
+      if (baseFilter !== void 0 && !baseFilter.call(base, ctx)) return false;
+      const tag = scopeOf(ctx);
+      if (tag === void 0) return true;
+      for (let cursor = key; cursor !== void 0; cursor = scopeParents.get(cursor)) {
+        if (cursor === tag) return true;
+      }
+      return false;
+    }
+  };
+  carrierKeys.set(carrier, key);
+  return carrier;
+}
 
 // packages/core/agent/src/model-selection.ts
 function sameRoute(left, right) {
@@ -66095,8 +67257,7 @@ function modelSwitchNotice(previous3, selected) {
       text: `[model changed: assistant turns above this point were generated by ${from2}; the session continues with ${to}]`
     }],
     source: {
-      kind: "plugin",
-      plugin: "model-selection",
+      kind: "model-selection",
       form: "notice",
       summary: boundContextSummary(`${from2} \u2192 ${to}`)
     }
@@ -66163,1050 +67324,6 @@ function credentialRef(value) {
 function isCredentialRefName(value) {
   return REF_PATTERN.test(value);
 }
-
-// packages/interaction/user-questions/src/index.ts
-var UserQuestionError = class extends HarnessError {
-  constructor(message, code2, options) {
-    super(message, code2, options);
-    this.name = "UserQuestionError";
-  }
-};
-
-// packages/core/session/src/index.ts
-import { isAbsolute as isAbsolute3 } from "node:path";
-
-// packages/core/session/src/types.ts
-function SessionId(id) {
-  return brandString(id);
-}
-function SessionSeq(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
-    throw new TypeError(`SessionSeq must be a non-negative safe integer, got ${String(value)}`);
-  }
-  return brandNumber(value);
-}
-function SessionLogOffset(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
-    throw new TypeError(`SessionLogOffset must be a non-negative safe integer, got ${String(value)}`);
-  }
-  return brandNumber(value);
-}
-var SESSION_FORMAT_VERSION = 3;
-
-// packages/core/session/src/known-event-types.ts
-var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "agent-preset/selected",
-  "agent/inbox/spliced",
-  "approval/asked",
-  "approval/decided",
-  "approval/policy",
-  "assistant/attempt",
-  "assistant/message",
-  "command/done",
-  "command/run",
-  "compaction/end",
-  "compaction/prune",
-  "compaction/start",
-  "compaction/summary",
-  "deliverables/presented",
-  "feedback/message-delete",
-  "feedback/message-put",
-  "feedback/record",
-  "goal/change",
-  "hook/invoked",
-  "hook/result",
-  "image/offload",
-  "llm/retry",
-  "llm/retry-started",
-  "model/selection",
-  "permission/preset",
-  "plan/mode",
-  "request/context",
-  "request/header",
-  "sandbox/mode",
-  "schedule/change",
-  "session-log-deepseek/delivery-accepted",
-  "session/end-seed",
-  "session/title",
-  "session/title-llm-request",
-  "step/end",
-  "step/start",
-  "subagent/catalog",
-  "subagent/descriptor",
-  "subagent/model-selection-policy",
-  "system/message",
-  "team/member",
-  "team/message/delivered",
-  "team/message/queued",
-  "team/task",
-  "todo/write",
-  "tool-workflow/agent-end",
-  "tool-workflow/agent-start",
-  "tool-workflow/run-end",
-  "tool-workflow/run-start",
-  "tool/call",
-  "tool/ptc-dispatch",
-  "tool/ptc-dispatch-start",
-  "tool/result",
-  "turn/end",
-  "turn/start",
-  "user/message",
-  "web/deepseek-search-llm-request",
-  "workspace/changes"
-]);
-var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "image/offload"
-]);
-
-// packages/core/session/src/surface.ts
-var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "system/message",
-  "user/message",
-  "assistant/message",
-  "tool/result"
-]);
-function isSurfaceEligibleType(type) {
-  return SURFACE_EVENT_TYPES.has(type);
-}
-function deriveEventMessage(event, projectedMessages) {
-  const projected = projectedMessages?.get(event.seq);
-  if (projected !== void 0) return projected;
-  switch (event.type) {
-    // Ordinary prompts and injected context project in user role: the event's
-    // model-facing content stays verbatim. Do NOT re-add per-type framing
-    // (e.g. `<context>`) here: framing is caller-owned — a producer bakes it
-    // into `content`, as agent-instructions does with `<system-reminder>` — or,
-    // if reintroduced, must be driven by the event `meta` map and a dedicated
-    // renderer, keeping this projection a verbatim pass-through. See the
-    // deferred design note in
-    // ../../../../.agents/notes/implemented/simplification/2026-07-20-unwrap-injected-content-envelopes.md
-    case "user/message": {
-      return event.data;
-    }
-    // An empty-content message projects to no wire message. For
-    // system/message the node records "no system prompt" while keeping its
-    // surface position; for assistant/message the event exists only to host a
-    // max-tokens step's usage and must not inject a content-less assistant
-    // turn into the provider transcript.
-    case "system/message":
-    case "assistant/message": {
-      if (event.data.message.content.length === 0) return null;
-      return event.data.message;
-    }
-    case "tool/result": {
-      return event.data.message;
-    }
-    default:
-      return null;
-  }
-}
-function isRecord2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function validateSessionEventData(event, subject) {
-  const data = event.data;
-  if (event.type === "request/header") {
-    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
-    const header = data["header"];
-    if (!isRecord2(header)) throw new Error(`${subject} header must be an object`);
-    if (Object.hasOwn(header, "system")) throw new Error(`${subject} must omit header.system; use system/message`);
-    if (Array.isArray(header["tools"]) && header["tools"].length === 0) {
-      throw new Error(`${subject} must omit empty tools`);
-    }
-    const defaults = header["adapterDefaults"];
-    if (isRecord2(defaults) && Object.keys(defaults).length === 0) {
-      throw new Error(`${subject} must omit empty adapterDefaults`);
-    }
-  } else if (event.type === "tool/result") {
-    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
-    if (data["error"] === void 0) return;
-    const message = data["message"];
-    const content3 = isRecord2(message) ? message["content"] : void 0;
-    const block = Array.isArray(content3) ? content3[0] : void 0;
-    if (!isRecord2(block) || block["isError"] !== true) {
-      throw new Error(`${subject} error requires message content[0].isError === true`);
-    }
-  }
-}
-function createFoldState() {
-  return { nodes: [], replaceGeneration: 0, contentGeneration: 0, projectedMessages: /* @__PURE__ */ new Map(), projections: /* @__PURE__ */ new Set() };
-}
-function isEventSeq(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0);
-}
-function isReplaceOp(value) {
-  const op = value;
-  return Object.keys(op).length === 3 && Object.hasOwn(op, "op") && Object.hasOwn(op, "startSeq") && Object.hasOwn(op, "endSeq") && op["op"] === "replace" && isEventSeq(op["startSeq"]) && isEventSeq(op["endSeq"]);
-}
-function surfaceOpOf(event) {
-  const raw = event;
-  if (!isSurfaceEligibleType(event.type)) {
-    if (!KNOWN_SESSION_EVENT_TYPES.has(event.type) && event.ignorable === true) return;
-    if (raw.surfaceOp !== void 0) {
-      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry surfaceOp`);
-    }
-    if (raw.sourceEventSeqs !== void 0) {
-      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry sourceEventSeqs`);
-    }
-    return;
-  }
-  const op = raw.surfaceOp;
-  if (op === void 0) {
-    throw new Error(`session event "${event.type}" is surface-eligible and requires a surfaceOp marker`);
-  }
-  if (op === "append") return op;
-  if (op === null || typeof op !== "object" || Array.isArray(op)) {
-    throw new Error(`session event "${event.type}" carries an invalid surfaceOp`);
-  }
-  if (!isReplaceOp(op)) {
-    throw new Error(`session event "${event.type}" carries an invalid replace surfaceOp`);
-  }
-  return op;
-}
-function assertSourceEventReferences(event, shadowedSeqs) {
-  const raw = event.sourceEventSeqs;
-  if (event.type === "assistant/message" && raw !== void 0) {
-    throw new Error("assistant/message embeds its source stream and cannot carry sourceEventSeqs");
-  }
-  const sources = /* @__PURE__ */ new Set();
-  if (raw !== void 0) {
-    if (!Array.isArray(raw)) {
-      throw new Error(`sourceEventSeqs on event at seq ${event.seq} must be an array when present`);
-    }
-    if (raw.length === 0) {
-      throw new Error("sourceEventSeqs must not be empty");
-    }
-    let nonEarlierSource;
-    for (const source of raw) {
-      if (!isEventSeq(source)) {
-        throw new Error(`session event "${event.type}" sourceEventSeqs must densely contain non-negative safe integers`);
-      }
-      sources.add(source);
-      if (nonEarlierSource === void 0 && source >= event.seq) nonEarlierSource = source;
-    }
-    if (sources.size !== raw.length) {
-      throw new Error("sourceEventSeqs must not contain duplicates");
-    }
-    if (nonEarlierSource !== void 0) {
-      throw new Error(`sourceEventSeqs must reference earlier events: ${nonEarlierSource} >= current seq ${event.seq}`);
-    }
-  }
-  const missing = shadowedSeqs.filter((seq) => !sources.has(seq));
-  if (missing.length > 0) {
-    throw new Error(`surface replace: sourceEventSeqs must include every shadowed surface node; missing ${missing.join(", ")}`);
-  }
-}
-function validateSurfaceMetadata(event) {
-  const op = surfaceOpOf(event);
-  if (op !== void 0 && op !== "append" && (op.startSeq >= event.seq || op.endSeq >= event.seq)) {
-    throw new Error(`surface replace at seq ${event.seq}: startSeq and endSeq must reference earlier events`);
-  }
-  if (op !== void 0) assertSourceEventReferences(event, []);
-  return op;
-}
-function replacementRange(state, op) {
-  const startIdx = state.nodes.indexOf(op.startSeq);
-  if (startIdx === -1) {
-    throw new Error(`surface replace: start seq ${op.startSeq} not found in surface`);
-  }
-  const endIdx = state.nodes.indexOf(op.endSeq);
-  if (endIdx === -1) {
-    throw new Error(`surface replace: end seq ${op.endSeq} not found in surface`);
-  }
-  if (startIdx > endIdx) {
-    throw new Error(`surface replace: start seq ${op.startSeq} (index ${startIdx}) is after end seq ${op.endSeq} (index ${endIdx})`);
-  }
-  return {
-    startIdx,
-    endIdx,
-    shadowedSeqs: state.nodes.slice(startIdx, endIdx + 1)
-  };
-}
-function isDeepEqualJson(a, b) {
-  if (a === b) return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, i) => isDeepEqualJson(item, b[i]));
-  }
-  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
-  const aKeys = Object.keys(a);
-  const bRecord = b;
-  if (aKeys.length !== Object.keys(b).length) return false;
-  return aKeys.every((key) => Object.hasOwn(b, key) && isDeepEqualJson(a[key], bRecord[key]));
-}
-function assertToolResultRewrite(event, shadowedSeqs, events, baseSeq) {
-  if (event.type !== "tool/result") return;
-  if (shadowedSeqs.length !== 1) {
-    throw new Error("tool/result surface replacement must rewrite exactly one current node");
-  }
-  for (const originalSeq of shadowedSeqs) {
-    const original = events[originalSeq - baseSeq];
-    if (original?.type !== "tool/result") {
-      throw new Error("tool/result surface replacement must target a current tool/result");
-    }
-    const originalRest = { ...original.data };
-    const replacementRest = { ...event.data };
-    const originalResult = original.data.message.content[0];
-    const replacementResult = event.data.message.content[0];
-    originalRest["message"] = {
-      ...original.data.message,
-      content: [{ ...originalResult, content: null }]
-    };
-    replacementRest["message"] = {
-      ...event.data.message,
-      content: [{ ...replacementResult, content: null }]
-    };
-    if (!isDeepEqualJson(originalRest, replacementRest)) {
-      throw new Error("tool/result surface replacement may change only content");
-    }
-  }
-}
-function assertSystemHeadRewrite(event, state, startIdx, shadowedSeqs, events, baseSeq) {
-  if (startIdx !== 0) return;
-  const head = events[state.nodes[0] - baseSeq];
-  if (head?.type !== "system/message") return;
-  if (event.type !== "system/message" || shadowedSeqs.length !== 1) {
-    throw new Error("surface replace: node 0 holds the system prompt and may be rewritten only by a system/message over exactly that node");
-  }
-}
-function planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
-  if (event.seq !== expectedSeq) {
-    throw new Error(`session event seq ${event.seq} is not contiguous; expected ${expectedSeq}`);
-  }
-  const surfaceOp = validateSurfaceMetadata(event);
-  const projection = projections.find((item) => item.type === event.type);
-  if (projection !== void 0) {
-    return { kind: "project", projection, messages: projection.project(event, {
-      nodes: state.nodes,
-      events,
-      baseSeq,
-      messages: state.projectedMessages
-    }) };
-  }
-  if (MESSAGE_PROJECTION_EVENT_TYPES.has(event.type)) {
-    throw new Error(`session event "${event.type}" requires a message projection; load its owning plugin or supply its projection definition`);
-  }
-  if (surfaceOp === void 0) return;
-  if (surfaceOp === "append") {
-    return { kind: "append", seq: event.seq };
-  }
-  const range = replacementRange(state, surfaceOp);
-  assertSourceEventReferences(event, range.shadowedSeqs);
-  assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq);
-  assertSystemHeadRewrite(event, state, range.startIdx, range.shadowedSeqs, events, baseSeq);
-  return {
-    kind: "replace",
-    seq: event.seq,
-    start: surfaceOp.startSeq,
-    end: surfaceOp.endSeq,
-    ...range
-  };
-}
-function applySurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
-  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections);
-  return applySurfacePlan(state, plan);
-}
-function applySurfacePlan(state, plan) {
-  if (plan?.kind === "append") {
-    state.nodes.push(plan.seq);
-  } else if (plan?.kind === "replace") {
-    state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq);
-    state.replaceGeneration += 1;
-    state.contentGeneration += 1;
-  } else if (plan?.kind === "project") {
-    for (const [seq, message] of plan.messages) state.projectedMessages.set(seq, message);
-    state.projections.add(plan.projection);
-    state.contentGeneration += 1;
-  }
-  if (plan?.kind !== "replace") return;
-  return {
-    seq: plan.seq,
-    start: plan.start,
-    end: plan.end,
-    shadowedSeqs: plan.shadowedSeqs
-  };
-}
-var SurfaceManager = class {
-  /**
-   * @param log - Contiguous complete log or loaded event window.
-   * @param baseSeq - Absolute sequence of the window's first event.
-   * @param projections - live borrowed definitions; removing a used definition invalidates further reads.
-   */
-  constructor(log, baseSeq = SessionLogOffset(0), projections = []) {
-    this.log = log;
-    this.baseSeq = baseSeq;
-    this.projections = projections;
-    this._lastProcessedSeq = baseSeq === 0 ? -1 : SessionSeq(baseSeq - 1);
-  }
-  log;
-  baseSeq;
-  projections;
-  /** Shared transition state; replacement history is not retained. */
-  _state = createFoldState();
-  /** Last processed absolute seq. */
-  _lastProcessedSeq;
-  /** Candidate already validated by `validateNext`, pending exact log admission. */
-  _pendingPlan;
-  /**
-   * Validate the next candidate without mutating the committed surface.
-   * @param event - candidate event that has not entered the log yet.
-   */
-  validateNext(event) {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    const expectedSeq = SessionSeq(this.baseSeq + this.log.length);
-    this._pendingPlan = {
-      event,
-      expectedSeq,
-      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq, this.projections)
-    };
-  }
-  /** Monotonic count of folded positional replacements. */
-  get replaceGeneration() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.replaceGeneration;
-  }
-  /** Monotonic count of committed changes to existing model-visible content. */
-  get contentGeneration() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.contentGeneration;
-  }
-  /**
-   * Project one message with every committed message projection applied.
-   * @param event - message-producing or log-only event.
-   * @returns its immutable projected message, or null when it produces none.
-   */
-  deriveEventMessage(event) {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return deriveEventMessage(event, this._state.projectedMessages);
-  }
-  /** Surface event sequences in model-visible order. */
-  get nodes() {
-    this._assertProjections();
-    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
-    return this._state.nodes;
-  }
-  /** Fold events appended since the previous access. */
-  _processDelta() {
-    const tailSeq = this.baseSeq + this.log.length - 1;
-    for (let seq = this._lastProcessedSeq + 1; seq <= tailSeq; seq++) {
-      const index2 = seq - this.baseSeq;
-      const event = this.log[index2];
-      const pending = this._pendingPlan;
-      if (pending?.event === event && pending.expectedSeq === seq) {
-        applySurfacePlan(this._state, pending.plan);
-      } else {
-        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq, this.projections);
-      }
-      if (pending !== void 0 && pending.expectedSeq <= seq) this._pendingPlan = void 0;
-      this._lastProcessedSeq = SessionSeq(seq);
-    }
-  }
-  /** Cached messages cannot outlive the definitions that interpreted their log. */
-  _assertProjections() {
-    const candidate = this._pendingPlan;
-    const pending = candidate !== void 0 && this.log[candidate.expectedSeq - this.baseSeq] === candidate.event ? candidate.plan : void 0;
-    const required2 = pending?.kind === "project" ? [...this._state.projections, pending.projection] : this._state.projections;
-    for (const projection of required2) {
-      if (!this.projections.includes(projection)) {
-        throw new Error(`session message projection "${projection.type}" was removed or replaced; restore the session with its owning plugin`);
-      }
-    }
-  }
-};
-
-// packages/core/session/src/request-header.ts
-function canonicalHeader(header) {
-  const adapterDefaults = header.adapterDefaults;
-  return {
-    config: header.config,
-    ...adapterDefaults?.reasoningEffort === true || adapterDefaults?.maxTokens === true ? { adapterDefaults } : {},
-    ...header.tools !== void 0 && header.tools.length > 0 ? { tools: header.tools } : {}
-  };
-}
-function foldRequestHeader(events, from2) {
-  let state = from2;
-  for (const event of events) {
-    if (event.type === "request/header") state = canonicalHeader(event.data.header);
-  }
-  return state;
-}
-
-// packages/core/session/src/index.ts
-function validateSessionHeader(id, input) {
-  if (input === null || typeof input !== "object" || Array.isArray(input)) {
-    throw new Error("session header is not a plain JSON record");
-  }
-  const record2 = input;
-  if (Object.hasOwn(record2, "seedLength")) {
-    throw new Error('session header has invalid field "seedLength"');
-  }
-  if (record2.version !== SESSION_FORMAT_VERSION) {
-    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record2.version)}`);
-  }
-  if (record2.id !== id) {
-    throw new Error(`session header id "${String(record2.id)}" does not match session id "${id}"`);
-  }
-  if (typeof record2.createdAt !== "number" || !Number.isSafeInteger(record2.createdAt) || record2.createdAt < 0) {
-    throw new Error("session header createdAt must be a non-negative safe integer");
-  }
-  if (record2.cwd !== void 0) {
-    if (typeof record2.cwd !== "string") throw new Error("session header cwd must be a string");
-    if (!isAbsolute3(record2.cwd)) {
-      throw new Error(`session header cwd must be an absolute path, got "${record2.cwd}"`);
-    }
-  }
-  if (record2.parentSession !== void 0 && typeof record2.parentSession !== "string") {
-    throw new Error("session header parentSession must be a string");
-  }
-  if (typeof record2.isSeeded !== "boolean") {
-    throw new Error("session header isSeeded must be a boolean");
-  }
-  if (record2.origin !== void 0 && record2.origin !== "subagent") {
-    throw new Error('session header origin must be "subagent"');
-  }
-  if (record2.delegationDepth !== void 0 && (typeof record2.delegationDepth !== "number" || !Number.isSafeInteger(record2.delegationDepth) || record2.delegationDepth < 0)) {
-    throw new Error("session header delegationDepth must be a non-negative safe integer");
-  }
-  if (record2.agentPreset !== void 0 && typeof record2.agentPreset !== "string") {
-    throw new Error("session header agentPreset must be a string");
-  }
-  return deepFreeze(record2);
-}
-function validateRestoredSessionHeader(id, input) {
-  if (input !== null && typeof input === "object" && !Array.isArray(input)) {
-    const prototype = Reflect.getPrototypeOf(input);
-    if (prototype !== Object.prototype && prototype !== null) {
-      throw new Error("session header is not a plain JSON record");
-    }
-  }
-  return validateSessionHeader(id, input);
-}
-function snapshotSessionHeader(id, source) {
-  const input = source === void 0 ? { version: SESSION_FORMAT_VERSION, id, createdAt: Date.now(), isSeeded: false } : source;
-  const snapshot = snapshotJsonValue(input);
-  if (snapshot === void 0) throw new Error("session header is not losslessly JSON-serializable");
-  return validateSessionHeader(id, snapshot);
-}
-function assertSessionEventEnvelope(value, index2) {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-  }
-  const event = value;
-  for (const key in event) {
-    switch (key) {
-      case "type":
-      case "seq":
-      case "time":
-      case "data":
-      case "surfaceOp":
-      case "sourceEventSeqs":
-      case "ignorable":
-        break;
-      default:
-        throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-    }
-  }
-  const type = event["type"];
-  const seq = event["seq"];
-  const time3 = event["time"];
-  if (typeof type !== "string" || typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 0 || Object.is(seq, -0) || typeof time3 !== "number" || !Number.isSafeInteger(time3) || event["data"] === void 0 || event["ignorable"] !== void 0 && event["ignorable"] !== true) {
-    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
-  }
-  validateSessionEventData(event, `seed ${type} at index ${index2}`);
-  switch (type) {
-    case "request/header":
-    case "system/message":
-    case "user/message":
-    case "assistant/attempt":
-    case "assistant/message":
-    case "tool/result":
-      assertCurrentLlmShape(event, index2);
-      break;
-  }
-}
-function assertCurrentLlmShape(event, index2) {
-  const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
-  if (event["type"] === "request/header") {
-    const headerRecord = record2?.["header"];
-    const config2 = headerRecord["config"];
-    if (!hasProviderModel(config2)) throw new Error(`seed request/header at index ${index2} lacks provider/model`);
-    const configRecord = config2;
-    const reasoningEffort = configRecord["reasoningEffort"];
-    if (reasoningEffort !== void 0 && (typeof reasoningEffort !== "string" || reasoningEffort.length === 0)) {
-      throw new Error(`seed request/header at index ${index2} has an invalid reasoningEffort`);
-    }
-    assertAdapterDefaults(headerRecord["adapterDefaults"], configRecord, index2);
-    const reason = record2?.["reason"];
-    if (reason !== "initial" && reason !== "resume" && reason !== "change" && reason !== "series") {
-      throw new Error(`seed request/header at index ${index2} has an invalid reason`);
-    }
-    if (record2?.["startsSeries"] !== void 0 && record2["startsSeries"] !== true) {
-      throw new Error(`seed request/header at index ${index2} has an invalid startsSeries marker`);
-    }
-  }
-  const type = event["type"];
-  if (type === "assistant/attempt") {
-    assertAssistantSettlementShape(record2, type, index2);
-    return;
-  }
-  if (!isMessageEventType(type)) return;
-  assertMessageEventShape(event, `seed ${type} at index ${index2}`);
-  if (type === "assistant/message") {
-    assertAssistantSettlementShape(record2, type, index2);
-  }
-}
-function assertAssistantSettlementShape(data, type, index2) {
-  const turn = data?.["turn"];
-  const step = data?.["step"];
-  if (typeof turn !== "number" || !Number.isSafeInteger(turn) || turn < 0 || Object.is(turn, -0) || typeof step !== "number" || !Number.isSafeInteger(step) || step < 0 || Object.is(step, -0) || !Array.isArray(data?.["stream"])) {
-    throw new Error(`seed ${type} at index ${index2} has invalid settlement fields`);
-  }
-}
-var allowedAdapterKeys = /* @__PURE__ */ new Set(["reasoningEffort", "maxTokens"]);
-function assertAdapterDefaults(value, config2, index2) {
-  if (value === void 0) return;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
-  }
-  const defaults = value;
-  if (Object.keys(defaults).some((key) => !allowedAdapterKeys.has(key)) || Object.values(defaults).some((marker) => marker !== true) || defaults["reasoningEffort"] === true && config2["reasoningEffort"] === void 0 || defaults["maxTokens"] === true && config2["maxTokens"] === void 0) {
-    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
-  }
-}
-function isMessageEventType(type) {
-  return type === "system/message" || type === "user/message" || type === "assistant/message" || type === "tool/result";
-}
-var MESSAGE_ROLE_BY_TYPE = {
-  "system/message": "system",
-  "user/message": "user",
-  "assistant/message": "assistant",
-  "tool/result": "user"
-};
-function assertMessageEventShape(event, subject) {
-  const type = event["type"];
-  if (!isMessageEventType(type)) return;
-  const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
-  const message = type === "user/message" ? record2 : record2?.["message"];
-  if (typeof message !== "object" || message === null || typeof message["id"] !== "string" || message["id"] === "") {
-    throw new Error(`${subject} lacks an identified message`);
-  }
-  const messageRecord = message;
-  const expectedRole = MESSAGE_ROLE_BY_TYPE[type];
-  if (messageRecord["role"] !== expectedRole) {
-    throw new Error(`${subject} message must have role "${expectedRole}"`);
-  }
-  const source = messageRecord["source"];
-  if (typeof source !== "object" || source === null || typeof source["kind"] !== "string" || source["kind"] === "") {
-    throw new Error(`${subject} message has invalid source`);
-  }
-  if (!Array.isArray(messageRecord["content"])) {
-    throw new Error(`${subject} message has invalid content`);
-  }
-  const sourceRecord = source;
-  if (type === "system/message") {
-    if (sourceRecord["kind"] !== "plugin" || typeof sourceRecord["plugin"] !== "string" || sourceRecord["plugin"] === "") {
-      throw new Error(`${subject} message must have plugin source`);
-    }
-    return;
-  }
-  if (type === "assistant/message") {
-    if (sourceRecord["kind"] !== "model" || !hasProviderModel(sourceRecord)) {
-      throw new Error(`${subject} message must have model source`);
-    }
-    return;
-  }
-  if (type !== "tool/result") return;
-  if (sourceRecord["kind"] !== "tool" || typeof sourceRecord["callId"] !== "string" || sourceRecord["callId"] === "") {
-    throw new Error(`${subject} message must have tool source`);
-  }
-  const content3 = messageRecord["content"];
-  const block = content3[0];
-  if (content3.length !== 1 || typeof block !== "object" || block === null || block["type"] !== "tool-result" || !Array.isArray(block["content"])) {
-    throw new Error(`${subject} message must contain one tool-result block`);
-  }
-  if (block["toolCallId"] !== sourceRecord["callId"]) {
-    throw new Error(`${subject} message has mismatched tool call ids`);
-  }
-}
-function hasProviderModel(value) {
-  if (typeof value !== "object" || value === null) return false;
-  const pair = value;
-  return typeof pair["provider"] === "string" && pair["provider"].length > 0 && typeof pair["model"] === "string" && pair["model"].length > 0;
-}
-function collectSessionCallbacks(ctx, args) {
-  return [...ctx.events.dispatch("emit", args)];
-}
-function invokeContainedSessionObservers(ctx, name2, id, args, callbacks) {
-  for (const callback of callbacks) {
-    try {
-      const returned = callback(...args);
-      void Promise.resolve(returned).catch((error51) => {
-        ctx.logger.warn(`session "${id}": ${name2} listener rejected: ${String(error51)}`);
-      });
-    } catch (error51) {
-      ctx.logger.warn(`session "${id}": ${name2} listener threw: ${String(error51)}`);
-    }
-  }
-}
-var attachments = /* @__PURE__ */ new WeakMap();
-var Session = class _Session {
-  log = [];
-  /** Single incremental owner of surface acceptance and projection state. */
-  surfaceManager;
-  /** The ordered surface over this session's event log. */
-  get surface() {
-    return this.surfaceManager;
-  }
-  /**
-   * Detached, deep-frozen creation metadata (format version, cwd, lineage,
-   * and whether fork history exists). Supplied by the store via `ctx.sessions.create()`. When a
-   * `Session` is created without a store-owned header, a minimal header is
-   * synthesized (stamped with the current {@link SESSION_FORMAT_VERSION}) so
-   * `session.header` is always present. Kept out of the event log — it is a
-   * storage concern, not replayable conversation state.
-   */
-  header;
-  /** Number of leading events inherited from this Session's fork parent. */
-  inheritedEventCount;
-  /** The session identity, derived from its durable header's single copy. */
-  get id() {
-    return this.header.id;
-  }
-  /**
-   * The first seq appended IN THIS PROCESS: the length of the constructor
-   * seed (0 without one). Events with smaller seq values entered through
-   * construction — replay, fork, or resume — and were never published on the
-   * `session/event` firehose (constructor seeds do not emit). This offset marks
-   * the constructor-input boundary for lifecycle ownership and persistence
-   * adoption; consumers that need complete canonical history still start at
-   * seq 0. Distinct from {@link inheritedEventCount}, the DURABLE
-   * fork-lineage cut: a resumed session's constructor seed is its full stored
-   * log, while the inherited count keeps the original fork value — this field is the
-   * in-process construction fact.
-   *
-   * Not persisted itself: a seeded session projects it into the log as the
-   * `session/end-seed` event, which is what a consumer reading STORED history
-   * reads. Locate the LAST such event, not necessarily one at this seq — a
-   * seed already ending in one is not re-marked, so reopening an untouched
-   * session leaves that event at a smaller seq than `firstLiveSeq`. Prefer
-   * this field in-process: it is exact before the marker reaches storage.
-   *
-   * When this lifecycle appends the marker, it occupies this seq before the
-   * store attaches and therefore does not publish either. Otherwise this seq
-   * holds an ordinary published write.
-   */
-  firstLiveSeq;
-  /**
-   * Create a detached session by validating and snapshotting borrowed seed
-   * events and storage metadata.
-   * @param id - session identity.
-   * @param seed - optional borrowed replay or fork events.
-   * @param header - optional borrowed storage metadata.
-   * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
-   * @param projections - pure interpreters for plugin-owned message changes.
-   * @returns a detached session.
-   * @throws when a seed event requires a missing message interpreter or fails validation.
-   */
-  static create(id, seed, header, inheritedEventCount, projections) {
-    return new _Session(id, seed, header, "snapshot", inheritedEventCount, projections);
-  }
-  /**
-   * Restore a detached session by adopting an independently owned or deeply frozen seed.
-   * Runtime-required event fields, event envelopes, sequence continuity, surface
-   * transitions, and header fields are validated without copying or freezing events.
-   * Embedded Assistant streams remain opaque until a stream consumer or storage
-   * verifier reads them.
-   * @param id - restored session identity.
-   * @param seed - independently owned or deeply frozen events.
-   * @param header - independently owned storage metadata.
-   * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
-   * @param eventState - aliasing state carried from the operation that produced the seed.
-   * @param projections - pure interpreters for plugin-owned message changes.
-   * @returns a restored detached session.
-   * @throws when a seed event requires a missing message interpreter or fails validation.
-   */
-  static fromRestore(id, seed, header, inheritedEventCount, eventState, projections) {
-    return new _Session(
-      id,
-      seed,
-      header,
-      eventState,
-      inheritedEventCount,
-      projections
-    );
-  }
-  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount, projections = []) {
-    this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
-    const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
-    if (seed !== void 0) {
-      for (const [index2, source] of seed.entries()) {
-        const snapshot = mode === "snapshot" ? snapshotJsonValue(source) : source;
-        if (snapshot === void 0) {
-          throw new Error(`seed event at index ${index2} is not losslessly JSON-serializable`);
-        }
-        assertSessionEventEnvelope(snapshot, index2);
-        if (snapshot.seq !== index2) {
-          throw new Error(`seed event at index ${index2} has seq ${snapshot.seq} (expected ${index2}); seed must be contiguous from 0`);
-        }
-        try {
-          this.surfaceManager.validateNext(snapshot);
-        } catch (error51) {
-          throw new Error(`invalid seed event at index ${index2}: ${error51 instanceof Error ? error51.message : "invalid surface metadata"}`);
-        }
-        this.log.push(mode === "snapshot" ? deepFreeze(snapshot) : snapshot);
-      }
-    }
-    this.firstLiveSeq = SessionLogOffset(this.log.length);
-    this.header = restoredHeader ?? snapshotSessionHeader(id, header);
-    if (this.header.isSeeded && seed === void 0) {
-      throw new Error("seeded session requires an explicit constructor seed");
-    }
-    if (this.header.isSeeded && suppliedInheritedEventCount === void 0) {
-      throw new Error("seeded session requires an inherited event count");
-    }
-    const inheritedEventCount = SessionLogOffset(suppliedInheritedEventCount ?? 0);
-    if (!this.header.isSeeded && inheritedEventCount !== 0) {
-      throw new Error("unseeded session inherited event count must be 0");
-    }
-    if (inheritedEventCount > this.log.length) {
-      throw new Error("session inherited event count exceeds its event log");
-    }
-    if (mode === "snapshot" && this.header.isSeeded && inheritedEventCount !== this.log.length) {
-      throw new Error("seeded session constructor seed must equal its inherited prefix");
-    }
-    this.inheritedEventCount = inheritedEventCount;
-    if (seed !== void 0 && mode === "snapshot" && this.header.isSeeded) {
-      this.append("session/end-seed", { inherited: true });
-    } else if (seed !== void 0 && this.log.at(-1)?.type !== "session/end-seed") {
-      this.append("session/end-seed", {});
-    }
-  }
-  /** Cached immutable full snapshot of the private append-only log. */
-  eventsSnapshot;
-  /**
-   * Return the immutable event stored at one exact sequence number.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @param seq - event sequence number.
-   * @returns the accepted event, or undefined when the log does not contain it.
-   */
-  eventAt(seq) {
-    return this.log[seq];
-  }
-  /**
-   * Materialize an immutable snapshot of a half-open event sequence range.
-   * A full current snapshot is reused until the next append; every previously
-   * returned snapshot remains stable after later appends.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @param fromSeq - non-negative inclusive sequence number; defaults to the log start.
-   * @param toSeqExclusive - non-negative exclusive sequence number; defaults to the current end.
-   * @returns a frozen array of the selected deeply frozen events.
-   */
-  snapshotEvents(fromSeq = SessionLogOffset(0), toSeqExclusive = this.seq) {
-    if (fromSeq === 0 && toSeqExclusive === this.log.length) {
-      this.eventsSnapshot ??= Object.freeze([...this.log]);
-      return this.eventsSnapshot;
-    }
-    return Object.freeze(this.log.slice(fromSeq, toSeqExclusive));
-  }
-  /**
-   * Return this Session's events after its fork-inherited prefix.
-   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
-   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
-   * @returns a fresh array containing child-owned events in log order.
-   */
-  ownEvents() {
-    return this.snapshotEvents(this.inheritedEventCount);
-  }
-  /**
-   * Whether one existing event position is outside the fork-inherited prefix.
-   * @param seq - event position in this Session.
-   * @returns true when the event belongs to this Session rather than its parent.
-   */
-  isOwnSeq(seq) {
-    return seq >= this.inheritedEventCount && seq < this.seq;
-  }
-  /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
-  get seq() {
-    return SessionLogOffset(this.log.length);
-  }
-  /**
-   * Append one typed event to the log and synchronously notify observers via
-   * the store-owned, module-private publication hooks. The hot path never blocks
-   * on I/O — persistence plugins buffer asynchronously. Once the event enters
-   * the log, the append is committed: observer failures are logged and
-   * contained per listener, so they do not change the return value or prevent
-   * later listeners from observing the same accepted event.
-   *
-   * @param type - The event type (key of {@link SessionEventMap}).
-   * @param data - The event payload; must be JSON-serializable.
-   * @param opts - Surface metadata: `surfaceOp` controls how the event enters
-   *   the ordered surface; `sourceEventSeqs` lists the seq numbers of earlier
-   *   events this one derives from. REQUIRED for
-   *   {@link SurfaceEventType} events (every message-producing event must
-   *   declare how it joins the surface, the sole source of derived model
-   *   history) and
-   *   rejected by the compiler for non-surface types like `turn/start` or
-   *   `assistant/attempt`. Assistant messages embed their exact provider
-   *   stream and cannot cite top-level source events.
-   * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
-   *   `data` that entered the log, so reading `event.data` back sees the logged
-   *   value, never the caller's still-mutable input.
-   * @throws if `data` or surface metadata is not losslessly JSON-serializable
-   *   (BigInt, function, symbol, undefined, negative zero, non-finite number,
-   *   circular reference, sparse array, or an exotic object such as
-   *   Map/Set/Date/class instance), or when the candidate violates the
-   *   request-header empty-field or tool-error consistency rules, or the
-   *   canonical surface contract (marker shape and eligibility, unique
-   *   earlier source-event references, positional replacement validity, and complete
-   *   shadowed-node coverage). One iterative pass reads, validates, and
-   *   copies each nested value once, so a stateful getter cannot supply one value
-   *   to validation and another to storage. The event log is the durable source
-   *   of truth, so a bad event fails at the append site rather than later during
-   *   a backend flush. A synchronous internal dispatch validation failure or an
-   *   append reentered while this acceptance/publication boundary is open also
-   *   rejects before the log changes.
-   */
-  append(type, data, ...opts) {
-    const surfaceOpts = opts[0];
-    const surfaceMetadata = {
-      ...surfaceOpts?.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
-      ...surfaceOpts?.surfaceOp === void 0 ? {} : { surfaceOp: surfaceOpts.surfaceOp }
-    };
-    const dataSnapshot = snapshotJsonValue(data);
-    if (dataSnapshot === void 0) {
-      throw new Error(`session event "${type}" carries non-JSON-serializable data`);
-    }
-    const surfaceMetadataSnapshot = snapshotJsonValue(surfaceMetadata);
-    if (surfaceMetadataSnapshot === void 0) {
-      throw new Error(`session event "${type}" carries non-JSON-serializable surface metadata`);
-    }
-    const entry = attachments.get(this);
-    if (entry?.appending) {
-      throw new Error("session append cannot reenter while another append is being published");
-    }
-    const event = deepFreeze({
-      type,
-      seq: SessionSeq(this.log.length),
-      time: Date.now(),
-      data: dataSnapshot,
-      ...surfaceMetadataSnapshot
-    });
-    validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`);
-    this.surfaceManager.validateNext(event);
-    if (entry !== void 0) entry.appending = true;
-    try {
-      let callbacks;
-      const callbackArgs = [this, event];
-      if (entry !== void 0) {
-        callbacks = collectSessionCallbacks(entry.emitCtx, [entry.carrier, "session/event", ...callbackArgs]);
-      }
-      this.log.push(event);
-      this.eventsSnapshot = void 0;
-      if (callbacks !== void 0 && entry !== void 0) {
-        invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
-      }
-      return event;
-    } finally {
-      if (entry !== void 0) {
-        entry.appending = false;
-        if (entry.detachRequested && !entry.announcing) entry.detach();
-      }
-    }
-  }
-  /** Cached fold of the request-header events — see {@link requestHeader}. */
-  headerFold;
-  /** Log position (events consumed) the header fold has reached. */
-  headerFoldSeq = 0;
-  /**
-   * The {@link EpochHeader} in force after the log's last header event — the
-   * header the NEXT request will be compared against — or undefined before
-   * the first `request/header` snapshot. The live, incrementally-maintained
-   * form of `foldRequestHeader(session.snapshotEvents())`: each header event is folded
-   * once, when first seen, so a per-step read costs O(new events).
-   * @returns the folded header, or undefined when no header event exists yet.
-   */
-  requestHeader() {
-    if (this.headerFoldSeq < this.log.length) {
-      this.headerFold = deepFreeze(foldRequestHeader(this.log.slice(this.headerFoldSeq), this.headerFold));
-      this.headerFoldSeq = this.log.length;
-    }
-    return this.headerFold;
-  }
-  /** Cached fold of `request/context` events. */
-  contextFold;
-  contextFoldSeq = 0;
-  /**
-   * Return the latest resolved route metadata, or `undefined` before the first
-   * `request/context` event. Each event is folded once.
-   * @returns the latest immutable route metadata.
-   */
-  requestContext() {
-    if (this.contextFoldSeq < this.log.length) {
-      for (const event of this.log.slice(this.contextFoldSeq)) {
-        if (event.type === "request/context") this.contextFold = deepFreeze({ ...event.data });
-      }
-      this.contextFoldSeq = this.log.length;
-    }
-    return this.contextFold;
-  }
-  /** The derived-message cache: frozen projections, extended per unseen node. */
-  derived = [];
-  /** Surface position (nodes projected) the cache has reached. */
-  derivedNodes = 0;
-  /** {@link SurfaceManager.contentGeneration} the cache was built under. */
-  derivedGeneration = 0;
-  /**
-   * Derive the LLM message history by walking the ordered sequences of
-   * message-producing events maintained by `surfaceOp` markers. The
-   * surface is the single source of derived history: every message-producing
-   * append records its `surfaceOp`, so a raw event with no marker (a chunk, a
-   * turn boundary) is correctly absent, and a compaction `replace` deletes the
-   * shadowed nodes from the derivation. The projection rules are
-   * {@link deriveEventMessage}, with logged message projections applied
-   * without changing node membership or message identity.
-   *
-   * CACHED: pure tail growth costs O(new nodes); a replacement or message projection
-   * ({@link SessionSurface.contentGeneration}) rebuilds. The returned array is
-   * a fresh snapshot per call (later appends never grow an array a caller
-   * already holds); the `Message` objects in it are SHARED and **deep-frozen**.
-   * Unchanged content reuses frozen event data; projected blocks are frozen
-   * derived copies. Consumers cannot mutate the log through either form.
-   * @returns a fresh array of the shared, frozen derived history.
-   */
-  deriveMessages() {
-    const surface = this.surface;
-    const nodes = surface.nodes;
-    const generation = surface.contentGeneration;
-    if (generation !== this.derivedGeneration) {
-      this.derived = [];
-      this.derivedNodes = 0;
-      this.derivedGeneration = generation;
-    }
-    for (const seq of nodes.slice(this.derivedNodes)) {
-      const msg = this.deriveEventMessage(this.log[seq]);
-      if (msg) this.derived.push(msg);
-    }
-    this.derivedNodes = nodes.length;
-    return [...this.derived];
-  }
-  /**
-   * Project one event with all committed message projections applied.
-   * The original durable event remains unchanged.
-   * @param event - the event to project.
-   * @returns the derived message, or null when the event produces none.
-   */
-  deriveEventMessage(event) {
-    return this.surfaceManager.deriveEventMessage(event);
-  }
-};
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -67767,10 +67884,10 @@ function $constructor(name2, initializer3, params) {
   }
   Object.defineProperty(Definition, "name", { value: name2 });
   function _(def) {
-    var _a4;
+    var _a5;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
+    (_a5 = inst._zod).deferred ?? (_a5.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -68388,8 +68505,8 @@ function explicitlyAborted(x, startIndex = 0) {
 }
 function prefixIssues(path2, issues) {
   return issues.map((iss) => {
-    var _a4;
-    (_a4 = iss).path ?? (_a4.path = []);
+    var _a5;
+    (_a5 = iss).path ?? (_a5.path = []);
     iss.path.unshift(path2);
     return iss;
   });
@@ -68574,7 +68691,7 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
   const processError = (error52, path2 = []) => {
-    var _a4, _b;
+    var _a5, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, [...path2, ...issue2.path]));
@@ -68595,7 +68712,7 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
           const terminal = i === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a4 = curr.properties)[el] ?? (_a4[el] = { errors: [] });
+            (_a5 = curr.properties)[el] ?? (_a5[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -68891,10 +69008,10 @@ var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a4;
+  var _a5;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a4 = inst._zod).onattach ?? (_a4.onattach = []);
+  (_a5 = inst._zod).onattach ?? (_a5.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -68960,8 +69077,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a4;
-    (_a4 = inst2._zod.bag).multipleOf ?? (_a4.multipleOf = def.value);
+    var _a5;
+    (_a5 = inst2._zod.bag).multipleOf ?? (_a5.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -69094,9 +69211,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69122,9 +69239,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69150,9 +69267,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -69180,9 +69297,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69209,9 +69326,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69238,9 +69355,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a4;
+  var _a5;
   $ZodCheck.init(inst, def);
-  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
+  (_a5 = inst._zod.def).when ?? (_a5.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -69269,7 +69386,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a4, _b;
+  var _a5, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -69280,7 +69397,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a4 = inst._zod).check ?? (_a4.check = (payload) => {
+    (_a5 = inst._zod).check ?? (_a5.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -69482,7 +69599,7 @@ var version2 = {
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a4;
+  var _a5;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -69497,7 +69614,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
+    (_a5 = inst._zod).deferred ?? (_a5.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -78640,7 +78757,7 @@ function initializeContext(params) {
   };
 }
 function process14(schema, ctx, _params = { path: [], schemaPath: [] }) {
-  var _a4;
+  var _a5;
   const def = schema._zod.def;
   const seen = ctx.seen.get(schema);
   if (seen) {
@@ -78688,7 +78805,7 @@ function process14(schema, ctx, _params = { path: [], schemaPath: [] }) {
     delete result.schema.default;
   }
   if (ctx.io === "input" && "_prefault" in result.schema)
-    (_a4 = result.schema).default ?? (_a4.default = result.schema._prefault);
+    (_a5 = result.schema).default ?? (_a5.default = result.schema._prefault);
   delete result.schema._prefault;
   const _result = ctx.seen.get(schema);
   return _result.schema;
@@ -81722,6 +81839,1770 @@ function date5(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
+// packages/core/session/src/index.ts
+import { isAbsolute as isAbsolute3 } from "node:path";
+
+// packages/core/session/src/types.ts
+function SessionId(id) {
+  return brandString(id);
+}
+function SessionSeq(value) {
+  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
+    throw new TypeError(`SessionSeq must be a non-negative safe integer, got ${String(value)}`);
+  }
+  return brandNumber(value);
+}
+function SessionLogOffset(value) {
+  if (!Number.isSafeInteger(value) || value < 0 || Object.is(value, -0)) {
+    throw new TypeError(`SessionLogOffset must be a non-negative safe integer, got ${String(value)}`);
+  }
+  return brandNumber(value);
+}
+var SESSION_FORMAT_VERSION = 4;
+
+// packages/core/session/src/known-event-types.ts
+var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "agent-preset/selected",
+  "agent/inbox/spliced",
+  "approval/asked",
+  "approval/decided",
+  "approval/policy",
+  "assistant/attempt",
+  "assistant/message",
+  "command/done",
+  "command/run",
+  "compaction/end",
+  "compaction/prune",
+  "compaction/start",
+  "compaction/summary",
+  "deliverables/presented",
+  "developer/message",
+  "feedback/message-delete",
+  "feedback/message-put",
+  "feedback/record",
+  "goal/change",
+  "hook/invoked",
+  "hook/result",
+  "image/offload",
+  "llm/retry",
+  "llm/retry-started",
+  "model/selection",
+  "permission/preset",
+  "plan/mode",
+  "request/context",
+  "request/header",
+  "sandbox/mode",
+  "schedule/change",
+  "session-log-deepseek/delivery-accepted",
+  "session/end-seed",
+  "session/title",
+  "session/title-llm-request",
+  "step/end",
+  "step/start",
+  "subagent/catalog",
+  "subagent/descriptor",
+  "subagent/model-selection-policy",
+  "system/message",
+  "team/member",
+  "team/message/delivered",
+  "team/message/queued",
+  "team/task",
+  "todo/write",
+  "tool-workflow/agent-end",
+  "tool-workflow/agent-start",
+  "tool-workflow/run-end",
+  "tool-workflow/run-start",
+  "tool/call",
+  "tool/ptc-dispatch",
+  "tool/ptc-dispatch-start",
+  "tool/result",
+  "turn/end",
+  "turn/start",
+  "user/message",
+  "web/deepseek-search-llm-request",
+  "working-directory/change",
+  "workspace/changes"
+]);
+var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "image/offload"
+]);
+
+// packages/core/session/src/surface.ts
+var SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "system/message",
+  "developer/message",
+  "user/message",
+  "assistant/message",
+  "tool/result"
+]);
+function isSurfaceEligibleType(type) {
+  return SURFACE_EVENT_TYPES.has(type);
+}
+function deriveEventMessage(event, projectedMessages) {
+  const projected = projectedMessages?.get(event.seq);
+  if (projected !== void 0) return projected;
+  switch (event.type) {
+    // Ordinary prompts and injected context retain producer-owned framing.
+    // See Derived history in packages/core/session/README.md.
+    case "user/message": {
+      return event.data;
+    }
+    // Empty system and developer nodes retain their surface positions without
+    // adding wire messages. An empty assistant event hosts a max-tokens step's
+    // usage and must not inject a content-less turn into the provider transcript.
+    case "system/message":
+    case "developer/message":
+    case "assistant/message": {
+      if (event.data.message.content.length === 0) return null;
+      return event.data.message;
+    }
+    case "tool/result": {
+      return event.data.message;
+    }
+    default:
+      return null;
+  }
+}
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function validateSessionEventData(event, subject) {
+  const data = event.data;
+  if (SURFACE_EVENT_TYPES.has(event.type) && isRecord2(data)) {
+    const message = event.type === "user/message" ? data : data["message"];
+    if (isRecord2(message)) {
+      if (event.type === "developer/message" !== (message["role"] === "developer")) {
+        throw new Error(`${subject} developer/message and developer role must occur together`);
+      }
+      if (message["role"] !== "developer" && Array.isArray(message["content"]) && message["content"].some((block) => isRecord2(block) && (block["type"] === "tool-addition" || block["type"] === "tool-removal"))) {
+        throw new Error(`${subject} tool-change blocks require developer role`);
+      }
+      if (event.type === "developer/message" && Array.isArray(message["content"])) {
+        let hasAdditions = false;
+        for (const block of message["content"]) {
+          if (!isRecord2(block) || block["type"] !== "tool-addition" && block["type"] !== "tool-removal") continue;
+          if (typeof block["toolName"] !== "string" || block["toolName"].length === 0) {
+            throw new Error(`${subject} ${block["type"]} requires a nonempty toolName`);
+          }
+          if (block["type"] === "tool-addition") {
+            hasAdditions = true;
+            if (Object.hasOwn(block, "tool")) throw new Error(`${subject} tool-addition must omit inline tool definitions`);
+          }
+        }
+        if (hasAdditions ? !isEventSeq(data["headerSeq"]) : Object.hasOwn(data, "headerSeq")) {
+          throw new Error(`${subject} requires headerSeq exactly when tool additions are present`);
+        }
+      }
+    }
+  }
+  if (event.type === "request/header") {
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
+    const header = data["header"];
+    if (!isRecord2(header)) throw new Error(`${subject} header must be an object`);
+    if (Object.hasOwn(header, "system")) throw new Error(`${subject} must omit header.system; use system/message`);
+    if (Array.isArray(header["tools"]) && header["tools"].length === 0) {
+      throw new Error(`${subject} must omit empty tools`);
+    }
+    const defaults = header["adapterDefaults"];
+    if (isRecord2(defaults) && Object.keys(defaults).length === 0) {
+      throw new Error(`${subject} must omit empty adapterDefaults`);
+    }
+  } else if (event.type === "tool/result") {
+    if (!isRecord2(data)) throw new Error(`${subject} data must be an object`);
+    if (data["error"] === void 0) return;
+    const message = data["message"];
+    if (!isRecord2(message) || message["isError"] !== true) {
+      throw new Error(`${subject} error requires message.isError === true`);
+    }
+  }
+}
+function createFoldState() {
+  return { nodes: [], replaceGeneration: 0, contentGeneration: 0, projectedMessages: /* @__PURE__ */ new Map(), projections: /* @__PURE__ */ new Set() };
+}
+function isEventSeq(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0);
+}
+function isReplaceOp(value) {
+  const op = value;
+  return Object.keys(op).length === 3 && Object.hasOwn(op, "op") && Object.hasOwn(op, "startSeq") && Object.hasOwn(op, "endSeq") && op["op"] === "replace" && isEventSeq(op["startSeq"]) && isEventSeq(op["endSeq"]);
+}
+function surfaceOpOf(event) {
+  const raw = event;
+  if (!isSurfaceEligibleType(event.type)) {
+    if (!KNOWN_SESSION_EVENT_TYPES.has(event.type) && event.ignorable === true) return;
+    if (raw.surfaceOp !== void 0) {
+      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry surfaceOp`);
+    }
+    if (raw.sourceEventSeqs !== void 0) {
+      throw new Error(`session event "${event.type}" is not surface-eligible and cannot carry sourceEventSeqs`);
+    }
+    return;
+  }
+  const op = raw.surfaceOp;
+  if (op === void 0) {
+    throw new Error(`session event "${event.type}" is surface-eligible and requires a surfaceOp marker`);
+  }
+  if (op === "append") return op;
+  if (op === null || typeof op !== "object" || Array.isArray(op)) {
+    throw new Error(`session event "${event.type}" carries an invalid surfaceOp`);
+  }
+  if (!isReplaceOp(op)) {
+    throw new Error(`session event "${event.type}" carries an invalid replace surfaceOp`);
+  }
+  return op;
+}
+function assertSourceEventReferences(event, shadowedSeqs) {
+  const raw = event.sourceEventSeqs;
+  if (event.type === "assistant/message" && raw !== void 0) {
+    throw new Error("assistant/message embeds its source stream and cannot carry sourceEventSeqs");
+  }
+  const sources = /* @__PURE__ */ new Set();
+  if (raw !== void 0) {
+    if (!Array.isArray(raw)) {
+      throw new Error(`sourceEventSeqs on event at seq ${event.seq} must be an array when present`);
+    }
+    if (raw.length === 0) {
+      throw new Error("sourceEventSeqs must not be empty");
+    }
+    let nonEarlierSource;
+    for (const source of raw) {
+      if (!isEventSeq(source)) {
+        throw new Error(`session event "${event.type}" sourceEventSeqs must densely contain non-negative safe integers`);
+      }
+      sources.add(source);
+      if (nonEarlierSource === void 0 && source >= event.seq) nonEarlierSource = source;
+    }
+    if (sources.size !== raw.length) {
+      throw new Error("sourceEventSeqs must not contain duplicates");
+    }
+    if (nonEarlierSource !== void 0) {
+      throw new Error(`sourceEventSeqs must reference earlier events: ${nonEarlierSource} >= current seq ${event.seq}`);
+    }
+  }
+  const missing = shadowedSeqs.filter((seq) => !sources.has(seq));
+  if (missing.length > 0) {
+    throw new Error(`surface replace: sourceEventSeqs must include every shadowed surface node; missing ${missing.join(", ")}`);
+  }
+}
+function assertDeveloperHeader(event, events, baseSeq) {
+  if (event.type !== "developer/message") return;
+  validateSessionEventData(event, `developer/message at seq ${event.seq}`);
+  if (event.data.headerSeq === void 0) return;
+  const headerSeq = event.data.headerSeq;
+  const headerEvent = events[headerSeq - baseSeq];
+  if (headerSeq >= event.seq || headerEvent?.type !== "request/header") {
+    throw new Error("developer/message headerSeq must reference an earlier request/header");
+  }
+  for (const block of event.data.message.content) {
+    if (block.type !== "tool-addition") continue;
+    const definitions = headerEvent.data.header.tools?.filter((tool) => tool.name === block.toolName) ?? [];
+    if (definitions.length !== 1) {
+      throw new Error(`developer/message tool-addition "${block.toolName}" must name exactly one tool in headerSeq ${headerSeq}`);
+    }
+    const definition2 = definitions[0];
+    if (typeof definition2.description !== "string" || !isRecord2(definition2.parameters)) {
+      throw new Error(`developer/message tool-addition "${block.toolName}" requires a complete tool definition in headerSeq ${headerSeq}`);
+    }
+    if (Object.hasOwn(definition2, "deferLoading") && definition2.deferLoading !== true) {
+      throw new Error("developer/message referenced tool deferLoading must be true when present");
+    }
+  }
+}
+function validateSurfaceMetadata(event) {
+  const op = surfaceOpOf(event);
+  if (op !== void 0 && op !== "append" && (op.startSeq >= event.seq || op.endSeq >= event.seq)) {
+    throw new Error(`surface replace at seq ${event.seq}: startSeq and endSeq must reference earlier events`);
+  }
+  if (op !== void 0) assertSourceEventReferences(event, []);
+  return op;
+}
+function replacementRange(state, op) {
+  const startIdx = state.nodes.indexOf(op.startSeq);
+  if (startIdx === -1) {
+    throw new Error(`surface replace: start seq ${op.startSeq} not found in surface`);
+  }
+  const endIdx = state.nodes.indexOf(op.endSeq);
+  if (endIdx === -1) {
+    throw new Error(`surface replace: end seq ${op.endSeq} not found in surface`);
+  }
+  if (startIdx > endIdx) {
+    throw new Error(`surface replace: start seq ${op.startSeq} (index ${startIdx}) is after end seq ${op.endSeq} (index ${endIdx})`);
+  }
+  return {
+    startIdx,
+    endIdx,
+    shadowedSeqs: state.nodes.slice(startIdx, endIdx + 1)
+  };
+}
+function isDeepEqualJson(a, b) {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item, i) => isDeepEqualJson(item, b[i]));
+  }
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  const aKeys = Object.keys(a);
+  const bRecord = b;
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((key) => Object.hasOwn(b, key) && isDeepEqualJson(a[key], bRecord[key]));
+}
+function assertToolResultRewrite(event, shadowedSeqs, events, baseSeq) {
+  if (event.type !== "tool/result") return;
+  if (shadowedSeqs.length !== 1) {
+    throw new Error("tool/result surface replacement must rewrite exactly one current node");
+  }
+  for (const originalSeq of shadowedSeqs) {
+    const original = events[originalSeq - baseSeq];
+    if (original?.type !== "tool/result") {
+      throw new Error("tool/result surface replacement must target a current tool/result");
+    }
+    const originalRest = { ...original.data };
+    const replacementRest = { ...event.data };
+    originalRest["message"] = {
+      ...original.data.message,
+      content: null
+    };
+    replacementRest["message"] = {
+      ...event.data.message,
+      content: null
+    };
+    if (!isDeepEqualJson(originalRest, replacementRest)) {
+      throw new Error("tool/result surface replacement may change only content");
+    }
+  }
+}
+function assertSystemHeadRewrite(event, state, startIdx, shadowedSeqs, events, baseSeq) {
+  if (startIdx !== 0) return;
+  const head = events[state.nodes[0] - baseSeq];
+  if (head?.type !== "system/message") return;
+  if (event.type !== "system/message" || shadowedSeqs.length !== 1) {
+    throw new Error("surface replace: node 0 holds the system prompt and may be rewritten only by a system/message over exactly that node");
+  }
+}
+function planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
+  if (event.seq !== expectedSeq) {
+    throw new Error(`session event seq ${event.seq} is not contiguous; expected ${expectedSeq}`);
+  }
+  const surfaceOp = validateSurfaceMetadata(event);
+  assertDeveloperHeader(event, events, baseSeq);
+  const projection = projections.find((item) => item.type === event.type);
+  if (projection !== void 0) {
+    return { kind: "project", projection, messages: projection.project(event, {
+      nodes: state.nodes,
+      events,
+      baseSeq,
+      messages: state.projectedMessages
+    }) };
+  }
+  if (MESSAGE_PROJECTION_EVENT_TYPES.has(event.type)) {
+    throw new Error(`session event "${event.type}" requires a message projection; load its owning plugin or supply its projection definition`);
+  }
+  if (surfaceOp === void 0) return;
+  if (surfaceOp === "append") {
+    return { kind: "append", seq: event.seq };
+  }
+  const range = replacementRange(state, surfaceOp);
+  assertSourceEventReferences(event, range.shadowedSeqs);
+  assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq);
+  assertSystemHeadRewrite(event, state, range.startIdx, range.shadowedSeqs, events, baseSeq);
+  return {
+    kind: "replace",
+    seq: event.seq,
+    start: surfaceOp.startSeq,
+    end: surfaceOp.endSeq,
+    ...range
+  };
+}
+function applySurfaceEvent(state, event, expectedSeq, events, baseSeq, projections) {
+  const plan = planSurfaceEvent(state, event, expectedSeq, events, baseSeq, projections);
+  return applySurfacePlan(state, plan);
+}
+function applySurfacePlan(state, plan) {
+  if (plan?.kind === "append") {
+    state.nodes.push(plan.seq);
+  } else if (plan?.kind === "replace") {
+    state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq);
+    state.replaceGeneration += 1;
+    state.contentGeneration += 1;
+  } else if (plan?.kind === "project") {
+    for (const [seq, message] of plan.messages) state.projectedMessages.set(seq, message);
+    state.projections.add(plan.projection);
+    state.contentGeneration += 1;
+  }
+  if (plan?.kind !== "replace") return;
+  return {
+    seq: plan.seq,
+    start: plan.start,
+    end: plan.end,
+    shadowedSeqs: plan.shadowedSeqs
+  };
+}
+var SurfaceManager = class {
+  /**
+   * @param log - Contiguous complete log or loaded event window.
+   * @param baseSeq - Absolute sequence of the window's first event.
+   * @param projections - live borrowed definitions; removing a used definition invalidates further reads.
+   */
+  constructor(log, baseSeq = SessionLogOffset(0), projections = []) {
+    this.log = log;
+    this.baseSeq = baseSeq;
+    this.projections = projections;
+    this._lastProcessedSeq = baseSeq === 0 ? -1 : SessionSeq(baseSeq - 1);
+  }
+  log;
+  baseSeq;
+  projections;
+  /** Shared transition state; replacement history is not retained. */
+  _state = createFoldState();
+  /** Last processed absolute seq. */
+  _lastProcessedSeq;
+  /** Candidate already validated by `validateNext`, pending exact log admission. */
+  _pendingPlan;
+  /**
+   * Validate the next candidate without mutating the committed surface.
+   * @param event - candidate event that has not entered the log yet.
+   */
+  validateNext(event) {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    const expectedSeq = SessionSeq(this.baseSeq + this.log.length);
+    this._pendingPlan = {
+      event,
+      expectedSeq,
+      plan: planSurfaceEvent(this._state, event, expectedSeq, this.log, this.baseSeq, this.projections)
+    };
+  }
+  /** Monotonic count of folded positional replacements. */
+  get replaceGeneration() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.replaceGeneration;
+  }
+  /** Monotonic count of committed changes to existing model-visible content. */
+  get contentGeneration() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.contentGeneration;
+  }
+  /**
+   * Project one message with every committed message projection applied.
+   * @param event - message-producing or log-only event.
+   * @returns its immutable projected message, or null when it produces none.
+   */
+  deriveEventMessage(event) {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return deriveEventMessage(event, this._state.projectedMessages);
+  }
+  /** Surface event sequences in model-visible order. */
+  get nodes() {
+    this._assertProjections();
+    if (this._lastProcessedSeq < this.baseSeq + this.log.length - 1) this._processDelta();
+    return this._state.nodes;
+  }
+  /** Fold events appended since the previous access. */
+  _processDelta() {
+    const tailSeq = this.baseSeq + this.log.length - 1;
+    for (let seq = this._lastProcessedSeq + 1; seq <= tailSeq; seq++) {
+      const index2 = seq - this.baseSeq;
+      const event = this.log[index2];
+      const pending = this._pendingPlan;
+      if (pending?.event === event && pending.expectedSeq === seq) {
+        applySurfacePlan(this._state, pending.plan);
+      } else {
+        applySurfaceEvent(this._state, event, SessionSeq(seq), this.log, this.baseSeq, this.projections);
+      }
+      if (pending !== void 0 && pending.expectedSeq <= seq) this._pendingPlan = void 0;
+      this._lastProcessedSeq = SessionSeq(seq);
+    }
+  }
+  /** Cached messages cannot outlive the definitions that interpreted their log. */
+  _assertProjections() {
+    const candidate = this._pendingPlan;
+    const pending = candidate !== void 0 && this.log[candidate.expectedSeq - this.baseSeq] === candidate.event ? candidate.plan : void 0;
+    const required2 = pending?.kind === "project" ? [...this._state.projections, pending.projection] : this._state.projections;
+    for (const projection of required2) {
+      if (!this.projections.includes(projection)) {
+        throw new Error(`session message projection "${projection.type}" was removed or replaced; restore the session with its owning plugin`);
+      }
+    }
+  }
+};
+
+// packages/core/session/src/request-header.ts
+function canonicalHeader(header) {
+  const adapterDefaults = header.adapterDefaults;
+  return {
+    config: header.config,
+    ...adapterDefaults?.reasoningEffort === true || adapterDefaults?.maxTokens === true ? { adapterDefaults } : {},
+    ...header.tools !== void 0 && header.tools.length > 0 ? { tools: header.tools } : {}
+  };
+}
+function foldRequestHeader(events, from2) {
+  let state = from2;
+  for (const event of events) {
+    if (event.type === "request/header") state = canonicalHeader(event.data.header);
+  }
+  return state;
+}
+
+// packages/core/session/src/tool-history.ts
+var ToolHistoryProjection = class {
+  /** Historical declarations indexed by the header sequence referenced by additions. */
+  headers = /* @__PURE__ */ new Map();
+  /** Definitions retained in the current declaration series, including removed tools. */
+  declared = /* @__PURE__ */ new Map();
+  /** Active definitions from the latest request header. */
+  active = [];
+  /** Active names reconstructed from the baseline and recorded updates. */
+  available = /* @__PURE__ */ new Set();
+  /** Header that starts the current declaration series; absent before the first header. */
+  baselineSeq;
+  /** Immutable request snapshot of the current baseline and resolved updates. */
+  history = deepFreeze({ tools: [], updates: [] });
+  /**
+   * Consume the next committed event in log order.
+   * @param event - a session event, including inherited events during restoration.
+   */
+  apply(event) {
+    if (event.type === "request/header") {
+      const tools = event.data.header.tools ?? [];
+      this.headers.set(event.seq, tools);
+      const redeclared = tools.some((tool) => {
+        const before = this.declared.get(tool.name);
+        return before !== void 0 && JSON.stringify(before) !== JSON.stringify(tool);
+      });
+      if (this.baselineSeq === void 0 || event.data.reason === "series" || event.data.startsSeries || redeclared) {
+        this.baselineSeq = event.seq;
+        this.declared = new Map(tools.map((tool) => [tool.name, tool]));
+        this.history = deepFreeze({ tools, updates: [] });
+        this.available = new Set(tools.map((tool) => tool.name));
+      }
+      this.active = tools;
+    } else if (event.type === "developer/message") {
+      const { message, headerSeq } = event.data;
+      const definitions = headerSeq === void 0 ? [] : this.headers.get(headerSeq);
+      const additions = message.content.flatMap((block) => {
+        if (block.type !== "tool-addition") return [];
+        const tool = definitions?.find((tool2) => tool2.name === block.toolName);
+        if (tool === void 0) throw new Error(`tool history: missing definition for ${block.toolName}`);
+        return [tool];
+      });
+      for (const tool of additions) this.declared.set(tool.name, tool);
+      for (const block of message.content) {
+        if (block.type === "tool-addition") this.available.add(block.toolName);
+        else if (block.type === "tool-removal") this.available.delete(block.toolName);
+      }
+      this.history = deepFreeze({
+        tools: this.history.tools,
+        updates: [...this.history.updates, { messageId: message.id, additions }]
+      });
+    }
+  }
+  /**
+   * Read an immutable snapshot; subsequent events do not mutate it.
+   * @returns initial declarations and historically resolved additions for the current series.
+   */
+  snapshot() {
+    if (this.active.length !== this.available.size || this.active.some((tool) => !this.available.has(tool.name))) {
+      return deepFreeze({ tools: this.active, updates: [] });
+    }
+    return this.history;
+  }
+};
+
+// packages/core/session/src/repair.ts
+var TOOL_OUTCOME_UNKNOWN = "TOOL_OUTCOME_UNKNOWN";
+
+// packages/core/session/src/index.ts
+function validateSessionHeader(id, input) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("session header is not a plain JSON record");
+  }
+  const record2 = input;
+  if (Object.hasOwn(record2, "seedLength")) {
+    throw new Error('session header has invalid field "seedLength"');
+  }
+  if (record2.version !== SESSION_FORMAT_VERSION) {
+    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record2.version)}`);
+  }
+  if (record2.id !== id) {
+    throw new Error(`session header id "${String(record2.id)}" does not match session id "${id}"`);
+  }
+  if (typeof record2.createdAt !== "number" || !Number.isSafeInteger(record2.createdAt) || record2.createdAt < 0) {
+    throw new Error("session header createdAt must be a non-negative safe integer");
+  }
+  if (record2.cwd !== void 0) {
+    if (typeof record2.cwd !== "string") throw new Error("session header cwd must be a string");
+    if (!isAbsolute3(record2.cwd)) {
+      throw new Error(`session header cwd must be an absolute path, got "${record2.cwd}"`);
+    }
+  }
+  if (record2.parentSession !== void 0 && typeof record2.parentSession !== "string") {
+    throw new Error("session header parentSession must be a string");
+  }
+  if (typeof record2.isSeeded !== "boolean") {
+    throw new Error("session header isSeeded must be a boolean");
+  }
+  if (record2.origin !== void 0 && record2.origin !== "subagent") {
+    throw new Error('session header origin must be "subagent"');
+  }
+  if (record2.delegationDepth !== void 0 && (typeof record2.delegationDepth !== "number" || !Number.isSafeInteger(record2.delegationDepth) || record2.delegationDepth < 0)) {
+    throw new Error("session header delegationDepth must be a non-negative safe integer");
+  }
+  if (record2.agentPreset !== void 0 && typeof record2.agentPreset !== "string") {
+    throw new Error("session header agentPreset must be a string");
+  }
+  return deepFreeze(record2);
+}
+function validateRestoredSessionHeader(id, input) {
+  if (input !== null && typeof input === "object" && !Array.isArray(input)) {
+    const prototype = Reflect.getPrototypeOf(input);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new Error("session header is not a plain JSON record");
+    }
+  }
+  return validateSessionHeader(id, input);
+}
+function snapshotSessionHeader(id, source) {
+  const input = source === void 0 ? { version: SESSION_FORMAT_VERSION, id, createdAt: Date.now(), isSeeded: false } : source;
+  const snapshot2 = snapshotJsonValue(input);
+  if (snapshot2 === void 0) throw new Error("session header is not losslessly JSON-serializable");
+  return validateSessionHeader(id, snapshot2);
+}
+function assertSessionEventEnvelope(value, index2) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+  }
+  const event = value;
+  for (const key in event) {
+    switch (key) {
+      case "type":
+      case "seq":
+      case "time":
+      case "data":
+      case "surfaceOp":
+      case "sourceEventSeqs":
+      case "ignorable":
+        break;
+      default:
+        throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+    }
+  }
+  const type = event["type"];
+  const seq = event["seq"];
+  const time3 = event["time"];
+  if (typeof type !== "string" || typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 0 || Object.is(seq, -0) || typeof time3 !== "number" || !Number.isSafeInteger(time3) || event["data"] === void 0 || event["ignorable"] !== void 0 && event["ignorable"] !== true) {
+    throw new Error(`seed event at index ${index2} has an invalid event envelope`);
+  }
+  validateSessionEventData(event, `seed ${type} at index ${index2}`);
+  switch (type) {
+    case "request/header":
+    case "developer/message":
+    case "system/message":
+    case "user/message":
+    case "assistant/attempt":
+    case "assistant/message":
+    case "tool/result":
+      assertCurrentLlmShape(event, index2);
+      break;
+  }
+}
+function assertCurrentLlmShape(event, index2) {
+  const data = event["data"];
+  const record2 = typeof data === "object" && data !== null ? data : void 0;
+  if (event["type"] === "request/header") {
+    const headerRecord = record2?.["header"];
+    const config2 = headerRecord["config"];
+    if (!hasProviderModel(config2)) throw new Error(`seed request/header at index ${index2} lacks provider/model`);
+    const configRecord = config2;
+    const reasoningEffort = configRecord["reasoningEffort"];
+    if (reasoningEffort !== void 0 && (typeof reasoningEffort !== "string" || reasoningEffort.length === 0)) {
+      throw new Error(`seed request/header at index ${index2} has an invalid reasoningEffort`);
+    }
+    assertAdapterDefaults(headerRecord["adapterDefaults"], configRecord, index2);
+    const reason = record2?.["reason"];
+    if (reason !== "initial" && reason !== "resume" && reason !== "change" && reason !== "series") {
+      throw new Error(`seed request/header at index ${index2} has an invalid reason`);
+    }
+    if (record2?.["startsSeries"] !== void 0 && record2["startsSeries"] !== true) {
+      throw new Error(`seed request/header at index ${index2} has an invalid startsSeries marker`);
+    }
+  }
+  const type = event["type"];
+  if (type === "assistant/attempt") {
+    assertAssistantSettlementShape(record2, type, index2);
+    return;
+  }
+  if (!isMessageEventType(type)) return;
+  assertMessageEventShape(event, `seed ${type} at index ${index2}`);
+  if (type === "assistant/message") {
+    assertAssistantSettlementShape(record2, type, index2);
+  }
+}
+function assertAssistantSettlementShape(data, type, index2) {
+  const turn = data?.["turn"];
+  const step = data?.["step"];
+  if (typeof turn !== "number" || !Number.isSafeInteger(turn) || turn < 0 || Object.is(turn, -0) || typeof step !== "number" || !Number.isSafeInteger(step) || step < 0 || Object.is(step, -0) || !Array.isArray(data?.["stream"])) {
+    throw new Error(`seed ${type} at index ${index2} has invalid settlement fields`);
+  }
+}
+var allowedAdapterKeys = /* @__PURE__ */ new Set(["reasoningEffort", "maxTokens"]);
+function assertAdapterDefaults(value, config2, index2) {
+  if (value === void 0) return;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
+  }
+  const defaults = value;
+  if (Object.keys(defaults).some((key) => !allowedAdapterKeys.has(key)) || Object.values(defaults).some((marker) => marker !== true) || defaults["reasoningEffort"] === true && config2["reasoningEffort"] === void 0 || defaults["maxTokens"] === true && config2["maxTokens"] === void 0) {
+    throw new Error(`seed request/header at index ${index2} has invalid adapterDefaults`);
+  }
+}
+function isMessageEventType(type) {
+  return type === "developer/message" || type === "system/message" || type === "user/message" || type === "assistant/message" || type === "tool/result";
+}
+var MESSAGE_ROLE_BY_TYPE = {
+  "system/message": "system",
+  "developer/message": "developer",
+  "user/message": "user",
+  "assistant/message": "assistant",
+  "tool/result": "tool"
+};
+function assertMessageEventShape(event, subject) {
+  const type = event["type"];
+  if (!isMessageEventType(type)) return;
+  const data = event["data"];
+  const record2 = typeof data === "object" && data !== null ? data : void 0;
+  const message = type === "user/message" ? record2 : record2?.["message"];
+  if (typeof message !== "object" || message === null || typeof message["id"] !== "string" || message["id"] === "") {
+    throw new Error(`${subject} lacks an identified message`);
+  }
+  const messageRecord = message;
+  const expectedRole = MESSAGE_ROLE_BY_TYPE[type];
+  if (messageRecord["role"] !== expectedRole) {
+    throw new Error(`${subject} message must have role "${expectedRole}"`);
+  }
+  const source = messageRecord["source"];
+  if (typeof source !== "object" || source === null || typeof source["kind"] !== "string" || source["kind"] === "") {
+    throw new Error(`${subject} message has invalid source`);
+  }
+  if (!Array.isArray(messageRecord["content"])) {
+    throw new Error(`${subject} message has invalid content`);
+  }
+  const sourceRecord = source;
+  if (type === "system/message") {
+    if (sourceRecord["kind"] !== "system-prompt") {
+      throw new Error(`${subject} message must have system-prompt source`);
+    }
+    return;
+  }
+  if (type === "assistant/message") {
+    if (sourceRecord["kind"] !== "model" || !hasProviderModel(sourceRecord)) {
+      throw new Error(`${subject} message must have model source`);
+    }
+    return;
+  }
+  if (type !== "tool/result") return;
+  if (sourceRecord["kind"] !== "tool" || typeof sourceRecord["callId"] !== "string" || sourceRecord["callId"] === "") {
+    throw new Error(`${subject} message must have tool source`);
+  }
+  if (messageRecord["toolCallId"] !== sourceRecord["callId"]) {
+    throw new Error(`${subject} message has mismatched tool call ids`);
+  }
+}
+function hasProviderModel(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const pair = value;
+  return typeof pair["provider"] === "string" && pair["provider"].length > 0 && typeof pair["model"] === "string" && pair["model"].length > 0;
+}
+function collectSessionCallbacks(ctx, args) {
+  return [...ctx.events.dispatch("emit", args)];
+}
+function invokeContainedSessionObservers(ctx, name2, id, args, callbacks) {
+  for (const callback of callbacks) {
+    try {
+      const returned = callback(...args);
+      void Promise.resolve(returned).catch((error51) => {
+        ctx.logger.warn(`session "${id}": ${name2} listener rejected: ${String(error51)}`);
+      });
+    } catch (error51) {
+      ctx.logger.warn(`session "${id}": ${name2} listener threw: ${String(error51)}`);
+    }
+  }
+}
+var attachments = /* @__PURE__ */ new WeakMap();
+var PLUGIN_RECORD_TYPE = /^plugin:[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*$/u;
+function isPluginRecordType(type) {
+  return PLUGIN_RECORD_TYPE.test(type);
+}
+function assertPluginRecordEvent(value) {
+  const { type } = value;
+  if (!isPluginRecordType(type)) {
+    throw new Error(`plugin record type "${type}" must be "plugin:" followed by lowercase slash-separated segments`);
+  }
+}
+var commitPluginRecord;
+var Session = class _Session {
+  log = [];
+  /** Single incremental owner of surface acceptance and projection state. */
+  surfaceManager;
+  /** The ordered surface over this session's event log. */
+  get surface() {
+    return this.surfaceManager;
+  }
+  /**
+   * Detached, deep-frozen creation metadata (format version, cwd, lineage,
+   * and whether fork history exists). Supplied by the store via `ctx.sessions.create()`. When a
+   * `Session` is created without a store-owned header, a minimal header is
+   * synthesized (stamped with the current {@link SESSION_FORMAT_VERSION}) so
+   * `session.header` is always present. Kept out of the event log — it is a
+   * storage concern, not replayable conversation state.
+   */
+  header;
+  /** Number of leading events inherited from this Session's fork parent. */
+  inheritedEventCount;
+  /** The session identity, derived from its durable header's single copy. */
+  get id() {
+    return this.header.id;
+  }
+  /**
+   * The constructor seed length (0 without one), before any marker appended
+   * during construction. Seed events never publish on `session/event`. A
+   * marker appended before the store attaches occupies this seq without
+   * publishing either; otherwise this seq is available for the next append.
+   *
+   * This in-process offset is not persisted. A fork seed can already contain
+   * the child's inherited marker and synthetic closers, so its child-owned
+   * history starts at {@link inheritedEventCount}, before this offset. A
+   * resumed Session's seed contains its full stored log, while its inherited
+   * count keeps the durable fork cut. Consumers needing complete canonical
+   * history start at seq 0.
+   */
+  firstLiveSeq;
+  /**
+   * First event produced for this object lifecycle. A new fork includes its
+   * child-owned seed marker and closers; a restored Session starts after its
+   * complete stored prefix. This in-process capture offset is not persisted.
+   */
+  firstLifecycleSeq;
+  /**
+   * Create a detached session by validating and snapshotting borrowed seed
+   * events and storage metadata.
+   * @param id - session identity.
+   * @param seed - optional borrowed replay or fork events.
+   * @param header - optional borrowed storage metadata.
+   * @param inheritedEventCount - exact fork-inherited prefix length for a seeded header.
+   * @param projections - pure interpreters for plugin-owned message changes.
+   * @returns a detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
+   */
+  static create(id, seed, header, inheritedEventCount, projections) {
+    return new _Session(id, seed, header, "snapshot", inheritedEventCount, projections);
+  }
+  /**
+   * Restore a detached session by adopting an independently owned or deeply frozen seed.
+   * Runtime-required event fields, event envelopes, sequence continuity, surface
+   * transitions, and header fields are validated without copying or freezing events.
+   * Embedded Assistant streams remain opaque until a stream consumer or storage
+   * verifier reads them.
+   * @param id - restored session identity.
+   * @param seed - independently owned or deeply frozen events.
+   * @param header - independently owned storage metadata.
+   * @param inheritedEventCount - exact fork-inherited prefix length decoded from storage.
+   * @param eventState - aliasing state carried from the operation that produced the seed.
+   * @param projections - pure interpreters for plugin-owned message changes.
+   * @returns a restored detached session.
+   * @throws when a seed event requires a missing message interpreter or fails validation.
+   */
+  static fromRestore(id, seed, header, inheritedEventCount, eventState, projections) {
+    return new _Session(
+      id,
+      seed,
+      header,
+      eventState,
+      inheritedEventCount,
+      projections
+    );
+  }
+  constructor(id, seed, header, mode = "snapshot", suppliedInheritedEventCount, projections = []) {
+    this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
+    const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
+    if (seed !== void 0) {
+      for (const [index2, source] of seed.entries()) {
+        const snapshot2 = mode === "snapshot" ? snapshotJsonValue(source) : source;
+        if (snapshot2 === void 0) {
+          throw new Error(`seed event at index ${index2} is not losslessly JSON-serializable`);
+        }
+        assertSessionEventEnvelope(snapshot2, index2);
+        if (snapshot2.seq !== index2) {
+          throw new Error(`seed event at index ${index2} has seq ${snapshot2.seq} (expected ${index2}); seed must be contiguous from 0`);
+        }
+        try {
+          this.surfaceManager.validateNext(snapshot2);
+        } catch (error51) {
+          throw new Error(`invalid seed event at index ${index2}: ${error51 instanceof Error ? error51.message : "invalid surface metadata"}`);
+        }
+        this.log.push(mode === "snapshot" ? deepFreeze(snapshot2) : snapshot2);
+      }
+    }
+    this.firstLiveSeq = SessionLogOffset(this.log.length);
+    this.header = restoredHeader ?? snapshotSessionHeader(id, header);
+    if (this.header.isSeeded && seed === void 0) {
+      throw new Error("seeded session requires an explicit constructor seed");
+    }
+    if (this.header.isSeeded && suppliedInheritedEventCount === void 0) {
+      throw new Error("seeded session requires an inherited event count");
+    }
+    const inheritedEventCount = SessionLogOffset(suppliedInheritedEventCount ?? 0);
+    if (!this.header.isSeeded && inheritedEventCount !== 0) {
+      throw new Error("unseeded session inherited event count must be 0");
+    }
+    if (inheritedEventCount > this.log.length) {
+      throw new Error("session inherited event count exceeds its event log");
+    }
+    const seedMarker = this.log[inheritedEventCount];
+    const markedSeed = seedMarker?.type === "session/end-seed" && seedMarker.data.inherited === true;
+    if (mode === "snapshot" && this.header.isSeeded && inheritedEventCount !== this.log.length && !markedSeed) {
+      throw new Error("seeded session constructor seed must equal its inherited prefix or mark its inherited cut");
+    }
+    if (markedSeed && this.log.slice(inheritedEventCount + 1).some((event) => event.type === "session/end-seed" && event.data.inherited === true)) {
+      throw new Error("session inherited event count must identify the final inherited marker");
+    }
+    this.inheritedEventCount = inheritedEventCount;
+    this.firstLifecycleSeq = mode === "snapshot" && this.header.isSeeded ? inheritedEventCount : this.firstLiveSeq;
+    if (seed !== void 0 && mode === "snapshot" && this.header.isSeeded && !markedSeed) {
+      this.append("session/end-seed", { inherited: true });
+    } else if (seed !== void 0 && !(mode === "snapshot" && this.header.isSeeded) && this.log.at(-1)?.type !== "session/end-seed") {
+      this.append("session/end-seed", {});
+    }
+  }
+  /** Cached immutable full snapshot of the private append-only log. */
+  eventsSnapshot;
+  /**
+   * Return the immutable event stored at one exact sequence number.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @param seq - event sequence number.
+   * @returns the accepted event, or undefined when the log does not contain it.
+   */
+  eventAt(seq) {
+    return this.log[seq];
+  }
+  /**
+   * Materialize an immutable snapshot of a half-open event sequence range.
+   * A full current snapshot is reused until the next append; every previously
+   * returned snapshot remains stable after later appends.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @param fromSeq - non-negative inclusive sequence number; defaults to the log start.
+   * @param toSeqExclusive - non-negative exclusive sequence number; defaults to the current end.
+   * @returns a frozen array of the selected deeply frozen events.
+   */
+  snapshotEvents(fromSeq = SessionLogOffset(0), toSeqExclusive = this.seq) {
+    if (fromSeq === 0 && toSeqExclusive === this.log.length) {
+      this.eventsSnapshot ??= Object.freeze([...this.log]);
+      return this.eventsSnapshot;
+    }
+    return Object.freeze(this.log.slice(fromSeq, toSeqExclusive));
+  }
+  /**
+   * Return this Session's events after its fork-inherited prefix.
+   * @deprecated Existing logic may remain unmigrated for now, but new calls are prohibited.
+   * See the [Agent Note](../../../../.agents/notes/implemented/architecture/2026-09-09-deprecate-synchronous-session-event-reads.md).
+   * @returns a fresh array containing child-owned events in log order.
+   */
+  ownEvents() {
+    return this.snapshotEvents(this.inheritedEventCount);
+  }
+  /**
+   * Whether one existing event position is outside the fork-inherited prefix.
+   * @param seq - event position in this Session.
+   * @returns true when the event belongs to this Session rather than its parent.
+   */
+  isOwnSeq(seq) {
+    return seq >= this.inheritedEventCount && seq < this.seq;
+  }
+  /** The next event's sequence number — always the log length (the `seq = log.length` contiguity contract). */
+  get seq() {
+    return SessionLogOffset(this.log.length);
+  }
+  /**
+   * Append one typed event to the log and synchronously notify observers via
+   * the store-owned, module-private publication hooks. The hot path never blocks
+   * on I/O — persistence plugins buffer asynchronously. Once the event enters
+   * the log, the append is committed: observer failures are logged and
+   * contained per listener, so they do not change the return value or prevent
+   * later listeners from observing the same accepted event.
+   *
+   * @param type - The event type (key of {@link SessionEventMap}).
+   * @param data - The event payload; must be JSON-serializable.
+   * @param opts - Surface metadata: `surfaceOp` controls how the event enters
+   *   the ordered surface; `sourceEventSeqs` lists the seq numbers of earlier
+   *   events this one derives from. REQUIRED for
+   *   {@link SurfaceEventType} events (every message-producing event must
+   *   declare how it joins the surface, the sole source of derived model
+   *   history) and
+   *   rejected by the compiler for non-surface types like `turn/start` or
+   *   `assistant/attempt`. Assistant messages embed their exact provider
+   *   stream and cannot cite top-level source events.
+   * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
+   *   `data` that entered the log, so reading `event.data` back sees the logged
+   *   value, never the caller's still-mutable input.
+   * @throws if `data` or surface metadata is not losslessly JSON-serializable
+   *   (BigInt, function, symbol, undefined, negative zero, non-finite number,
+   *   circular reference, sparse array, or an exotic object such as
+   *   Map/Set/Date/class instance), or when the candidate violates the
+   *   request-header empty-field or tool-error consistency rules, or the
+   *   canonical surface contract (marker shape and eligibility, unique
+   *   earlier source-event references, positional replacement validity, and complete
+   *   shadowed-node coverage). One iterative pass reads, validates, and
+   *   copies each nested value once, so a stateful getter cannot supply one value
+   *   to validation and another to storage. The event log is the durable source
+   *   of truth, so a bad event fails at the append site rather than later during
+   *   a backend flush. A synchronous internal dispatch validation failure or an
+   *   append reentered while this acceptance/publication boundary is open also
+   *   rejects before the log changes.
+   */
+  append(type, data, ...opts) {
+    const surfaceOpts = opts[0];
+    const surfaceMetadata = {
+      ...surfaceOpts?.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
+      ...surfaceOpts?.surfaceOp === void 0 ? {} : { surfaceOp: surfaceOpts.surfaceOp }
+    };
+    const dataSnapshot = snapshotJsonValue(data);
+    if (dataSnapshot === void 0) {
+      throw new Error(`session event "${type}" carries non-JSON-serializable data`);
+    }
+    const surfaceMetadataSnapshot = snapshotJsonValue(surfaceMetadata);
+    if (surfaceMetadataSnapshot === void 0) {
+      throw new Error(`session event "${type}" carries non-JSON-serializable surface metadata`);
+    }
+    const entry = this.publicationEntry();
+    const event = deepFreeze({
+      type,
+      seq: SessionSeq(this.log.length),
+      time: Date.now(),
+      data: dataSnapshot,
+      ...surfaceMetadataSnapshot
+    });
+    validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`);
+    this.commit(event, entry);
+    return event;
+  }
+  static {
+    commitPluginRecord = (session, type, data) => session.#appendRecord(type, data);
+  }
+  /**
+   * Commit one plugin record; {@link appendPluginRecord} is the only caller.
+   * @param type - record type, checked against the plugin record grammar.
+   * @param data - JSON payload, snapshotted before it enters the log.
+   * @returns the record's sequence number.
+   */
+  #appendRecord(type, data) {
+    const dataSnapshot = snapshotJsonValue(data);
+    if (dataSnapshot === void 0) {
+      throw new Error(`plugin record "${type}" carries non-JSON-serializable data`);
+    }
+    const entry = this.publicationEntry();
+    const record2 = deepFreeze({
+      type,
+      seq: SessionSeq(this.log.length),
+      time: Date.now(),
+      data: dataSnapshot,
+      ignorable: true
+    });
+    assertPluginRecordEvent(record2);
+    this.commit(record2, entry);
+    return record2.seq;
+  }
+  /**
+   * Read the store attachment for one append, refusing an append that
+   * reenters while another append is being published.
+   * @returns the attachment, or undefined for a detached Session.
+   */
+  publicationEntry() {
+    const entry = attachments.get(this);
+    if (entry?.appending) {
+      throw new Error("session append cannot reenter while another append is being published");
+    }
+    return entry;
+  }
+  /**
+   * Accept one frozen candidate at the next sequence number, enter it into the
+   * log, and notify `session/event` observers with per-listener containment.
+   * @param event - the candidate built at the current log length.
+   * @param entry - the attachment read before the candidate was built.
+   */
+  commit(event, entry) {
+    this.surfaceManager.validateNext(event);
+    if (entry !== void 0) entry.appending = true;
+    try {
+      let callbacks;
+      const callbackArgs = [this, event];
+      if (entry !== void 0) {
+        callbacks = collectSessionCallbacks(entry.emitCtx, [entry.carrier, "session/event", ...callbackArgs]);
+      }
+      this.log.push(event);
+      this.eventsSnapshot = void 0;
+      if (callbacks !== void 0 && entry !== void 0) {
+        invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
+      }
+    } finally {
+      if (entry !== void 0) {
+        entry.appending = false;
+        if (entry.detachRequested && !entry.announcing) entry.detach();
+      }
+    }
+  }
+  /** Cached fold of the request-header events — see {@link requestHeader}. */
+  headerFold;
+  /** Log position (events consumed) the header fold has reached. */
+  headerFoldSeq = 0;
+  /**
+   * The {@link EpochHeader} in force after the log's last header event — the
+   * header the NEXT request will be compared against — or undefined before
+   * the first `request/header` snapshot. The live, incrementally-maintained
+   * form of `foldRequestHeader(session.snapshotEvents())`: each header event is folded
+   * once, when first seen, so a per-step read costs O(new events).
+   * @returns the folded header, or undefined when no header event exists yet.
+   */
+  requestHeader() {
+    if (this.headerFoldSeq < this.log.length) {
+      this.headerFold = deepFreeze(foldRequestHeader(this.log.slice(this.headerFoldSeq), this.headerFold));
+      this.headerFoldSeq = this.log.length;
+    }
+    return this.headerFold;
+  }
+  /** Cached fold of `request/context` events. */
+  contextFold;
+  contextFoldSeq = 0;
+  /**
+   * Return the latest resolved route metadata, or `undefined` before the first
+   * `request/context` event. Each event is folded once.
+   * @returns the latest immutable route metadata.
+   */
+  requestContext() {
+    if (this.contextFoldSeq < this.log.length) {
+      for (const event of this.log.slice(this.contextFoldSeq)) {
+        if (event.type === "request/context") this.contextFold = deepFreeze({ ...event.data });
+      }
+      this.contextFoldSeq = this.log.length;
+    }
+    return this.contextFold;
+  }
+  /** Cached historical tool definitions and updates for request projection. */
+  toolHistoryProjection = new ToolHistoryProjection();
+  /** Index of the next committed event not yet consumed by the tool-history fold. */
+  toolHistorySeq = 0;
+  /**
+   * Fold unseen committed events into capability-independent tool history.
+   * Initial access reconstructs inherited history; later reads consume only new events.
+   * @returns an immutable snapshot for LLM request projection, including historical addition definitions.
+   */
+  toolHistory() {
+    for (const event of this.log.slice(this.toolHistorySeq)) this.toolHistoryProjection.apply(event);
+    this.toolHistorySeq = this.log.length;
+    return this.toolHistoryProjection.snapshot();
+  }
+  /** The derived-message cache: frozen projections, extended per unseen node. */
+  derived = [];
+  /** Surface position (nodes projected) the cache has reached. */
+  derivedNodes = 0;
+  /** {@link SurfaceManager.contentGeneration} the cache was built under. */
+  derivedGeneration = 0;
+  /**
+   * Derive the LLM message history by walking the ordered sequences of
+   * message-producing events maintained by `surfaceOp` markers. The
+   * surface is the single source of derived history: every message-producing
+   * append records its `surfaceOp`, so a raw event with no marker (a chunk, a
+   * turn boundary) is correctly absent, and a compaction `replace` deletes the
+   * shadowed nodes from the derivation. The projection rules are
+   * {@link deriveEventMessage}, with logged message projections applied
+   * without changing node membership or message identity.
+   *
+   * CACHED: pure tail growth costs O(new nodes); a replacement or message projection
+   * ({@link SessionSurface.contentGeneration}) rebuilds. The returned array is
+   * a fresh snapshot per call (later appends never grow an array a caller
+   * already holds); the `Message` objects in it are SHARED and **deep-frozen**.
+   * Unchanged content reuses frozen event data; projected blocks are frozen
+   * derived copies. Consumers cannot mutate the log through either form.
+   * @returns a fresh array of the shared, frozen derived history.
+   */
+  deriveMessages() {
+    const surface = this.surface;
+    const nodes = surface.nodes;
+    const generation = surface.contentGeneration;
+    if (generation !== this.derivedGeneration) {
+      this.derived = [];
+      this.derivedNodes = 0;
+      this.derivedGeneration = generation;
+    }
+    for (const seq of nodes.slice(this.derivedNodes)) {
+      const msg = this.deriveEventMessage(this.log[seq]);
+      if (msg) this.derived.push(msg);
+    }
+    this.derivedNodes = nodes.length;
+    return [...this.derived];
+  }
+  /**
+   * Project one event with all committed message projections applied.
+   * The original durable event remains unchanged.
+   * @param event - the event to project.
+   * @returns the derived message, or null when the event produces none.
+   */
+  deriveEventMessage(event) {
+    return this.surfaceManager.deriveEventMessage(event);
+  }
+};
+
+// packages/interaction/user-questions/src/projection.ts
+var ASK_USER_QUESTION_TOOL = "ask_user_question";
+var TIMED_WAIT_PARAMETER = "timeout";
+var toolOptionSchema = external_exports.object({
+  label: external_exports.string(),
+  description: external_exports.string().optional()
+}).loose();
+var toolQuestionSchema = external_exports.object({
+  id: external_exports.string(),
+  question: external_exports.string(),
+  header: external_exports.string().optional(),
+  options: external_exports.array(toolOptionSchema).optional(),
+  multi_select: external_exports.boolean().optional()
+}).loose();
+var toolArgumentsSchema = external_exports.object({
+  questions: external_exports.array(toolQuestionSchema).min(1)
+}).loose();
+var optionSchema = external_exports.object({
+  label: external_exports.string(),
+  description: external_exports.string().optional()
+}).strict().transform((option) => ({
+  label: option.label,
+  ...option.description === void 0 ? {} : { description: option.description }
+}));
+var questionSchema = external_exports.object({
+  id: external_exports.string(),
+  question: external_exports.string(),
+  detail: external_exports.string().optional(),
+  header: external_exports.string().optional(),
+  options: external_exports.array(optionSchema).optional(),
+  multiSelect: external_exports.boolean().optional()
+}).strict().transform((question) => ({
+  id: question.id,
+  question: question.question,
+  ...question.detail === void 0 ? {} : { detail: question.detail },
+  ...question.header === void 0 ? {} : { header: question.header },
+  ...question.options === void 0 ? {} : { options: question.options },
+  ...question.multiSelect === void 0 ? {} : { multiSelect: question.multiSelect }
+}));
+var pendingQuestionsSchema = external_exports.array(external_exports.object({
+  callId: external_exports.string().min(1).transform(ToolCallId),
+  questions: external_exports.array(questionSchema).min(1),
+  state: external_exports.enum(["open", "continued"])
+}).strict()).superRefine((active, context) => {
+  if (new Set(active.map((question) => question.callId)).size !== active.length) {
+    context.addIssue({ code: "custom", message: "callIds must be unique" });
+  }
+});
+var answerSchema = external_exports.object({
+  id: external_exports.string(),
+  selected: external_exports.array(external_exports.string()),
+  custom: external_exports.string().optional()
+}).strict().transform((answer) => ({
+  id: answer.id,
+  selected: answer.selected,
+  ...answer.custom === void 0 ? {} : { custom: answer.custom }
+}));
+var settledQuestionsSchema = external_exports.array(external_exports.object({
+  callId: external_exports.string().min(1).transform(ToolCallId),
+  answers: external_exports.array(answerSchema)
+}).strict());
+var projectionViewSchema = external_exports.object({
+  active: pendingQuestionsSchema,
+  settled: settledQuestionsSchema
+}).strict();
+var answerBatchSchema = external_exports.object({ answers: external_exports.array(answerSchema) }).loose();
+var emptyView = { active: [], settled: [] };
+var initialFold = { timed: false, questions: emptyView };
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isTimedAskUserQuestionSchema(tool) {
+  if (tool.name !== ASK_USER_QUESTION_TOOL) return false;
+  const properties = tool.parameters["properties"];
+  return isRecord3(properties) && TIMED_WAIT_PARAMETER in properties;
+}
+function questionsOf(argumentsText) {
+  let parsed;
+  try {
+    parsed = JSON.parse(argumentsText);
+  } catch (error51) {
+    void error51;
+    return null;
+  }
+  const result = toolArgumentsSchema.safeParse(parsed);
+  if (!result.success) return null;
+  return result.data.questions.map((question) => ({
+    id: question.id,
+    question: question.question,
+    ...question.header === void 0 ? {} : { header: question.header },
+    ...question.options === void 0 ? {} : {
+      options: question.options.map((option) => ({
+        label: option.label,
+        ...option.description === void 0 ? {} : { description: option.description }
+      }))
+    },
+    ...question.multi_select === void 0 ? {} : { multiSelect: question.multi_select }
+  }));
+}
+function isPendingResult(content3) {
+  const text4 = content3.find((block) => block.type === "text");
+  if (text4 === void 0) return false;
+  try {
+    const parsed = JSON.parse(text4.text);
+    return typeof parsed === "object" && parsed !== null && parsed.pending === true;
+  } catch (error51) {
+    void error51;
+    return false;
+  }
+}
+function answerBatchOf(content3) {
+  const text4 = content3.find((block) => block.type === "text");
+  if (text4 === void 0) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text4.text);
+  } catch (error51) {
+    void error51;
+    return null;
+  }
+  const result = answerBatchSchema.safeParse(parsed);
+  return result.success ? result.data.answers : null;
+}
+function settleQuestion(view, callId, answers) {
+  const question = view.active.find((item) => item.callId === callId);
+  if (question === void 0) return view;
+  return {
+    active: view.active.filter((item) => item.callId !== callId),
+    settled: [...view.settled, { callId: question.callId, answers }]
+  };
+}
+function applyUserQuestionEvent(fold, event) {
+  const view = fold.questions;
+  switch (event.type) {
+    case "request/header": {
+      const tools = event.data.header.tools;
+      const timed = Array.isArray(tools) && tools.some((tool) => isRecord3(tool) && typeof tool.name === "string" && isRecord3(tool.parameters) && isTimedAskUserQuestionSchema({ name: tool.name, parameters: tool.parameters }));
+      return timed === fold.timed ? fold : { ...fold, timed };
+    }
+    case "tool/call": {
+      if (!fold.timed || event.data.name !== ASK_USER_QUESTION_TOOL) return fold;
+      const questions = questionsOf(event.data.arguments);
+      if (questions === null) return fold;
+      const callId = event.data.callId;
+      return {
+        ...fold,
+        questions: {
+          ...view,
+          active: [...view.active.filter((question) => question.callId !== callId), { callId, questions, state: "open" }]
+        }
+      };
+    }
+    case "tool/result": {
+      const callId = event.data.message.toolCallId;
+      if (!view.active.some((question) => question.callId === callId)) return fold;
+      if (isPendingResult(event.data.message.content) || event.data.error?.code === TOOL_OUTCOME_UNKNOWN) {
+        return {
+          ...fold,
+          questions: {
+            ...view,
+            active: view.active.map((question) => question.callId === callId ? { ...question, state: "continued" } : question)
+          }
+        };
+      }
+      const answers = event.data.error === void 0 && event.data.message.isError !== true ? answerBatchOf(event.data.message.content) : null;
+      return {
+        ...fold,
+        questions: answers === null ? { ...view, active: view.active.filter((question) => question.callId !== callId) } : settleQuestion(view, callId, answers)
+      };
+    }
+    case "tool/ptc-dispatch": {
+      if (event.data.name !== ASK_USER_QUESTION_TOOL || event.data.isError || !isPendingResult(event.data.content)) return fold;
+      const questions = questionsOf(JSON.stringify(event.data.arguments));
+      if (questions === null) return fold;
+      const callId = event.data.subCallId;
+      return {
+        ...fold,
+        questions: {
+          ...view,
+          active: [...view.active.filter((question) => question.callId !== callId), { callId, questions, state: "continued" }]
+        }
+      };
+    }
+    case "user/message": {
+      const source = event.data.source;
+      if (source.kind !== "user-question-reply") return fold;
+      const questions = settleQuestion(view, source.callId, answerBatchOf(event.data.content) ?? []);
+      return questions === view ? fold : { ...fold, questions };
+    }
+    default:
+      return fold;
+  }
+}
+var userQuestionProjectionDefinition = {
+  key: "userQuestions",
+  stateSchema: external_exports.object({
+    inheritedEventCount: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).transform(SessionLogOffset),
+    timed: external_exports.boolean(),
+    questions: projectionViewSchema
+  }).strict(),
+  init: (_header, inheritedEventCount) => ({ inheritedEventCount, ...initialFold }),
+  apply: (state, event) => {
+    if (event.seq < state.inheritedEventCount) return state;
+    const fold = applyUserQuestionEvent(state, event);
+    return fold === state ? state : { ...state, ...fold };
+  },
+  wire: { viewSchema: projectionViewSchema, view: (state) => state.questions },
+  stateVersion: 2
+};
+
+// packages/interaction/user-questions/src/timed-wait.ts
+var TimedQuestionWait = class {
+  /**
+   * @param deadline - Host-clock deadline used while no Client holds the wait.
+   * @param parent - Calling Turn's cancellation signal.
+   * @param timeout - Business error used to settle an unattended wait.
+   */
+  constructor(deadline, parent, timeout) {
+    this.deadline = deadline;
+    this.parent = parent;
+    this.timeout = timeout;
+    parent?.addEventListener("abort", this.parentAborted, { once: true });
+    if (parent?.aborted === true) this.parentAborted();
+    else this.schedule();
+  }
+  deadline;
+  parent;
+  timeout;
+  controller = new AbortController();
+  completion = Promise.withResolvers();
+  claims = /* @__PURE__ */ new Set();
+  timer;
+  /** Cancellation shared with the foreground waterfall, not with the calling Turn. */
+  get signal() {
+    return this.controller.signal;
+  }
+  /** Settles when the wait is cancelled, expires, or is disposed. */
+  get done() {
+    return this.completion.promise;
+  }
+  parentAborted = () => {
+    this.close(this.parent?.reason);
+  };
+  schedule() {
+    clearTimeout(this.timer);
+    this.timer = void 0;
+    if (this.signal.aborted || this.claims.size > 0) return;
+    this.timer = setTimeout(() => {
+      this.close(this.timeout);
+    }, Math.max(0, this.deadline - Date.now()));
+  }
+  /**
+   * Hold the wait for one answer UI until its stream closes or the question settles.
+   * @param signal - This business stream's cancellation lifetime.
+   * @returns One remaining-duration frame; completion releases the claim.
+   */
+  async *attach(signal) {
+    if (signal.aborted || this.signal.aborted) return;
+    if (this.claims.size === 0 && Date.now() >= this.deadline) {
+      this.close(this.timeout);
+      return;
+    }
+    const ended = Promise.withResolvers();
+    const release = () => {
+      if (!this.claims.delete(release)) return;
+      signal.removeEventListener("abort", release);
+      this.signal.removeEventListener("abort", release);
+      ended.resolve();
+      this.schedule();
+    };
+    this.claims.add(release);
+    signal.addEventListener("abort", release, { once: true });
+    this.signal.addEventListener("abort", release, { once: true });
+    this.schedule();
+    try {
+      yield { remainingMs: Math.max(0, this.deadline - Date.now()) };
+      await ended.promise;
+    } finally {
+      release();
+    }
+  }
+  /**
+   * Release timers, parent cancellation, and all Client claims.
+   * @param reason - Cancellation delivered to the foreground waterfall.
+   */
+  close(reason) {
+    if (this.signal.aborted) return;
+    clearTimeout(this.timer);
+    this.timer = void 0;
+    this.parent?.removeEventListener("abort", this.parentAborted);
+    this.controller.abort(reason);
+    this.completion.resolve();
+  }
+};
+
+// packages/interaction/user-questions/src/index.ts
+var UserQuestionError = class extends HarnessError {
+  constructor(message, code2, options) {
+    super(message, code2, options);
+    this.name = "UserQuestionError";
+  }
+};
+function abortedQuestion(cause) {
+  return new UserQuestionError(
+    "ask_user_question was aborted before the user answered",
+    "ASK_ABORTED",
+    cause === void 0 ? void 0 : { cause }
+  );
+}
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function restoreUserQuestionError(reason) {
+  if (reason instanceof UserQuestionError) return reason;
+  if (isRecord4(reason) && reason.name === "UserQuestionError" && typeof reason.message === "string" && typeof reason.code === "string") {
+    return new UserQuestionError(reason.message, reason.code, { cause: reason });
+  }
+  return reason;
+}
+var _attachWait_dec, _answer_dec, _a4, _init2;
+var UserQuestionService = class extends (_a4 = TypertRemoteService, _answer_dec = [Remote], _attachWait_dec = [Remote({ mode: "stream" })], _a4) {
+  constructor(ctx) {
+    super(ctx, "userQuestions");
+    __runInitializers(_init2, 5, this);
+    __publicField(this, "waits", /* @__PURE__ */ new Map());
+    __publicField(this, "queuedReplies", /* @__PURE__ */ new WeakMap());
+    ctx.inject(["sessionProjections"], (projectionCtx) => {
+      projectionCtx.sessionProjections.register(userQuestionProjectionDefinition);
+    });
+    ctx.effect(() => () => {
+      for (const calls of this.waits.values()) {
+        for (const wait of calls.values()) wait.close(abortedQuestion());
+      }
+      this.waits.clear();
+    }, "userQuestions: foreground waits");
+    ctx.on("agent/inbox/claimed", ({ agent, message, turn }) => {
+      const source = message.source;
+      if (source.kind !== "user-question-reply") return;
+      const calls = this.queuedReplies.get(agent.session) ?? /* @__PURE__ */ new Map();
+      const reply = calls.get(source.callId);
+      if (reply === void 0) {
+        calls.set(source.callId, { messageId: message.id, claimedTurn: turn });
+        this.queuedReplies.set(agent.session, calls);
+      } else if (reply.messageId === message.id) {
+        reply.claimedTurn = turn;
+      }
+    }, { global: true });
+    ctx.on("agent/inbox/discarded", ({ agent, message }) => {
+      const source = message.source;
+      if (source.kind === "user-question-reply") this.releaseReply(agent.session, source.callId, message.id);
+    }, { global: true });
+    ctx.on("session/event", (session, event) => {
+      if (event.type === "user/message") {
+        const source = event.data.source;
+        if (source.kind === "user-question-reply") this.releaseReply(session, source.callId, event.data.id);
+      } else if (event.type === "turn/end") {
+        const calls = this.queuedReplies.get(session);
+        if (calls === void 0) return;
+        for (const [callId, reply] of calls) {
+          if (reply.claimedTurn === event.data.turn) calls.delete(callId);
+        }
+      }
+    }, { global: true });
+  }
+  releaseReply(session, callId, messageId) {
+    const calls = this.queuedReplies.get(session);
+    if (calls?.get(callId)?.messageId !== messageId) return;
+    calls.delete(callId);
+  }
+  assertLiveRoot(agent) {
+    const agents = this.ctx.get("agents");
+    if (agents === void 0 || agents.get(agent.id) !== agent) {
+      throw new UserQuestionError(
+        "human interaction requires the exact live calling agent when an agent is supplied",
+        "CALLER_NOT_LIVE"
+      );
+    }
+    if (!agents.roots().includes(agent)) {
+      throw new UserQuestionError(
+        "human interaction is unavailable while the calling agent is owned by another live agent; include the unresolved question or decision in the child agent's final result",
+        "DELEGATED_CALLER"
+      );
+    }
+  }
+  continued(agent) {
+    const state = this.ctx.get("sessionProjections")?.stateOf(agent.session, "userQuestions");
+    return (state?.questions.active ?? []).filter((question) => question.state === "continued");
+  }
+  answer(agent, callId, answer) {
+    this.assertLiveRoot(agent);
+    const question = this.continued(agent).find((item) => item.callId === callId);
+    if (question === void 0) return false;
+    const queued = this.queuedReplies.get(agent.session);
+    const matches = (message2) => message2.source.kind === "user-question-reply" && message2.source.callId === callId;
+    if (queued?.has(callId) || agent.inbox.nextTurn.some(matches) || agent.inbox.nextStep.some(matches)) {
+      throw new UserQuestionError("a reply is already queued for this question", "REPLY_QUEUED");
+    }
+    const answered = new Set(answer.answers.map((item) => item.id));
+    if (answered.size !== answer.answers.length || question.questions.length !== answer.answers.length || !question.questions.every((item) => answered.has(item.id))) {
+      throw new UserQuestionError(
+        `the answer batch for ${callId} must name each of its ${String(question.questions.length)} questions exactly once`,
+        "BAD_ANSWER"
+      );
+    }
+    const message = createUserMessage({
+      source: { kind: "user-question-reply", callId, outcome: "answered" },
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          kind: "answer_to_pending_question",
+          tool: "ask_user_question",
+          callId,
+          questions: question.questions,
+          answers: answer.answers
+        })
+      }]
+    });
+    const calls = queued ?? /* @__PURE__ */ new Map();
+    calls.set(callId, { messageId: message.id });
+    this.queuedReplies.set(agent.session, calls);
+    try {
+      agent.steer(message);
+    } catch (error51) {
+      this.releaseReply(agent.session, callId, message.id);
+      throw error51;
+    }
+    return true;
+  }
+  async *attachWait(agent, callId, signal) {
+    this.assertLiveRoot(agent);
+    const wait = this.waits.get(agent)?.get(callId);
+    if (wait !== void 0) yield* wait.attach(signal);
+  }
+  /**
+   * Foreground wait whose first settlement the Client decides: the Client
+   * rejects with `ASK_TIMED_OUT` when its countdown ends, and this method maps
+   * that code to the pending result.
+   * @param request - Questions, live owner agent, and abort signal.
+   * @param callId - Tool call identity the Client card is keyed by.
+   * @param timeoutMs - Positive foreground wait in milliseconds.
+   * @returns The answer when it arrives inside the window, otherwise a pending
+   *   result, also when no connected Client claimed the request by the deadline.
+   * @throws {UserQuestionError} `BAD_TIMEOUT` for a non-integer, non-positive,
+   *   or oversized wait.
+   */
+  async askTimed(request, callId, timeoutMs) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2147483647) {
+      throw new UserQuestionError("timeout must fit a positive platform timer", "BAD_TIMEOUT");
+    }
+    this.assertLiveRoot(request.agent);
+    const calls = this.waits.get(request.agent) ?? /* @__PURE__ */ new Map();
+    if (calls.has(callId)) throw new UserQuestionError("the question call already has a foreground wait", "DUPLICATE_WAIT");
+    const wait = new TimedQuestionWait(
+      Date.now() + timeoutMs,
+      request.signal,
+      new UserQuestionError("ask_user_question timed out before the user answered", "ASK_TIMED_OUT")
+    );
+    calls.set(callId, wait);
+    this.waits.set(request.agent, calls);
+    try {
+      try {
+        return await this.ask({ ...request, signal: wait.signal, wait: { callId, timed: true } });
+      } catch (error51) {
+        if (wait.signal.aborted) throw wait.signal.reason;
+        if (error51 instanceof UserQuestionError && error51.code === "NO_PROVIDER") {
+          await wait.done;
+          throw wait.signal.reason;
+        }
+        throw error51;
+      }
+    } catch (error51) {
+      if (error51 instanceof UserQuestionError && error51.code === "ASK_TIMED_OUT") return { pending: true, callId };
+      if (wait.signal.aborted) throw abortedQuestion(error51);
+      throw error51;
+    } finally {
+      wait.close(abortedQuestion());
+      calls.delete(callId);
+      if (calls.size === 0) this.waits.delete(request.agent);
+    }
+  }
+  /**
+   * Ask the scoped answerer waterfall and wait for the user's answer.
+   *
+   * When a caller supplies an agent, human interaction is valid only for the
+   * exact live runtime root. Runtime ownership, not durable session lineage,
+   * decides this boundary: an owned child has no human answerer and would
+   * block forever, while a lineage-bearing session resumed as a new runtime
+   * root may ask normally.
+   *
+   * @param request Questions, owner agent, and abort signal.
+   * @returns The answer chosen or typed by the human.
+   * @throws {UserQuestionError} code `ASK_ABORTED` when the supplied signal
+   *   is already or becomes aborted, `CALLER_NOT_LIVE` when a supplied agent
+   *   is not the registry's exact live instance, or `DELEGATED_CALLER` when
+   *   that live agent is owned by another agent.
+   */
+  async ask(request) {
+    if (request.signal?.aborted) {
+      throw abortedQuestion();
+    }
+    if (request.questions.length === 0) {
+      throw new UserQuestionError("ask_user_question requires at least one question", "EMPTY_QUESTIONS");
+    }
+    const agent = request.agent;
+    if (agent !== void 0) this.assertLiveRoot(agent);
+    for (const question of request.questions) {
+      const intent = question.intent;
+      if (intent === void 0) continue;
+      if (!(question.options ?? []).some((option) => option.label === intent.approve)) {
+        throw new UserQuestionError(
+          `question ${question.id} declares intent ${intent.kind} whose approve label ${JSON.stringify(intent.approve)} names none of its options`,
+          "BAD_INTENT"
+        );
+      }
+      if (question.detail === void 0) {
+        throw new UserQuestionError(
+          `question ${question.id} declares intent ${intent.kind} without the detail it reviews`,
+          "BAD_INTENT"
+        );
+      }
+    }
+    const noAnswerer = () => Promise.reject(new UserQuestionError(
+      "no user-questions answerer accepted the request",
+      "NO_PROVIDER"
+    ));
+    try {
+      return await (agent === void 0 ? this.ctx.waterfall("user-questions/request", request, noAnswerer) : this.ctx.waterfall(
+        scopeTarget(agent, agent),
+        "user-questions/request",
+        { ...request, agent },
+        noAnswerer
+      ));
+    } catch (error51) {
+      const restored = restoreUserQuestionError(error51);
+      if (restored instanceof UserQuestionError) throw restored;
+      if (request.signal?.aborted) {
+        throw abortedQuestion(error51);
+      }
+      throw restored;
+    }
+  }
+};
+_init2 = __decoratorStart(_a4);
+__decorateElement(_init2, 1, "answer", _answer_dec, UserQuestionService);
+__decorateElement(_init2, 1, "attachWait", _attachWait_dec, UserQuestionService);
+__decoratorMetadata(_init2, UserQuestionService);
+__publicField(UserQuestionService, "Config", src_default2.object({}));
+
 // packages/session/session-title/src/normalize.ts
 var OSC_SEQUENCE = /(?:\u001B\]|\u009D)(?:(?!\u0007|\u001B\\)[\s\S])*(?:\u0007|\u001B\\|$)/gu;
 var CSI_SEQUENCE = /(?:\u001B\[|\u009B)[0-?]*[ -/]*[@-~]/gu;
@@ -81964,9 +83845,9 @@ var SessionTitleService = class extends Service {
       messageSeqs: [],
       source: { kind: "user" }
     });
-    const snapshot = this.get(session);
-    if (snapshot === void 0) throw new Error("renamed title failed to fold");
-    return snapshot;
+    const snapshot2 = this.get(session);
+    if (snapshot2 === void 0) throw new Error("renamed title failed to fold");
+    return snapshot2;
   }
   /**
    * Explicitly retry the registered provider, or materialize the built-in
@@ -82008,13 +83889,14 @@ var SessionTitleService = class extends Service {
   }
   /**
    * Register the sole optional title provider. Disposal aborts its pending and
-   * active work before another provider may register.
+   * active work; a replacement may register once disposal has started, and the
+   * closing provider's late results never commit.
    * @param provider - provider identity, cadence, and generation function.
    * @returns exact Cordis effect disposer, which settles after active calls quiesce.
    */
   register(provider) {
     this.validateProvider(provider);
-    if (this.registration !== void 0) {
+    if (this.registration !== void 0 && !this.registration.closing) {
       throw new Error(`session-title provider "${this.registration.provider.id}" is already registered`);
     }
     const registration = {
@@ -82083,7 +83965,7 @@ var SessionTitleService = class extends Service {
     if (session === void 0 || state === void 0 || pending === void 0) return;
     const boundary = this.ctx.sessionProjections.stateOf(session, "turnBoundary")?.lastStepBoundary;
     const route = session.requestHeader()?.config;
-    if (boundary?.kind !== "start" || boundary.seq <= pending.throughSeq || route?.provider !== options.provider || route.model !== options.model) return;
+    if (boundary?.kind !== "start" || route?.provider !== options.provider || route.model !== options.model) return;
     this.startPending(session, state, pending, { provider: options.provider, model: options.model });
   }
   /** Consume one pending revision and schedule its non-blocking provider call. */
@@ -82111,11 +83993,14 @@ var SessionTitleService = class extends Service {
       this.assertCurrent(session, work);
       await this.ensureFallback(session);
       this.assertCurrent(session, work);
-      const messages = collectSessionTitleMessages(session.snapshotEvents(), work.throughSeq);
+      const events = session.snapshotEvents();
+      const messages = collectSessionTitleMessages(events, work.throughSeq);
+      const currentTitle = foldSessionTitle(events);
       const result = await work.registration.provider.generate({
         session,
         messages,
         ...route === void 0 ? {} : { route },
+        ...currentTitle === void 0 ? {} : { currentTitle },
         signal: work.signal
       });
       this.assertCurrent(session, work);
@@ -82365,7 +84250,7 @@ function installSignalHooks(cleanup) {
 
 // packages/tui/tui/src/export.ts
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { dirname as dirname3, resolve as resolve4 } from "node:path";
 function timeHeaderOf(time3) {
   return new Date(time3).toISOString();
 }
@@ -82391,10 +84276,10 @@ function toolCallBlock(event) {
   });
 }
 function toolResultBlock(event) {
-  const result = event.data.message.content[0];
+  const result = event.data.message;
   const record2 = {
     callId: escapeContent(result.toolCallId),
-    result: escapeContent(result.content.filter((block) => block.type === "text").map((block) => block.text).join("")),
+    result: escapeContent(result.content.map((block) => block.type === "text" ? block.text : "").join("")),
     isError: result.isError ?? false,
     ...event.data.error === void 0 ? {} : {
       error: {
@@ -82446,8 +84331,8 @@ function renderSessionMarkdown(events) {
 `;
 }
 async function exportSessionMarkdown(session, dir) {
-  const resolvedDir = resolve3(dir);
-  const target = resolve3(
+  const resolvedDir = resolve4(dir);
+  const target = resolve4(
     resolvedDir,
     `session-${encodeURIComponent(session.id)}.md`
   );
@@ -82700,7 +84585,7 @@ function stringifySettingValue(value) {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (value === null) return "null";
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? "";
 }
 function parseSettingValue(current, draft) {
   if (Array.isArray(current) || isPlainObject3(current) || current === null) {
@@ -83052,20 +84937,23 @@ var FEEDBACK_COPY = {
 function feedbackCopy(key) {
   return FEEDBACK_COPY[key];
 }
+function plainLiveConfig(value) {
+  if (typeof value !== "object" || value === null) return value;
+  if (/* @__PURE__ */ Symbol.for("cosmokit.volatile.write") in value) {
+    return plainLiveConfig(value.get());
+  }
+  if (Array.isArray(value)) return value.map(plainLiveConfig);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return void 0;
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, plainLiveConfig(child)]));
+}
+function entryConfig(ctx, ns) {
+  const entry = ctx.get("configEditor")?.entries().find((row) => row.options.id === ns);
+  return entry?.fiber === void 0 ? void 0 : plainLiveConfig(entry.fiber.config);
+}
 var DANGER_PRESET = "danger-full-access";
 var TUI_SETTINGS_NS = "tui";
 var ONBOARDING_KEY = "DEEPSEEK_API_KEY";
-var TuiUserSettings = src_default2.object({
-  colorTier: src_default2.union(["truecolor", "256", "16", "none"]),
-  submitOnEnter: src_default2.boolean().default(true),
-  notify: src_default2.union(["off", "attention", "every-turn"]).default("attention"),
-  notifyQuietInputSeconds: src_default2.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
-  brandAnimation: src_default2.union(["auto", "on", "off"]).default("auto"),
-  scrollbar: src_default2.boolean().default(true),
-  locale: src_default2.union(["zh-CN", "en-US"]).default("zh-CN"),
-  reasoning: src_default2.boolean().default(false),
-  statusDetails: src_default2.boolean().default(false)
-});
 var PRESENTATION_DEFAULTS = {
   reasoning: false,
   scrollbar: true,
@@ -83160,13 +85048,32 @@ var internals = {
   editorTempParent: tmpdir(),
   editorTtyPath: "/dev/tty",
   processArgv: process.argv,
-  clipboardSpawn: (command, args, options) => spawn3(command, [...args], options)
+  clipboardSpawn: (command, args, options) => spawn3(command, [...args], options),
+  openUrl: (href) => {
+    openUrl(href);
+  },
+  accountEnvironment: process.env
 };
+function tuiClientVersion() {
+  const manifest = JSON.parse(readFileSync3(new URL("../package.json", import.meta.url), "utf8"));
+  if (typeof manifest.version !== "string" || manifest.version === "") throw new Error("dsh-tui: package manifest carries no version");
+  return manifest.version;
+}
+function formatWallets(wallets, bonus, bonusLabel) {
+  const parts = [
+    ...wallets.map((wallet) => `${wallet.currency} ${wallet.balance}`),
+    ...bonus.map((wallet) => `${bonusLabel} ${wallet.currency} ${wallet.balance}`)
+  ];
+  return parts.length === 0 ? void 0 : parts.join(" \xB7 ");
+}
+function catalogInstallTarget(bundle) {
+  return bundle.availability === "missing" ? bundle.installTarget : void 0;
+}
 var liveRuntimeLifecycles = /* @__PURE__ */ new Set();
 var runtimeLifecycleObservers = /* @__PURE__ */ new Set();
 function observeTuiRuntimeLifecycle(observer) {
   runtimeLifecycleObservers.add(observer);
-  for (const snapshot of liveRuntimeLifecycles) observer(snapshot);
+  for (const snapshot2 of liveRuntimeLifecycles) observer(snapshot2);
   return () => {
     runtimeLifecycleObservers.delete(observer);
   };
@@ -83342,17 +85249,38 @@ var LIST_TITLE_MAX_BYTES = 80;
 var SEARCH_LIMIT = 30;
 var SEARCH_DEBOUNCE_MS = 120;
 var LOCAL_COMMANDS = [
+  { name: "cd", description: "Show or change the session working directory", input: { hint: "[PATH]" } },
   { name: "export", description: "Export this session to a Markdown file" },
   { name: "files", description: "Browse and preview workspace files" },
   { name: "help", description: "Show command help and key bindings" },
   { name: "key", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
-  { name: "login", description: "Set or update API key", input: { hint: "[KEY_NAME] <SECRET>" } },
+  { name: "login", description: "Sign in to a DeepSeek account (API key when sign-in is unavailable)", input: { hint: "[KEY_NAME] <SECRET>" } },
+  { name: "logout", description: "Sign out of the DeepSeek account" },
   { name: "model", description: "Switch the active model" },
   { name: "new", description: "Start a new session" },
   { name: "reload", description: "Relaunch this process and resume the session" },
   { name: "resume", description: "Switch or resume a session" },
   { name: "settings", description: "Edit settings, catalogs, and General" }
 ];
+var ZH_COMMAND_DESCRIPTIONS = {
+  cd: "\u67E5\u770B\u6216\u5207\u6362\u4F1A\u8BDD\u5DE5\u4F5C\u76EE\u5F55",
+  compact: "\u538B\u7F29\u8F83\u65E9\u7684\u5BF9\u8BDD\u5386\u53F2",
+  export: "\u5BFC\u51FA\u5F53\u524D\u4F1A\u8BDD\u4E3A Markdown \u6587\u4EF6",
+  feedback: "\u8BB0\u5F55\u5BF9\u672C\u4F1A\u8BDD\u7684\u53CD\u9988",
+  files: "\u6D4F\u89C8\u5E76\u9884\u89C8\u5DE5\u4F5C\u533A\u6587\u4EF6",
+  goal: "\u8BBE\u7F6E\u6216\u67E5\u770B\u957F\u4EFB\u52A1\u76EE\u6807",
+  help: "\u547D\u4EE4\u4E0E\u5FEB\u6377\u952E\u901F\u67E5",
+  key: "\u8BBE\u7F6E\u6216\u66F4\u65B0 API \u5BC6\u94A5",
+  login: "\u767B\u5F55 DeepSeek \u8D26\u53F7\uFF08\u4E0D\u652F\u6301\u65F6\u8BBE\u7F6E API \u5BC6\u94A5\uFF09",
+  logout: "\u9000\u51FA DeepSeek \u8D26\u53F7",
+  model: "\u5207\u6362\u5F53\u524D\u6A21\u578B",
+  new: "\u5F00\u59CB\u65B0\u4F1A\u8BDD",
+  permission: "\u5207\u6362\u6743\u9650\u9884\u8BBE\uFF08\u6C99\u7BB1\u6A21\u5F0F + \u5BA1\u6279\u7B56\u7565\uFF09",
+  plan: "\u8FDB\u5165\u6216\u9000\u51FA\u8BA1\u5212\u6A21\u5F0F",
+  reload: "\u91CD\u542F\u8FDB\u7A0B\u5E76\u6062\u590D\u5F53\u524D\u4F1A\u8BDD",
+  resume: "\u5207\u6362\u6216\u6062\u590D\u4F1A\u8BDD",
+  settings: "\u7F16\u8F91\u8BBE\u7F6E\u3001\u6A21\u578B\u76EE\u5F55\u4E0E\u901A\u7528\u9009\u9879"
+};
 var RuntimeController = class _RuntimeController {
   /**
    * Create a controller and immediately subscribe to the global Session event
@@ -83420,6 +85348,13 @@ var RuntimeController = class _RuntimeController {
         if (agent !== this.agent || status !== "idle") return;
         this.drainDraftFifo();
         this.notifyRunSettled();
+      }),
+      // Session format v3 persists no per-chunk events; live text and
+      // reasoning arrive only on this transient channel.
+      ctx.on("agent/assistant-stream", ({ agent, frame }) => {
+        if (agent !== this.liveHandle?.agent) return;
+        this.projector.pushStreamFrame(frame);
+        this.emit();
       })
     ];
     this.disposeAgentInboxEvents = () => {
@@ -83440,16 +85375,26 @@ var RuntimeController = class _RuntimeController {
         const key = progress.phase === "installing" ? "pluginsInstalling" : progress.phase === "cancelling" ? "pluginsCancelling" : "pluginsApplying";
         this.updatePlugins({ progress: tuiCopy(key, this.getLocale()) });
       }),
-      ctx.on("plugin-manager/install-log", (chunk) => {
-        if (this.closed || chunk.requestId === void 0 || chunk.requestId !== this.pluginsAttempt?.id) return;
-        this.updatePlugins({ output: this.pluginsPane.output + chunk.text });
+      ctx.on("plugin-manager/install-log", (chunk2) => {
+        if (this.closed || chunk2.requestId === void 0 || chunk2.requestId !== this.pluginsAttempt?.id) return;
+        this.updatePlugins({ output: this.pluginsPane.output + chunk2.text });
       })
     ];
+    pluginDisposers.push(
+      ctx.on("deepseek-account/model-sign-in-required", () => {
+        this.setFeedback(`\u2717 ${tuiCopy("accountSignInRequired", this.getLocale())}`);
+      }),
+      ctx.on("deepseek-account/session-expired", () => {
+        this.accountDetailsRevision++;
+        this.setFeedback(`\u2717 ${tuiCopy("accountSessionExpired", this.getLocale())}`);
+        if (this.accountPane.open) this.updateAccount({ profile: void 0, balance: void 0 });
+      })
+    );
     this.disposePluginEvents = () => {
       for (const dispose of pluginDisposers) dispose();
     };
-    this.disposeJobsChanged = jobs?.onJobsChanged(() => {
-      this.emit();
+    this.disposeJobsChanged = jobs?.events.subscribe({ owners: "scope" }, (event) => {
+      if (event.type !== "output") this.emit();
     });
     const workflowDisposers = [
       ctx.on("workflow/start", (info) => {
@@ -83579,6 +85524,7 @@ var RuntimeController = class _RuntimeController {
   /** The one controller-owned transition and its shared in-flight promise. */
   transitionState = IDLE_TRANSITION;
   transitionInFlight;
+  transitionInFlightRequest;
   /** The owned session, exposed for the exit flush. */
   session;
   /** Directory rows, newest activity first; refreshed from persistence. */
@@ -83687,7 +85633,6 @@ var RuntimeController = class _RuntimeController {
   feedbackSeq = 0;
   workflowOverlayOpen = false;
   /** Live `tui` section reader installed by {@link installSettingsSection}. */
-  readTuiSettings;
   /** Last recorded turn ending, consumed by the idle-time notification summary. */
   lastTurnEnd;
   /** Epoch ms of the most recent local keypress; drives the quiet-window suppression. */
@@ -83746,6 +85691,12 @@ var RuntimeController = class _RuntimeController {
   /** Jobs-registry change subscription; no-op when the service is absent. */
   disposeJobsChanged;
   pluginsPane = { ...EMPTY_PLUGINS_PANE };
+  /** DeepSeek account page; the watch subscription lives while the page is open. */
+  accountPane = { ...EMPTY_ACCOUNT_PANE };
+  accountWatch;
+  accountDetailsRevision = 0;
+  accountAttemptId;
+  accountUrlOpened;
   pluginsBundles = [];
   pluginsEntries = [];
   pluginsInventorySeq = 0;
@@ -83789,6 +85740,7 @@ var RuntimeController = class _RuntimeController {
     };
     this.disposeJobsChanged?.();
     this.disposePluginEvents();
+    this.accountWatch?.abort();
     this.disposeWorkflowEvents();
     this.cancelQueuedApprovals();
     this.cancelQueuedAskUsers();
@@ -83909,8 +85861,7 @@ var RuntimeController = class _RuntimeController {
    * @returns max live children (8) and max depth (1) unless the user raised them.
    */
   subagentLimits() {
-    const settings = this.ctx.get("settings");
-    const section = settings === void 0 ? void 0 : settings.get("subagent");
+    const section = entryConfig(this.ctx, "subagent");
     const maxActive = fieldOf(section, "maxActiveSubagents");
     const maxDepth = fieldOf(section, "maxDepth");
     return {
@@ -84069,8 +86020,8 @@ var RuntimeController = class _RuntimeController {
         if (text4.length > OSC52_MAX_CHARS) this.setFeedback(`${tuiCopy("toolCopyFailed", options.locale)} \xB7 e ${tuiCopy("toolExportAction", options.locale)}`);
         else {
           try {
-            internals.copyText(text4, (chunk) => {
-              this.io.stdout.write(chunk);
+            internals.copyText(text4, (chunk2) => {
+              this.io.stdout.write(chunk2);
             });
             this.setFeedback(tuiCopy("toolCopied", options.locale));
           } catch (error51) {
@@ -84087,7 +86038,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Write one explicitly requested source export without replacing an existing file. */
   async exportToolText(text4, locale) {
-    const path2 = resolve4(this.config.cwd ?? process.cwd(), `tool-${randomUUID2()}.txt`);
+    const path2 = resolve5(this.getCwd(), `tool-${randomUUID2()}.txt`);
     try {
       await writeFile2(path2, text4, { flag: "wx", mode: 384 });
       if (!this.closed) this.setFeedback(`${tuiCopy("toolExported", locale)} \xB7 ${path2}`);
@@ -84258,7 +86209,7 @@ var RuntimeController = class _RuntimeController {
     const fs3 = this.ctx.get("fs");
     if (fs3 === void 0) return;
     try {
-      const root = await fs3.resolve(this.config.cwd ?? ".");
+      const root = await fs3.resolve(this.sessionDirectory() ?? ".");
       const children = await fs3.listDir(root);
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
       this.commitResolvedWorkspaceRoot(root, children);
@@ -84503,7 +86454,7 @@ var RuntimeController = class _RuntimeController {
     if (agent === void 0) return void 0;
     const jobs = this.ctx.get("jobs");
     if (jobs === void 0) return void 0;
-    return jobs.list(agent).filter((job) => job.status === "running" || job.status === "stopping").map((job) => ({
+    return jobs.list(agent.session.id).filter((job) => job.status === "running" || job.status === "stopping").map((job) => ({
       id: String(job.id),
       status: job.status,
       label: job.label
@@ -84662,11 +86613,23 @@ var RuntimeController = class _RuntimeController {
     return this.ctx.get("tools");
   }
   /**
+   * Read the live `tui` settings published by the companion settings plugin.
+   * @returns the current snapshot, or undefined when the plugin is not composed.
+   */
+  tuiSettings() {
+    return this.ctx.get("tuiSettings")?.get();
+  }
+  /** Apply a saved color-tier override over the mount-time detected tier. */
+  applyColorTierSetting() {
+    const tier = this.tuiSettings()?.colorTier;
+    if (tier !== void 0) applyTheme(tier);
+  }
+  /**
    * Return whether Enter sends a chat message.
    * @returns false when the `tui` section sets `submitOnEnter` to false.
    */
   getSubmitOnEnter() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.submitOnEnter !== false;
   }
   /**
@@ -84674,7 +86637,7 @@ var RuntimeController = class _RuntimeController {
    * @returns `auto` when no explicit value is configured.
    */
   getBrandAnimation() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.brandAnimation ?? "auto";
   }
   /**
@@ -84696,11 +86659,11 @@ var RuntimeController = class _RuntimeController {
    * @returns the saved locale, or the Chinese product default.
    */
   getLocale() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return section?.locale ?? "zh-CN";
   }
   presentationFlag(field) {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return this.presentationOverrides.get(field)?.value ?? section?.[field] ?? PRESENTATION_DEFAULTS[field];
   }
   /** Apply immediately, serialize persistence, and let only the latest write settle its override. */
@@ -84842,7 +86805,184 @@ var RuntimeController = class _RuntimeController {
     this.modelStatus = "idle";
     this.modelError = void 0;
   }
-  /** Return the latest Plugins snapshot, including progress received while closed. */
+  /**
+   * Return the latest DeepSeek account page snapshot.
+   * @returns current account presentation state.
+   */
+  getAccountPane() {
+    return this.accountPane;
+  }
+  /** Publish a new account page snapshot. */
+  updateAccount(patch) {
+    if (this.closed) return;
+    this.accountPane = { ...this.accountPane, ...patch };
+    this.emit();
+  }
+  /** Identity headers for one account call. */
+  accountClient() {
+    return { version: tuiClientVersion(), locale: this.getLocale(), timezoneOffsetSeconds: -(/* @__PURE__ */ new Date()).getTimezoneOffset() * 60 };
+  }
+  /**
+   * Open the account page and subscribe to account snapshots until it closes.
+   * @param confirmSignOut - open directly on the sign-out confirmation (`/logout`).
+   */
+  openAccountPane(confirmSignOut = false) {
+    this.closeOtherPanels();
+    const account = this.ctx.get("deepseekAccount");
+    this.accountPane = {
+      ...EMPTY_ACCOUNT_PANE,
+      open: true,
+      available: account !== void 0,
+      confirmSignOut: confirmSignOut && account !== void 0
+    };
+    this.emit();
+    if (account === void 0) return;
+    const watch = new AbortController();
+    this.accountWatch = watch;
+    this.ownWork((async () => {
+      try {
+        for await (const view of account.watch(AbortSignal.any([watch.signal, this.lifecycleAbort.signal]))) {
+          if (watch.signal.aborted || this.closed) return;
+          this.applyAccountView(view);
+        }
+      } catch (error51) {
+        if (!watch.signal.aborted && !this.closed) this.updateAccount({ error: errorReason(error51) });
+      }
+    })(), "account watch");
+  }
+  /** Fold one account snapshot; a newly stored credential loads profile and balance. */
+  applyAccountView(view) {
+    const attempt = view.attempt;
+    const identityChanged = this.accountPane.status !== view.status || this.accountAttemptId !== attempt?.id;
+    if (identityChanged) this.accountDetailsRevision++;
+    this.accountAttemptId = attempt?.id;
+    const wasSignedIn = this.accountPane.status === "credential-stored" && !identityChanged;
+    this.updateAccount({
+      status: view.status,
+      phase: attempt?.phase,
+      authorizeUrl: attempt?.authorizeUrl,
+      errorCode: attempt?.errorCode,
+      ...identityChanged || view.status === "signed-out" ? { profile: void 0, balance: void 0 } : {}
+    });
+    if (attempt?.phase === "waiting-browser" && attempt.authorizeUrl !== void 0 && this.accountUrlOpened !== attempt.authorizeUrl) {
+      this.accountUrlOpened = attempt.authorizeUrl;
+      if (this.accountPane.forward === void 0) internals.openUrl(attempt.authorizeUrl);
+    }
+    if (view.status === "credential-stored" && !wasSignedIn) this.ownWork(this.loadAccountDetails(), "account details");
+  }
+  /** Read profile and balance; only the originating page and credential revision may publish. */
+  async loadAccountDetails() {
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0) return;
+    const client = this.accountClient();
+    const watch = this.accountWatch;
+    const revision = this.accountDetailsRevision;
+    const [profile, balance] = await Promise.allSettled([account.getProfile(client), account.getBalance(client)]);
+    if (this.closed || watch === void 0 || watch.signal.aborted || this.accountWatch !== watch || revision !== this.accountDetailsRevision || this.accountPane.status !== "credential-stored") return;
+    const patch = {};
+    if (profile.status === "fulfilled" && profile.value?.status === "ready") {
+      const value = profile.value.value;
+      const text4 = [value.name, value.contact].filter((part) => part !== null && part !== "").join(" \xB7 ");
+      if (text4 !== "") patch.profile = text4;
+    }
+    if (balance.status === "fulfilled" && balance.value?.status === "ready") {
+      patch.balance = formatWallets(balance.value.value, balance.value.bonusWallets, this.getLocale() === "zh-CN" ? "\u8D60\u9001" : "bonus");
+    }
+    this.updateAccount(patch);
+  }
+  /** Start or join browser sign-in with the loopback callback served by the webserver row. */
+  async startAccountSignIn() {
+    const watch = this.accountWatch;
+    const current = () => !this.closed && watch !== void 0 && !watch.signal.aborted && this.accountWatch === watch;
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0) return;
+    const webServer = this.ctx.get("webServer");
+    if (webServer === void 0 || webServer.protocol !== "http:") {
+      this.updateAccount({ error: tuiCopy("accountCallbackUnavailable", this.getLocale()) });
+      return;
+    }
+    const host = webServer.host.includes(":") ? `[${webServer.host}]` : webServer.host;
+    const environment2 = internals.accountEnvironment;
+    const remote = environment2.SSH_CONNECTION !== void 0 || environment2.SSH_TTY !== void 0;
+    this.accountUrlOpened = void 0;
+    this.updateAccount({
+      busy: true,
+      error: void 0,
+      forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : void 0
+    });
+    try {
+      const view = await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, "web");
+      if (current()) this.applyAccountView(view);
+    } catch (error51) {
+      if (current()) this.updateAccount({ error: errorReason(error51) });
+    } finally {
+      if (current()) this.updateAccount({ busy: false });
+    }
+  }
+  /** Run one account mutation and surface its failure on the page. */
+  async accountOperation(operation, done) {
+    const watch = this.accountWatch;
+    const current = () => !this.closed && watch !== void 0 && !watch.signal.aborted && this.accountWatch === watch;
+    this.updateAccount({ busy: true, error: void 0 });
+    try {
+      const view = await operation();
+      if (!current()) return;
+      this.applyAccountView(view);
+      if (done !== void 0) this.setFeedback(`\u2713 ${done}`);
+    } catch (error51) {
+      if (current()) this.updateAccount({ error: errorReason(error51) });
+    } finally {
+      if (current()) this.updateAccount({ busy: false });
+    }
+  }
+  /** Enforce the page's state at the action executor. */
+  handleAccountInput(input) {
+    const state = this.accountPane;
+    if (!state.open) return;
+    if (input.kind === "close") {
+      this.accountWatch?.abort();
+      this.accountWatch = void 0;
+      this.updateAccount({ open: false, confirmSignOut: false });
+      return;
+    }
+    if (input.kind === "api-key") {
+      this.handleAccountInput({ kind: "close" });
+      this.openApiKeyPane();
+      return;
+    }
+    const account = this.ctx.get("deepseekAccount");
+    if (account === void 0 || state.busy) return;
+    switch (input.kind) {
+      case "sign-in":
+        if (state.status !== "credential-stored" && !accountAttemptActive(state.phase)) this.ownWork(this.startAccountSignIn(), "account sign-in");
+        return;
+      case "open-url":
+        if (state.authorizeUrl !== void 0) internals.openUrl(state.authorizeUrl);
+        return;
+      case "cancel": {
+        const id = this.accountAttemptId;
+        if (id !== void 0 && accountAttemptActive(state.phase)) this.ownWork(this.accountOperation(() => account.cancelSignIn(id)), "account cancel");
+        return;
+      }
+      case "sign-out":
+        if (state.status === "credential-stored") this.updateAccount({ confirmSignOut: true });
+        return;
+      case "dismiss":
+        this.updateAccount({ confirmSignOut: false });
+        return;
+      case "confirm":
+        if (!state.confirmSignOut) return;
+        this.updateAccount({ confirmSignOut: false });
+        this.ownWork(this.accountOperation(() => account.signOut(this.accountClient()), tuiCopy("accountSignedOutDone", this.getLocale())), "account sign-out");
+        return;
+      default:
+        assertNever(input.kind, "AccountPaneInput");
+    }
+  }
+  /**
+   * Return the latest Plugins snapshot, including progress received while closed.
+   * @returns current plugin inventory and operation presentation.
+   */
   getPluginsPane() {
     return this.pluginsPane;
   }
@@ -84870,21 +87010,30 @@ var RuntimeController = class _RuntimeController {
       this.pluginsEntries = entries;
       const copy = (key) => tuiCopy(key, this.getLocale());
       const rows = [];
-      for (const bundle of [...bundles.filter((item) => !item.installed), ...bundles.filter((item) => item.installed)]) {
-        const group = bundle.installed ? "owned" : "supplied";
+      const groupOf = (bundle) => bundle.installed ? "owned" : bundle.official ? "official" : "supplied";
+      const groupOrder = ["official", "supplied", "owned"];
+      for (const bundle of groupOrder.flatMap((group) => bundles.filter((item) => groupOf(item) === group))) {
+        const group = groupOf(bundle);
+        const catalog = catalogInstallTarget(bundle);
         const details = [
           bundle.description,
           bundle.version,
+          bundle.availability === "missing" ? copy(bundle.installed ? "pluginsMissingFiles" : "pluginsNotInstalled") : void 0,
+          catalog === void 0 ? void 0 : `${copy("pluginsInstallTarget")}: ${catalog.spec} (${catalog.version})`,
           bundle.optional ? copy("pluginsOptional") : void 0,
           !bundle.removable ? copy("pluginsNotRemovable") : void 0,
           bundle.readOnlyReason ? this.pluginsError({ code: bundle.readOnlyReason }) : void 0,
           bundle.error ? this.pluginsError(bundle.error) : void 0,
           bundle.overrides.length ? `${copy("pluginsOverrides")}: ${bundle.overrides.join(", ")}` : void 0
         ].filter((value) => value !== void 0);
+        const badges = [
+          bundle.official ? copy("pluginsOfficial") : void 0,
+          copy(catalog !== void 0 ? "pluginsCatalog" : bundle.enabled ? "pluginsSelected" : "pluginsUnselected")
+        ];
         rows.push({
           id: `bundle:${bundle.name}`,
           group,
-          label: `${bundle.name} \xB7 ${copy(bundle.enabled ? "pluginsSelected" : "pluginsUnselected")}`,
+          label: [bundle.name, ...badges.filter((value) => value !== void 0)].join(" \xB7 "),
           details,
           toggle: bundle.readOnlyReason === void 0,
           removable: bundle.removable && bundle.readOnlyReason === void 0
@@ -84942,13 +87091,18 @@ var RuntimeController = class _RuntimeController {
       case "stale-approval":
         key = "pluginsStaleApproval";
         break;
+      case "incompatible-version":
+        key = "pluginsIncompatibleVersion";
+        break;
       case "operation-error":
         key = "pluginsOperationError";
         break;
       default:
         return assertNever(error51.code, "pluginsError");
     }
-    return tuiCopy(key, this.getLocale()) + (error51.diagnostic ? `: ${error51.diagnostic}` : "");
+    const incompatible = (error51.incompatible ?? []).map((plugin) => `${plugin.name}@${plugin.version} (${Object.entries(plugin.peers).map(([peer, range]) => `${peer} ${range}`).join(", ")})`).join("; ");
+    const detail = [error51.diagnostic, incompatible].filter((part) => part !== void 0 && part !== "").join(" \xB7 ");
+    return tuiCopy(key, this.getLocale()) + (detail === "" ? "" : `: ${detail}`);
   }
   /** Localize the service's package failure category. */
   pluginsFailure(kind) {
@@ -85073,7 +87227,7 @@ var RuntimeController = class _RuntimeController {
     this.pluginsInspection = void 0;
     this.updatePlugins({ inspecting: true, inspection: [], error: void 0 });
     try {
-      const result = await manager.inspect(spec, this.lifecycleAbort.signal);
+      const result = await manager.inspect(spec, {}, this.lifecycleAbort.signal);
       if (this.closed) return;
       this.pluginsInspection = result;
       if (result.status === "refused") {
@@ -85117,7 +87271,7 @@ var RuntimeController = class _RuntimeController {
     });
     const run2 = async () => {
       try {
-        const inspected = await manager.inspect(spec, this.lifecycleAbort.signal);
+        const inspected = await manager.inspect(spec, {}, this.lifecycleAbort.signal);
         if (this.closed) return;
         if (inspected.status === "refused") {
           this.pluginsInspection = inspected;
@@ -85242,7 +87396,12 @@ var RuntimeController = class _RuntimeController {
         return;
       }
       if (!row.toggle) return;
-      if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), "plugins bundle toggle");
+      const catalog = bundle === void 0 ? void 0 : catalogInstallTarget(bundle);
+      if (catalog !== void 0) {
+        this.pluginsInspection = void 0;
+        this.updatePlugins({ mode: "input", spec: catalog.spec, inspection: [], result: [], error: void 0, pendingBuilds: [], retry: false });
+        this.ownWork(this.inspectPlugins(), "plugins catalog inspection");
+      } else if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), "plugins bundle toggle");
       else {
         for (const owner of this.pluginsBundles) {
           const declaration = owner.rows.find((item) => row.id === `row:${owner.name}:${item.rowId}`);
@@ -85259,6 +87418,11 @@ var RuntimeController = class _RuntimeController {
   }
   /** Close other overlays while retaining the tracked Plugins operation. */
   closeOtherPanels() {
+    if (this.accountPane.open) {
+      this.accountWatch?.abort();
+      this.accountWatch = void 0;
+      this.accountPane = { ...this.accountPane, open: false, confirmSignOut: false };
+    }
     this.pluginsPane = {
       ...this.pluginsPane,
       open: false,
@@ -85359,7 +87523,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents === void 0 || this.session === void 0) return;
     try {
-      const entries = await subagents.listChildren(this.session.id, signal);
+      const entries = (await subagents.listDescendants(this.session.id, signal)).filter((entry) => entry.depth === 1);
       const rows = await this.enrichAgentHubRows(entries, signal);
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = rows;
@@ -85384,7 +87548,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents === void 0) return;
     try {
-      const entries = await subagents.listChildren(SessionId(childId), signal);
+      const entries = (await subagents.listDescendants(SessionId(childId), signal)).filter((entry) => entry.depth === 1);
       const rows = await this.enrichAgentHubRows(entries, signal);
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return;
       this.agentHubRows = rows;
@@ -85428,21 +87592,21 @@ var RuntimeController = class _RuntimeController {
     }
     return Promise.all(rows.map(async (row) => {
       signal.throwIfAborted();
-      let snapshot;
+      let snapshot2;
       const live = this.ctx.sessions.get(row.id);
       const projections = this.ctx.get("sessionProjections");
       if (live === void 0) {
         const header = coldHeaders.get(row.id);
         if (cache4 === void 0 || persistence === void 0 || header === void 0) return row;
         try {
-          snapshot = cache4.cachedSnapshot(header, SessionLogOffset(0), AGENT_HUB_PROJECTION_KEYS);
-          if (snapshot === void 0) {
+          snapshot2 = cache4.cachedSnapshot(header, AGENT_HUB_PROJECTION_KEYS);
+          if (snapshot2 === void 0) {
             if (persistenceHasOpen(persistence)) {
               const handle = await persistence.open(row.id, "read", { signal });
               try {
                 signal.throwIfAborted();
                 const events = (await handle.read(0, void 0, { signal })).events;
-                snapshot = cache4.coldSnapshot(handle.header, SessionLogOffset(0), events);
+                snapshot2 = cache4.coldSnapshot(handle.header, SessionLogOffset(0), events);
               } finally {
                 await handle.close();
               }
@@ -85450,7 +87614,7 @@ var RuntimeController = class _RuntimeController {
               const borrowed = await persistence.borrowSession(row.id, signal);
               try {
                 signal.throwIfAborted();
-                snapshot = cache4.coldSnapshot(
+                snapshot2 = cache4.coldSnapshot(
                   borrowed.inspection.meta,
                   SessionLogOffset(borrowed.inspection.inheritedEventCount ?? 0),
                   borrowed.inspection.events
@@ -85466,10 +87630,10 @@ var RuntimeController = class _RuntimeController {
         }
       } else {
         if (projections === void 0) return row;
-        snapshot = projections.snapshot(live);
+        snapshot2 = projections.snapshot(live);
       }
-      if (snapshot === void 0) return row;
-      return { ...row, ...hubMetricsOf(snapshot.values, row.activity, now) };
+      if (snapshot2 === void 0) return row;
+      return { ...row, ...hubMetricsOf(snapshot2.values, row.activity, now) };
     }));
   }
   /**
@@ -85685,6 +87849,9 @@ var RuntimeController = class _RuntimeController {
         return;
       case "plugins-input":
         this.handlePluginsInput(action.input);
+        return;
+      case "account-input":
+        this.handleAccountInput(action.input);
         return;
       case "approval-allow":
         this.answerHead("allowed-once");
@@ -86259,7 +88426,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Resolve the notification settings section, defaulting when no section is stored. */
   notifySettings() {
-    const section = this.readTuiSettings?.() ?? this.ctx.get("settings")?.get(TUI_SETTINGS_NS);
+    const section = this.tuiSettings();
     return {
       mode: section?.notify ?? "attention",
       quietInputSeconds: section?.notifyQuietInputSeconds ?? DEFAULT_NOTIFY_QUIET_INPUT_SECONDS
@@ -86373,16 +88540,16 @@ var RuntimeController = class _RuntimeController {
     let received = 0;
     const store = this.attachmentStore();
     const limit = store?.imageLimits.maxImageBytes ?? 10 * 1024 * 1024;
-    child.stdout.on("data", (chunk) => {
-      received += chunk.length;
-      if (received <= limit) chunks.push(chunk);
+    child.stdout.on("data", (chunk2) => {
+      received += chunk2.length;
+      if (received <= limit) chunks.push(chunk2);
     });
-    const closed = await new Promise((resolve5) => {
+    const closed = await new Promise((resolve6) => {
       child.on("error", (error51) => {
-        resolve5(error51);
+        resolve6(error51);
       });
       child.on("close", (code2) => {
-        resolve5(code2);
+        resolve6(code2);
       });
     });
     if (closed instanceof Error) {
@@ -86581,8 +88748,8 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     const payload = target.text.slice(0, OSC52_MAX_CHARS);
-    internals.copyText(payload, (chunk) => {
-      this.io.stdout.write(chunk);
+    internals.copyText(payload, (chunk2) => {
+      this.io.stdout.write(chunk2);
     });
     this.setFeedback(target.kind === "code" ? "\u5DF2\u590D\u5236\u4EE3\u7801\u5757" : "\u5DF2\u590D\u5236\u6700\u8FD1\u6D88\u606F");
   }
@@ -86636,7 +88803,7 @@ var RuntimeController = class _RuntimeController {
     }
     await this.createOrResume();
     if (this.closed || this.agentHandle === void 0) return;
-    this.installTuiSettings();
+    this.applyColorTierSetting();
     if (this.config.task === "") await this.maybeOpenOnboarding();
     this.emit();
     const parked = this.pending;
@@ -86666,30 +88833,28 @@ var RuntimeController = class _RuntimeController {
     }
   }
   /**
-   * Enter the single-flight session-transition slot. The first request owns the
-   * immutable intent; repeated create or switch requests receive its promise
-   * until all commit, rollback, and cleanup work settles.
+   * Serialize session transitions and coalesce consecutive identical intents.
+   * Distinct requests wait for the preceding transition's commit or rollback.
    * @param request - create intent or validated persisted Session identity.
-   * @param startup - whether a pre-commit failure must reject startup instead of
-   * becoming transient feedback.
-   * @returns the shared in-flight transition promise.
+   * @param startup - whether a pre-commit failure rejects startup.
+   * @returns completion of this request and its cleanup.
    */
   transitionSession(request, startup = false) {
-    if (this.transitionInFlight !== void 0) {
-      return this.transitionInFlight;
+    const preceding = this.transitionInFlight;
+    const pending = this.transitionInFlightRequest;
+    if (preceding !== void 0 && pending !== void 0 && pending.intent === request.intent && (pending.intent !== "switch" || request.intent === "switch" && pending.id === request.id)) {
+      return preceding;
     }
-    const operation = Promise.resolve().then(
-      () => this.performSessionTransition(request, startup)
-    );
+    const perform = () => this.performSessionTransition(request, startup);
+    const operation = preceding === void 0 ? Promise.resolve().then(perform) : preceding.then(perform, perform);
     this.transitionInFlight = operation;
-    void operation.then(
-      () => {
-        this.transitionInFlight = void 0;
-      },
-      () => {
-        this.transitionInFlight = void 0;
-      }
-    );
+    this.transitionInFlightRequest = request;
+    const settled = () => {
+      if (this.transitionInFlight !== operation) return;
+      this.transitionInFlight = void 0;
+      this.transitionInFlightRequest = void 0;
+    };
+    void operation.then(settled, settled);
     return operation;
   }
   /**
@@ -86878,15 +89043,15 @@ var RuntimeController = class _RuntimeController {
     };
   }
   /** Restore the prior tuple after any pre-commit failure. */
-  restoreBoundState(snapshot) {
-    this.liveHandle = snapshot.liveHandle;
-    this.agent = snapshot.agent;
-    this.agentHandle = snapshot.agentHandle;
-    this.session = snapshot.session;
-    this.projector = snapshot.projector;
-    this.modelSelectionRef = snapshot.modelSelectionRef;
-    this.badge = snapshot.badge;
-    this.machine = snapshot.machine;
+  restoreBoundState(snapshot2) {
+    this.liveHandle = snapshot2.liveHandle;
+    this.agent = snapshot2.agent;
+    this.agentHandle = snapshot2.agentHandle;
+    this.session = snapshot2.session;
+    this.projector = snapshot2.projector;
+    this.modelSelectionRef = snapshot2.modelSelectionRef;
+    this.badge = snapshot2.badge;
+    this.machine = snapshot2.machine;
   }
   /** Publish one internal phase change to the render loop. */
   setTransition(state) {
@@ -87040,7 +89205,11 @@ var RuntimeController = class _RuntimeController {
       name: commandName,
       description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? "on" : "off", locale)})`
     }));
-    return [...registry2, ...LOCAL_COMMANDS, ...displayCommands, { name: "plugins", description: tuiCopy("pluginsCommand", locale) }, { name: "tools", description: tuiCopy("commandTools", locale) }].sort(
+    const localized = [...registry2, ...LOCAL_COMMANDS].map((command) => {
+      const zh2 = locale === "zh-CN" ? ZH_COMMAND_DESCRIPTIONS[command.name] : void 0;
+      return zh2 === void 0 ? command : { ...command, description: zh2 };
+    });
+    return [...localized, ...displayCommands, { name: "plugins", description: tuiCopy("pluginsCommand", locale) }, { name: "tools", description: tuiCopy("commandTools", locale) }].sort(
       (left, right) => left.name < right.name ? -1 : 1
     );
   }
@@ -87082,6 +89251,10 @@ var RuntimeController = class _RuntimeController {
       this.ownWork(this.exportLive(), "session export");
       return;
     }
+    if (query === "cd" || query.startsWith("cd ")) {
+      this.ownWork(this.changeWorkingDirectory(query.slice(2).trim()), "working directory change");
+      return;
+    }
     if (query === "new" || query === "new ") {
       if (this.blockingHead() !== void 0) return;
       this.closeOtherPanels();
@@ -87099,6 +89272,16 @@ var RuntimeController = class _RuntimeController {
     }
     if (query === "help") {
       this.openHelpPane();
+      return;
+    }
+    if ((query === "login" || query === "login ") && this.ctx.get("deepseekAccount") !== void 0) {
+      if (this.blockingHead() !== void 0) return;
+      this.openAccountPane();
+      return;
+    }
+    if (query === "logout" || query === "logout ") {
+      if (this.blockingHead() !== void 0) return;
+      this.openAccountPane(true);
       return;
     }
     if (query === "key" || query === "key " || query === "login" || query === "login ") {
@@ -87143,6 +89326,31 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     this.executeSlash(query);
+  }
+  /**
+   * Show or change the bound Session's working directory. Existing shells and
+   * terminals keep their own directories; the service records the change in
+   * the Session log and queues the model-visible notice.
+   * @param path - absolute or current-directory-relative target; empty shows the current directory.
+   */
+  async changeWorkingDirectory(path2) {
+    const locale = this.getLocale();
+    const agent = this.agent;
+    const workingDirectory = this.ctx.get("workingDirectory");
+    if (agent === void 0 || workingDirectory === void 0) {
+      this.reportCommandFailure(tuiCopy("cdUnavailable", locale));
+      return;
+    }
+    if (path2 === "") {
+      this.setFeedback(`${tuiCopy("cdCurrent", locale)}: ${workingDirectory.get(agent.session)}`);
+      return;
+    }
+    try {
+      const directory = await workingDirectory.set(agent, path2, this.lifecycleAbort.signal);
+      if (!this.closed) this.setFeedback(`\u2713 ${tuiCopy("cdChanged", locale)}: ${directory}`);
+    } catch (error51) {
+      if (!this.closed) this.reportCommandFailure(errorReason(error51));
+    }
   }
   /**
    * Forward `/{query}` to the command registry. Overlay Enter uses this
@@ -87313,9 +89521,10 @@ var RuntimeController = class _RuntimeController {
   readSettingsRows() {
     const settings = this.ctx.get("settings");
     if (settings === void 0) return [];
+    const descriptors = settings.describe({ redactSecrets: true });
     const rows = settingsRowsFromDescribe(
-      settings.describe({ redactSecrets: true }),
-      (ns) => settings.get(ns),
+      descriptors,
+      (ns) => descriptors.find((form) => form.ns === ns)?.value,
       { expandProviders: true }
     );
     return [...rows, ...credentialSettingRows(
@@ -87337,8 +89546,8 @@ var RuntimeController = class _RuntimeController {
       const ref = profile["apiKeyEnv"];
       if (typeof ref === "string" && isCredentialRefName(ref)) names.add(ref);
     };
-    collect(settings.get("llm-deepseek"));
-    const piAi = settings.get("llm-pi-ai");
+    collect(entryConfig(this.ctx, "llm-deepseek"));
+    const piAi = entryConfig(this.ctx, "llm-pi-ai");
     if (typeof piAi === "object" && piAi !== null && !Array.isArray(piAi)) {
       const providers = piAi["providers"];
       if (typeof providers === "object" && providers !== null && !Array.isArray(providers)) {
@@ -87439,7 +89648,7 @@ var RuntimeController = class _RuntimeController {
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
-        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : fieldOf(settings.get(row.namespace), row.field),
+        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : fieldOf(settings.describe().find((form) => String(form.ns) === row.namespace)?.value, row.field),
         value,
         this.catalogProviderIds(row.namespace)
       );
@@ -87456,6 +89665,7 @@ var RuntimeController = class _RuntimeController {
       try {
         await settings.update(row.namespace, createSettingsPatch(row.field, parsed));
         if (this.closed) return;
+        if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting();
         this.settingsOpen = false;
         this.settingsEditing = false;
         this.settingsOnboarding = false;
@@ -87699,7 +89909,7 @@ var RuntimeController = class _RuntimeController {
         if (this.closed) return;
         const settings = this.ctx.get("settings");
         if (settings !== void 0) {
-          const ds = settings.get("llm-deepseek");
+          const ds = entryConfig(this.ctx, "llm-deepseek");
           if (typeof ds?.apiKeyEnv === "string" && ds.apiKeyEnv.startsWith("sk-")) {
             await settings.update("llm-deepseek", { apiKeyEnv: "DEEPSEEK_API_KEY" });
           }
@@ -87762,25 +89972,6 @@ var RuntimeController = class _RuntimeController {
     this.refreshConfiguredCredentials();
   }
   /**
-   * Register the `tui` user-settings section when the host exposes `register`.
-   * Unit stubs that only implement `describe`/`get`/`update` are left alone.
-   */
-  installTuiSettings() {
-    this.ctx.inject(["settings"], (settingsCtx) => {
-      if (typeof settingsCtx.settings.installSection !== "function") return;
-      settingsCtx.settings.installSection(this.ctx, TUI_SETTINGS_NS, TuiUserSettings, {}, {
-        setSource: (read) => {
-          this.readTuiSettings = read;
-        },
-        onChange: () => {
-          const next = this.readTuiSettings?.();
-          if (next?.colorTier !== void 0) applyTheme(next.colorTier);
-          this.emit();
-        }
-      });
-    });
-  }
-  /**
    * Open the API-key configuration overlay directly from /key or /login.
    * @param targetField - credential reference name (defaults to DEEPSEEK_API_KEY).
    */
@@ -87838,16 +90029,18 @@ var RuntimeController = class _RuntimeController {
       return `/${command.name} \u2014 ${command.description}${hint}`;
     });
     return [
-      "/help \u2014 \u547D\u4EE4\u4E0E\u952E\u4F4D\u901F\u67E5",
-      ...commands,
-      "",
+      "\u2500\u2500 \u5FEB\u6377\u952E \u2500\u2500",
       "\u952E\u4F4D: Ctrl+C \u505C\u6B62/\u9000\u51FA \xB7 Ctrl+O \u663E\u793A/\u9690\u85CF\u601D\u8003 \xB7 Ctrl+N \u65B0\u4F1A\u8BDD \xB7 Ctrl+K \u641C\u7D22 \xB7 Ctrl+T \u65F6\u95F4\u7EBF",
       "Ctrl+E \u5DE5\u5177\u5361 \xB7 y/n \u5BA1\u6279 \xB7 /permission \xB7 /settings \xB7 e/r \u5BFC\u51FA\u91CD\u8F7D",
-      "g a \u5B50\u4EE3\u7406 \xB7 g t \u5DE5\u4F5C\u533A \xB7 g f \u53CD\u9988 \xB7 g w \u5DE5\u4F5C\u6D41",
+      "\u7F16\u8F91: Shift+Enter \u6362\u884C \xB7 Ctrl+U \u5220\u81F3\u884C\u9996 \xB7 Ctrl+W \u5220\u524D\u4E00\u8BCD \xB7 \u2191\u2193 \u5386\u53F2",
+      "g a \u5B50\u4EE3\u7406 \xB7 g t \u5DE5\u4F5C\u533A \xB7 g f \u53CD\u9988 \xB7 g w \u5DE5\u4F5C\u6D41 \xB7 g p \u63D2\u4EF6",
       "\u2191\u2193/jk \u6EDA\u52A8 \xB7 g s \u4F1A\u8BDD\u5217\u8868 \xB7 Tab \u8865\u5168 \xB7 Esc \u5173\u95ED \xB7 / \u547D\u4EE4 \xB7 @ \u63D0\u53CA",
       "\u6EDA\u8F6E\u6EDA\u52A8 \xB7 \u70B9\u51FB\u6253\u5F00\u94FE\u63A5 \xB7 \u62D6\u9009\u590D\u5236",
       "/files \u5DE5\u4F5C\u533A \xB7 /plan \u8BA1\u5212 \xB7 /goal \u76EE\u6807 \xB7 /compact \u538B\u7F29",
-      "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D"
+      "/model \u6A21\u578B\u9009\u62E9 \xB7 /new \u65B0\u4F1A\u8BDD \xB7 /help \u5E2E\u52A9 \xB7 /export \u5BFC\u51FA\u4F1A\u8BDD \xB7 /settings \u8BBE\u7F6E \xB7 /resume \u4F1A\u8BDD \xB7 /reload \u91CD\u8F7D",
+      "",
+      "\u2500\u2500 \u547D\u4EE4 \u2500\u2500",
+      ...commands
     ];
   }
   /**
@@ -87922,6 +90115,7 @@ var RuntimeController = class _RuntimeController {
       const providers = llm.listProviders();
       const groups = await Promise.all(providers.map(async (provider) => {
         let models;
+        let failed = false;
         try {
           models = await llm.listModels(provider.id);
         } catch (error51) {
@@ -87929,9 +90123,10 @@ var RuntimeController = class _RuntimeController {
             `model catalog for "${provider.id}" failed: ${String(error51)}`
           );
           models = [];
+          failed = true;
         }
         if (models.length === 0) {
-          return [this.fallbackModelRow(provider.id, provider.name, current)];
+          return [this.fallbackModelRow(provider.id, provider.name, current, failed)];
         }
         return models.map(
           (model) => this.catalogRow(provider.id, model.id, model.name, current)
@@ -87970,20 +90165,16 @@ var RuntimeController = class _RuntimeController {
   }
   /**
    * The degraded row for a provider with no discoverable catalog: the live
-   * default model when the provider is the current one, else the provider
-   * route itself as the only known identity.
+   * default model when the provider is the current one, else an unselectable
+   * provider row whose guidance names how its models become available.
+   * DeepSeek providers advertise models only after sign-in or key setup.
    */
-  fallbackModelRow(provider, providerName, current) {
-    const isCurrentProvider = current.provider === provider;
-    const model = isCurrentProvider ? current.model : provider;
-    return {
-      id: `default:${provider}`,
-      provider,
-      model,
-      name: isCurrentProvider ? current.model : providerName,
-      fallback: true,
-      current: isCurrentProvider
-    };
+  fallbackModelRow(provider, providerName, current, failed) {
+    if (current.provider === provider) {
+      return { id: `default:${provider}`, provider, model: current.model, name: current.model, fallback: true, current: true };
+    }
+    const unavailable = failed ? "\u6A21\u578B\u76EE\u5F55\u52A0\u8F7D\u5931\u8D25" : provider === "deepseek-account" ? "\u767B\u5F55 DeepSeek \u8D26\u53F7\u540E\u53EF\u7528 \xB7 /login" : provider === "deepseek-official" ? "\u914D\u7F6E API \u5BC6\u94A5\u540E\u53EF\u7528 \xB7 /key" : "\u6682\u65E0\u53EF\u7528\u6A21\u578B \xB7 /settings \u914D\u7F6E";
+    return { id: `default:${provider}`, provider, model: provider, name: providerName, fallback: true, current: false, unavailable };
   }
   /**
    * Enter on a highlighted model row: persist the selection, then apply it
@@ -87997,6 +90188,10 @@ var RuntimeController = class _RuntimeController {
     const ref = this.modelSelectionRef;
     const defaultModel = this.ctx.get("agentDefaultModel");
     if (row === void 0 || ref === void 0 || defaultModel === void 0) {
+      return;
+    }
+    if (row.unavailable !== void 0) {
+      this.setFeedback(`\u2717 ${row.name}\uFF1A${row.unavailable}`);
       return;
     }
     const next = { provider: row.provider, model: row.model };
@@ -88018,11 +90213,21 @@ var RuntimeController = class _RuntimeController {
     this.emit();
   }
   /**
-   * Return the workspace base directory `@` mention queries resolve under.
-   * @returns the configured run cwd, else the process cwd.
+   * Return the directory the footer shows and `@` mentions and `/files` resolve under.
+   * @returns the bound Session's working directory when the working-directory service is mounted, else the configured run cwd, else the process cwd.
    */
   getCwd() {
-    return this.config.cwd ?? process.cwd();
+    return this.sessionDirectory() ?? process.cwd();
+  }
+  /**
+   * The explicit base directory for filesystem lookups.
+   * @returns the bound Session's working directory when the service is mounted, else the configured run cwd; undefined lets the filesystem provider apply its own base.
+   */
+  sessionDirectory() {
+    const agent = this.agent;
+    const workingDirectory = this.ctx.get("workingDirectory");
+    if (agent !== void 0 && workingDirectory !== void 0) return workingDirectory.get(agent.session);
+    return this.config.cwd;
   }
   /**
    * Resolve `@` mention candidates for one base path and typed query: a
@@ -88042,9 +90247,10 @@ var RuntimeController = class _RuntimeController {
     const needle = query.toLowerCase();
     const fs3 = this.ctx.get("fs");
     if (fs3 !== void 0 && basePath.trim() !== "") {
+      const cwd2 = this.sessionDirectory();
       try {
         const target = await fs3.resolve(basePath, {
-          ...this.config.cwd === void 0 ? {} : { cwd: this.config.cwd },
+          ...cwd2 === void 0 ? {} : { cwd: cwd2 },
           ...signal === void 0 ? {} : { signal }
         });
         const entries = await fs3.listDir(target, signal);
@@ -88086,7 +90292,7 @@ var RuntimeController = class _RuntimeController {
     const subagents = this.ctx.get("subagents");
     if (subagents !== void 0 && this.agentHandle !== void 0 && this.session !== void 0) {
       try {
-        const entries = await subagents.listChildren(this.session.id, signal);
+        const entries = (await subagents.listDescendants(this.session.id, signal)).filter((entry) => entry.depth === 1);
         for (const entry of entries) {
           if (entry.kind !== "child" || entry.activity !== "running") continue;
           const name2 = entry.mode === "continuable" ? entry.label : entry.label ?? entry.id;
@@ -88399,10 +90605,10 @@ var RuntimeController = class _RuntimeController {
    * @returns the user's one-shot outcome, or `'cancelled'` if the signal aborts.
    */
   enqueueApproval(request) {
-    return new Promise((resolve5) => {
+    return new Promise((resolve6) => {
       const entry = {
         request,
-        resolve: resolve5,
+        resolve: resolve6,
         seq: ++this.slotSeq,
         settled: false,
         detailsOpen: false,
@@ -88489,10 +90695,10 @@ var RuntimeController = class _RuntimeController {
     if (request.signal?.aborted === true) {
       return Promise.reject(askAborted());
     }
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve6, reject) => {
       const entry = {
         request,
-        resolve: resolve5,
+        resolve: resolve6,
         reject,
         seq: ++this.slotSeq,
         settled: false,
@@ -88828,7 +91034,7 @@ function askUserOptionCount(entry) {
   return entry.request.questions[0]?.options?.length ?? 0;
 }
 async function frameStatsTarget(input) {
-  const absolute = resolve4(input);
+  const absolute = resolve5(input);
   let target;
   try {
     target = await stat(absolute);
@@ -88855,10 +91061,10 @@ async function frameStatsTarget(input) {
   return absolute;
 }
 async function writeFrameStatsFile(path2, probe, io, brandProbe, frameMetrics) {
-  const snapshot = frameStatsSnapshot(probe);
+  const snapshot2 = frameStatsSnapshot(probe);
   const brandSnapshot = brandProbe === void 0 ? createFrameProbe().snapshot() : frameStatsSnapshot(brandProbe);
   const payload = {
-    renderMs: snapshot,
+    renderMs: snapshot2,
     brandRenderMs: brandSnapshot,
     pacing: { commits: probe.commits, elapsedMs: probe.elapsedMs() },
     brandRevealTimers: activeBrandRevealTimerCount(),

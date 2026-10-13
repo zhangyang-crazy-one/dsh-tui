@@ -29,6 +29,9 @@
     },
     {
       "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../deliverables/workspace-changes"
     }
   ]
 }

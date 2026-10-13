@@ -30,9 +30,9 @@ deepseek-tui 的 profile bundle（配置包）与运行时插件让用户在 `ds
 
 bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选的 `resume` 和可选的 `cwd`。启动 provider 接受可选的任务位置参数、`--resume <id>` 与 `--cwd <dir>`；无任务（或仅 `--resume <id>`）时 profile 以空闲的全屏循环启动，焦点位于空 composer（占位符 `输入消息`，以及一行操作/状态页脚），空 composer 上按 Enter 是无操作。
 
-随产品交付的 profile 为 `{ bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-tui'], patchReload: 'startup' }`。profile 与 home patch 的修改在下次进程启动时生效，不会重新组合正在运行的终端、Agent 或会话。设置文件热更新仍由 settings 服务拥有。
+`tui` profile 的 bundles 为 `['@deepseek-ai/dsh-base', '@crazyhappyone/dsh-tui']`，由 `dsh plugin --profile tui add` 维护。本 bundle 关闭 HMR，因此除设置外的 profile 与 home patch 修改在下次进程启动时生效，不会重新组合正在运行的终端、Agent 或会话。`/settings` 通过 dsh settings 服务写入 volatile 字段并实时生效；`tui` 行自身的偏好通过 `tuiSettings` 服务按需读取。
 
-可选 `renderPolicy` 配置在启动时解析一次，并显式传给渲染器。`transcriptOverscan` 与 `cache.maxRows`/`cache.maxBytes` 限制物理行投影和重建缓存；`stream` 拥有 smooth/catch-up 队列阈值与单帧工作量；`scroll` 拥有 latest-target 节奏、追赶步长和鼠标滚轮行数。`tools.previewRows`、`detailPageRows`、`cacheEntries` 和 `cacheRows` 分别限制工具预览、详情分页与派生存储，默认值为 6、40、128 和 2048。Config schema 要求帧间隔和缓存上限为正、overscan/缓存预算有界，且退出阈值严格小于对应进入阈值，因此无效组合会在插件加载时失败。随产品交付的值位于 [`cordis.patch.yml`](cordis.patch.yml)，`pnpm run test:tui:perf` 运行严格的真实 PTY 性能门禁。
+可选 `renderPolicy` 配置在启动时解析一次，并显式传给渲染器。`transcriptOverscan` 与 `cache.maxRows`/`cache.maxBytes` 限制物理行投影和重建缓存；`stream` 拥有 smooth/catch-up 队列阈值与单帧工作量；`scroll` 拥有 latest-target 节奏、追赶步长和鼠标滚轮行数。`tools.previewRows`、`detailPageRows`、`cacheEntries` 和 `cacheRows` 分别限制工具预览、详情分页与派生存储，默认值为 6、40、128 和 2048。Config schema 要求帧间隔和缓存上限为正、overscan/缓存预算有界，且退出阈值严格小于对应进入阈值，因此无效组合会在插件加载时失败。随产品交付的值位于 [`cordis.patch.yml`](../cordis.patch.yml)，`pnpm run test:tui:perf` 运行严格的真实 PTY 性能门禁。
 
 思考默认隐藏。Ctrl+O 或 `/reasoning` 在共享 transcript 中显示完整的淡化思考正文；流式生成与结束不会将其折叠。`/scrollbar` 显示或隐藏右侧轨道，不改变阅读宽度与导航。`/status` 切换输入/输出等详细指标；默认单行页脚在权威值与宽度允许时保留上下文用量条、百分比和缓存命中率。模型名称只出现在输入区标签中。这些偏好也可在 `/settings` 中设置，并在重启后保留。`tui.locale` 为新增设置、状态与工具详情文案选择 zh-CN（默认）或 en-US；这些控制不改变模型推理或会话事件。
 
@@ -46,7 +46,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 
 ### 插件与实时任务
 
-`/plugins` 或 `g p` 打开 Plugins 页面，按安装供给与 profile 自有分组列出 bundle。只读原因保持可见；不可移除的 bundle 在服务允许时仍可启停。变更影响使用该 profile 的所有会话。未组合 Plugin Manager 时，页面明确提示服务不可用，并仍可关闭。
+`/plugins` 或 `g p` 打开 Plugins 页面，按官方、安装供给与 profile 自有分组列出 bundle。`availability: 'missing'` 且带 `installTarget` 的官方目录条目显示该目标；按 Space 会检查该目标并打开安装预览，而不是切换选中状态。只读原因保持可见；不可移除的 bundle 在服务允许时仍可启停。变更影响使用该 profile 的所有会话。未组合 Plugin Manager 时，页面明确提示服务不可用，并仍可关闭。
 
 页面区分已保存的选择、运行状态与操作结果。成功保存且结果为 `restart-required` 时提供 `R` 或 `/reload`；`failed`、`cancelled` 与 `overridden` 保留服务报告的含义，不显示成功重启提示。清单在打开、操作结束和收到管理器通知时刷新。外部 patch 编辑在页面重新打开时重读。
 
@@ -56,11 +56,13 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 
 `renderPolicy.normalHudRows`、`compactHudRows` 与 `compactHeightThreshold` 默认分别为 8、4 和 24。终端不足 24 行时 HUD 使用紧凑上限；可用空间还可进一步收缩任一上限。三个值必须为正整数，紧凑上限不能大于普通上限。标题、Workflow 摘要与隐藏项计数共享预算；空分区自动收起。渲染器先为输入、对话框与正文预留空间，再分配 HUD 行数。
 
+挂载 `deepseekAccount` 时，`/login` 打开账号页。页面仅在打开期间订阅 `watch()`，以 `webServer` 服务的回环 origin 发起登录，非 SSH 环境下只自动打开一次授权链接，并在凭据保存后读取账号资料与余额；这些响应只应用到发起请求的页面及凭据版本，关闭页面、退出、登录失效或再次登录后的旧响应不更新当前页面；未挂载该服务时，`/login` 仍打开 API 密钥编辑器。`/logout` 直接打开同一页面的退出确认。`deepseek-account/model-sign-in-required` 与 `deepseek-account/session-expired` 在状态行显示提示。`/cd [路径]` 读取或调用 `workingDirectory.set`；挂载该服务时，底栏、顶栏、`@` 提及、`/files` 与工具导出使用会话工作目录。`deepseek-account` 与 `deepseek-official` 目录为空时，在 `/model` 中显示为不可选中的行，并注明 `/login` 或 `/key`。
+
 ### 约定
 
 - 运行时拥有 live Agent 句柄、会话投影和会话目录状态；渲染包只接收 controller 接口。顶栏标题是已折叠的 `session/title`，但与人类用户消息并存的 `fallback` 标题除外；在出现 provider 或重命名标题之前循环显示紧凑挂载名 `DeepSeek · deepseek-tui`。目录行仍使用第一条人类消息作为回退。空闲无消息时，对话列绘制生成的官方 FishLogo、`DeepSeek` 与 `有什么可以帮忙的`。环境独立于颜色选择 half-block、full-block、ASCII 或纯字标输出；`brandAnimation` 保存 `auto | on | off`，任何输入、历史、覆盖层、resize、播放完成或卸载 stop 都会清除一次性 reveal timer。运行时只为已绑定的 live agent 回答 `approval/request`，其他 agent 调用 `next()`。`y`/`a` 得到 `'allowed-once'`，`n`/`d`/Esc 得到 `'rejected'`，中止（含 Ctrl+C 停止生成）经请求 signal 得到 `'cancelled'`。策略 `'never'` 由 host 在该 listener 之前决定，因此不会出现 ApprovalPane。Ctrl+E 翻转当前窗口的工具卡折叠（`toolCardsExpanded`；不写 session 事件）。空 `/permission` 打开预设覆盖层；带参 `/permission <name>` 走 `ctx.commands.execute`。空 `/settings` 打开设置覆盖层，列出 `describe()` 的每个顶层字段（`llm-deepseek · models`；`llm-pi-ai · providers` 打开一个结构化表单——目录名、模板序号 1–4、单行 `名称 端点 [模型[,模型…]]`，或多行 `name= baseURL= models= api=`；已有路由展开为 `api` / `baseURL` / `apiKeyEnv` / `displayName` / `models` 的子行）；Enter 应用经 `ctx.settings.update` 写入所选字段。`models=` 留空、任一表单中的字面量 `auto`、两 token 的 `名称 端点` 形式，以及已有路由 `providers.<route>.models` 行被填成 `auto` 时，都把模型列表组装交给 `ctx.llm.discoverModels`；面板在请求进行中显示 `正在获取模型列表…`，任何拒绝或空响应都画在 ✗ 行上且不写任何设置——未存凭据时的 401/403 会追加 `请先使用 /key 配置 API key`。浏览态 `e` 报告 `prepareDocument()`，`r` 重读行（`✓ 已重载设置`）。空 `/resume` 打开会话列表。`/reload` 是本地命令：flush 当前会话、卸载终端、dispose 该会话，再以相同启动器标志加上 `--resume <id>` 拉起新的 Node，并丢掉原来的任务位置参数，以免首条消息再发一次。覆盖层上的 `r` 只重读设置行。空闲启动且未配置 `DEEPSEEK_API_KEY` 时打开 `首次设置`；Enter 经 `ctx.credentials.set` 保存后打开模型面板，Esc 跳过且不打开。`tui` 分节拥有 `colorTier`、`submitOnEnter`（为 false 时 Enter 插入换行）、`notify`（`off | attention | every-turn`，默认 `attention`）、`notifyQuietInputSeconds`（非负整数，默认 10）、`brandAnimation`（显示为 `自动 / 开启 / 关闭`）、`scrollbar`（布尔值，默认 `true`）、`reasoning` 与 `statusDetails`（布尔值，默认 `false`）、`locale`（`zh-CN | en-US`，默认 `zh-CN`）以及上文所述已验证的 `renderPolicy`。当前 runtime root Agent 的 scope 注册 `user-questions/request` waterfall listener；它用 `next()` 委托外部 root 与 child 请求，被接纳的请求则绘制 `AskUserPane`，把中止、Agent 替换与释放归并到同一清理，并只在准入时通知一次。↑↓/jk 移动高亮，数字键再 Enter 返回选项的原始 label。斜杠目录包含每条命令的 `description`。
 - 被引用的 `apiKeyEnv` 名称会在已声明字段之后各自获得一行设置行（`凭据 · NAME`）；在该行回车，经 `ctx.credentials.set` 存储密钥并保持面板打开。向 `apiKeyEnv` 字段输入真实密钥会被拒绝，并给出应改用的命令（`请用 /key NAME <密钥> 配置该变量`）；`/key NAME` 可从命令行接受命名凭据。
-- `g s` 在组合器缓冲恰好为 `g` 时切换已持久化的会话目录；`/resume` 打开同一列表且不会关掉已打开的列表。折叠标题相同的行会在行内追加稳定的最短唯一 session-id 提示；标题唯一的行保持不变。左右方向键按字素移动组合器 caret。↑/k 把对话移向更旧的行，↓/j 回到 live 边缘；有输入时方向键仍滚动，j/k 则插入字母。对话脱离底部时始终显示 `↓ 底部 · End/G`，有新输出时还会添加未读行数。鼠标滚轮在对话上与 ↑/k 同向，在列表面板上与 j/k 同向；每个报告移动 `scroll.wheelRows` 个物理行，同一 stdin 数据块内的报告合并为一个净请求。Ctrl+N 新建会话，目录动作通过所拥有的服务切换、重命名或删除会话。删除调用 persistence 服务；该服务拒绝 live、已预留或已借用的身份，并在持久删除后移除派生的投影缓存状态。
+- `g s` 在组合器缓冲恰好为 `g` 时切换已持久化的会话目录；`/resume` 打开同一列表且不会关掉已打开的列表。折叠标题相同的行会在行内追加稳定的最短唯一 session-id 提示；标题唯一的行保持不变。左右方向键按字素移动组合器 caret。↑/k 把对话移向更旧的行，↓/j 回到 live 边缘；有输入时方向键仍滚动，j/k 则插入字母。对话脱离底部时始终显示 `↓ 底部 · End/G`，有新输出时还会添加未读行数。鼠标滚轮在对话上与 ↑/k 同向，在列表面板上与 j/k 同向；每个报告移动 `scroll.wheelRows` 个物理行，同一 stdin 数据块内的报告合并为一个净请求。连续相同的会话切换请求共享完成结果；不同请求按到达顺序等待前一请求提交或回滚。Ctrl+N 新建会话，目录动作通过所拥有的服务切换、重命名或删除会话。删除调用 persistence 服务；该服务拒绝 live、已预留或已借用的身份，并在持久删除后移除派生的投影缓存状态。
 - 终端、回退标题和 `/export` Markdown 只包含直接人类输入的 `user/message` 事件（`source.kind === 'user'`）与 assistant 回复。来自 agent 指令、插件和 skill 目录的持久模型上下文有意不进入这份人类 transcript（文本记录）。
 - Ctrl+K 搜索向 `ctx.sessionQuery` 请求 `literal-substring` 匹配，并过滤到 `user`/`assistant` transcript 角色，因此查询 `回复` 可以找到可见的 `只回复` 文本，同时不会显示注入的模型上下文；其他服务调用方仍保持默认的 token-phrase 模式与完整语义语料库。
 - SIGINT 遵循交互状态机；SIGTERM 与 SIGHUP 请求退出。退出会在请求进程退出前 flush 所拥有的会话；`--frame-stats` 在同一有序退出路径写入其 JSON。
@@ -88,7 +90,7 @@ bundle patch 从 `tuiStartup` 读取可选的 `task` 首条消息种子、可选
 <details>
 <summary>实现内部 — 点击展开</summary>
 
-[`cordis.patch.yml`](cordis.patch.yml) 在 base bundle 上添加终端所属提供方与运行时 glue，不重复 base 存储服务。[`src/index.ts`](src/index.ts) 拥有控制器与生命周期集成，[`../tui-render/`](../tui-render/README.zh.md) 拥有终端投影与绘制。
+[`cordis.patch.yml`](../cordis.patch.yml) 在 base bundle 上添加终端所属提供方与运行时 glue，不重复 base 存储服务。[`src/index.ts`](src/index.ts) 拥有控制器与生命周期集成，[`../tui-render/`](../tui-render/README.zh.md) 拥有终端投影与绘制。
 
 </details>
 

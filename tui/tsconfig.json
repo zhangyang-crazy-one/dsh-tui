@@ -75,9 +75,6 @@
       "path": "../tui-render"
     },
     {
-      "path": "../../runtime-diagnostics/invariants"
-    },
-    {
       "path": "../../boot/cmdline"
     },
     {
@@ -94,6 +91,15 @@
     },
     {
       "path": "../../goal/goal"
+    },
+    {
+      "path": "../../session/working-directory"
+    },
+    {
+      "path": "../../credentials/deepseek-account"
+    },
+    {
+      "path": "../../host/webserver"
     },
     {
       "path": "../../session/session-projection"

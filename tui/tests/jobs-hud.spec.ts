@@ -1,7 +1,7 @@
 /**
  * RuntimeController jobs HUD: rows come from the jobs registry scoped to the
  * exact live agent (a caller-less list would leak other sessions), hide when
- * the service or the list is absent, and re-emit on `onJobsChanged`.
+ * the service or the list is absent, and re-emit on registry lifecycle events.
  */
 
 import { describe, expect, it, vi } from 'vitest'
@@ -16,7 +16,12 @@ import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { JobId } from '@deepseek-ai/dsh-jobs'
-import type { JobSnapshot } from '@deepseek-ai/dsh-jobs'
+import type { JobEventListener, JobView } from '@deepseek-ai/dsh-jobs'
+import type { SessionId } from '@deepseek-ai/dsh-session'
+
+/** The registry view fields the HUD reads; fixtures omit output coordinates. */
+type JobSnapshot = Pick<JobView, 'id' | 'kind' | 'label' | 'status' | 'startedAt'>
+  & Partial<Pick<JobView, 'detail' | 'finishedAt'>> & { reported?: boolean }
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
@@ -93,16 +98,16 @@ async function bench(setup?: (ctx: Context) => void): Promise<Bench> {
 }
 
 interface JobsFake {
-  readonly calls: (Agent | undefined)[]
+  readonly calls: (SessionId | undefined)[]
   readonly fire: () => void
 }
 
 /** Provide a jobs fake; return its call log and a change trigger. */
 function provideJobs(ctx: Context, rows: JobSnapshot[]): JobsFake {
-  const calls: (Agent | undefined)[] = []
-  let listener: (() => void) | undefined
+  const calls: (SessionId | undefined)[] = []
+  let listener: JobEventListener | undefined
   ctx.provide('jobs', {
-    list: (caller?: Agent) => {
+    list: (caller?: SessionId) => {
       calls.push(caller)
       return rows
     },
@@ -111,14 +116,17 @@ function provideJobs(ctx: Context, rows: JobSnapshot[]): JobsFake {
       if (row === undefined) throw new Error(`unknown job ${id}`)
       return { ...row }
     },
-    onJobsChanged: (next: () => void) => {
-      listener = next
-      return () => {}
+    events: {
+      subscribe: (_filter: unknown, next: JobEventListener) => {
+        listener = next
+        return () => {}
+      },
     },
   } as never)
   return {
     calls,
-    fire: () => listener?.(),
+    // A lifecycle event; output events carry no HUD change.
+    fire: () => listener?.({ type: 'progress', job: rows[0] as unknown as JobView }),
   }
 }
 
@@ -137,7 +145,7 @@ describe('jobs HUD', () => {
     expect(controller.getJobsHud()).toEqual([
       { id: 'bash-1', status: 'running', label: '跑测试' },
     ])
-    expect(jobs?.calls).toEqual([liveAgent])
+    expect(jobs?.calls).toEqual([liveAgent.session.id])
     await ctx.fiber.dispose()
   })
 
@@ -220,10 +228,10 @@ describe('jobs HUD', () => {
         await vi.waitFor(() => {
           expect(observe).toHaveReturnedWith([])
         })
-        expect(jobs.calls.slice(readsBeforeNotification)).toEqual([liveAgent])
+        expect(jobs.calls.slice(readsBeforeNotification)).toEqual([liveAgent.session.id])
         expect(controller.getJobsHud()).toEqual([])
-        expect(ctx.jobs.get(RUNNING.id, liveAgent)).toEqual(terminalRecord)
-        expect(ctx.jobs.list(liveAgent)).toEqual([terminalRecord])
+        expect(ctx.jobs.get(RUNNING.id, liveAgent.session.id)).toEqual(terminalRecord)
+        expect(ctx.jobs.list(liveAgent.session.id)).toEqual([terminalRecord])
         expect(rows).toEqual([terminalRecord])
       } finally {
         unsubscribe()
@@ -247,7 +255,7 @@ describe('jobs HUD', () => {
       liveAgent.session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
       expect(controller.getInteraction()).toBe('idle')
       expect(controller.getJobsHud()).toEqual(activeSnapshot)
-      expect(ctx.jobs.get(RUNNING.id, liveAgent)).toEqual(RUNNING)
+      expect(ctx.jobs.get(RUNNING.id, liveAgent.session.id)).toEqual(RUNNING)
     } finally {
       await controller.dispose()
       await ctx.fiber.dispose()
@@ -283,15 +291,16 @@ describe('jobs HUD', () => {
         expectedRecords.push(...settled.map(job => ({ ...job })))
         jobs.fire()
         expect(controller.getJobsHud()).toEqual([activeRow])
-        expect(ctx.jobs.list(liveAgent)).toEqual(expectedRecords)
+        expect(ctx.jobs.list(liveAgent.session.id)).toEqual(expectedRecords)
       }
-      rows[0] = { ...ongoing, status: 'completed', finishedAt: 3 }
-      expectedRecords[0] = { ...rows[0] }
+      const finished: JobSnapshot = { ...ongoing, status: 'completed', finishedAt: 3 }
+      rows[0] = finished
+      expectedRecords[0] = { ...finished }
       jobs.fire()
       expect(controller.getJobsHud()).toEqual([])
-      expect(ctx.jobs.list(liveAgent)).toEqual(expectedRecords)
+      expect(ctx.jobs.list(liveAgent.session.id)).toEqual(expectedRecords)
       expect(expectedRecords).toHaveLength(13)
-      expect(jobs.calls.every(caller => caller === liveAgent)).toBe(true)
+      expect(jobs.calls.every(caller => caller === liveAgent.session.id)).toBe(true)
     } finally {
       await controller.dispose()
       await ctx.fiber.dispose()
