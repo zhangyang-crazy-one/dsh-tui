@@ -73,10 +73,10 @@ export function longSessionText(
 }
 
 /**
- * The deterministic 4000-event log (turn/start, user/message,
+ * The deterministic 6000-event log (turn/start, user/message, step/start,
  * assistant/message, turn/end per turn) for one seed.
  * @param seed - determinism seed (default 0).
- * @returns the contiguous event list, seq 0..3999.
+ * @returns the contiguous event list, seq 0..5999.
  */
 export function longSessionEvents(seed = 0): readonly SessionEvent[] {
   const events: SessionEvent[] = []
@@ -87,15 +87,9 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
     const userIndex = (turn - 1) * 2
     events.push({ type: 'turn/start', seq: SessionSeq(seq), time, data: { turn } })
     events.push({
-      type: 'step/start',
+      type: 'user/message',
       seq: SessionSeq(seq + 1),
       time: time + 1,
-      data: { turn, step: 1 },
-    })
-    events.push({
-      type: 'user/message',
-      seq: SessionSeq(seq + 2),
-      time: time + 2,
       data: {
         role: 'user',
         // Deterministic identity: the createUserMessage factory assigns a
@@ -108,6 +102,7 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
       },
       surfaceOp: 'append',
     })
+    events.push({ type: 'step/start', seq: SessionSeq(seq + 2), time: time + 2, data: { turn, step: 1 } })
     events.push({
       type: 'assistant/message',
       seq: SessionSeq(seq + 3),
@@ -134,12 +129,7 @@ export function longSessionEvents(seed = 0): readonly SessionEvent[] {
       },
       surfaceOp: 'append',
     })
-    events.push({
-      type: 'step/end',
-      seq: SessionSeq(seq + 4),
-      time: time + 4,
-      data: { turn, step: 1 },
-    })
+    events.push({ type: 'step/end', seq: SessionSeq(seq + 4), time: time + 4, data: { turn, step: 1 } })
     events.push({
       type: 'turn/end',
       seq: SessionSeq(seq + 5),

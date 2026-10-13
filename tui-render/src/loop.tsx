@@ -11,18 +11,20 @@
  */
 
 import { homedir } from 'node:os'
-import { Box, Text, useInput, usePaste, useWindowSize } from 'ink'
+import { Box, Text, measureElement, useInput, usePaste, useWindowSize } from 'ink'
 import {
+  Activity,
   createElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { Key } from 'ink'
+import type { DOMElement, Key } from 'ink'
 import { AppShell } from './app-shell.tsx'
 import { StreamView } from './stream-view.tsx'
 import { SessionPane } from './session-pane.tsx'
@@ -74,15 +76,18 @@ import type { BrandRenderTier } from './terminal-capabilities.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
 import type { RenderPolicy } from './render-policy.ts'
-import { TodoHud } from './todo-hud.tsx'
+import { fitHudRow, hudRowBudget, layoutHud } from './hud-layout.ts'
+import { renderPolicyDefaults } from './render-policy.ts'
 import type { TodoHudItem } from './todo-hud.tsx'
-import { JobsHud } from './jobs-hud.tsx'
 import type { JobHudItem } from './jobs-hud.tsx'
-import { WorkflowHud } from './workflow-hud.tsx'
 import type { WorkflowHudState } from './workflow-hud.tsx'
 import { WorkflowOverlay } from './workflow-overlay.tsx'
 import type { WorkflowOverlayState } from './workflow-overlay.tsx'
 import { WorkspacePane } from './workspace-pane.tsx'
+import { PluginsPane, EMPTY_PLUGINS_PANE } from './plugins-pane.tsx'
+import type { PluginsPaneState, PluginsPaneInput } from './plugins-pane.tsx'
+import { AccountPane, EMPTY_ACCOUNT_PANE, accountAttemptActive } from './account-pane.tsx'
+import type { AccountPaneState, AccountPaneInput } from './account-pane.tsx'
 import type { WorkspacePaneState, WorkspacePreviewLayout } from './workspace-pane.tsx'
 import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
@@ -105,6 +110,9 @@ export type LoopMode = 'agent' | 'plan' | 'focus'
 
 /** Runtime actions the loop requests from its controller. */
 export type LoopAction =
+  | { kind: 'plugins-pane' }
+  | { kind: 'plugins-input'; input: PluginsPaneInput }
+  | { kind: 'account-input'; input: AccountPaneInput }
   | { kind: 'tool-details'; input: ToolDetailsInput; width: number; pageRows: number }
   | { kind: 'send'; text: string }
   | { kind: 'sigint' }
@@ -187,6 +195,10 @@ export type LoopAction =
 
 /** The controller seam: model access, subscription, and action dispatch. */
 export interface TuiController {
+  /** Latest Plugins inventory and controller-owned install state. */
+  getPluginsPane?(): PluginsPaneState
+  /** Latest DeepSeek account page state. */
+  getAccountPane?(): AccountPaneState
   /** Latest folded view model. */
   getModel(): ViewModel
   /** Latest interaction state. */
@@ -389,6 +401,46 @@ function hasControlCodepoint(value: string): boolean {
     if (code <= 0x1f || code === 0x7f) return true
   }
   return false
+}
+
+/** How one unbracketed multi-byte input chunk containing line breaks should apply. */
+export type InputBurst =
+  | { readonly kind: 'submit'; readonly text: string }
+  | { readonly kind: 'paste'; readonly text: string }
+
+/**
+ * Split an input chunk that carries typed text and line breaks together.
+ * Ink delivers such a chunk (fast typing under load, tmux/SSH batching, IME
+ * commit plus Enter, or a paste without bracketed-paste mode) as one input
+ * string with no `return` flag, and its control bytes would otherwise make
+ * the whole chunk non-text. A single trailing break means "type, then press
+ * Enter"; interior breaks mean pasted multi-line text, which is inserted
+ * without submitting.
+ * @param key - raw Ink input string.
+ * @param keyInfo - Ink key flags for the chunk.
+ * @returns the burst interpretation, or undefined for ordinary input.
+ */
+export function splitInputBurst(key: string, keyInfo: Key): InputBurst | undefined {
+  if (key.length < 2 || keyInfo.ctrl || keyInfo.meta || !/[\r\n]/u.test(key)) return undefined
+  const text = key.replace(/\r\n?/gu, '\n')
+  // Any other control byte is an unrecognized sequence, not typed text.
+  if (hasControlCodepoint(text.replace(/[\n\t]/gu, ''))) return undefined
+  if (/^\n+$/u.test(text)) return { kind: 'submit', text: '' }
+  const body = text.endsWith('\n') ? text.slice(0, -1) : text
+  if (text.endsWith('\n') && !body.includes('\n')) return { kind: 'submit', text: body }
+  return { kind: 'paste', text: body }
+}
+
+/**
+ * Whether one input chunk is several j/k presses delivered together (key
+ * repeat, tmux/SSH batching). A pane that handles single j/k keys and ignores
+ * the whole chunk receives the presses one at a time instead.
+ * @param key - raw Ink input string.
+ * @param keyInfo - Ink key flags for the chunk.
+ * @returns true for a run of two or more j/k characters without modifiers.
+ */
+export function isNavigationBurst(key: string, keyInfo: Key): boolean {
+  return key.length > 1 && !keyInfo.ctrl && !keyInfo.meta && /^[jk]+$/u.test(key)
 }
 
 function isTextInput(key: string, keyInfo: Key): boolean {
@@ -652,6 +704,8 @@ function draftKeyEffect(
  */
 function overlayChordAction(key: string): LoopAction | undefined {
   switch (key) {
+    case 'p':
+      return { kind: 'plugins-pane' }
     case 'a':
       return { kind: 'agent-hub' }
     case 't':
@@ -731,6 +785,8 @@ export function mapKeyEvent(
   },
   submitOnEnter = true,
   overlays: {
+    plugins?: PluginsPaneState
+    account?: AccountPaneState
     agentHub?: { open: boolean }
     planDirectory?: { open: boolean }
     workspace?: {
@@ -762,6 +818,49 @@ export function mapKeyEvent(
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))
     && state.commandDismissed !== true
+  if (overlays.account?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const account = overlays.account
+    const send = (input: AccountPaneInput) => holdComposer(state, { kind: 'account-input', input })
+    if (keyInfo.escape) return send({ kind: 'close' })
+    if (keyInfo.ctrl && key === 'c') return holdComposer(state, { kind: 'sigint' })
+    if (keyInfo.ctrl || keyInfo.meta || account.busy) return { kind: 'none' }
+    if (account.confirmSignOut) return key === 'y' ? send({ kind: 'confirm' }) : key === 'n' ? send({ kind: 'dismiss' }) : { kind: 'none' }
+    if (accountAttemptActive(account.phase)) {
+      return key === 'o' ? send({ kind: 'open-url' }) : key === 'c' ? send({ kind: 'cancel' }) : { kind: 'none' }
+    }
+    if (account.status === 'credential-stored') return key === 'x' ? send({ kind: 'sign-out' }) : { kind: 'none' }
+    if (keyInfo.return && account.available) return send({ kind: 'sign-in' })
+    return key === 'k' ? send({ kind: 'api-key' }) : { kind: 'none' }
+  }
+  if (overlays.plugins?.open && !approval.open && !askUser.open && !overlays.planReview?.open) {
+    const plugins = overlays.plugins
+    const send = (input: PluginsPaneInput) => holdComposer(state, { kind: 'plugins-input', input })
+    if (keyInfo.escape) return send({ kind: 'close' })
+    if (keyInfo.ctrl && key === 'c') return holdComposer(state, { kind: 'sigint' })
+    if (keyInfo.ctrl || keyInfo.meta) return { kind: 'none' }
+    if (plugins.busy) return key === 'c' ? send({ kind: 'cancel' }) : { kind: 'none' }
+    if (plugins.inspecting) return { kind: 'none' }
+    if (plugins.mode === 'input') {
+      if (keyInfo.return) return send({ kind: 'inspect' })
+      if (keyInfo.backspace || keyInfo.delete) return send({ kind: 'text', value: Array.from(plugins.spec).slice(0, -1).join('') })
+      if (!keyInfo.ctrl && !keyInfo.meta && key && !keyInfo.upArrow && !keyInfo.downArrow && !keyInfo.leftArrow && !keyInfo.rightArrow) {
+        return send({ kind: 'text', value: plugins.spec + key })
+      }
+      return { kind: 'none' }
+    }
+    if (plugins.mode === 'remove' || plugins.mode === 'builds') {
+      if (keyInfo.upArrow) return send({ kind: 'move', delta: -1 })
+      if (keyInfo.downArrow) return send({ kind: 'move', delta: 1 })
+      if (key === 'y') return send({ kind: 'confirm' })
+      return key === 'n' ? send({ kind: 'dismiss' }) : { kind: 'none' }
+    }
+    if (keyInfo.return && plugins.mode === 'preview') return send({ kind: 'install' })
+    if (keyInfo.upArrow || key === 'k') return send({ kind: 'move', delta: -1 })
+    if (keyInfo.downArrow || key === 'j') return send({ kind: 'move', delta: 1 })
+    const action = key === ' ' ? 'toggle' : key === 'i' ? 'edit' : key === 'd' ? 'remove'
+      : key === 'a' ? 'approve' : key === 'r' ? 'retry' : key === 'R' ? 'reload' : undefined
+    return action === undefined ? { kind: 'none' } : send({ kind: action })
+  }
   const mentionMode = activeMentionQuery(state.text) !== undefined
   const agentHubOpen = overlays.agentHub?.open === true
   const planDirectoryOpen = overlays.planDirectory?.open === true
@@ -1519,6 +1618,27 @@ export function mapKeyEvent(
       renaming: state.renaming,
     }
   }
+  // Readline-style kills: Ctrl+U clears to the start of the caret's line,
+  // Ctrl+W deletes the word before the caret.
+  if (keyInfo.ctrl && (key === 'u' || key === 'w') && !modelPane.open && !search.open && !helpPane.open) {
+    const caret = clampCaretIndex(state.text, state.caretIndex)
+    const before = state.text.slice(0, caret)
+    const start = key === 'u'
+      ? before.lastIndexOf('\n') + 1
+      : before.replace(/\S*\s*$/u, '').length
+    const text = state.text.slice(0, start) + state.text.slice(caret)
+    return {
+      kind: 'dispatch',
+      action: { kind: 'none' as never },
+      text,
+      commandQuery: text.startsWith('/') ? text.slice(1) : undefined,
+      prefixG: false,
+      renaming: state.renaming,
+      caretIndex: start,
+      historyIndex: state.historyIndex,
+      historyDraft: state.historyDraft,
+    }
+  }
   // ←/→ move the composer caret one grapheme; ↑/↓ navigate prompt history
   // (or move caret vertically across lines in multiline text), never scrolling the conversation.
   if (keyInfo.leftArrow || keyInfo.rightArrow) {
@@ -2029,6 +2149,14 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getSettingsPane(),
   )
+  const pluginsPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE,
+  )
+  const accountPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getAccountPane?.() ?? EMPTY_ACCOUNT_PANE,
+  )
   const agentHubPane = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getAgentHubPane(),
@@ -2149,6 +2277,10 @@ export function TuiLoop({
   const permissionPaneRef = useRef(permissionPane)
   permissionPaneRef.current = permissionPane
   const settingsPaneRef = useRef(settingsPane)
+  const pluginsPaneRef = useRef(pluginsPane)
+  pluginsPaneRef.current = pluginsPane
+  const accountPaneRef = useRef(accountPane)
+  accountPaneRef.current = accountPane
   settingsPaneRef.current = settingsPane
   const agentHubPaneRef = useRef(agentHubPane)
   agentHubPaneRef.current = agentHubPane
@@ -2196,6 +2328,10 @@ export function TuiLoop({
   useEffect(() => {
     const listener = (delta: number): void => {
       frameMetrics?.recordInputEvent()
+      if (pluginsPaneRef.current.open) {
+        controller.dispatch({ kind: 'plugins-input', input: { kind: 'move', delta: -delta } })
+        return
+      }
       if (toolDetailsPaneRef.current.open) {
         controller.dispatch({ kind: 'tool-details', input: delta > 0 ? 'up' : 'down', ...toolDetailsSizeRef.current })
         return
@@ -2234,18 +2370,12 @@ export function TuiLoop({
       setMouseRailListener(undefined)
     }
   }, [controller, frameMetrics, issueViewportCommand])
-  // 合并块拆分后同一 tick 内的下一个按键不能等 React 渲染刷新 ref；从
-  // controller getter 同步读取权威状态。测试替身可以只实现部分 getter——缺
-  // 省时保留渲染层最后发布的值。
+  // One stdin chunk can dispatch navigation and Enter before React commits.
   const syncPaneRef = <T,>(ref: { current: T }, read: (() => T) | undefined): void => {
     if (read !== undefined) ref.current = read()
   }
-
-  const handleKeyInput = (key: string, keyInfo: Key): void => {
+  const handleKey = (key: string, keyInfo: Key): void => {
     frameMetrics?.recordInputEvent()
-    // 拆分后的顺序按键与渲染帧解耦：每次按键前从 controller 重读权威状态刷新
-    // refs（useSyncExternalStore 的 ref 桥只在 render 时更新），否则同 tick 的
-    // 第二个键会读到过期快照（如 j 后紧跟回车读到移动前的目录选中）。
     syncPaneRef(paneRef, controller.getSessionPane?.bind(controller))
     syncPaneRef(searchRef, controller.getSearchPane?.bind(controller))
     syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller))
@@ -2256,6 +2386,8 @@ export function TuiLoop({
     syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller))
     syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller))
     syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller))
+    syncPaneRef(pluginsPaneRef, controller.getPluginsPane?.bind(controller))
+    syncPaneRef(accountPaneRef, controller.getAccountPane?.bind(controller))
     syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller))
     syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller))
     syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller))
@@ -2270,6 +2402,7 @@ export function TuiLoop({
       else {
         const input = toolDetailsKeyAction(key, keyInfo)
         if (input !== undefined) controller.dispatch({ kind: 'tool-details', input, ...toolDetailsSizeRef.current })
+        else if (isNavigationBurst(key, keyInfo)) for (const char of key) handleKey(char, keyInfo)
       }
       return
     }
@@ -2321,6 +2454,8 @@ export function TuiLoop({
       controller.getSubmitOnEnter(),
       {
         agentHub: { open: agentHubPaneRef.current.open },
+        plugins: pluginsPaneRef.current,
+        account: accountPaneRef.current,
         planDirectory: { open: planDirectoryPaneRef.current.open },
         workspace: {
           open: workspacePaneRef.current.open,
@@ -2350,6 +2485,10 @@ export function TuiLoop({
       { available: (model.compactionDividers?.length ?? 0) > 0 },
       inputHistory,
     )
+    if (effect.kind === 'none' && isNavigationBurst(key, keyInfo)) {
+      for (const char of key) handleKey(char, keyInfo)
+      return
+    }
     if (effect.kind === 'dispatch') {
       const action = effect.action
       if (
@@ -2456,53 +2595,17 @@ export function TuiLoop({
     stateRef.current = next
     setState(next)
   }
-
-  // PTY 或终端繁忙时，多次按键可能合并为一个块交付（如 "j\r"、"sr"）。
-  // 短的纯键序块拆成顺序按键逐个同步处理（handleKeyInput 每次按键前从
-  // controller 重读权威状态），保持物理按键顺序；长块视为批量文本输入
-  //（无 bracketed-paste 标记的粘贴）保持原样不拆。
   useInput((key, keyInfo) => {
-    // Esc 与紧随其后的可打印键合并交付时（"\x1bg"），本应用没有 Alt 绑定，
-    // 拆成 Esc + 后续键处理（终端对 Esc 与 Alt 的区分本是时序约定）。
-    if (key.length > 1 && key.startsWith('\x1b') && !key.startsWith('\x1b[')
-      && !keyInfo.ctrl) {
-      const rest = key.slice(1)
-      if (rest.length > 0 && /^[\x20-\x7e\r]+$/u.test(rest)) {
-        handleKeyInput('', { ...keyInfo, meta: false, escape: true })
-        for (const char of rest) {
-          if (char === '\r') handleKeyInput(char, { ...keyInfo, meta: false, return: true })
-          else handleKeyInput(char, { ...keyInfo, meta: false })
-        }
-        return
-      }
+    const burst = splitInputBurst(key, keyInfo)
+    if (burst === undefined) {
+      handleKey(key, keyInfo)
+    } else if (burst.kind === 'paste') {
+      handlePaste(burst.text)
+    } else {
+      // stateRef is written synchronously, so Enter sees the typed text.
+      if (burst.text !== '') handleKey(burst.text, { ...keyInfo, return: false })
+      handleKey('', { ...keyInfo, return: true })
     }
-    const special = keyInfo.ctrl || keyInfo.meta || keyInfo.return || keyInfo.tab
-      || keyInfo.upArrow || keyInfo.downArrow || keyInfo.leftArrow
-      || keyInfo.rightArrow || keyInfo.pageUp || keyInfo.pageDown
-      || keyInfo.home || keyInfo.end || keyInfo.backspace || keyInfo.delete
-      || keyInfo.escape
-    if (!special && key.length > 1 && key.length <= 16) {
-      let rest = key
-      while (rest.length > 0) {
-        const boundary = rest.indexOf('\r')
-        if (boundary === 0) {
-          handleKeyInput('\r', { ...keyInfo, return: true })
-          rest = rest.slice(1)
-        } else if (boundary > 0) {
-          for (const char of rest.slice(0, boundary)) {
-            handleKeyInput(char, { ...keyInfo, return: false })
-          }
-          rest = rest.slice(boundary)
-        } else {
-          for (const char of rest) {
-            handleKeyInput(char, { ...keyInfo, return: false })
-          }
-          break
-        }
-      }
-      return
-    }
-    handleKeyInput(key, keyInfo)
   })
 
   const insertImageToken = (token: string): void => {
@@ -2524,8 +2627,13 @@ export function TuiLoop({
     setState(next)
   }
 
-  usePaste((pasted: string) => {
+  const handlePaste = (pasted: string): void => {
     controller.noteUserActivity()
+    if (pluginsPaneRef.current.open) {
+      if (pluginsPaneRef.current.mode === 'input') controller.dispatch({ kind: 'plugins-input',
+        input: { kind: 'text', value: pluginsPaneRef.current.spec + pasted } })
+      return
+    }
     const current = stateRef.current
     if (
       toolDetailsPaneRef.current.open
@@ -2574,7 +2682,8 @@ export function TuiLoop({
     }
     stateRef.current = next
     setState(next)
-  })
+  }
+  usePaste(handlePaste)
 
   const commandMode =
     (state.commandQuery !== undefined || state.text.startsWith('/'))
@@ -2776,6 +2885,8 @@ export function TuiLoop({
     )
   }
   const viewportMotionPaused = pane.open
+    || pluginsPane.open
+    || accountPane.open
     || search.open
     || timelineOpen
     || modelPane.open
@@ -2814,8 +2925,23 @@ export function TuiLoop({
     () => controller.getToolPresenters?.(),
     [controller],
   )
+  const inputMeasureRef = useRef<DOMElement | null>(null)
+  const inputMeasureKey = useMemo(() => ({}), [
+    columns, state.text, commandMode, mentionMode, mentionCandidates,
+    approvalPane, askUserPane, planReviewPane, viewportMotionPaused,
+  ])
+  const [inputMeasure, setInputMeasure] = useState<{ key: object; height: number }>()
+  useLayoutEffect(() => {
+    const height = inputMeasureRef.current === null ? 0 : measureElement(inputMeasureRef.current).height
+    setInputMeasure(previous => previous?.key === inputMeasureKey && previous.height === height
+      ? previous : { key: inputMeasureKey, height })
+  })
+  const inputRows = inputMeasure?.key === inputMeasureKey ? inputMeasure.height
+    : approvalPane.open || askUserPane.open || planReviewPane.open || commandMode || mentionMode
+      ? rows : state.text.split('\n').length + 1
   const streamLayoutKey = useMemo(() => ({}), [
     statusRowCount,
+    inputMeasure,
     state.text.split('\n').length,
     commandMode ? state.text : '',
     mentionMode ? state.text : '',
@@ -2848,21 +2974,18 @@ export function TuiLoop({
     onStickyHeaderChange: setTopDividerLabel,
   })
   const conversationColumns = conversationWidth(columns)
-  const hudRows: ReactNode[] = []
-  if (todoHud !== undefined && todoHud.length > 0) {
-    hudRows.push(createElement(TodoHud, { todos: todoHud, maxCols: conversationColumns }))
-  }
-  if (jobsHud !== undefined && jobsHud.length > 0) {
-    hudRows.push(createElement(JobsHud, { jobs: jobsHud, maxCols: conversationColumns }))
-  }
-  if (workflowHud !== undefined) {
-    hudRows.push(createElement(WorkflowHud, { run: workflowHud, maxCols: conversationColumns }))
-  }
+  const auxiliaryRows = Number(composerHud !== undefined && composerHud !== '') + Number(queuedDraftCount > 0)
+  // Three shell rows, footer, actual input, one transcript row, and its existing gap.
+  const budget = hudRowBudget(renderPolicy ?? renderPolicyDefaults(), rows, 3 + statusRowCount + inputRows + 2 + auxiliaryRows)
+  const hudRows: ReactNode[] = layoutHud({
+    todos: todoHud, jobs: jobsHud, workflow: workflowHud, rows: budget, columns: conversationColumns, locale,
+  })
+    .map(row => createElement(Text, { key: row.key, wrap: 'truncate' }, paintRow([styled(row.text, row.token)])))
   if (composerHud !== undefined && composerHud !== '') {
-    hudRows.push(createElement(Text, null, paintRow([styled(escapeContent(composerHud), 'fg')])))
+    hudRows.push(createElement(Text, { key: 'composer-hud', wrap: 'truncate' }, paintRow([styled(fitHudRow(composerHud, conversationColumns), 'fg')])))
   }
   if (queuedDraftCount > 0) {
-    hudRows.push(createElement(QueueChip, { count: queuedDraftCount }))
+    hudRows.push(createElement(QueueChip, { key: 'queue-hud', count: queuedDraftCount }))
   }
   const hasConversation = model.history.length > 0 || model.activeTurn !== undefined
   const conversation =
@@ -2876,7 +2999,7 @@ export function TuiLoop({
           ? [
             createElement(
               Box,
-              { key: 'hud-rows', flexDirection: 'column', alignItems: 'center', width: '100%' },
+              { key: 'hud-rows', flexDirection: 'column', alignItems: 'center', width: '100%', flexShrink: 0 },
               createElement(Box, { flexDirection: 'column', width: conversationColumns }, ...hudRows),
             ),
           ]
@@ -2885,6 +3008,8 @@ export function TuiLoop({
       )
   const overlayBrowseOpen =
     agentHubPane.open
+    || pluginsPane.open
+    || accountPane.open
     || planDirectoryPane.open
     || workspacePane.open
     || feedbackPane.open
@@ -2892,6 +3017,11 @@ export function TuiLoop({
   let content: ReactNode
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content = conversation
+  } else if (accountPane.open) {
+    content = createElement(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) })
+  } else if (pluginsPane.open) {
+    content = createElement(PluginsPane, { state: pluginsPane, locale,
+      maxCols: conversationWidth(columns), maxRows: Math.max(3, rows - 3 - statusRowCount) })
   } else if (permissionPane.open) {
     content = createElement(PermissionPane, {
       names: permissionPane.names,
@@ -3113,8 +3243,12 @@ export function TuiLoop({
     title: liveTitle === '' ? title : liveTitle,
     badge: adaptiveInfoFooter === undefined ? badge : shortenHomePath(controller.getCwd(), homedir()),
     status,
-    children: content,
-    input: inputSlot,
+    // Plugins retains the measured transcript and its anchor while controller updates continue.
+    children: content === conversation || (pluginsPane.open && !permissionPane.open && !settingsPane.open)
+      ? [createElement(Activity, { key: 'plugins-transcript', mode: content === conversation ? 'visible' : 'hidden', children: conversation }),
+        ...(content === conversation ? [] : [createElement(Box, { key: 'plugins-content', flexDirection: 'column', width: '100%', flexGrow: 1 }, content)])]
+      : content,
+    input: inputSlot === null || inputSlot === undefined ? inputSlot : createElement(Box, { ref: inputMeasureRef, flexDirection: 'column', width: '100%' }, inputSlot),
     topDividerLabel,
   })
 }

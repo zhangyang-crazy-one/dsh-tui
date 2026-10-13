@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, isAbsolute, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 interface CacheEntry {
   readonly branch: string | undefined
@@ -41,11 +41,7 @@ export function detectGitBranch(cwd: string): string | undefined {
           const match = /gitdir:\s*(.+)/u.exec(gitContent)
           if (match?.[1]) {
             const gitDir = match[1].trim()
-            // gitdir may be absolute (standard worktree) or relative (submodule).
-            // path.join treats subsequent absolute segments as relative, so resolve
-            // against `dir` only when the value is relative.
-            const gitDirAbs = isAbsolute(gitDir) ? gitDir : join(dir, gitDir)
-            headPath = join(gitDirAbs, 'HEAD')
+            headPath = resolve(dir, gitDir, 'HEAD')
           }
         }
         if (headPath && existsSync(headPath)) {

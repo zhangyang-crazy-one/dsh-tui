@@ -1,3 +1,5 @@
+import { createTestProjector as createProjector } from './projector-fixture.ts'
+import type { ProjectorInput } from './projector-fixture.ts'
 /** Real-PTY geometry baselines for the HTML terminal design mapping. */
 
 import { afterEach, describe, expect, it } from 'vitest'
@@ -6,7 +8,6 @@ import { createElement } from 'react'
 import { AppShell } from '../src/app-shell.tsx'
 import { InputBar } from '../src/input-bar.tsx'
 import { StreamView } from '../src/stream-view.tsx'
-import { createProjector } from '../src/projection.ts'
 import type { ViewModel } from '../src/projection.ts'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import { applyTheme, inkColor, paintBackgroundRow, styled } from '../src/theme.ts'
@@ -16,7 +17,6 @@ import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 import { displayWidth } from '../src/content.ts'
 import { formatAdaptiveInfoFooterRows } from '../src/adaptive-info-footer.ts'
 import type { AdaptiveInfoFooterView } from '../src/adaptive-info-footer.ts'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 const IDLE: ViewModel = {
   history: [],
@@ -38,8 +38,8 @@ function tty(columns: number, rows: number) {
   return stdout
 }
 
-function event(seq: number, type: string, data: unknown): SessionEvent {
-  return { seq, time: seq, type, data } as unknown as SessionEvent
+function event(seq: number, type: string, data: unknown): ProjectorInput {
+  return { seq, time: seq, type, data } as unknown as ProjectorInput
 }
 
 function footer(
@@ -286,7 +286,7 @@ describe('HTML terminal design geometry', () => {
       patchConsole: false,
       interactive: true,
     })
-    const push = (...events: SessionEvent[]) => {
+    const push = (...events: ProjectorInput[]) => {
       for (const item of events) projector.push(item)
     }
     const flush = async () => {
@@ -298,17 +298,17 @@ describe('HTML terminal design geometry', () => {
       push(
         event(1, 'turn/start', { turn: 1 }),
         event(2, 'step/start', { turn: 1, step: 1 }),
-        event(3, 'assistant/chunk', {
+        event(3, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
         }),
-        event(4, 'assistant/chunk', {
+        event(4, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: { type: 'reasoning-delta', index: 0, text: '检查布局约束' },
         }),
-        event(5, 'assistant/chunk', {
+        event(5, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: {
@@ -317,12 +317,12 @@ describe('HTML terminal design geometry', () => {
             block: { type: 'reasoning', text: '检查布局约束' },
           },
         }),
-        event(6, 'assistant/chunk', {
+        event(6, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: { type: 'block-start', index: 1, blockType: 'tool-call' },
         }),
-        event(7, 'assistant/chunk', {
+        event(7, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: {
@@ -333,7 +333,7 @@ describe('HTML terminal design geometry', () => {
             argumentsDelta: '{"path":"/workspace/out.ts"}',
           },
         }),
-        event(8, 'assistant/chunk', {
+        event(8, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: {
@@ -347,7 +347,7 @@ describe('HTML terminal design geometry', () => {
             },
           },
         }),
-        event(9, 'assistant/chunk', {
+        event(9, 'test/stream-chunk', {
           turn: 1,
           step: 1,
           chunk: {
@@ -432,12 +432,12 @@ describe('HTML terminal design geometry', () => {
       push(
         event(13, 'step/end', { turn: 1, step: 1 }),
         event(14, 'step/start', { turn: 1, step: 2 }),
-        event(15, 'assistant/chunk', {
+        event(15, 'test/stream-chunk', {
           turn: 1,
           step: 2,
           chunk: { type: 'block-start', index: 0, blockType: 'text' },
         }),
-        event(16, 'assistant/chunk', {
+        event(16, 'test/stream-chunk', {
           turn: 1,
           step: 2,
           chunk: { type: 'text-delta', index: 0, text: '## 修复完成\n布局与配色保持一致。' },
@@ -453,7 +453,7 @@ describe('HTML terminal design geometry', () => {
       expect(streaming.indexOf('Write /workspace/out.ts')).toBeLessThan(streaming.indexOf('修复完成'))
 
       push(
-        event(17, 'assistant/chunk', {
+        event(17, 'test/stream-chunk', {
           turn: 1,
           step: 2,
           chunk: {
@@ -462,7 +462,7 @@ describe('HTML terminal design geometry', () => {
             block: { type: 'text', text: '## 修复完成\n布局与配色保持一致。' },
           },
         }),
-        event(18, 'assistant/chunk', {
+        event(18, 'test/stream-chunk', {
           turn: 1,
           step: 2,
           chunk: {

@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-tui",
-  "version": "0.1.6-alpha.2",
+  "version": "0.2.1-alpha.2",
   "type": "module",
   "license": "MIT",
   "description": "The dsh terminal-surface bundle: the deepseek-tui patch layer over dsh-base plus the runtime glue plugin (terminal guard, signal hooks, echo driver). No Host, HTTP, or browser layer.",
@@ -15,30 +15,23 @@
       "types": "./lib/types/startup.d.ts",
       "default": "./lib/startup.js"
     },
-    "./invariant": {
-      "types": "./lib/types/invariant.d.ts",
-      "default": "./lib/invariant.js"
-    },
-    "./user-settings": {
-      "types": "./lib/types/tui-user-settings.d.ts",
-      "default": "./lib/tui-user-settings.js"
-    },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./settings": {
+      "types": "./lib/types/user-settings.d.ts",
+      "default": "./lib/user-settings.js"
+    }
   },
   "files": [
-    "lib/index.js",
-    "lib/invariant.js",
-    "lib/startup.js",
-    "lib/tui-user-settings.js",
     "cordis.patch.yml",
-    "lib/types/**/*.d.ts"
+    "lib/index.js",
+    "lib/startup.js",
+    "lib/types/**/*.d.ts",
+    "lib/user-settings.js"
   ],
   "dependencies": {
     "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-llm-anthropic": "workspace:^",
-    "@deepseek-ai/dsh-llm-openai": "workspace:^",
     "@deepseek-ai/dsh-message-feedback": "workspace:^",
     "@deepseek-ai/dsh-session-stats": "workspace:^",
     "@deepseek-ai/dsh-tool-ask-user": "workspace:^",
@@ -55,10 +48,12 @@
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-default-model": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
+    "@deepseek-ai/dsh-config-editor": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
+    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@deepseek-ai/dsh-jobs": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
@@ -74,10 +69,11 @@
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",
     "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-user-approval": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^"
+    "@deepseek-ai/dsh-workflow": "workspace:^",
+    "@deepseek-ai/dsh-working-directory": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -85,11 +81,13 @@
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-agent-default-model": "workspace:^",
     "@deepseek-ai/dsh-commands": "workspace:^",
+    "@deepseek-ai/dsh-config-editor": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
+    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
     "@deepseek-ai/dsh-fs": "workspace:^",
     "@deepseek-ai/dsh-fs-local": "workspace:^",
     "@deepseek-ai/dsh-goal": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-host-webserver": "workspace:^",
     "@deepseek-ai/dsh-jobs": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-llm-retry": "workspace:^",
@@ -108,10 +106,11 @@
     "@deepseek-ai/dsh-skill": "workspace:^",
     "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
     "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-tool-todo": "workspace:^",
     "@deepseek-ai/dsh-user-approval": "workspace:^",
-    "@deepseek-ai/dsh-workflow": "workspace:^"
+    "@deepseek-ai/dsh-workflow": "workspace:^",
+    "@deepseek-ai/dsh-working-directory": "workspace:^"
   },
   "dsh": {
     "bundle": {

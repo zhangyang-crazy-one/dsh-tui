@@ -59,9 +59,9 @@ interface Bench {
   controller: RuntimeController
 }
 
-/** Mount core services and an optional `subagents` listDescendants stub. */
+/** Mount core services and an optional `subagents` listChildren stub. */
 async function bench(
-  listDescendants?: (root: SessionId, signal?: AbortSignal) => Promise<readonly SubagentListEntry[]>,
+  listChildren?: (parent: SessionId, signal?: AbortSignal) => Promise<SubagentListEntry[]>,
 ): Promise<Bench> {
   const root = await mkdtemp(`${tmpdir()}/dsh-tui-mention-subagent-`)
   roots.push(root)
@@ -73,8 +73,12 @@ async function bench(
     model: 'test-model',
   })
   await ctx.plugin(CommandRuntime)
-  if (listDescendants !== undefined) {
-    ctx.provide('subagents', { listDescendants } as never)
+  if (listChildren !== undefined) {
+    // dsh 0.2 serves classified rows through listDescendants; direct children are depth 1.
+    ctx.provide('subagents', {
+      listDescendants: async (id: SessionId, signal?: AbortSignal) =>
+        (await listChildren(id, signal)).map((entry: object) => ({ ...entry, parentId: id, depth: 1 })),
+    } as never)
   }
   ctx.agents.setFactory({
     async createAgent(
@@ -173,7 +177,7 @@ describe('listMentions subagent', () => {
     await ctx.fiber.dispose()
   })
 
-  it('does not throw when listDescendants rejects', async () => {
+  it('does not throw when listChildren rejects', async () => {
     const { ctx, controller } = await bench(async () => {
       throw new Error('backend listing failed')
     })

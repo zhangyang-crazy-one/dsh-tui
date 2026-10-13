@@ -19,7 +19,7 @@ const { appendFileSync } = require('node:fs')
 const args = process.argv.slice(2)
 appendFileSync(process.env.DSH_TEST_CALLS, JSON.stringify(args) + '\\n')
 if (args[0] === '--version') console.log('0.2.0-rc.2')
-else process.exitCode = 7
+else if (args[0] !== 'plugin') process.exitCode = 7
 `)
     const callsFile = join(root, 'calls.jsonl')
     const launcher = fileURLToPath(new URL('../bin/dsh-tui.js', import.meta.url))
@@ -31,10 +31,9 @@ else process.exitCode = 7
     assert.equal(result.status, 7, result.stderr)
     assert.deepEqual(readFileSync(callsFile, 'utf8').trim().split('\n').map(line => JSON.parse(line)), [
       ['--version'],
-      ['--profile', 'tui', '--patch', fileURLToPath(new URL('../cordis.patch.yml', import.meta.url)), '--resume', 'session-1'],
+      ['plugin', '--profile', 'tui', 'add', fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/u, '')],
+      ['--profile', 'tui', '--resume', 'session-1'],
     ])
-    const profile = JSON.parse(readFileSync(join(root, 'home', 'profiles', 'tui', 'package.json'), 'utf8'))
-    assert.deepEqual(profile.dsh.profile, { bundles: ['@deepseek-ai/dsh-base'], patchReload: 'startup' })
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

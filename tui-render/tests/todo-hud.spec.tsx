@@ -45,7 +45,7 @@ describe('TodoHud', () => {
     expect(output).not.toContain('提交')
   })
 
-  it('displays only the tail 5 incomplete todos by default', () => {
+  it('prioritizes in-progress then earliest pending within five total rows', () => {
     const output = renderPlain([
       { content: '已完成1', status: 'completed' },
       { content: '任务1', status: 'pending' },
@@ -58,12 +58,13 @@ describe('TodoHud', () => {
     ])
     expect(output).not.toContain('已完成1')
     expect(output).not.toContain('已完成2')
-    expect(output).not.toContain('任务1')
+    expect(output).toContain('任务1')
     expect(output).toContain('任务2')
     expect(output).toContain('任务3')
     expect(output).toContain('任务4')
-    expect(output).toContain('任务5')
-    expect(output).toContain('任务6')
+    expect(output).not.toContain('任务5')
+    expect(output).not.toContain('任务6')
+    expect(output).toContain('+2')
   })
 
   it('respects custom limit for incomplete items', () => {
@@ -76,9 +77,10 @@ describe('TodoHud', () => {
       maxCols: 80,
       limit: 2,
     })))
-    expect(output).not.toContain('任务1')
-    expect(output).toContain('任务2')
-    expect(output).toContain('任务3')
+    expect(output).toContain('任务1')
+    expect(output).not.toContain('任务2')
+    expect(output).not.toContain('任务3')
+    expect(output).toContain('+2')
   })
 
   it('handles non-positive limit defensively by painting nothing', () => {

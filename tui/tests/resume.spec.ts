@@ -47,32 +47,24 @@ function round(
   assistantText: string,
   base: number,
 ): SessionEvent[] {
-  // V4 native admission wraps each model-visible assistant turn in step/start
-  // and step/end events; assistant/message would otherwise be rejected for
-  // lacking an open step. Step count grows to 6 per turn.
   const seq = (turn - 1) * 6
   return [
     { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
-      type: 'step/start',
+      type: 'user/message',
       seq: SessionSeq(seq + 1),
       time: base + 1,
-      data: { turn, step: 1 },
-    },
-    {
-      type: 'user/message',
-      seq: SessionSeq(seq + 2),
-      time: base + 2,
       data: createUserMessage({
         content: [{ type: 'text', text: userText }],
         source: { kind: 'user' },
       }),
       surfaceOp: 'append',
     },
+    { type: 'step/start', seq: SessionSeq(seq + 2), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'assistant/message',
       seq: SessionSeq(seq + 3),
-      time: base + 3,
+      time: base + 2,
       data: {
         turn,
         step: 1,
@@ -84,16 +76,11 @@ function round(
       },
       surfaceOp: 'append',
     },
-    {
-      type: 'step/end',
-      seq: SessionSeq(seq + 4),
-      time: base + 4,
-      data: { turn, step: 1 },
-    },
+    { type: 'step/end', seq: SessionSeq(seq + 4), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'turn/end',
       seq: SessionSeq(seq + 5),
-      time: base + 5,
+      time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },
   ]
@@ -107,7 +94,6 @@ function appendSentinelTurn(
   assistantText: string,
 ): void {
   session.append('turn/start', { turn })
-  session.append('step/start', { turn, step: 1 })
   session.append(
     'user/message',
     createUserMessage({
@@ -129,7 +115,6 @@ function appendSentinelTurn(
     },
     { surfaceOp: 'append' },
   )
-  session.append('step/end', { turn, step: 1 })
   session.append('turn/end', { turn, reason: { kind: 'completed' } })
 }
 
@@ -559,6 +544,31 @@ describe('session resume', () => {
     await test.ctx.fiber.dispose()
   })
 
+  it('switches to the requested session after a pending create settles', async () => {
+    const test = await transitionBench()
+    const candidateReady = Promise.withResolvers<undefined>()
+    const releaseCandidate = Promise.withResolvers<undefined>()
+    let candidate: TransitionHandle | undefined
+    test.setCreateOverride(async (ownerCtx, options) => {
+      candidate = await test.makeHandle(ownerCtx, options.sessionId, options.setup)
+      candidateReady.resolve(undefined)
+      await releaseCandidate.promise
+      return candidate
+    })
+    test.controller.dispatch({ kind: 'new-session' })
+    await candidateReady.promise
+    test.controller.dispatch({ kind: 'select-session', id: 'queued-target' })
+    test.controller.dispatch({ kind: 'select-session', id: 'queued-target' })
+    expect(test.resumeCalls).not.toHaveBeenCalled()
+    releaseCandidate.resolve(undefined)
+    await vi.waitFor(() => {
+      expect(test.controller.session?.id).toBe('queued-target')
+      expect(test.resumeCalls).toHaveBeenCalledTimes(1)
+      expect(candidate?.dispose).toHaveBeenCalledTimes(1)
+    })
+    await test.ctx.fiber.dispose()
+  })
+
   it('contains post-commit disposal and old-command cancellation failures', async () => {
     const test = await transitionBench()
     const warn = vi.spyOn(test.ctx.logger, 'warn')
@@ -726,10 +736,10 @@ describe('session resume', () => {
         text: message.text,
         timestamp: message.timestamp,
       }))).toEqual([
-        { kind: 'user', text: '第一轮问题', timestamp: 102 },
-        { kind: 'assistant', text: '第一轮回答', timestamp: 105 },
-        { kind: 'user', text: '第二轮问题', timestamp: 202 },
-        { kind: 'assistant', text: '第二轮回答', timestamp: 205 },
+        { kind: 'user', text: '第一轮问题', timestamp: 101 },
+        { kind: 'assistant', text: '第一轮回答', timestamp: 103 },
+        { kind: 'user', text: '第二轮问题', timestamp: 201 },
+        { kind: 'assistant', text: '第二轮回答', timestamp: 203 },
       ])
     })
     expect(resumeCalls).toHaveBeenCalledWith('session-1')
@@ -741,7 +751,6 @@ describe('session resume', () => {
     const live = controller.session
     expect(live?.id).toBe('session-1')
     live?.append('turn/start', { turn: 3 })
-    live?.append('step/start', { turn: 3, step: 1 })
     live?.append(
       'user/message',
       createUserMessage({
@@ -750,6 +759,7 @@ describe('session resume', () => {
       }),
       { surfaceOp: 'append' },
     )
+    live?.append('step/start', { turn: 3, step: 1 })
     live?.append(
       'assistant/message',
       {

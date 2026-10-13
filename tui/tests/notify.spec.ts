@@ -403,9 +403,9 @@ describe('turn-end notifications', () => {
   it('stays silent when the tui section disables notifications', async () => {
     const { controller, session, writes, restore } = await bench()
     const withSection = controller as unknown as {
-      readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
+      tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
     }
-    withSection.readTuiSettings = () => ({ notify: 'off' })
+    withSection.tuiSettings = () => ({ notify: 'off' })
     try {
       session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
       ;(controller as unknown as { notifyRunSettled(): void }).notifyRunSettled()
@@ -451,9 +451,9 @@ describe('turn-end notifications', () => {
     const { controller, session, writes, restore } = await bench()
     internals.notifyEnvironment = { TERM_PROGRAM: 'iTerm.app' }
     const withSection = controller as unknown as {
-      readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
+      tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
     }
-    withSection.readTuiSettings = () => ({ notify: 'every-turn' })
+    withSection.tuiSettings = () => ({ notify: 'every-turn' })
     try {
       controller.dispatch({ kind: 'send', text: 'start' })
       session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -638,9 +638,9 @@ describe('turn-end notifications', () => {
     const { controller, session, writes, restore } = await bench()
     internals.notifyEnvironment = { TERM_PROGRAM: 'iTerm.app' }
     const withSection = controller as unknown as {
-      readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
+      tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
     }
-    withSection.readTuiSettings = () => ({ notify: 'every-turn' })
+    withSection.tuiSettings = () => ({ notify: 'every-turn' })
     try {
       controller.dispatch({ kind: 'send', text: 'start' })
       session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -656,9 +656,9 @@ describe('turn-end notifications', () => {
     const { controller, writes, notifySpawns, restore } = await bench()
     internals.notifyEnvironment = { TERM: 'vt100' }
     const withSection = controller as unknown as {
-      readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
+      tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
     }
-    withSection.readTuiSettings = () => ({ notify: 'every-turn' })
+    withSection.tuiSettings = () => ({ notify: 'every-turn' })
     try {
       const agent = (controller as unknown as { agent: Agent }).agent
       ;(controller as unknown as { noteUserActivity(): void }).noteUserActivity()
@@ -682,9 +682,9 @@ describe('turn-end notifications', () => {
     const { controller, session, writes, notifySpawns, restore } = await bench()
     internals.notifyEnvironment = { TERM: 'vt100' }
     const withSection = controller as unknown as {
-      readTuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
+      tuiSettings?: () => { notify?: 'off' | 'attention' | 'every-turn' } | undefined
     }
-    withSection.readTuiSettings = () => ({ notify: 'off' })
+    withSection.tuiSettings = () => ({ notify: 'off' })
     try {
       controller.dispatch({ kind: 'send', text: 'start' })
       session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })

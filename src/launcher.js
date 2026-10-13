@@ -8,7 +8,12 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 
 const DEFAULT_SOURCE_URL = 'https://github.com/zhangyang-crazy-one/deepseek-harness.git'
 const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
-const PROBE_TIMEOUT_MS = 3000
+// Bounds a hung probe; a cold first start of `dsh --version` can exceed 3s.
+const PROBE_TIMEOUT_MS = 10_000
+/** dsh release the bundle patch and dist were composed against. */
+export const COMPATIBLE_DSH_VERSION = '0.2.1-alpha.2'
+/** Engine release line (major.minor) whose plugin APIs the bundle targets. */
+const COMPATIBLE_DSH_LINE = COMPATIBLE_DSH_VERSION.split('.').slice(0, 2).join('.')
 
 /** @typedef {'missing' | 'directory' | 'file' | 'symlink' | 'other'} PathKind */
 
@@ -37,11 +42,10 @@ const PROBE_TIMEOUT_MS = 3000
  * @property {(path: string) => PathKind} inspectPath
  * @property {(path: string) => void} makeDirectory
  * @property {(path: string) => string} readText
- * @property {(path: string, content: string) => void} [writeText]
  * @property {string} [nodeExecutable] Node executable for package bin entries without an executable bit.
  * @property {string} [currentDirectory] Working directory for local package resolution.
  * @property {(directory: string) => string | undefined} [resolveDshPackage] Resolve an installed @deepseek-ai/dsh package.json.
- * @property {(command: string, args: string[], options?: {cwd?: string, stdio?: 'inherit', capture?: boolean, timeoutMs?: number}) => CommandResult} run
+ * @property {(command: string, args: string[], options?: {cwd?: string, stdio?: 'inherit' | 'output', capture?: boolean, timeoutMs?: number}) => CommandResult} run
  * @property {(text: string) => void} writeOut
  * @property {(text: string) => void} writeError
  */
@@ -180,49 +184,63 @@ export function probeInstalledDsh({ env = {}, settings, adapters }) {
   }
 }
 
+/** npm name this package installs under; the tui profile lists it as a bundle. */
+export const BUNDLE_PACKAGE = '@crazyhappyone/dsh-tui'
+/** Profile the launcher boots. */
+const TUI_PROFILE = 'tui'
+
 /**
- * Locate the bundled cordis.patch.yml within the package root.
+ * Locate this package's bundle root: the directory whose cordis.patch.yml the
+ * package manifest declares as `dsh.bundle.patch`.
  * @param {string | undefined} packageRoot
  * @param {LauncherAdapters} adapters
- * @returns {string | undefined}
+ * @returns {string | undefined} the package root, or undefined without a bundle patch.
  */
-export function findBundledPatch(packageRoot, adapters) {
+export function findBundleRoot(packageRoot, adapters) {
   if (!packageRoot || typeof packageRoot !== 'string') return undefined
-  const candidates = [
-    join(packageRoot, 'cordis.patch.yml'),
-    join(packageRoot, 'tui', 'cordis.patch.yml'),
-  ]
-  for (const candidate of candidates) {
-    if (adapters.inspectPath(candidate) === 'file') return candidate
-  }
-  return undefined
+  // pnpm records `link:` targets without a trailing separator.
+  const root = resolve(packageRoot)
+  return adapters.inspectPath(join(root, 'cordis.patch.yml')) === 'file' ? root : undefined
 }
 
 /**
- * Ensure the custom tui profile uses dsh-base with startup-only patch reload.
- * The release patch supplies TUI plugins; the headless bundle would add a second runner.
- * @param {{homeDirectory?: string, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ * Whether the tui profile already lists this package root as a linked bundle.
+ * @param {{bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ * @returns {boolean}
  */
-export function ensureTuiProfile({ homeDirectory, env = {}, adapters }) {
-  const dshHome = env['DSH_HOME'] || (homeDirectory ? join(homeDirectory, '.dsh') : undefined)
-  if (!dshHome) return
-  const profileDir = join(dshHome, 'profiles', 'tui')
-  const manifestPath = join(profileDir, 'package.json')
-  if (adapters.inspectPath(manifestPath) === 'file') return
-  adapters.makeDirectory(profileDir)
-  const manifest = {
-    name: 'dsh-profile-tui',
-    private: true,
-    dsh: {
-      profile: {
-        bundles: ['@deepseek-ai/dsh-base'],
-        patchReload: 'startup',
-      },
-    },
+export function tuiBundleInstalled({ bundleRoot, settings, env = {}, adapters }) {
+  const dshHome = env['DSH_HOME'] || (settings.homeDirectory ? join(settings.homeDirectory, '.dsh') : undefined)
+  if (!dshHome) return false
+  const manifestPath = join(dshHome, 'profiles', TUI_PROFILE, 'package.json')
+  if (adapters.inspectPath(manifestPath) !== 'file') return false
+  let manifest
+  try {
+    manifest = JSON.parse(adapters.readText(manifestPath))
+  } catch {
+    return false
   }
-  if (typeof adapters.writeText === 'function') {
-    adapters.writeText(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
-  }
+  return manifest?.dependencies?.[BUNDLE_PACKAGE] === `link:${bundleRoot}`
+    && Array.isArray(manifest?.dsh?.profile?.bundles)
+    && manifest.dsh.profile.bundles.includes(BUNDLE_PACKAGE)
+}
+
+/**
+ * Install this package as a bundle of the tui profile through dsh's own
+ * plugin manager, which links it, appends it after @deepseek-ai/dsh-base, and
+ * keeps the profile's user patch layer after it so settings edits apply.
+ * @param {{probe: {binPath: string, command?: string, args?: string[]}, bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ * @returns {{ok: true} | {ok: false, reason: string}}
+ */
+export function ensureTuiBundle({ probe, bundleRoot, settings, env = {}, adapters }) {
+  if (tuiBundleInstalled({ bundleRoot, settings, env, adapters })) return { ok: true }
+  const result = adapters.run(
+    probe.command ?? probe.binPath,
+    [...(probe.args ?? []), 'plugin', '--profile', TUI_PROFILE, 'add', bundleRoot],
+    // The install reads nothing; input typed meanwhile stays queued for the TUI.
+    { stdio: 'output' },
+  )
+  if (result.status === 0) return { ok: true }
+  return { ok: false, reason: `\`dsh plugin --profile ${TUI_PROFILE} add ${bundleRoot}\` failed with exit code ${result.status}` }
 }
 
 /**
@@ -264,6 +282,26 @@ function runtimeState(settings, adapters) {
   return { ok: true, initialized: true }
 }
 
+/**
+ * Check a probed engine version against the bundle's release line. A different
+ * major.minor line changes plugin APIs the bundle calls (0.2 reworked jobs and
+ * llm-deepseek config), so launching would crash after the TUI takes the screen.
+ * @param {string} version - `dsh --version` output.
+ * @param {Readonly<Record<string, string | undefined>>} env - launcher environment.
+ * @returns {{ok: true} | {ok: false, reason: string}}
+ */
+export function engineCompatibility(version, env = {}) {
+  const match = /^(\d+)\.(\d+)\./u.exec(version.trim())
+  if (!match || env['DSH_TUI_SKIP_ENGINE_CHECK'] === '1') return { ok: true }
+  if (`${match[1]}.${match[2]}` === COMPATIBLE_DSH_LINE) return { ok: true }
+  return {
+    ok: false,
+    reason: `installed dsh ${version.trim()} is not supported by this dsh-tui, which is built for @deepseek-ai/dsh ${COMPATIBLE_DSH_VERSION}. `
+      + `Install the matching engine with \`npm install --global @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\` `
+      + '(or set DSH_TUI_SKIP_ENGINE_CHECK=1 to launch anyway)',
+  }
+}
+
 function launchTui({ args, mode, settings, adapters, env = {} }) {
   const effectiveMode = mode ?? settings.mode ?? 'auto'
 
@@ -271,19 +309,21 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
     return launchSourceTui({ args, settings, adapters })
   }
 
-  const patchPath = findBundledPatch(settings.packageRoot, adapters)
+  const bundleRoot = findBundleRoot(settings.packageRoot, adapters)
 
-  if (patchPath !== undefined) {
+  if (bundleRoot !== undefined) {
     const probe = probeInstalledDsh({ env, settings, adapters })
     if (probe.ok) {
-      return launchLightweightTui({ args, probe, patchPath, adapters, env, settings })
+      const compatibility = engineCompatibility(probe.version, env)
+      if (!compatibility.ok) return reportError(adapters, compatibility.reason)
+      return launchLightweightTui({ args, probe, bundleRoot, adapters, env, settings })
     }
     const explicit = settings.dshBin ?? env['DSH_BIN']
     if (effectiveMode === 'lightweight' || explicit?.trim()) {
-      return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh\` or use \`dsh-tui --source\``)
+      return reportError(adapters, `lightweight mode requires installed dsh (${probe.reason}); run \`npm i -g @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\` or use \`dsh-tui --source\``)
     }
   } else if (effectiveMode === 'lightweight') {
-    return reportError(adapters, `bundled TUI patch not found under ${settings.packageRoot}; run \`dsh-tui update\` to initialize source runtime`)
+    return reportError(adapters, `bundle patch not found under ${settings.packageRoot}; run \`dsh-tui update\` to initialize source runtime`)
   }
 
   // Fallback to source runtime if initialized
@@ -295,7 +335,7 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   if (state.ok && !state.initialized) {
     adapters.writeError('dsh-tui: 未检测到系统已安装的 dsh 核心引擎。\n')
     adapters.writeError('dsh-tui: 推荐通过 npm 极速安装官方运行时（无需克隆完整源码仓库，仅需数十 MB）：\n')
-    adapters.writeError('dsh-tui:   npm install --global @deepseek-ai/dsh\n\n')
+    adapters.writeError(`dsh-tui:   npm install --global @deepseek-ai/dsh@${COMPATIBLE_DSH_VERSION}\n\n`)
     adapters.writeError('dsh-tui: 若您需要进行底层源码开发与测试，可运行:\n')
     adapters.writeError('dsh-tui:   dsh-tui update\n')
     adapters.writeError('dsh-tui:   dsh-tui --source\n')
@@ -305,11 +345,12 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   return launchSourceTui({ args, settings, adapters })
 }
 
-function launchLightweightTui({ args, probe, patchPath, adapters, env = {}, settings }) {
-  ensureTuiProfile({ homeDirectory: settings?.homeDirectory, env, adapters })
+function launchLightweightTui({ args, probe, bundleRoot, adapters, env = {}, settings }) {
+  const installed = ensureTuiBundle({ probe, bundleRoot, settings, env, adapters })
+  if (!installed.ok) return reportError(adapters, installed.reason)
   const result = adapters.run(
     probe.command ?? probe.binPath,
-    [...(probe.args ?? []), '--profile', 'tui', '--patch', patchPath, ...args],
+    [...(probe.args ?? []), '--profile', TUI_PROFILE, ...args],
     { stdio: 'inherit' },
   )
   return result.status
@@ -338,8 +379,14 @@ function showProbe({ settings, packageVersion, adapters, env = {} }) {
     adapters.writeOut(`dsh: installed\n`)
     adapters.writeOut(`executable: ${probe.binPath}\n`)
     adapters.writeOut(`dsh engine version: ${probe.version}\n`)
-    const patchPath = findBundledPatch(settings.packageRoot, adapters)
-    adapters.writeOut(`bundled patch: ${patchPath ?? 'missing'}\n`)
+    const compatibility = engineCompatibility(probe.version, env)
+    adapters.writeOut(compatibility.ok
+      ? `engine compatibility: ok (built for ${COMPATIBLE_DSH_VERSION})\n`
+      : `engine compatibility: ${compatibility.reason}\n`)
+    const bundleRoot = findBundleRoot(settings.packageRoot, adapters)
+    adapters.writeOut(`bundle: ${bundleRoot === undefined
+      ? 'missing'
+      : `${bundleRoot} (${tuiBundleInstalled({ bundleRoot, settings, env, adapters }) ? 'installed in' : 'not yet installed in'} profile ${TUI_PROFILE})`}\n`)
     return 0
   }
   adapters.writeOut(`dsh: not installed (${probe.reason})\n`)

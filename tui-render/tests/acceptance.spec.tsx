@@ -1,14 +1,14 @@
+import { createTestProjector as createProjector } from './projector-fixture.ts'
+import type { ProjectorInput } from './projector-fixture.ts'
 /** Phase 2 acceptance: ten scripted turns stay frozen, throttled, and bounded. */
 
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
-import { createProjector } from '../src/projection.ts'
 import { StreamView } from '../src/stream-view.tsx'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
-function event(seq: number, type: string, data: unknown): SessionEvent {
-  return { seq, time: seq, type, data } as unknown as SessionEvent
+function event(seq: number, type: string, data: unknown): ProjectorInput {
+  return { seq, time: seq, type, data } as unknown as ProjectorInput
 }
 
 /** Push one complete turn: user message + streamed assistant text. */
@@ -27,21 +27,21 @@ function pushTurn(
     }),
   )
   projector.push(
-    event(seqStart + 2, 'assistant/chunk', {
+    event(seqStart + 2, 'test/stream-chunk', {
       turn,
       step: 1,
       chunk: { type: 'block-start', index: 0, blockType: 'text' },
     }),
   )
   projector.push(
-    event(seqStart + 3, 'assistant/chunk', {
+    event(seqStart + 3, 'test/stream-chunk', {
       turn,
       step: 1,
       chunk: { type: 'text-delta', index: 0, text },
     }),
   )
   projector.push(
-    event(seqStart + 4, 'assistant/chunk', {
+    event(seqStart + 4, 'test/stream-chunk', {
       turn,
       step: 1,
       chunk: { type: 'block-end', index: 0, block: { type: 'text', text } },

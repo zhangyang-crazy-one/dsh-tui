@@ -525,3 +525,11 @@ describe('subagent / vision settings rows', () => {
       .toBe('text (仅文本)')
   })
 })
+
+describe('stringifySettingValue', () => {
+  it('renders an unset optional field as empty text instead of undefined', () => {
+    expect(stringifySettingValue(undefined)).toBe('')
+    expect(settingsRowsFromDescribe([descriptor('llm-deepseek')], () => ({ baseURL: undefined })))
+      .toEqual([{ namespace: 'llm-deepseek', field: 'baseURL', value: '' }])
+  })
+})

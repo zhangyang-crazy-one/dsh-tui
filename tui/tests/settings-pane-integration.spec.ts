@@ -17,24 +17,10 @@ import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
-import type { SettingsDescriptor } from '@deepseek-ai/dsh-settings'
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
 const NS = 'llm-deepseek'
-const TUI_SETTINGS_NS = 'tui'
-
-/** Build one minimal section descriptor for the settings `describe()` stub. */
-function sectionDescriptor(ns: string, value: unknown): SettingsDescriptor {
-  return {
-    ns: ns as SettingsDescriptor['ns'],
-    autoGenerate: true,
-    schema: {},
-    value,
-    revision: 0,
-    applies: 'live',
-  }
-}
 
 /** Scripted agent whose followup records the message and appends nothing. */
 function scriptedAgent(ownerCtx: Context, session: Session): Agent {
@@ -102,54 +88,27 @@ async function bench(options?: {
       brandAnimation: 'off' as const,
       scrollbar: false,
     }
-    const descriptors = (): Array<{
-      ns: string
-      autoGenerate: true
-      schema: Record<string, never>
-      value: unknown
-      revision: number
-      applies: 'live'
-    }> => {
-      const list: Array<{
-        ns: string
-        autoGenerate: true
-        schema: Record<string, never>
-        value: unknown
-        revision: number
-        applies: 'live'
-      }> = [{
-        ns: NS,
-        autoGenerate: true,
-        schema: {},
-        value: stored,
-        revision: 0,
-        applies: 'live',
-      }]
-      if (options?.piAi !== undefined) {
-        list.push({
-          ns: 'llm-pi-ai',
-          autoGenerate: true,
-          schema: {},
-          value: options.piAi,
-          revision: 0,
-          applies: 'live',
-        })
-      }
-      if (options?.registerTui === true) {
-        list.push({
-          ns: TUI_SETTINGS_NS,
-          autoGenerate: true,
-          schema: {},
-          value: tuiSection,
-          revision: 0,
-          applies: 'live',
-        })
-      }
-      return list
-    }
-    ctx.provide('settings', {
-      describe: descriptors,
+    const settingsService = {
+      // 0.2 descriptors carry the volatile form values the pane lists.
+      describe: (): { ns: unknown; value?: unknown }[] => [{ ns: NS, value: settingsService.get(NS) }],
       update,
+      /** Test-only reader for the effective section the config editor exposes. */
+      get: (ns: unknown): unknown => ns === NS ? stored : ns === 'llm-pi-ai' ? options?.piAi : undefined,
+    }
+    ctx.provide('settings', settingsService as never)
+    // dsh 0.2 reads effective section values from the live Loader entries.
+    ctx.provide('configEditor', {
+      entries: () => [...new Set([
+        ...settingsService.describe().map(({ ns }) => ns),
+        ...options?.piAi === undefined ? [] : ['llm-pi-ai'],
+      ])].map(ns => ({
+        options: { id: ns },
+        fiber: { config: settingsService.get(ns) },
+      })),
+    } as never)
+    // The companion `tui` plugin publishes the TUI section; tests swap `get`.
+    ctx.provide('tuiSettings', {
+      get: () => options?.registerTui === true ? tuiSection : {},
     } as never)
   }
   if (options?.credentials !== undefined) {
@@ -207,13 +166,10 @@ describe('SettingsPane intercept', () => {
 
   it('serializes rapid display changes and retains the latest visible choice until it is saved', async () => {
     const { ctx, controller } = await bench()
-    const stored = { reasoning: false, scrollbar: true, statusDetails: false, locale: 'en-US' }
+    const stored = { reasoning: false, scrollbar: true, statusDetails: false, locale: 'en-US' as const }
     const writes: { patch: object; resolve(): void }[] = []
     const settings = ctx.get('settings')!
-    settings.describe = () => [
-      sectionDescriptor(NS, { baseURL: 'https://api.deepseek.com' }),
-      sectionDescriptor(TUI_SETTINGS_NS, stored),
-    ]
+    ctx.get('tuiSettings')!.get = () => stored
     settings.update = vi.fn((_ns: string, patch: Record<string, unknown>) => new Promise<void>((resolve) => {
       writes.push({ patch, resolve: () => { Object.assign(stored, patch); resolve() } })
     }))
@@ -245,10 +201,7 @@ describe('SettingsPane intercept', () => {
     const { ctx, controller } = await bench()
     const stored = { reasoning: false }
     const settings = ctx.get('settings')!
-    settings.describe = () => [
-      sectionDescriptor(NS, { baseURL: 'https://api.deepseek.com' }),
-      sectionDescriptor(TUI_SETTINGS_NS, stored),
-    ]
+    ctx.get('tuiSettings')!.get = () => stored
     settings.update = vi.fn().mockRejectedValueOnce(new Error('read-only settings'))
       .mockImplementation(async (_ns, patch) => { Object.assign(stored, patch) })
     try {
@@ -366,20 +319,20 @@ describe('SettingsPane intercept', () => {
 
   it('omits a namespace whose get() is not a plain object', async () => {
     const { ctx, controller } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => []
+    const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
+    settings.get = () => undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows).toEqual([])
     controller.dispatch({ kind: 'settings-escape' })
-    settings.describe = () => [sectionDescriptor(NS, { baseURL: 1 })]
+    settings.get = () => ({ baseURL: 1 })
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows[0]?.value).toBe('1')
     controller.dispatch({ kind: 'settings-escape' })
-    settings.describe = () => [sectionDescriptor(NS, null)]
+    settings.get = () => null
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows).toEqual([])
     controller.dispatch({ kind: 'settings-escape' })
-    settings.describe = () => [sectionDescriptor(NS, [])]
+    settings.get = () => []
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows).toEqual([])
     const internals = controller as unknown as {
@@ -402,7 +355,7 @@ describe('SettingsPane intercept', () => {
 
   it('paints a non-Error update rejection', async () => {
     const { ctx, controller } = await bench()
-    const settings = ctx.get('settings') as {
+    const settings = ctx.get('settings') as never as {
       update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     settings.update = async () => {
@@ -419,7 +372,7 @@ describe('SettingsPane intercept', () => {
 
   it('ignores a settings write that settles after dispose', async () => {
     const { ctx, controller } = await bench()
-    const settings = ctx.get('settings') as {
+    const settings = ctx.get('settings') as never as {
       update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     let settle!: (error?: Error) => void
@@ -444,31 +397,29 @@ describe('SettingsPane intercept', () => {
     await ctx.fiber.dispose()
   })
 
-  it('reads submitOnEnter from the global settings fallback', async () => {
+  it('reads submitOnEnter from the tui settings service', async () => {
     const { ctx, controller } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(TUI_SETTINGS_NS, { submitOnEnter: false })]
+    ctx.get('tuiSettings')!.get = () => ({ submitOnEnter: false })
     expect(controller.getSubmitOnEnter()).toBe(false)
     await ctx.fiber.dispose()
   })
 
-  it('reads scrollbar visibility from global and registered settings with visible as the default', async () => {
+  it('reads scrollbar visibility from the tui settings service with visible as the default', async () => {
     const fallback = await bench()
     expect(fallback.controller.getScrollbarVisible()).toBe(true)
-    const settings = fallback.ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(TUI_SETTINGS_NS, { scrollbar: false })]
+    const tui = fallback.ctx.get('tuiSettings')!
+    tui.get = () => ({ scrollbar: false })
     expect(fallback.controller.getScrollbarVisible()).toBe(false)
-    settings.describe = () => [sectionDescriptor(TUI_SETTINGS_NS, { scrollbar: true })]
+    tui.get = () => ({ scrollbar: true })
     expect(fallback.controller.getScrollbarVisible()).toBe(true)
     const registered = await bench({ registerTui: true })
     expect(registered.controller.getScrollbarVisible()).toBe(false)
   })
 
-  it('reads brandAnimation from global and registered tui settings with auto as the default', async () => {
+  it('reads brandAnimation from the tui settings service with auto as the default', async () => {
     const fallback = await bench()
     expect(fallback.controller.getBrandAnimation()).toBe('auto')
-    const settings = fallback.ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(TUI_SETTINGS_NS, { brandAnimation: 'on' })]
+    fallback.ctx.get('tuiSettings')!.get = () => ({ brandAnimation: 'on' })
     expect(fallback.controller.getBrandAnimation()).toBe('on')
     await fallback.ctx.fiber.dispose()
 
@@ -498,7 +449,7 @@ describe('SettingsPane intercept', () => {
 
   it('ignores a settings write rejection that settles after dispose', async () => {
     const { ctx, controller } = await bench()
-    const settings = ctx.get('settings') as {
+    const settings = ctx.get('settings') as never as {
       update: (ns: unknown, patch: Record<string, unknown>) => Promise<void>
     }
     let settle!: (error?: Error) => void
@@ -523,11 +474,12 @@ describe('SettingsPane intercept', () => {
     const openaiNs = 'llm-openai'
     const openaiStored = { baseURL: 'https://api.openai.com/v1' }
     const { ctx, controller, stored, update } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [
-      sectionDescriptor(NS, stored),
-      sectionDescriptor(openaiNs, openaiStored),
-    ]
+    const settings = ctx.get('settings') as never as {
+      describe: () => { ns: unknown; value?: unknown }[]
+      get: (ns: unknown) => unknown
+    }
+    settings.describe = () => [NS, openaiNs].map(ns => ({ ns, value: settings.get(ns) }))
+    settings.get = (ns: unknown) => ns === NS ? stored : ns === openaiNs ? openaiStored : undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows).toEqual([
       { namespace: 'llm-deepseek', field: 'baseURL', value: 'https://api.deepseek.com' },
@@ -546,8 +498,8 @@ describe('SettingsPane intercept', () => {
   it('applies DeepSeek models JSON through the selected field', async () => {
     const stored = { baseURL: 'https://api.deepseek.com', models: [{ id: 'deepseek-v4-flash' }] }
     const { ctx, controller, update } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(NS, stored)]
+    const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
+    settings.get = () => stored
     controller.dispatch({ kind: 'command', query: 'settings' })
     expect(controller.getSettingsPane().rows.map(row => row.field)).toEqual(['baseURL', 'models'])
     controller.dispatch({ kind: 'settings-move', delta: 1 })
@@ -570,11 +522,12 @@ describe('SettingsPane intercept', () => {
       providers: { acme: { api: 'openai-completions', baseURL: 'https://gw.example' } },
     }
     const { ctx, controller, stored, update } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [
-      sectionDescriptor(NS, stored),
-      sectionDescriptor(piNs, piStored),
-    ]
+    const settings = ctx.get('settings') as never as {
+      describe: () => { ns: unknown; value?: unknown }[]
+      get: (ns: unknown) => unknown
+    }
+    settings.describe = () => [NS, piNs].map(ns => ({ ns, value: settings.get(ns) }))
+    settings.get = (ns: unknown) => ns === NS ? stored : ns === piNs ? piStored : undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
     controller.dispatch({ kind: 'settings-move', delta: 1 })
     expect(controller.getSettingsPane().rows[1]).toMatchObject({
@@ -599,8 +552,8 @@ describe('SettingsPane intercept', () => {
   it('keeps the overlay open and reports invalid JSON', async () => {
     const stored = { models: [{ id: 'a' }] }
     const { ctx, controller, update } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(NS, stored)]
+    const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
+    settings.get = () => stored
     controller.dispatch({ kind: 'command', query: 'settings' })
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: '{' })
@@ -790,12 +743,12 @@ describe('SettingsPane intercept', () => {
 
   it('clamps selection when reload shrinks the row list', async () => {
     const { ctx, controller, stored } = await bench()
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(NS, { ...stored, models: [] })]
+    const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
+    settings.get = () => ({ ...stored, models: [] })
     controller.dispatch({ kind: 'command', query: 'settings' })
     controller.dispatch({ kind: 'settings-move', delta: 1 })
     expect(controller.getSettingsPane().selectedIndex).toBe(1)
-    settings.describe = () => [sectionDescriptor(NS, stored)]
+    settings.get = () => stored
     controller.dispatch({ kind: 'settings-reload' })
     expect(controller.getSettingsPane().selectedIndex).toBe(0)
     expect(controller.getFeedback()).toBe('✓ 已重载设置')
@@ -845,8 +798,8 @@ describe('SettingsPane intercept', () => {
     const { ctx, controller, setCredential, update, stored } = await bench({
       credentials: { configured: true },
     })
-    const settings = ctx.get('settings') as { describe: () => SettingsDescriptor[] }
-    settings.describe = () => [sectionDescriptor(NS, { ...stored, apiKeyEnv: 'sk-polluted-in-settings' })]
+    const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
+    settings.get = ns => ns === NS ? { ...stored, apiKeyEnv: 'sk-polluted-in-settings' } : undefined
     controller.dispatch({ kind: 'command', query: 'key sk-new-token' })
     await vi.waitFor(() => {
       expect(controller.getFeedback()).toBe('✓ 已保存 API key')

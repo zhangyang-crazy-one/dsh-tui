@@ -30,6 +30,8 @@ import type { ViewModel } from '../src/projection.ts'
 import type { SearchPaneState } from '../src/search-pane.tsx'
 import type { ModelPaneState } from '../src/model-pane.tsx'
 import type { HelpPaneState } from '../src/help-pane.tsx'
+import type { JobHudItem } from '../src/jobs-hud.tsx'
+import type { TodoHudItem } from '../src/todo-hud.tsx'
 import { EMPTY_APPROVAL_PANE } from '../src/approval-pane.tsx'
 import { EMPTY_ASK_USER_PANE } from '../src/ask-user-pane.tsx'
 import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
@@ -518,6 +520,117 @@ describe('A3 escape before styling', () => {
 })
 
 describe('TuiLoop mounted render branches', () => {
+  it.each([[80, 24], [120, 40]])('reclaims transcript rows as live HUD sections empty in one %sx%s terminal', async (columns, rows) => {
+    applyTheme('none')
+    const stdout = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
+      isTTY: boolean
+      columns: number
+      rows: number
+    }
+    stdout.isTTY = true
+    stdout.columns = columns
+    stdout.rows = rows
+    // The same in-memory grid consumes every Ink write, including erasures.
+    const atlas = new ScreenAtlas(columns, rows)
+    stdout.on('data', (chunk: unknown) => { atlas.feed(String(chunk)) })
+    const model: ViewModel = {
+      ...IDLE_MODEL,
+      history: [{
+        id: 1,
+        kind: 'user',
+        text: Array.from({ length: 60 }, (_, index) => `TRANSCRIPT_ROW_${String(index).padStart(2, '0')}`).join('\n'),
+        timestamp: 1,
+      }],
+    }
+    let jobs: readonly JobHudItem[] = []
+    let todos: readonly TodoHudItem[] = []
+    const listeners = new Set<() => void>()
+    const controller = stubController({
+      getModel: () => model,
+      getJobsHud: () => jobs,
+      getTodoHud: () => todos,
+      subscribe: (listener) => {
+        listeners.add(listener)
+        return () => { listeners.delete(listener) }
+      },
+    })
+    const instance = render(createElement(TuiLoop, { title: 'HUD_LIFECYCLE', controller }), {
+      stdout: wrapStdoutForFrameBg(stdout, () => 'none') as unknown as typeof stdout,
+      stdin: fakeTtyStdin(),
+      exitOnCtrlC: false,
+      patchConsole: false,
+      interactive: true,
+    })
+    const frame = async (): Promise<string> => {
+      await instance.waitUntilRenderFlush()
+      await instance.waitUntilRenderFlush()
+      return atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
+    }
+    const notify = (): void => { for (const listener of listeners) listener() }
+    const transcriptRows = (output: string): number => (output.match(/TRANSCRIPT_ROW_\d+/g) ?? []).length
+    try {
+      const emptyFrame = await frame()
+      const inputRow = emptyFrame.split('\n').findIndex(line => line.includes('输入消息'))
+      expect(inputRow).toBeGreaterThan(0)
+      expect(transcriptRows(emptyFrame)).toBeGreaterThan(7)
+
+      todos = [{ content: 'CURRENT_PLAN', status: 'in_progress' }]
+      jobs = [
+        { id: 'bash-1', status: 'running', label: 'FIRST_WORKER' },
+        { id: 'bash-2', status: 'running', label: 'SECOND_WORKER' },
+        { id: 'bash-3', status: 'running', label: 'ONGOING_WORKER' },
+      ]
+      notify()
+      const activeFrame = await frame()
+      expect(activeFrame).toContain('─ 任务计划')
+      expect(activeFrame).toContain('─ 后台执行 3')
+      expect(activeFrame).toContain('bash-1 · 运行中 · FIRST_WORKER')
+      expect(activeFrame).toContain('bash-2 · 运行中 · SECOND_WORKER')
+      expect(activeFrame).toContain('bash-3 · 运行中 · ONGOING_WORKER')
+      expect(transcriptRows(activeFrame)).toBeLessThan(transcriptRows(emptyFrame))
+      expect(activeFrame.split('\n').findIndex(line => line.includes('输入消息'))).toBe(inputRow)
+
+      jobs = jobs.map(job => job.id === 'bash-2' ? { ...job, status: 'stopping' } : job)
+      notify()
+      const stoppingFrame = await frame()
+      expect(stoppingFrame).toContain('bash-2 · 停止中 · SECOND_WORKER')
+      expect(transcriptRows(stoppingFrame)).toBe(transcriptRows(activeFrame))
+
+      jobs = jobs.map(job => job.id === 'bash-1' ? { ...job, status: 'completed' }
+        : job.id === 'bash-2' ? { ...job, status: 'killed' } : job)
+      notify()
+      const partialFrame = await frame()
+      expect(partialFrame).not.toContain('bash-1')
+      expect(partialFrame).not.toContain('FIRST_WORKER')
+      expect(partialFrame).not.toContain('bash-2')
+      expect(partialFrame).not.toContain('SECOND_WORKER')
+      expect(partialFrame).toContain('─ 后台执行 1')
+      expect(partialFrame).toContain('bash-3 · 运行中 · ONGOING_WORKER')
+      expect(partialFrame).toContain('CURRENT_PLAN')
+      expect(transcriptRows(partialFrame)).toBeGreaterThan(transcriptRows(activeFrame))
+
+      jobs = jobs.map(job => job.id === 'bash-3' ? { ...job, status: 'failed' } : job)
+      notify()
+      const planOnlyFrame = await frame()
+      expect(planOnlyFrame).not.toContain('bash-')
+      expect(planOnlyFrame).not.toContain('ONGOING_WORKER')
+      expect(planOnlyFrame).not.toContain('后台执行')
+      expect(planOnlyFrame).toContain('─ 任务计划')
+      expect(planOnlyFrame).toContain('CURRENT_PLAN')
+      expect(transcriptRows(planOnlyFrame)).toBeGreaterThan(transcriptRows(partialFrame))
+
+      todos = [{ content: 'CURRENT_PLAN', status: 'completed' }]
+      notify()
+      const settledFrame = await frame()
+      expect(settledFrame).not.toContain('任务计划')
+      expect(settledFrame).not.toContain('CURRENT_PLAN')
+      expect(settledFrame).not.toContain('后台执行')
+      expect(settledFrame).toBe(emptyFrame)
+    } finally {
+      instance.unmount()
+    }
+  })
+
   it('keeps the transcript visible beside Jobs HUD while an active tool chain settles', async () => {
     applyTheme('none')
     const columns = 113
@@ -590,7 +703,7 @@ describe('TuiLoop mounted render branches', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       expect(frame()).toContain('ACTIVE_TOOL_CHAIN')
-      expect(frame()).toContain('bash-1 · running · long tool chain')
+      expect(frame()).toContain('bash-1 · 运行中 · long tool chain')
 
       currentModel = settledModel
       currentJobs = [{ id: 'bash-1', status: 'completed', label: 'long tool chain' }]
@@ -600,7 +713,8 @@ describe('TuiLoop mounted render branches', () => {
       const settledFrame = frame()
       expect(settledFrame).toContain('FINAL_SETTLED_RESULT')
       expect(settledFrame).toContain('── 已完成 ──')
-      expect(settledFrame).toContain('bash-1 · completed · long tool chain')
+      expect(settledFrame).not.toContain('bash-1')
+      expect(settledFrame).not.toContain('后台执行')
       expect(settledFrame).toContain('输入消息')
       expect(settledFrame).toContain('状态 空闲')
     } finally {
@@ -628,7 +742,7 @@ describe('TuiLoop mounted render branches', () => {
       }),
     }))
     expect(out).toContain('目标 execute 2/4')
-    expect(out).toContain('job-1 · running · worker')
+    expect(out).toContain('job-1 · 运行中 · worker')
     expect(out).toContain('阶段 verify')
     expect(out).toContain('composer hud')
   })

@@ -22,7 +22,7 @@ type ControllerInternals = {
   applySettingsValue(value: string): void
   applyOnboardingKey(field: string, value: string): void
   exportSettingsDocument(): void
-  installTuiSettings(): void
+  applyColorTierSetting(): void
   maybeOpenOnboarding(): Promise<void>
   rowFor(id: SessionId): Promise<{ id: SessionId; title: string; updatedAt: number }>
   rowForLiveSession(session: Session): { id: SessionId; title: string; updatedAt: number }
@@ -247,19 +247,12 @@ describe('RuntimeController defensive lifecycle paths', () => {
     await ctx.fiber.dispose()
   })
 
-  it('accepts a registered TUI settings section without a color override', async () => {
+  it('keeps the detected color tier when the tui section has no override', async () => {
     const { ctx, controller } = await bareController()
     const state = controller as unknown as ControllerInternals
-    ctx.provide('settings', {
-      register: () => ({
-        get: () => ({}),
-        watch: () => () => {},
-        update: async () => {},
-        replace: async () => {},
-      }),
-    } as never)
-    state.installTuiSettings()
-    await Promise.resolve()
+    state.applyColorTierSetting()
+    ctx.provide('tuiSettings', { get: () => ({}) } as never)
+    state.applyColorTierSetting()
     await controller.dispose()
     await ctx.fiber.dispose()
   })

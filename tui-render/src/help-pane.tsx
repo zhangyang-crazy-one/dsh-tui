@@ -42,12 +42,15 @@ export function HelpPane({ lines, offset }: HelpPaneProps): ReactNode {
   const maxOffset = Math.max(0, lines.length - HELP_WINDOW)
   const safeOffset = Math.min(offset, maxOffset)
   const visible = lines.slice(safeOffset, safeOffset + HELP_WINDOW)
+  const below = Math.max(0, lines.length - safeOffset - HELP_WINDOW)
   return (
     <Box flexDirection="column" width="100%">
       {safeOffset > 0 ? <Text dimColor>… 还有 {safeOffset} 行</Text> : null}
       {visible.map((line, index) => (
-        <Text key={safeOffset + index}>{escapeContent(line)}</Text>
+        // An empty Text collapses to zero rows; a space keeps section gaps.
+        <Text key={safeOffset + index}>{line === '' ? ' ' : escapeContent(line)}</Text>
       ))}
+      {below > 0 ? <Text dimColor>… 下方还有 {below} 行</Text> : null}
       <Text>{styled(escapeContent('↑↓/jk 滚动 · Esc/Enter 关闭'), 'fgDim')}</Text>
     </Box>
   )

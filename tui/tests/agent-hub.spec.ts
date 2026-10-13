@@ -78,7 +78,7 @@ interface HubBench {
 
 /** Mount core services plus optional Hub backends. */
 async function bench(options: {
-  listDescendants?: (root: SessionId, signal?: AbortSignal) => Promise<readonly SubagentListEntry[]>
+  listChildren?: (id: SessionId, signal?: AbortSignal) => Promise<SubagentListEntry[]>
   inspect?: (id: SessionId) => Promise<{ meta: unknown; events: readonly unknown[] }>
   liveChildIds?: readonly SessionId[]
   liveSnapshot?: (session: Session) => ProjectionSnapshot
@@ -107,8 +107,13 @@ async function bench(options: {
       coldSnapshot: options.coldSnapshot ?? (() => { throw new Error('unexpected cold fold') }),
     } as never)
   }
-  if (options.listDescendants !== undefined) {
-    ctx.provide('subagents', { listDescendants: options.listDescendants } as never)
+  if (options.listChildren !== undefined) {
+    const listChildren = options.listChildren
+    // dsh 0.2 serves classified rows through listDescendants; direct children are depth 1.
+    ctx.provide('subagents', {
+      listDescendants: async (id: SessionId, signal?: AbortSignal) =>
+        (await listChildren(id, signal)).map(entry => ({ ...entry, parentId: id, depth: 1 })),
+    } as never)
   }
   if (options.inspect !== undefined || options.listHeaders !== undefined || options.borrowSession !== undefined) {
     ctx.provide('sessionPersistence', {
@@ -191,7 +196,7 @@ describe('Agent Hub controller', () => {
       listHeaders: async () => [coldHeader],
       cachedSnapshot,
       borrowSession,
-      listDescendants: async () => [
+      listChildren: async () => [
         {
           kind: 'child', id: liveId, mode: 'continuable', label: 'live',
           activity: 'running', hasChildren: false,
@@ -277,7 +282,7 @@ describe('Agent Hub controller', () => {
         cachedSnapshot: () => undefined,
         borrowSession,
         coldSnapshot,
-        listDescendants: async () => [{
+        listChildren: async () => [{
           kind: 'child', id: childId, mode: 'one-shot',
           activity: 'inactive', hasChildren: false,
         }],
@@ -311,7 +316,7 @@ describe('Agent Hub controller', () => {
         [Symbol.dispose]: dispose,
       }),
       coldSnapshot,
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child', id: childId, mode: 'one-shot',
         activity: 'inactive', hasChildren: false,
       }],
@@ -346,7 +351,7 @@ describe('Agent Hub controller', () => {
         return gate.promise
       },
       coldSnapshot,
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child', id: childId, mode: 'one-shot',
         activity: 'inactive', hasChildren: false,
       }],
@@ -379,7 +384,7 @@ describe('Agent Hub controller', () => {
 
   it('lists an empty table when subagents returns no children', async () => {
     const { ctx, controller } = await bench({
-      listDescendants: async () => [],
+      listChildren: async () => [],
     })
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
@@ -400,7 +405,7 @@ describe('Agent Hub controller', () => {
 
   it('inspects a running child and paints 无法读取子会话 on inspect failure', async () => {
     const { ctx, controller } = await bench({
-      listDescendants: async () => [
+      listChildren: async () => [
         {
           kind: 'child',
           id: SessionId('child-1'),
@@ -442,7 +447,7 @@ describe('Agent Hub controller', () => {
 
   it('refuses to open Hub while approval is queued (K2′)', async () => {
     const { ctx, controller } = await bench({
-      listDescendants: async () => [],
+      listChildren: async () => [],
     })
     await controller.start()
     const original = controller.getApprovalPane.bind(controller)
@@ -466,7 +471,7 @@ describe('Agent Hub controller', () => {
       },
       {
         type: 'user/message', seq: SessionSeq(2), time: 2,
-        data: createUserMessage({ content: [{ type: 'text', text: 'hidden' }], source: { kind: 'agent-instructions', form: 'instructions', changes: [] } }),
+        data: createUserMessage({ content: [{ type: 'text', text: 'hidden' }], source: { kind: 'skill-invocation', name: 'x', form: 'instructions' } }),
         surfaceOp: 'append',
       },
       {
@@ -496,7 +501,7 @@ describe('Agent Hub controller', () => {
       { type: 'turn/end', seq: SessionSeq(5), time: 5, data: { turn: 1, reason: { kind: 'completed' } } },
     ]
     const { ctx, controller } = await bench({
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child', id: SessionId('child-transcript'), mode: 'one-shot',
         activity: 'inactive', hasChildren: false,
       }],
@@ -513,7 +518,7 @@ describe('Agent Hub controller', () => {
   })
 
   it('expands nested children and filters non-child diagnostics', async () => {
-    const listDescendants = vi.fn(async (id: SessionId) => id === SessionId('child-parent')
+    const listChildren = vi.fn(async (id: SessionId) => id === SessionId('child-parent')
       ? [
         { kind: 'diagnostic', message: 'nested ignored' } as never,
         { kind: 'child', id: SessionId('child-leaf'), mode: 'one-shot', label: 'leaf', activity: 'inactive', hasChildren: false } as const,
@@ -522,13 +527,13 @@ describe('Agent Hub controller', () => {
         { kind: 'diagnostic', message: 'ignored' } as never,
         { kind: 'child', id: SessionId('child-parent'), mode: 'continuable', label: 'parent', activity: 'running', hasChildren: true } as const,
       ])
-    const { ctx, controller } = await bench({ listDescendants })
+    const { ctx, controller } = await bench({ listChildren })
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows?.[0]?.id).toBe('child-parent') })
     controller.dispatch({ kind: 'agent-hub-enter' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows?.[0]?.id).toBe('child-leaf') })
-    expect(listDescendants).toHaveBeenCalledWith(
+    expect(listChildren).toHaveBeenCalledWith(
       SessionId('child-parent'),
       expect.any(AbortSignal),
     )
@@ -536,14 +541,14 @@ describe('Agent Hub controller', () => {
   })
 
   it('reports list failure and missing persistence for inspect', async () => {
-    const failed = await bench({ listDescendants: async () => { throw new Error('list gone') } })
+    const failed = await bench({ listChildren: async () => { throw new Error('list gone') } })
     await failed.controller.start()
     failed.controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(failed.controller.getAgentHubPane().error).toContain('list gone') })
     await failed.ctx.fiber.dispose()
 
     const missing = await bench({
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child', id: SessionId('child-no-store'), mode: 'one-shot',
         activity: 'inactive', hasChildren: false,
       }],
@@ -557,14 +562,14 @@ describe('Agent Hub controller', () => {
   })
 
   it('reports nested expansion failure', async () => {
-    const listDescendants = vi.fn(async (id: SessionId) => {
+    const listChildren = vi.fn(async (id: SessionId) => {
       if (id === SessionId('child-expand-fail')) throw new Error('nested gone')
       return [{
         kind: 'child', id: SessionId('child-expand-fail'), mode: 'continuable',
         label: 'parent', activity: 'running', hasChildren: true,
       } as const]
     })
-    const { ctx, controller } = await bench({ listDescendants })
+    const { ctx, controller } = await bench({ listChildren })
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows).toHaveLength(1) })
@@ -575,7 +580,7 @@ describe('Agent Hub controller', () => {
 
   it('moves a non-empty Hub selection and tolerates a missing service during expand', async () => {
     const fixture = await bench({
-      listDescendants: async () => [
+      listChildren: async () => [
         { kind: 'child', id: SessionId('child-a'), mode: 'one-shot', label: 'a', activity: 'inactive', hasChildren: false },
         { kind: 'child', id: SessionId('child-b'), mode: 'one-shot', label: 'b', activity: 'inactive', hasChildren: false },
       ],
@@ -607,7 +612,7 @@ describe('Agent Hub controller', () => {
   it.each(['resolve', 'reject'] as const)('drops a stale nested expansion that will %s', async (mode) => {
     const gate = Promise.withResolvers<SubagentListEntry[]>()
     const started = Promise.withResolvers<undefined>()
-    const listDescendants = vi.fn(async (id: SessionId) => {
+    const listChildren = vi.fn(async (id: SessionId) => {
       if (id === SessionId('parent-stale')) {
         started.resolve(undefined)
         return gate.promise
@@ -616,7 +621,7 @@ describe('Agent Hub controller', () => {
         kind: 'child', id: SessionId('parent-stale'), mode: 'continuable', label: 'parent', activity: 'running', hasChildren: true,
       } as const]
     })
-    const fixture = await bench({ listDescendants })
+    const fixture = await bench({ listChildren })
     await fixture.controller.start()
     fixture.controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(fixture.controller.getAgentHubPane().rows).toHaveLength(1) })
@@ -696,7 +701,7 @@ describe('Agent Hub controller', () => {
     const gate = Promise.withResolvers<SubagentListEntry[]>()
     const started = Promise.withResolvers<undefined>()
     const fixture = await bench({
-      listDescendants: () => {
+      listChildren: () => {
         started.resolve(undefined)
         return gate.promise
       },
@@ -716,7 +721,7 @@ describe('Agent Hub controller', () => {
     const gate = Promise.withResolvers<{ meta: unknown; events: readonly unknown[] }>()
     const started = Promise.withResolvers<undefined>()
     const fixture = await bench({
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child', id: SessionId('child-stale-inspect'), mode: 'one-shot',
         activity: 'inactive', hasChildren: false,
       }],
@@ -742,7 +747,7 @@ describe('Agent Hub controller', () => {
   })
 
   it('exposes continuable defaults of 8 live children and depth 1', async () => {
-    const { ctx, controller } = await bench({ listDescendants: async () => [] })
+    const { ctx, controller } = await bench({ listChildren: async () => [] })
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().open).toBe(true) })
@@ -756,10 +761,11 @@ describe('Agent Hub controller', () => {
   })
 
   it('reads live settings overrides instead of caching the default cap', async () => {
-    const { ctx, controller } = await bench({ listDescendants: async () => [] })
+    const { ctx, controller } = await bench({ listChildren: async () => [] })
     const subagent = { maxActiveSubagents: 8, maxDepth: 1 }
-    ctx.provide('settings', {
-      describe: () => [{ ns: 'subagent' as never, value: subagent }],
+    // dsh 0.2 reads non-volatile limits from the live Loader entry config.
+    ctx.provide('configEditor', {
+      entries: () => [{ options: { id: 'subagent' }, fiber: { config: subagent } }],
     } as never)
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
@@ -783,7 +789,7 @@ describe('Agent Hub controller', () => {
       activity: 'running' as const,
       hasChildren: false,
     }))
-    const { ctx, controller } = await bench({ listDescendants: async () => running })
+    const { ctx, controller } = await bench({ listChildren: async () => running })
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows).toHaveLength(8) })
@@ -823,7 +829,7 @@ describe('Agent Hub controller', () => {
       },
     ]
     const { ctx, controller } = await bench({
-      listDescendants: async () => [{
+      listChildren: async () => [{
         kind: 'child',
         id: childId,
         mode: 'continuable',

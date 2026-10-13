@@ -181,11 +181,13 @@ describe('renderSessionMarkdown', () => {
         data: {
           turn: 1,
           step: 1,
-          message: createToolResultMessage({
-            callId,
+          message: {
+            id: 'tool-default' as never,
+            role: 'tool',
+            source: { kind: 'tool', callId },
+            toolCallId: callId,
             content: [{ type: 'text', text: 'ok' }],
-            isError: false,
-          }),
+          },
         },
         surfaceOp: 'append',
       },
@@ -204,9 +206,9 @@ describe('renderSessionMarkdown', () => {
         data: createUserMessage({
           content: [{ type: 'text', text: 'INTERNAL-CONTEXT-SENTINEL' }],
           source: {
-            kind: 'runtime-context',
-            form: 'snapshot',
-            sections: [],
+            kind: 'skill-invocation',
+            name: 'test',
+            form: 'instructions',
           },
         }),
         surfaceOp: 'append',
@@ -471,7 +473,7 @@ describe('renderSessionMarkdown', () => {
         time: 1_000,
         data: createUserMessage({
           content: [{ type: 'text', text: 'internal runtime context' }],
-          source: { kind: 'runtime-context', form: 'snapshot', sections: [] },
+          source: { kind: 'skill-invocation', name: 'x', form: 'instructions' },
         }),
         surfaceOp: 'append',
       },

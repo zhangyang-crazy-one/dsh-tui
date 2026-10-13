@@ -1,9 +1,10 @@
+import { createTestProjector as createProjector } from './projector-fixture.ts'
+import type { ProjectorInput } from './projector-fixture.ts'
 import { describe, expect, it } from 'vitest'
-import { createProjector, EMPTY_VIEW } from '../src/projection.ts'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { EMPTY_VIEW, reasoningDurationsFromStream } from '../src/projection.ts'
 
-function event(seq: number, type: string, data: unknown): SessionEvent {
-  return { seq, time: seq, type, data } as unknown as SessionEvent
+function event(seq: number, type: string, data: unknown): ProjectorInput {
+  return { seq, time: seq, type, data } as unknown as ProjectorInput
 }
 
 describe('createProjector', () => {
@@ -11,10 +12,10 @@ describe('createProjector', () => {
     const projector = createProjector()
     projector.seed([
       event(1, 'step/start', { turn: 1, step: 1 }),
-      event(2, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'orphan' } }),
+      event(2, 'test/stream-chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'orphan' } }),
       event(3, 'assistant/message', { turn: 1, step: 1, message: { content: [] } }),
       event(4, 'tool/call', { turn: 1, step: 1, callId: 'orphan', name: 'read', arguments: '{}' }),
-      event(5, 'tool/result', { turn: 1, step: 1, message: { role: 'tool', source: { kind: 'tool', callId: 'orphan' }, toolCallId: 'orphan', content: [] } }),
+      event(5, 'tool/result', { turn: 1, step: 1, message: { content: [] } }),
       event(6, 'step/end', { turn: 1, step: 1 }),
       event(7, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
       event(8, 'future/event', {}),
@@ -55,28 +56,28 @@ describe('createProjector', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
     projector.push(
-      event(2, 'assistant/chunk', {
+      event(2, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'text' },
       }),
     )
     projector.push(
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'text-delta', index: 0, text: 'hi ' },
       }),
     )
     projector.push(
-      event(4, 'assistant/chunk', {
+      event(4, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'text-delta', index: 0, text: 'there' },
       }),
     )
     projector.push(
-      event(5, 'assistant/chunk', {
+      event(5, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -95,21 +96,21 @@ describe('createProjector', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
     projector.push(
-      event(2, 'assistant/chunk', {
+      event(2, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'text' },
       }),
     )
     projector.push(
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'text-delta', index: 0, text: 'done' },
       }),
     )
     projector.push(
-      event(4, 'assistant/chunk', {
+      event(4, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -144,7 +145,7 @@ describe('createProjector', () => {
     projector.seed([
       event(1, 'turn/start', { turn: 1 }),
       event(2, 'step/start', { turn: 1, step: 1 }),
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -177,7 +178,7 @@ describe('createProjector', () => {
       }),
       event(5, 'step/end', { turn: 1, step: 1 }),
       event(6, 'step/start', { turn: 1, step: 2 }),
-      event(7, 'assistant/chunk', {
+      event(7, 'test/stream-chunk', {
         turn: 1,
         step: 2,
         chunk: {
@@ -252,14 +253,14 @@ describe('createProjector', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
     projector.push(
-      event(2, 'assistant/chunk', {
+      event(2, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'text' },
       }),
     )
     projector.push(
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'text-delta', index: 0, text: 'first' },
@@ -271,7 +272,7 @@ describe('createProjector', () => {
     const before = projector.snapshot().history
     projector.push(event(5, 'turn/start', { turn: 2 }))
     projector.push(
-      event(6, 'assistant/chunk', {
+      event(6, 'test/stream-chunk', {
         turn: 2,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'text' },
@@ -336,22 +337,22 @@ describe('createProjector', () => {
     const events = [
       event(1, 'turn/start', { turn: 1 }),
       event(2, 'step/start', { turn: 1, step: 1 }),
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
       }),
-      event(4, 'assistant/chunk', {
+      event(4, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'reasoning-delta', index: 0, text: 'inspect first' },
       }),
-      event(5, 'assistant/chunk', {
+      event(5, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 1, blockType: 'tool-call' },
       }),
-      event(6, 'assistant/chunk', {
+      event(6, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -404,12 +405,12 @@ describe('createProjector', () => {
       }),
       event(10, 'step/end', { turn: 1, step: 1 }),
       event(11, 'step/start', { turn: 1, step: 2 }),
-      event(12, 'assistant/chunk', {
+      event(12, 'test/stream-chunk', {
         turn: 1,
         step: 2,
         chunk: { type: 'block-start', index: 0, blockType: 'text' },
       }),
-      event(13, 'assistant/chunk', {
+      event(13, 'test/stream-chunk', {
         turn: 1,
         step: 2,
         chunk: { type: 'text-delta', index: 0, text: 'final answer' },
@@ -474,21 +475,21 @@ describe('createProjector', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
     projector.push(
-      event(2, 'assistant/chunk', {
+      event(2, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
       }),
     )
     projector.push(
-      event(3, 'assistant/chunk', {
+      event(3, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'reasoning-delta', index: 0, text: 'thinking…' },
       }),
     )
     projector.push(
-      event(4, 'assistant/chunk', {
+      event(4, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -499,14 +500,14 @@ describe('createProjector', () => {
       }),
     )
     projector.push(
-      event(5, 'assistant/chunk', {
+      event(5, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: { type: 'block-start', index: 1, blockType: 'tool-call' },
       }),
     )
     projector.push(
-      event(6, 'assistant/chunk', {
+      event(6, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -519,7 +520,7 @@ describe('createProjector', () => {
       }),
     )
     projector.push(
-      event(7, 'assistant/chunk', {
+      event(7, 'test/stream-chunk', {
         turn: 1,
         step: 1,
         chunk: {
@@ -544,12 +545,12 @@ describe('createProjector', () => {
   it('stamps a distinct duration on each reasoning run', () => {
     const projector = createProjector()
     projector.push(event(10, 'turn/start', { turn: 1 }))
-    projector.push(event(12, 'assistant/chunk', {
+    projector.push(event(12, 'test/stream-chunk', {
       turn: 1,
       step: 1,
       chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
     }))
-    projector.push(event(20, 'assistant/chunk', {
+    projector.push(event(20, 'test/stream-chunk', {
       turn: 1,
       step: 1,
       chunk: { type: 'reasoning-delta', index: 0, text: 'first' },
@@ -574,12 +575,12 @@ describe('createProjector', () => {
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))
     projector.push(event(46, 'step/start', { turn: 1, step: 2 }))
-    projector.push(event(50, 'assistant/chunk', {
+    projector.push(event(50, 'test/stream-chunk', {
       turn: 1,
       step: 2,
       chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
     }))
-    projector.push(event(55, 'assistant/chunk', {
+    projector.push(event(55, 'test/stream-chunk', {
       turn: 1,
       step: 2,
       chunk: { type: 'reasoning-delta', index: 0, text: 'second' },
@@ -598,12 +599,12 @@ describe('createProjector', () => {
   it('freezes per-run reasoning durations into history at turn/end', () => {
     const projector = createProjector()
     projector.push(event(10, 'turn/start', { turn: 1 }))
-    projector.push(event(12, 'assistant/chunk', {
+    projector.push(event(12, 'test/stream-chunk', {
       turn: 1,
       step: 1,
       chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
     }))
-    projector.push(event(20, 'assistant/chunk', {
+    projector.push(event(20, 'test/stream-chunk', {
       turn: 1,
       step: 1,
       chunk: { type: 'reasoning-delta', index: 0, text: 'first' },
@@ -628,12 +629,12 @@ describe('createProjector', () => {
     }))
     projector.push(event(45, 'step/end', { turn: 1, step: 1 }))
     projector.push(event(46, 'step/start', { turn: 1, step: 2 }))
-    projector.push(event(50, 'assistant/chunk', {
+    projector.push(event(50, 'test/stream-chunk', {
       turn: 1,
       step: 2,
       chunk: { type: 'block-start', index: 0, blockType: 'reasoning' },
     }))
-    projector.push(event(55, 'assistant/chunk', {
+    projector.push(event(55, 'test/stream-chunk', {
       turn: 1,
       step: 2,
       chunk: { type: 'reasoning-delta', index: 0, text: 'second' },
@@ -710,7 +711,7 @@ describe('createProjector', () => {
   it('appends formatted error message when a turn ends with an error and partial text', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))
-    projector.push(event(2, 'assistant/chunk', {
+    projector.push(event(2, 'test/stream-chunk', {
       turn: 1,
       step: 1,
       chunk: { type: 'text-delta', index: 0, text: 'Partial output' },
@@ -962,5 +963,62 @@ describe('createProjector', () => {
     const row = projector.snapshot().history.find(item => item.kind === 'assistant')
     expect(row).toMatchObject({ kind: 'assistant', text: 'done', turnOrdinal: 1, workspaceChangesSeq: 5 })
     expect(row?.workspaceChanges).toBeUndefined()
+  })
+
+  it('renders v3 live stream frames before the durable message commits', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.push(event(2, 'step/start', { turn: 1, step: 1 }))
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 100, chunk: { type: 'block-start', index: 0, blockType: 'reasoning' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 100, chunk: { type: 'reasoning-delta', index: 0, text: 'plan ' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 900, chunk: { type: 'reasoning-delta', index: 0, text: 'more' } })
+    expect(projector.snapshot().activeTurn?.reasoningText).toBe('plan more')
+    projector.pushStreamFrame({ type: 'chunk', time: 1600, chunk: { type: 'block-start', index: 1, blockType: 'text' } })
+    projector.pushStreamFrame({ type: 'chunk', time: 1600, chunk: { type: 'text-delta', index: 1, text: 'hel' } })
+    const live = projector.snapshot().activeTurn
+    expect(live?.assistantText).toBe('hel')
+    expect(live?.content?.find(item => item.kind === 'reasoning')).toMatchObject({ durationMs: 1500 })
+  })
+
+  it('drops an abandoned attempt and lets a retry replace its partial', () => {
+    const projector = createProjector()
+    projector.push(event(1, 'turn/start', { turn: 1 }))
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 2, chunk: { type: 'text-delta', index: 0, text: 'stale' } })
+    projector.pushStreamFrame({ type: 'end', outcome: { kind: 'abandoned' } })
+    expect(projector.snapshot().activeTurn?.assistantText).toBe('')
+    projector.pushStreamFrame({ type: 'start' })
+    projector.pushStreamFrame({ type: 'chunk', time: 3, chunk: { type: 'text-delta', index: 0, text: 'fresh' } })
+    expect(projector.snapshot().activeTurn?.assistantText).toBe('fresh')
+  })
+
+  it('ignores stream frames between turns', () => {
+    const projector = createProjector()
+    projector.pushStreamFrame({ type: 'chunk', time: 1, chunk: { type: 'text-delta', index: 0, text: 'x' } })
+    expect(projector.snapshot()).toEqual(EMPTY_VIEW)
+  })
+
+  it('replays reasoning durations from the durable timed stream', () => {
+    const stream = [
+      { type: 'reasoning-chunks', time0: 1000, index: 0, dt: [200, 300], texts: ['a', 'b', 'c'] },
+      { type: 'text-chunks', time0: 2500, index: 1, dt: [10], texts: ['x', 'y'] },
+    ]
+    expect(reasoningDurationsFromStream(stream)).toEqual([1500])
+    expect(reasoningDurationsFromStream(undefined)).toEqual([])
+    const projector = createProjector()
+    projector.seed([
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        stream,
+        message: { id: 'm', role: 'assistant', content: [{ type: 'reasoning', text: 'abc' }, { type: 'text', text: 'xy' }] },
+      }),
+      event(4, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ])
+    const [row] = projector.snapshot().history
+    expect(row).toMatchObject({ reasoningDurationMs: 1500 })
   })
 })

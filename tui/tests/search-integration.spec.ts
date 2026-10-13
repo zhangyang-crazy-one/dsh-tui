@@ -69,32 +69,24 @@ function deferred<T>(): {
 
 /** One completed turn whose user prompt carries a distinct keyword. */
 function round(turn: number, keyword: string, base: number): SessionEvent[] {
-  // V4 native admission requires each assistant turn to open and close a
-  // step; without step/start and step/end the JSONL scanner refuses the log
-  // as corrupt and the session-query index sees no body.
   const seq = (turn - 1) * 6
   return [
     { type: 'turn/start', seq: SessionSeq(seq), time: base, data: { turn } },
     {
-      type: 'step/start',
+      type: 'user/message',
       seq: SessionSeq(seq + 1),
       time: base + 1,
-      data: { turn, step: 1 },
-    },
-    {
-      type: 'user/message',
-      seq: SessionSeq(seq + 2),
-      time: base + 2,
       data: createUserMessage({
         content: [{ type: 'text', text: `please buy ${keyword}` }],
         source: { kind: 'user' },
       }),
       surfaceOp: 'append',
     },
+    { type: 'step/start', seq: SessionSeq(seq + 2), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'assistant/message',
       seq: SessionSeq(seq + 3),
-      time: base + 3,
+      time: base + 2,
       data: {
         turn,
         step: 1,
@@ -106,16 +98,11 @@ function round(turn: number, keyword: string, base: number): SessionEvent[] {
       },
       surfaceOp: 'append',
     },
-    {
-      type: 'step/end',
-      seq: SessionSeq(seq + 4),
-      time: base + 4,
-      data: { turn, step: 1 },
-    },
+    { type: 'step/end', seq: SessionSeq(seq + 4), time: base + 2, data: { turn, step: 1 } },
     {
       type: 'turn/end',
       seq: SessionSeq(seq + 5),
-      time: base + 5,
+      time: base + 3,
       data: { turn, reason: { kind: 'completed' } },
     },
   ]

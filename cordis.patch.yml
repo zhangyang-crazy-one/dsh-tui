@@ -1,40 +1,35 @@
 # yaml-language-server: $schema=none
-# The deepseek-tui bundle patch: terminal-surface mode directly over dsh-base.
+# The dsh-tui bundle layer: a terminal surface over @deepseek-ai/dsh-base.
 # It mounts no Host, HTTP server, Web runtime, or browser plugin. An ordinary
-# provider plugin parses --resume/--cwd and the task positional, then the
-# terminal driver creates an Agent through the core registry and prints its
-# durable result. Unlike the web surface, the agent plane stays process-wide:
-# dsh-base keeps tool-bash/tool-fs/tool-todo and friends because the TUI is
-# single-session and composes its agent process-wide. Insert and config rows
-# resolve through the 0.1.6-alpha.2 runtime Loader; this file is not a
-# compile-time plugin graph.
+# provider plugin parses --resume/--cwd and the task positional; the terminal
+# driver then creates an Agent through the core registry. The agent plane
+# stays process-wide because the TUI is single-session.
+#
+# Install it as a bundle so user settings (written to the profile layer)
+# apply after this layer:
+#   dsh plugin --profile tui add @crazyhappyone/dsh-tui
+#   dsh --profile tui
+# Rows target the dsh 0.2 Loader and name plugins through this package's
+# exports, so profile-layer edits record a portable row name.
 
+# The working directory reaches the model through the runtime-context
+# message; dsh 0.2.1 registers no cwd prompt variable.
 - id: system-prompt
   config:
-    persona: >-
+    personaPrefix: >-
       You are a coding agent powered by the {{model}} model.
-      Your working directory is {{cwd}}.
-      You are interacting with the user through the deepseek-tui
+      You are interacting with the user through the dsh-tui
       terminal interface.
 
-# The shared module-reload HMR row stays off; the launcher's watch-only
-# fallback still keeps the user patch layers live until the run exits.
+# HMR stays disabled. Profile and home patch edits apply on the next
+# process start; /reload restarts the terminal with the current session.
 - id: hmr
   disabled: true
 
 - id: tools
   config:
     # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
-    # pi-lens-ignore: YAML:0
     mode: !!js process.env.DSH_TOOLS_MODE
-
-- id: approval
-  # pi-lens-ignore: YAML:0
-  config:
-    policy: !!js >-
-      (process.env.DSH_PERMISSION_MODE ?? 'workspace-write')
-      === 'danger-full-access'
-      ? 'never' : 'ask'
 
 # Full-text session search stays disabled until the first Ctrl+K search (the
 # base row's `openAt: never`). The TUI has no browser-latency concern, so the
@@ -44,22 +39,8 @@
     path: ':memory:'
     openAt: first-search
 
-# Inherit the 0.1.6-alpha.2 llm-deepseek DEFAULT_MODELS catalog
-# (`deepseek-flash`, `deepseek-v4-pro`) without re-listing the removed
-# V4 Flash / V4 Flash Vision Exp ids. The 0.2.0 adapter is Messages-only
-# and rejects `config.protocol`, so the TUI overlay intentionally does
-# not override it — dsh-base already inserts the `llm-deepseek` row.
-
-- id: agent-default-model
-  config:
-    # pi-lens-ignore: YAML:0
-    provider: deepseek-official
-    # pi-lens-ignore: YAML:0
-    model: !!js "process.env.DSH_MODEL ?? 'deepseek-flash'"
-
-# pi-lens-ignore: YAML:0
+# The first-prompt title gets the whole first prompt, not the base 4 KiB.
 - id: session-title-llm
-  name: "@deepseek-ai/dsh-session-title-first-prompt-llm"
   config:
     targetWords: 5
     targetCjkCharacters: 10
@@ -83,24 +64,13 @@
       name: "@deepseek-ai/dsh-tool-ask-user"
 
     - id: tui-startup
-      name: "./dist/startup.js"
+      name: "@crazyhappyone/dsh-tui/startup"
 
-    # Hosts the `tui` settings namespace so the `tui:` block of settings.yaml
-    # imports through Settings.importLegacyDocument() and the overlay can edit
-    # the same fields. 0.2.0-rc.2 removed the runtime's installSection hook,
-    # so this stub entry owns the Config schema with `.volatile()` fields.
+    # TUI presentation preferences (locale, Enter behavior, notifications,
+    # scrollbar, thinking visibility). Every field is volatile, so /settings
+    # edits land in the profile layer and apply without a remount.
     - id: tui
-      name: "@deepseek-ai/dsh-tui/user-settings"
-
-    # Zero-config official OpenAI/Anthropic routes. They register
-    # openai-official / anthropic-official so they do not collide with the
-    # dormant llm-pi-ai catalog keys openai / anthropic that the Web Models
-    # page already owns.
-    - id: llm-openai
-      name: "@deepseek-ai/dsh-llm-openai"
-
-    - id: llm-anthropic
-      name: "@deepseek-ai/dsh-llm-anthropic"
+      name: "@crazyhappyone/dsh-tui/settings"
 
     # In-process OpenCode Zen header proxy (vendored from
     # zhangyang-crazy-one/dsh-zen-proxy, MIT). Listens on localhost
@@ -108,10 +78,20 @@
     # http://127.0.0.1:4097/v1 to reach the Zen free tier.
     # Remove this row to disable the listener.
     - id: zen-proxy
-      name: "./dist/zen-proxy.js"
+      name: "@crazyhappyone/dsh-tui/zen-proxy"
       config:
         host: 127.0.0.1
         port: 4097
+
+    # Loopback route carrier for the DeepSeek account browser callback
+    # (/login). Port 0 takes a free port from the OS; pin a port here when
+    # an SSH session forwards it. Only routes registered by mounted plugins
+    # are served, and the address must stay a loopback literal.
+    - id: webserver
+      name: '@deepseek-ai/dsh-host-webserver'
+      config:
+        host: 127.0.0.1
+        port: 0
 
     # Records each top-level turn's changed files from git working-tree
     # snapshots; the TUI projects a bounded transcript card from Host
@@ -127,22 +107,18 @@
 
     # Reads its task from the ordinary tuiStartup provider.
     - id: tui-runtime
-      # pi-lens-ignore: YAML:0
-      name: "./dist/index.js"
+      name: "@crazyhappyone/dsh-tui/runtime"
       inject: [tuiStartup]
-      # pi-lens-ignore: YAML:0
       config:
-        # pi-lens-ignore: YAML:0
         task: !!js ctx.tuiStartup.task
         resume: !!js ctx.tuiStartup.resume
-        # pi-lens-ignore: YAML:0
         cwd: !!js ctx.tuiStartup.cwd
         model: !!js ctx.tuiStartup.model
         frameStats: !!js ctx.tuiStartup.frameStats
         # Render policy (overscan, stream pacing, scroll pacing, cache).
-        # Loaded by the runtime Config schema; the values below mirror the
-        # schema defaults so the deployment layer owns the tunables. Override
-        # here to retune without touching the plugin.
+        # The values mirror the runtime Config schema defaults so the
+        # deployment layer owns the tunables; override in the profile patch
+        # to retune without touching the plugin.
         renderPolicy:
           transcriptOverscan: 16
           stream:

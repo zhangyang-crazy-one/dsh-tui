@@ -256,28 +256,36 @@ var Time;
   Time2.template = template;
 })(Time || (Time = {}));
 
-// vendor/schemastery/lib/index.mjs
+// vendor/schemastery/src/index.ts
 var kSchema = /* @__PURE__ */ Symbol.for("schemastery");
 var kValidationError = /* @__PURE__ */ Symbol.for("ValidationError");
 globalThis.__schemastery_index__ ??= 0;
 globalThis.__schemastery_refs__ = void 0;
 var ValidationError = class extends TypeError {
-  options;
-  name = "ValidationError";
   constructor(message, options) {
     let prefix = "$";
-    for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
-    else if (typeof segment === "number") prefix += "[" + segment + "]";
-    else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
+    for (const segment of options.path || []) {
+      if (typeof segment === "string") {
+        prefix += "." + segment;
+      } else if (typeof segment === "number") {
+        prefix += "[" + segment + "]";
+      } else if (typeof segment === "symbol") {
+        prefix += `[Symbol(${segment.toString()})]`;
+      }
+    }
     if (prefix.startsWith(".")) prefix = prefix.slice(1);
     super((prefix === "$" ? "" : `${prefix} `) + message);
     this.options = options;
   }
+  options;
+  name = "ValidationError";
   static is(error) {
     return !!error?.[kValidationError];
   }
 };
-Object.defineProperty(ValidationError.prototype, kValidationError, { value: true });
+Object.defineProperty(ValidationError.prototype, kValidationError, {
+  value: true
+});
 var Schema = function(options) {
   const schema = function(data, options2 = {}) {
     return Schema.resolve(data, schema, options2)[0];
@@ -295,9 +303,11 @@ var Schema = function(options) {
     return refs[options.uid];
   }
   Object.assign(schema, options);
-  if (typeof schema.callback === "string") try {
-    schema.callback = new Function("return " + schema.callback)();
-  } catch {
+  if (typeof schema.callback === "string") {
+    try {
+      schema.callback = new Function("return " + schema.callback)();
+    } catch {
+    }
   }
   Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
   Object.setPrototypeOf(schema, Schema.prototype);
@@ -307,23 +317,24 @@ var Schema = function(options) {
 };
 Schema.prototype = Object.create(Function.prototype);
 Schema.prototype[kSchema] = true;
-Object.defineProperty(Schema.prototype, "~standard", { get() {
-  return {
-    version: 1,
-    vendor: "schemastery",
-    validate: (value) => {
-      try {
-        return { value: Schema.resolve(value, this, {})[0] };
-      } catch (error) {
-        if (ValidationError.is(error)) return { issues: [{
-          message: error.message,
-          path: error.options.path
-        }] };
-        throw error;
+Object.defineProperty(Schema.prototype, "~standard", {
+  get() {
+    return {
+      version: 1,
+      vendor: "schemastery",
+      validate: (value) => {
+        try {
+          return { value: Schema.resolve(value, this, {})[0] };
+        } catch (error) {
+          if (ValidationError.is(error)) {
+            return { issues: [{ message: error.message, path: error.options.path }] };
+          }
+          throw error;
+        }
       }
-    }
-  };
-} });
+    };
+  }
+});
 Schema.ValidationError = ValidationError;
 Schema.prototype.toJSON = function toJSON() {
   if (globalThis.__schemastery_refs__) {
@@ -332,10 +343,7 @@ Schema.prototype.toJSON = function toJSON() {
   }
   globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
   globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
-  const result = {
-    uid: this.uid,
-    refs: globalThis.__schemastery_refs__
-  };
+  const result = { uid: this.uid, refs: globalThis.__schemastery_refs__ };
   globalThis.__schemastery_refs__ = void 0;
   return result;
 };
@@ -351,8 +359,11 @@ function mergeDesc(original, messages) {
   const result = typeof original === "string" ? { "": original } : { ...original };
   for (const locale in messages) {
     const value = messages[locale];
-    if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
-    else if (typeof value === "string") result[locale] = value;
+    if (value?.$description || value?.$desc) {
+      result[locale] = value.$description || value.$desc;
+    } else if (typeof value === "string") {
+      result[locale] = value;
+    }
   }
   return result;
 }
@@ -366,70 +377,61 @@ Schema.prototype.i18n = function i18n(messages) {
   const schema = Schema(this);
   const desc = mergeDesc(schema.meta.description, messages);
   if (Object.keys(desc).length) schema.meta.description = desc;
-  if (schema.dict) schema.dict = mapValues(schema.dict, (inner, key) => {
-    return inner.i18n(mapValues(messages, (data) => getInner(data)?.[key] ?? data?.[key]));
-  });
-  if (schema.list) schema.list = schema.list.map((inner, index) => {
-    return inner.i18n(mapValues(messages, (data = {}) => {
-      if (Array.isArray(getInner(data))) return getInner(data)[index];
-      if (Array.isArray(data)) return data[index];
+  if (schema.dict) {
+    schema.dict = mapValues(schema.dict, (inner, key) => {
+      return inner.i18n(mapValues(messages, (data) => getInner(data)?.[key] ?? data?.[key]));
+    });
+  }
+  if (schema.list) {
+    schema.list = schema.list.map((inner, index) => {
+      return inner.i18n(mapValues(messages, (data = {}) => {
+        if (Array.isArray(getInner(data))) return getInner(data)[index];
+        if (Array.isArray(data)) return data[index];
+        return extractKeys(data);
+      }));
+    });
+  }
+  if (schema.inner) {
+    schema.inner = schema.inner.i18n(mapValues(messages, (data) => {
+      if (getInner(data)) return getInner(data);
       return extractKeys(data);
     }));
-  });
-  if (schema.inner) schema.inner = schema.inner.i18n(mapValues(messages, (data) => {
-    if (getInner(data)) return getInner(data);
-    return extractKeys(data);
-  }));
-  if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues(messages, (data) => data?.$key));
+  }
+  if (schema.sKey) {
+    schema.sKey = schema.sKey.i18n(mapValues(messages, (data) => data?.$key));
+  }
   return schema;
 };
 Schema.prototype.extra = function extra(key, value) {
   const schema = Schema(this);
-  schema.meta = {
-    ...schema.meta,
-    [key]: value
-  };
+  schema.meta = { ...schema.meta, [key]: value };
   return schema;
 };
-for (const key of [
-  "required",
-  "disabled",
-  "collapse",
-  "hidden",
-  "loose"
-]) Object.assign(Schema.prototype, { [key](value = true) {
-  const schema = Schema(this);
-  schema.meta = {
-    ...schema.meta,
-    [key]: value
-  };
-  return schema;
-} });
+for (const key of ["required", "disabled", "collapse", "hidden", "loose"]) {
+  Object.assign(Schema.prototype, {
+    [key](value = true) {
+      const schema = Schema(this);
+      schema.meta = { ...schema.meta, [key]: value };
+      return schema;
+    }
+  });
+}
 Schema.prototype.deprecated = function deprecated() {
   const schema = Schema(this);
   schema.meta.badges ||= [];
-  schema.meta.badges.push({
-    text: "deprecated",
-    type: "danger"
-  });
+  schema.meta.badges.push({ text: "deprecated", type: "danger" });
   return schema;
 };
 Schema.prototype.experimental = function experimental() {
   const schema = Schema(this);
   schema.meta.badges ||= [];
-  schema.meta.badges.push({
-    text: "experimental",
-    type: "warning"
-  });
+  schema.meta.badges.push({ text: "experimental", type: "warning" });
   return schema;
 };
 Schema.prototype.pattern = function pattern(regexp) {
   const schema = Schema(this);
   const pattern2 = pick(regexp, ["source", "flags"]);
-  schema.meta = {
-    ...schema.meta,
-    pattern: pattern2
-  };
+  schema.meta = { ...schema.meta, pattern: pattern2 };
   return schema;
 };
 Schema.prototype.simplify = function simplify(value) {
@@ -439,7 +441,8 @@ Schema.prototype.simplify = function simplify(value) {
   if (this.type === "object" || this.type === "dict") {
     const result = {};
     for (const key in value) {
-      const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
+      const schema = this.type === "object" ? this.dict[key] : this.inner;
+      const item = schema?.simplify(value[key]);
       if (this.type === "dict" || !isNullable(item)) result[key] = item;
     }
     if (deepEqual(result, this.meta.default, this.type === "dict")) return null;
@@ -454,12 +457,18 @@ Schema.prototype.simplify = function simplify(value) {
     return result;
   } else if (this.type === "intersect") {
     const result = {};
-    for (const item of this.list) Object.assign(result, item.simplify(value));
+    for (const item of this.list) {
+      Object.assign(result, item.simplify(value));
+    }
     return result;
-  } else if (this.type === "union") for (const schema of this.list) try {
-    Schema.resolve(value, schema, {});
-    return schema.simplify(value);
-  } catch {
+  } else if (this.type === "union") {
+    for (const schema of this.list) {
+      try {
+        Schema.resolve(value, schema, {});
+        return schema.simplify(value);
+      } catch {
+      }
+    }
   }
   return value;
 };
@@ -468,29 +477,18 @@ Schema.prototype.toString = function toString(inline) {
 };
 Schema.prototype.role = function role(role, extra2) {
   const schema = Schema(this);
-  schema.meta = {
-    ...schema.meta,
-    role,
-    extra: extra2
-  };
+  schema.meta = { ...schema.meta, role, extra: extra2 };
   return schema;
 };
-for (const key of [
-  "default",
-  "link",
-  "comment",
-  "description",
-  "max",
-  "min",
-  "step"
-]) Object.assign(Schema.prototype, { [key](value) {
-  const schema = Schema(this);
-  schema.meta = {
-    ...schema.meta,
-    [key]: value
-  };
-  return schema;
-} });
+for (const key of ["default", "link", "comment", "description", "max", "min", "step"]) {
+  Object.assign(Schema.prototype, {
+    [key](value) {
+      const schema = Schema(this);
+      schema.meta = { ...schema.meta, [key]: value };
+      return schema;
+    }
+  });
+}
 Schema.prototype.volatile = function volatile() {
   if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
   return this.extra("volatile", true);
@@ -502,12 +500,22 @@ function validateVolatileSchema(schema, path = [], blocked = false, seen = /* @_
   if (states.has(blocked)) return;
   states.add(blocked);
   seen.set(schema, states);
-  if (schema.meta?.volatile && blocked) throw new ValidationError("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  if (schema.meta?.volatile && blocked) {
+    throw new ValidationError("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  }
   const nested = blocked || !!schema.meta?.volatile;
-  if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema(child, [...path, key], nested, seen);
+  if (schema.dict) {
+    for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema(child, [...path, key], nested, seen);
+  }
   if (schema.sKey) validateVolatileSchema(schema.sKey, [...path, "<key>"], true, seen);
-  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) validateVolatileSchema(schema.inner, [...path, "*"], true, seen);
-  if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema(schema.list[index], [...path, String(index)], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) {
+    validateVolatileSchema(schema.inner, [...path, "*"], true, seen);
+  }
+  if (schema.list) {
+    for (let index = 0; index < schema.list.length; index++) {
+      validateVolatileSchema(schema.list[index], [...path, String(index)], true, seen);
+    }
+  }
 }
 Schema.extend = function extend(type, resolve2) {
   resolvers[type] = resolve2;
@@ -516,17 +524,11 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
   if (!options[checkedVolatile]) {
     validateVolatileSchema(schema, options.path);
-    options = {
-      ...options,
-      [checkedVolatile]: true
-    };
+    options = { ...options, [checkedVolatile]: true };
   }
   if (schema.meta?.volatile) {
     const inner = Schema(schema);
-    inner.meta = {
-      ...schema.meta,
-      volatile: false
-    };
+    inner.meta = { ...schema.meta, volatile: false };
     const [value, adapted] = Schema.resolve(data, inner, options, strict);
     try {
       return [createVolatile(value), adapted];
@@ -556,43 +558,38 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   }
 };
 Schema.from = function from(source) {
-  if (isNullable(source)) return Schema.any();
-  else if ([
-    "string",
-    "number",
-    "boolean"
-  ].includes(typeof source)) return Schema.const(source).required();
-  else if (source[kSchema]) return source;
-  else if (typeof source === "function") switch (source) {
-    case String:
-      return Schema.string().required();
-    case Number:
-      return Schema.number().required();
-    case Boolean:
-      return Schema.boolean().required();
-    case Function:
-      return Schema.function().required();
-    default:
-      return Schema.is(source).required();
+  if (isNullable(source)) {
+    return Schema.any();
+  } else if (["string", "number", "boolean"].includes(typeof source)) {
+    return Schema.const(source).required();
+  } else if (source[kSchema]) {
+    return source;
+  } else if (typeof source === "function") {
+    switch (source) {
+      case String:
+        return Schema.string().required();
+      case Number:
+        return Schema.number().required();
+      case Boolean:
+        return Schema.boolean().required();
+      case Function:
+        return Schema.function().required();
+      default:
+        return Schema.is(source).required();
+    }
+  } else {
+    throw new TypeError(`cannot infer schema from ${source}`);
   }
-  else throw new TypeError(`cannot infer schema from ${source}`);
 };
 Schema.lazy = function lazy(builder) {
   const toJSON2 = () => {
     if (!schema.inner[kSchema]) {
       schema.inner = schema.builder();
-      schema.inner.meta = {
-        ...schema.meta,
-        ...schema.inner.meta
-      };
+      schema.inner.meta = { ...schema.meta, ...schema.inner.meta };
     }
     return schema.inner.toJSON();
   };
-  const schema = new Schema({
-    type: "lazy",
-    builder,
-    inner: { toJSON: toJSON2 }
-  });
+  const schema = new Schema({ type: "lazy", builder, inner: { toJSON: toJSON2 } });
   return schema;
 };
 Schema.natural = function natural() {
@@ -602,20 +599,26 @@ Schema.percent = function percent() {
   return Schema.number().step(0.01).min(0).max(1).role("slider");
 };
 Schema.date = function date() {
-  return Schema.union([Schema.is(Date), Schema.transform(Schema.string().role("datetime"), (value, options) => {
-    const date2 = new Date(value);
-    if (isNaN(+date2)) throw new ValidationError(`invalid date "${value}"`, options);
-    return date2;
-  }, true)]);
+  return Schema.union([
+    Schema.is(Date),
+    Schema.transform(Schema.string().role("datetime"), (value, options) => {
+      const date2 = new Date(value);
+      if (isNaN(+date2)) throw new ValidationError(`invalid date "${value}"`, options);
+      return date2;
+    }, true)
+  ]);
 };
 Schema.regExp = function regExp(flag = "") {
-  return Schema.union([Schema.is(RegExp), Schema.transform(Schema.string().role("regexp", { flag }), (value, options) => {
-    try {
-      return new RegExp(value, flag);
-    } catch (e) {
-      throw new ValidationError(e.message, options);
-    }
-  }, true)]);
+  return Schema.union([
+    Schema.is(RegExp),
+    Schema.transform(Schema.string().role("regexp", { flag }), (value, options) => {
+      try {
+        return new RegExp(value, flag);
+      } catch (e) {
+        throw new ValidationError(e.message, options);
+      }
+    }, true)
+  ]);
 };
 Schema.arrayBuffer = function arrayBuffer(encoding) {
   return Schema.union([
@@ -637,10 +640,7 @@ Schema.arrayBuffer = function arrayBuffer(encoding) {
 Schema.extend("lazy", (data, schema, options, strict) => {
   if (!schema.inner[kSchema]) {
     schema.inner = schema.builder();
-    schema.inner.meta = {
-      ...schema.meta,
-      ...schema.inner.meta
-    };
+    schema.inner.meta = { ...schema.meta, ...schema.inner.meta };
     validateVolatileSchema(schema.inner, options.path, true);
   }
   return Schema.resolve(data, schema.inner, options, strict);
@@ -681,7 +681,9 @@ function decimalShift(data, digits) {
 }
 function isMultipleOf(data, min, step) {
   step = Math.abs(step);
-  if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
+  if (!/^\d+\.\d+$/.test(step.toString())) {
+    return (data - min) % step === 0;
+  }
   const index = step.toString().indexOf(".");
   const digits = step.toString().slice(index + 1).length;
   return Math.abs(decimalShift(data, digits) - decimalShift(min, digits)) % decimalShift(step, digits) === 0;
@@ -690,7 +692,9 @@ Schema.extend("number", (data, { meta }, options) => {
   if (typeof data !== "number") throw new ValidationError(`expected number but got ${data}`, options);
   checkWithinRange(data, meta, "number", options);
   const { step } = meta;
-  if (step && !isMultipleOf(data, meta.min ?? 0, step)) throw new ValidationError(`expected number multiple of ${step} but got ${data}`, options);
+  if (step && !isMultipleOf(data, meta.min ?? 0, step)) {
+    throw new ValidationError(`expected number multiple of ${step} but got ${data}`, options);
+  }
   return [data];
 });
 Schema.extend("boolean", (data, _, options) => {
@@ -701,14 +705,20 @@ Schema.extend("bitset", (data, { bits, meta }, options) => {
   let value = 0, keys = [];
   if (typeof data === "number") {
     value = data;
-    for (const key in bits) if (data & bits[key]) keys.push(key);
+    for (const key in bits) {
+      if (data & bits[key]) {
+        keys.push(key);
+      }
+    }
   } else if (Array.isArray(data)) {
     keys = data;
     for (const key of keys) {
       if (typeof key !== "string") throw new ValidationError(`expected string but got ${key}`, options);
       if (key in bits) value |= bits[key];
     }
-  } else throw new ValidationError(`expected number or array but got ${data}`, options);
+  } else {
+    throw new ValidationError(`expected number or array but got ${data}`, options);
+  }
   if (value === meta.default) return [value];
   return [value, keys];
 });
@@ -721,7 +731,9 @@ Schema.extend("is", (data, { constructor }, options) => {
     if (data instanceof constructor) return [data];
     throw new ValidationError(`expected ${constructor.name} but got ${data}`, options);
   } else {
-    if (isNullable(data)) throw new ValidationError(`expected ${constructor} but got ${data}`, options);
+    if (isNullable(data)) {
+      throw new ValidationError(`expected ${constructor} but got ${data}`, options);
+    }
     let prototype = Object.getPrototypeOf(data);
     while (prototype) {
       if (prototype.constructor?.name === constructor) return [data];
@@ -784,17 +796,21 @@ Schema.extend("object", (data, { dict }, options, strict) => {
   const result = {};
   for (const key in dict) {
     const value = property(data, key, dict[key], options);
-    if (!isNullable(value) || key in data) result[key] = value;
+    if (!isNullable(value) || key in data) {
+      result[key] = value;
+    }
   }
   if (!strict) merge(result, data);
   return [result];
 });
 Schema.extend("union", (data, { list, toString: toString2 }, options, strict) => {
   const messages = [];
-  for (const inner of list) try {
-    return Schema.resolve(data, inner, options, strict);
-  } catch (error) {
-    messages.push(error);
+  for (const inner of list) {
+    try {
+      return Schema.resolve(data, inner, options, strict);
+    } catch (error) {
+      messages.push(error);
+    }
   }
   throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
 });
@@ -804,68 +820,89 @@ Schema.extend("intersect", (data, { list, toString: toString2 }, options, strict
   for (const inner of list) {
     const value = Schema.resolve(data, inner, options, true)[0];
     if (isNullable(value)) continue;
-    if (isNullable(result)) result = value;
-    else if (typeof result !== typeof value) throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
-    else if (typeof value === "object") merge(result ??= {}, value);
-    else if (result !== value) throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+    if (isNullable(result)) {
+      result = value;
+    } else if (typeof result !== typeof value) {
+      throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+    } else if (typeof value === "object") {
+      merge(result ??= {}, value);
+    } else if (result !== value) {
+      throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+    }
   }
   if (!strict && isPlainObject(data)) merge(result, data);
   return [result];
 });
 Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
   const [result, adapted = data] = Schema.resolve(data, inner, options, true);
-  if (preserve) return [callback(result)];
-  else return [callback(result), callback(adapted)];
+  if (preserve) {
+    return [callback(result)];
+  } else {
+    return [callback(result), callback(adapted)];
+  }
 });
 var formatters = {};
 function defineMethod(name2, keys, format) {
   formatters[name2] = format;
-  Object.assign(Schema, { [name2](...args) {
-    const schema = new Schema({ type: name2 });
-    keys.forEach((key, index) => {
-      switch (key) {
-        case "sKey":
-          schema.sKey = args[index] ?? Schema.string();
-          break;
-        case "inner":
-          schema.inner = Schema.from(args[index]);
-          break;
-        case "list":
-          schema.list = args[index].map(Schema.from);
-          break;
-        case "dict":
-          schema.dict = mapValues(args[index], Schema.from);
-          break;
-        case "bits":
-          schema.bits = {};
-          for (const key2 in args[index]) {
-            if (typeof args[index][key2] !== "number") continue;
-            schema.bits[key2] = args[index][key2];
+  Object.assign(Schema, {
+    [name2](...args) {
+      const schema = new Schema({ type: name2 });
+      keys.forEach((key, index) => {
+        switch (key) {
+          case "sKey":
+            schema.sKey = args[index] ?? Schema.string();
+            break;
+          case "inner":
+            schema.inner = Schema.from(args[index]);
+            break;
+          case "list":
+            schema.list = args[index].map(Schema.from);
+            break;
+          case "dict":
+            schema.dict = mapValues(args[index], Schema.from);
+            break;
+          case "bits": {
+            schema.bits = {};
+            for (const key2 in args[index]) {
+              if (typeof args[index][key2] !== "number") continue;
+              schema.bits[key2] = args[index][key2];
+            }
+            break;
           }
-          break;
-        case "callback": {
-          const callback = schema.callback = args[index];
-          callback["toJSON"] ||= () => callback.toString();
-          break;
+          case "callback": {
+            const callback = schema.callback = args[index];
+            callback["toJSON"] ||= () => callback.toString();
+            break;
+          }
+          case "constructor": {
+            const constructor = schema.constructor = args[index];
+            if (typeof constructor === "function") {
+              ;
+              constructor["toJSON"] ||= () => constructor["name"];
+            }
+            break;
+          }
+          default:
+            schema[key] = args[index];
         }
-        case "constructor": {
-          const constructor = schema.constructor = args[index];
-          if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
-          break;
-        }
-        default:
-          schema[key] = args[index];
+      });
+      if (name2 === "object" || name2 === "dict") {
+        schema.meta.default = {};
+      } else if (name2 === "array" || name2 === "tuple") {
+        schema.meta.default = [];
+      } else if (name2 === "bitset") {
+        schema.meta.default = 0;
       }
-    });
-    if (name2 === "object" || name2 === "dict") schema.meta.default = {};
-    else if (name2 === "array" || name2 === "tuple") schema.meta.default = [];
-    else if (name2 === "bitset") schema.meta.default = 0;
-    return schema;
-  } });
+      return schema;
+    }
+  });
 }
 defineMethod("is", ["constructor"], ({ constructor }) => {
-  if (typeof constructor === "function") return constructor.name;
-  else return constructor;
+  if (typeof constructor === "function") {
+    return constructor.name;
+  } else {
+    return constructor;
+  }
 });
 defineMethod("any", [], () => "any");
 defineMethod("never", [], () => "never");
@@ -891,25 +928,22 @@ defineMethod("union", ["list"], ({ list }, inline) => {
 defineMethod("intersect", ["list"], ({ list }) => {
   return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
 });
-defineMethod("transform", [
-  "inner",
-  "callback",
-  "preserve"
-], ({ inner }, isInner) => inner.toString(isInner));
+defineMethod("transform", ["inner", "callback", "preserve"], ({ inner }, isInner) => inner.toString(isInner));
+var src_default = Schema;
 
 // ../dsh-tui/plugins/zen-proxy/index.js
 import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 var name = "zen-proxy";
-var Config = Schema.object({
-  host: Schema.string().default("127.0.0.1"),
-  port: Schema.number().default(4097),
-  upstreamHost: Schema.string().default("opencode.ai"),
-  upstreamBasePath: Schema.string().default("/zen/v1"),
-  userAgent: Schema.string().default("opencode/1.18.30"),
-  clientHeader: Schema.string().default("cli"),
-  projectHeader: Schema.string().default("global")
+var Config = src_default.object({
+  host: src_default.string().default("127.0.0.1"),
+  port: src_default.number().default(4097),
+  upstreamHost: src_default.string().default("opencode.ai"),
+  upstreamBasePath: src_default.string().default("/zen/v1"),
+  userAgent: src_default.string().default("opencode/1.18.30"),
+  clientHeader: src_default.string().default("cli"),
+  projectHeader: src_default.string().default("global")
 });
 var inject = [];
 var rnd = (p) => `${p}${crypto.randomBytes(13).toString("hex")}`;

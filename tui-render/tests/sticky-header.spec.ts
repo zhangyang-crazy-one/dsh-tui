@@ -12,7 +12,7 @@ describe('resolveStickyThinkingHeader', () => {
 
   it('formats the divider label with turn ordinal and duration', () => {
     expect(formatStickyThinkingLabel(range)).toBe(
-      '💭 思考中 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
+      '💭 思考 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
     )
   })
 
@@ -22,10 +22,10 @@ describe('resolveStickyThinkingHeader', () => {
 
   it('projects the sticky label once the header has scrolled off', () => {
     expect(resolveStickyThinkingHeader(11, [range])).toBe(
-      '💭 思考中 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
+      '💭 思考 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
     )
     expect(resolveStickyThinkingHeader(39, [range])).toBe(
-      '💭 思考中 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
+      '💭 思考 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]',
     )
   })
 
@@ -50,7 +50,7 @@ describe('resolveStickyTranscriptHeader', () => {
       reasoning: [reasoning],
       tools: [tool],
       users: [user],
-    })).toBe('💭 思考中 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]')
+    })).toBe('💭 思考 (第 3 轮 · 14.2s) · [Ctrl+O 折叠]')
   })
 
   it('projects a tool heading once the viewport is inside the card body', () => {
