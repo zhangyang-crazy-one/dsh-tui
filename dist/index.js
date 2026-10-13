@@ -24255,9 +24255,9 @@ var require_react_reconciler = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js
 var require_constants2 = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/constants.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -24278,9 +24278,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants2();
     var FastBuffer = Buffer[Symbol.species];
@@ -24353,9 +24353,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/limiter.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -24403,9 +24403,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -24532,7 +24532,7 @@ var require_permessage_deflate = __commonJS({
       acceptAsServer(offers) {
         const opts = this._options;
         const accepted = offers.find((params) => {
-          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && !params.client_max_window_bits) {
+          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && (typeof params.client_max_window_bits === "number" ? opts.clientMaxWindowBits > params.client_max_window_bits : !params.client_max_window_bits)) {
             return false;
           }
           return true;
@@ -24786,9 +24786,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js
 var require_validation = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/validation.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants2();
@@ -24987,9 +24987,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/receiver.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -25052,6 +25052,7 @@ var require_receiver = __commonJS({
         this._opcode = 0;
         this._totalPayloadLength = 0;
         this._messageLength = 0;
+        this._numFragments = 0;
         this._fragments = [];
         this._errored = false;
         this._loop = false;
@@ -25402,23 +25403,23 @@ var require_receiver = __commonJS({
           this.controlMessage(data, cb);
           return;
         }
+        if (this._maxFragments > 0 && ++this._numFragments > this._maxFragments) {
+          const error51 = this.createError(
+            RangeError,
+            "Too many message fragments",
+            false,
+            1008,
+            "WS_ERR_TOO_MANY_BUFFERED_PARTS"
+          );
+          cb(error51);
+          return;
+        }
         if (this._compressed) {
           this._state = INFLATING;
           this.decompress(data, cb);
           return;
         }
         if (data.length) {
-          if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-            const error51 = this.createError(
-              RangeError,
-              "Too many message fragments",
-              false,
-              1008,
-              "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-            );
-            cb(error51);
-            return;
-          }
           this._messageLength = this._totalPayloadLength;
           this._fragments.push(data);
         }
@@ -25448,17 +25449,6 @@ var require_receiver = __commonJS({
               cb(error51);
               return;
             }
-            if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-              const error51 = this.createError(
-                RangeError,
-                "Too many message fragments",
-                false,
-                1008,
-                "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-              );
-              cb(error51);
-              return;
-            }
             this._fragments.push(buf);
           }
           this.dataMessage(cb);
@@ -25481,6 +25471,7 @@ var require_receiver = __commonJS({
         this._totalPayloadLength = 0;
         this._messageLength = 0;
         this._fragmented = 0;
+        this._numFragments = 0;
         this._fragments = [];
         if (this._opcode === 2) {
           let data;
@@ -25619,9 +25610,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/sender.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -26112,9 +26103,9 @@ var require_sender = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/event-target.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants2();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -26341,9 +26332,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/extension.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function push3(dest, name2, elem) {
@@ -26494,9 +26485,9 @@ var require_extension = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var https = __require("https");
@@ -26981,8 +26972,8 @@ var require_websocket = __commonJS({
         autoPong: true,
         closeTimeout: CLOSE_TIMEOUT,
         protocolVersion: protocolVersions[1],
-        maxBufferedChunks: 1024 * 1024,
-        maxFragments: 128 * 1024,
+        maxBufferedChunks: 256 * 1024,
+        maxFragments: 16 * 1024,
         maxPayload: 100 * 1024 * 1024,
         skipUTF8Validation: false,
         perMessageDeflate: true,
@@ -27390,9 +27381,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/stream.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -27488,9 +27479,9 @@ var require_stream = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function parse4(header) {
@@ -27533,9 +27524,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter3 = __require("events");
     var http = __require("http");
@@ -27569,9 +27560,9 @@ var require_websocket_server = __commonJS({
        *     called
        * @param {Function} [options.handleProtocols] A hook to handle protocols
        * @param {String} [options.host] The hostname where to bind the server
-       * @param {Number} [options.maxBufferedChunks=1048576] The maximum number of
+       * @param {Number} [options.maxBufferedChunks=262144] The maximum number of
        *     buffered data chunks
-       * @param {Number} [options.maxFragments=131072] The maximum number of message
+       * @param {Number} [options.maxFragments=16384] The maximum number of message
        *     fragments
        * @param {Number} [options.maxPayload=104857600] The maximum allowed message
        *     size
@@ -27594,8 +27585,8 @@ var require_websocket_server = __commonJS({
         options = {
           allowSynchronousEvents: true,
           autoPong: true,
-          maxBufferedChunks: 1024 * 1024,
-          maxFragments: 128 * 1024,
+          maxBufferedChunks: 256 * 1024,
+          maxFragments: 16 * 1024,
           maxPayload: 100 * 1024 * 1024,
           skipUTF8Validation: false,
           perMessageDeflate: false,
@@ -27934,10 +27925,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs
+// node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server, wrapper_default;
 var init_wrapper = __esm({
-  "node_modules/.pnpm/ws@8.21.0/node_modules/ws/wrapper.mjs"() {
+  "node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -46253,7 +46244,7 @@ function previous2(match, email3) {
   (!email3 || code2 !== 47);
 }
 
-// node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0/node_modules/mdast-util-gfm-footnote/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-footnote@2.1.0_supports-color@9.4.0/node_modules/mdast-util-gfm-footnote/lib/index.js
 footnoteReference.peek = footnoteReferencePeek;
 function enterFootnoteCallString() {
   this.buffer();
@@ -46327,7 +46318,7 @@ function gfmFootnoteFromMarkdown() {
   };
 }
 
-// node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-strikethrough@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-strikethrough/lib/index.js
 handleDelete.peek = peekDelete;
 function gfmStrikethroughFromMarkdown() {
   return {
@@ -46359,7 +46350,7 @@ function peekDelete() {
   return "~";
 }
 
-// node_modules/.pnpm/mdast-util-gfm-table@2.0.0/node_modules/mdast-util-gfm-table/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-table@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-table/lib/index.js
 function gfmTableFromMarkdown() {
   return {
     enter: {
@@ -46419,7 +46410,7 @@ function replace($0, $1) {
   return $1 === "|" ? $1 : $0;
 }
 
-// node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm-task-list-item@2.0.0_supports-color@9.4.0/node_modules/mdast-util-gfm-task-list-item/lib/index.js
 function gfmTaskListItemFromMarkdown() {
   return {
     exit: {
@@ -46466,7 +46457,7 @@ function exitParagraphWithTaskListItem(token) {
   this.exit(token);
 }
 
-// node_modules/.pnpm/mdast-util-gfm@3.1.0/node_modules/mdast-util-gfm/lib/index.js
+// node_modules/.pnpm/mdast-util-gfm@3.1.0_supports-color@9.4.0/node_modules/mdast-util-gfm/lib/index.js
 function gfmFromMarkdown() {
   return [
     gfmAutolinkLiteralFromMarkdown(),
@@ -63180,6 +63171,629 @@ function validateName(subject, value) {
   }
 }
 
+// packages/util/values/src/partial-json.ts
+var SIMPLE_ESCAPES = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "	"
+};
+var CONTENT_ESCAPE = /[\\\u0000-\u001f]/u;
+function isWhitespace(c) {
+  return c === " " || c === "\n" || c === "\r" || c === "	";
+}
+function isHex(c) {
+  return c >= "0" && c <= "9" || c >= "a" && c <= "f" || c >= "A" && c <= "F";
+}
+var PartialArguments = class _PartialArguments {
+  /** The view of a call with no arguments available. */
+  static EMPTY = _PartialArguments.fromObject({});
+  /**
+   * View finished argument text without scanning it until a reader asks.
+   * @param text - the complete argument JSON text.
+   * @returns a sealed view.
+   */
+  static fromText(text4) {
+    const view = new _PartialArguments();
+    view.append(text4);
+    view.sealed = true;
+    return view;
+  }
+  /**
+   * View an already parsed argument payload, such as a PTC dispatch object.
+   * @param value - the parsed argument value.
+   * @returns a sealed view; a non-object payload has no fields.
+   */
+  static fromObject(value) {
+    const view = new _PartialArguments();
+    view.object = typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+    view.sealed = true;
+    return view;
+  }
+  /**
+   * The source: text so far or a parsed object, plus whether it can still grow.
+   * These are the only enumerable fields, so two views over the same source
+   * compare equal structurally however far each has been read.
+   */
+  chunks = [];
+  object;
+  sealed = false;
+  // Scan progress, located fields, and remembered reads are caches over the source.
+  #ends = [];
+  #size = 0;
+  #consumed = 0;
+  #mode = "root";
+  #escape = false;
+  #keyStart = 0;
+  #keyEscaped = false;
+  #key = "";
+  #current = null;
+  #nestedEnds = [];
+  #nestedInString = false;
+  #invalidAt;
+  #invalidValue = false;
+  #entries = /* @__PURE__ */ new Map();
+  #order = [];
+  #reads = /* @__PURE__ */ new Map();
+  /** Whether this view rejects further appends; does not scan text or register reads. */
+  get isSealed() {
+    return this.sealed;
+  }
+  /** Whether indexing or a content read found invalid JSON; unread value contents are not validated. */
+  get invalid() {
+    this.scan();
+    return this.#mode === "invalid" || this.#invalidValue;
+  }
+  /**
+   * Retain streamed argument text without scanning or comparing observed answers.
+   * @param fragment - the text following every fragment appended before.
+   */
+  append(fragment) {
+    if (this.sealed) throw new Error("PartialArguments: cannot append to a sealed view");
+    if (fragment.length === 0) return;
+    this.chunks.push(fragment);
+    this.#size += fragment.length;
+    this.#ends.push(this.#size);
+  }
+  /**
+   * Reconcile a streamed prefix with authoritative complete text without joining the fragments.
+   * @param text - the final argument text, which replaces missing or conflicting deltas.
+   * @returns this view sealed with its caches retained when every character matches; otherwise a new sealed view.
+   */
+  settle(text4) {
+    if (this.object !== void 0 || text4.length !== this.#size) return _PartialArguments.fromText(text4);
+    let offset = 0;
+    for (const chunk of this.chunks) {
+      if (!text4.startsWith(chunk, offset)) return _PartialArguments.fromText(text4);
+      offset += chunk.length;
+    }
+    this.chunks = text4.length === 0 ? [] : [text4];
+    this.#ends = text4.length === 0 ? [] : [text4.length];
+    this.sealed = true;
+    return this;
+  }
+  /**
+   * Compare observed answers and advance their publication baseline. Unread views remain unscanned.
+   * @returns whether any observed answer changed since its first read or the preceding refresh.
+   */
+  refresh() {
+    if (this.#reads.size === 0) return false;
+    this.scan();
+    let changed = false;
+    let completions = false;
+    for (const read of this.#reads.values()) {
+      if (read.completion) {
+        completions = true;
+        continue;
+      }
+      changed = this.refreshRead(read) || changed;
+    }
+    if (completions) {
+      for (const read of this.#reads.values()) if (read.completion) changed = this.refreshRead(read) || changed;
+    }
+    if (this.sealed) this.#reads.clear();
+    return changed;
+  }
+  refreshRead(read) {
+    const now = read.answer();
+    if (Object.is(now, read.last)) return false;
+    read.last = now;
+    return true;
+  }
+  /**
+   * Check whether no further fields can arrive.
+   * @returns whether the outer object closed, indexing failed, or the view is sealed; unread values are not validated.
+   */
+  closed() {
+    return this.remember("closed", "", () => this.closedNow());
+  }
+  /**
+   * List discovered fields in first-appearance order.
+   * @returns top-level keys seen so far, in first-appearance order.
+   */
+  keys() {
+    return this.remember("keys", "", () => this.keysNow(), (keys) => keys.length);
+  }
+  /**
+   * Check whether a top-level field has appeared.
+   * @param key - argument name.
+   * @returns whether the field has appeared (a string opened or another value began).
+   */
+  has(key) {
+    return this.remember("has", key, () => this.hasNow(key));
+  }
+  /**
+   * Check whether a field's closing delimiter has arrived, without validating its contents.
+   * @param key - argument name.
+   * @returns whether its delimiter arrived and no content reader has reported an error for this value.
+   */
+  complete(key) {
+    return this.remember("complete", key, () => this.completeNow(key));
+  }
+  /**
+   * Read string length without materializing its text.
+   * @param key - argument name.
+   * @param options - change granularity for a streaming string.
+   * @returns decoded UTF-16 length of the string field so far; undefined when absent or not a string.
+   */
+  stringLength(key, options) {
+    const step = Math.max(1, Math.floor(options?.step ?? 1));
+    const offset = options?.offset ?? 0;
+    return this.remember(
+      `length:${step}:${offset}`,
+      key,
+      () => this.lengthNow(key),
+      (length) => length === void 0 ? void 0 : Math.ceil((length + offset) / step)
+    );
+  }
+  /**
+   * Check a string against a decoded UTF-16 length limit without materializing it.
+   * @param key - argument name.
+   * @param maxLength - decoded UTF-16 limit, floored to at least zero.
+   * @returns whether the string is longer than the limit; false when absent or not a string.
+   */
+  stringExceeds(key, maxLength) {
+    const limit = Math.max(0, Math.floor(maxLength));
+    return this.remember(
+      `exceeds:${limit}`,
+      key,
+      () => (this.lengthNow(key, limit + 1) ?? 0) > limit
+    );
+  }
+  /**
+   * Read a decoded string, including a streaming prefix.
+   * @param key - argument name.
+   * @returns the string field's decoded text so far; undefined when absent or not a string.
+   */
+  text(key) {
+    return this.remember("text", key, () => this.textNow(key));
+  }
+  /**
+   * Read at most the first decoded UTF-16 units of a string.
+   * @param key - argument name.
+   * @param maxLength - maximum decoded UTF-16 length, floored to at least one.
+   * @returns the bounded string prefix; undefined when absent or not a string.
+   */
+  textPrefix(key, maxLength) {
+    const limit = Math.max(1, Math.floor(maxLength));
+    return this.remember(
+      `prefix:${limit}`,
+      key,
+      () => this.textPrefixNow(key, limit)
+    );
+  }
+  /**
+   * Read a completed non-string argument.
+   * @param key - argument name.
+   * @returns the parsed non-string value once it closed; undefined while open, absent, or a string.
+   */
+  value(key) {
+    return this.remember("value", key, () => this.valueNow(key));
+  }
+  /** Answer a question and, on a streaming view, remember it for change detection. */
+  remember(kind, key, read, comparison) {
+    this.scan();
+    const result = read();
+    if (!this.sealed) {
+      const id = `${kind}/${key}`;
+      if (!this.#reads.has(id)) {
+        this.#reads.set(id, {
+          completion: kind === "complete",
+          answer: comparison === void 0 ? read : () => comparison(read()),
+          last: comparison === void 0 ? result : comparison(result)
+        });
+      }
+    }
+    return result;
+  }
+  closedNow() {
+    return this.sealed || this.#mode === "closed" || this.#mode === "invalid";
+  }
+  keysNow() {
+    return this.object === void 0 ? this.#order : Object.keys(this.object);
+  }
+  hasNow(key) {
+    return this.object === void 0 ? this.#entries.has(key) : Object.hasOwn(this.object, key);
+  }
+  completeNow(key) {
+    if (this.object !== void 0) return Object.hasOwn(this.object, key);
+    const entry = this.#entries.get(key);
+    return entry !== void 0 && entry.end >= 0 && (entry.kind === "string" ? entry.invalidAt === void 0 : !entry.invalid);
+  }
+  lengthNow(key, limit = Number.POSITIVE_INFINITY) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field.length : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    if (entry.text !== void 0 && entry.text.at === entry.end) return entry.text.length;
+    const read = entry.length ??= { at: entry.start, length: 0, text: "" };
+    this.readString(entry, read, limit, false);
+    return read.length;
+  }
+  textNow(key) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    if (entry.text === void 0 && entry.end >= 0 && entry.needsDecoding && entry.invalidAt === void 0) {
+      let text4;
+      try {
+        text4 = JSON.parse(`"${this.slice(entry.start, entry.end)}"`);
+      } catch (_error) {
+      }
+      if (text4 !== void 0) entry.text = { at: entry.end, length: text4.length, text: text4 };
+    }
+    const read = entry.text ??= { at: entry.start, length: 0, text: "" };
+    this.readString(entry, read, Number.POSITIVE_INFINITY, true);
+    return read.text;
+  }
+  textPrefixNow(key, maxLength) {
+    if (this.object !== void 0) {
+      const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+      return typeof field === "string" ? field.slice(0, maxLength) : void 0;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "string") return void 0;
+    const prefixes = entry.prefixes ??= /* @__PURE__ */ new Map();
+    let read = prefixes.get(maxLength);
+    if (read === void 0) {
+      read = { at: entry.start, length: 0, text: "" };
+      prefixes.set(maxLength, read);
+    }
+    this.readString(entry, read, maxLength, true);
+    return read.text;
+  }
+  valueNow(key) {
+    if (this.object !== void 0) {
+      if (!Object.hasOwn(this.object, key)) return void 0;
+      const field = this.object[key];
+      return typeof field === "string" ? void 0 : field;
+    }
+    const entry = this.#entries.get(key);
+    if (entry?.kind !== "value" || entry.end < 0 || entry.invalid) return void 0;
+    if (entry.parsed === void 0) {
+      try {
+        entry.parsed = JSON.parse(this.slice(entry.start, entry.end));
+      } catch (_error) {
+        entry.invalid = true;
+        this.#invalidValue = true;
+      }
+    }
+    return entry.parsed;
+  }
+  chunkAt(at) {
+    let low = 0;
+    let high = this.#ends.length;
+    while (low < high) {
+      const mid = low + high >>> 1;
+      if (this.#ends[mid] <= at) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  }
+  /** Materialize only a requested range, never the cumulative source. */
+  slice(start, end) {
+    if (start >= end) return "";
+    const first = this.chunkAt(start);
+    const last = this.chunkAt(end - 1);
+    const base = first === 0 ? 0 : this.#ends[first - 1];
+    if (first === last) return this.chunks[first].slice(start - base, end - base);
+    const parts = [this.chunks[first].slice(start - base)];
+    for (let i = first + 1; i < last; i++) parts.push(this.chunks[i]);
+    parts.push(this.chunks[last].slice(0, end - this.#ends[last - 1]));
+    return parts.join("");
+  }
+  readString(entry, read, limit, materialize) {
+    const end = Math.min(
+      entry.end < 0 ? this.#consumed : entry.end,
+      entry.invalidAt ?? Number.POSITIVE_INFINITY,
+      this.#invalidAt ?? Number.POSITIVE_INFINITY
+    );
+    if (!entry.needsDecoding) {
+      const length = Math.min(end - read.at, limit - read.length);
+      if (length <= 0) return;
+      if (materialize) read.text += this.slice(read.at, read.at + length);
+      read.at += length;
+      read.length += length;
+      return;
+    }
+    let chunkIndex = this.chunkAt(read.at);
+    while (read.at < end && read.length < limit) {
+      const base = chunkIndex === 0 ? 0 : this.#ends[chunkIndex - 1];
+      const chunk = this.chunks[chunkIndex];
+      const remaining = chunk.slice(read.at - base, Math.min(chunk.length, end - base));
+      const boundary = remaining.search(CONTENT_ESCAPE);
+      const length = Math.min(boundary < 0 ? remaining.length : boundary, limit - read.length);
+      if (length > 0) {
+        if (materialize) read.text += remaining.slice(0, length);
+        read.at += length;
+        read.length += length;
+        if (read.at === base + chunk.length) chunkIndex++;
+        continue;
+      }
+      const type = remaining.length > 1 ? remaining[1] : read.at + 1 < end ? this.chunks[chunkIndex + 1][0] : void 0;
+      let decoded;
+      let width = 2;
+      if (remaining[0] === "\\" && type === void 0 && entry.end < 0) return;
+      if (remaining[0] === "\\" && type === "u") {
+        const hex3 = this.slice(read.at + 2, Math.min(end, read.at + 6));
+        let valid = true;
+        for (let i = 0; i < hex3.length; i++) if (!isHex(hex3[i])) valid = false;
+        if (valid) {
+          if (hex3.length < 4 && entry.end < 0) return;
+          if (hex3.length === 4) decoded = String.fromCharCode(Number.parseInt(hex3, 16));
+        }
+        width = 6;
+      } else if (remaining[0] === "\\" && type !== void 0) {
+        decoded = SIMPLE_ESCAPES[type];
+      }
+      if (decoded === void 0) {
+        entry.invalidAt = read.at;
+        this.#invalidValue = true;
+        return;
+      }
+      if (materialize) read.text += decoded;
+      read.length++;
+      read.at += width;
+      while (chunkIndex < this.chunks.length && read.at >= this.#ends[chunkIndex]) chunkIndex++;
+    }
+  }
+  /** Locate new field ranges without decoding or parsing their contents. */
+  scan() {
+    if (this.object !== void 0 || this.#consumed === this.#size) return;
+    for (let i = this.chunkAt(this.#consumed); i < this.chunks.length && this.#invalidAt === void 0; i++) {
+      const pending = this.chunks[i];
+      const base = i === 0 ? 0 : this.#ends[i - 1];
+      for (let index2 = this.#consumed - base; index2 < pending.length && this.#mode !== "invalid"; index2++) {
+        if (this.#mode === "string" || this.#mode === "nested" && this.#nestedInString) {
+          const end = this.stringBoundary(pending, index2);
+          this.#consumed += end - index2;
+          index2 = end;
+          if (index2 === pending.length) break;
+        }
+        this.step(pending[index2], this.#consumed);
+        this.#consumed++;
+      }
+    }
+  }
+  /** Only raw quotes and their preceding backslash runs can terminate a string. */
+  stringBoundary(fragment, start) {
+    let at = start;
+    while (true) {
+      const quote = fragment.indexOf('"', at);
+      const end = quote < 0 ? fragment.length : quote;
+      if (this.#mode === "string") {
+        const entry = this.#current;
+        if (!entry.needsDecoding && CONTENT_ESCAPE.test(fragment.slice(at, end))) entry.needsDecoding = true;
+      }
+      let slashStart = end;
+      while (slashStart > at && fragment[slashStart - 1] === "\\") slashStart--;
+      const escaped = (end - slashStart) % 2 === 1 !== (slashStart === at && this.#escape);
+      this.#escape = quote < 0 && escaped;
+      if (quote < 0 || !escaped) return end;
+      at = quote + 1;
+    }
+  }
+  step(c, at) {
+    switch (this.#mode) {
+      case "root":
+        if (isWhitespace(c)) return;
+        if (c === "{") {
+          this.#mode = "key-or-end";
+          return;
+        }
+        this.fail();
+        return;
+      case "key-or-end":
+        if (isWhitespace(c)) return;
+        if (c === "}") {
+          this.#mode = "closed";
+          return;
+        }
+        if (c === '"') {
+          this.beginKey(at);
+          return;
+        }
+        this.fail();
+        return;
+      case "key-only":
+        if (isWhitespace(c)) return;
+        if (c === '"') {
+          this.beginKey(at);
+          return;
+        }
+        this.fail();
+        return;
+      case "key":
+        this.stepKey(c, at);
+        return;
+      case "colon":
+        if (isWhitespace(c)) return;
+        if (c === ":") {
+          this.#mode = "value";
+          return;
+        }
+        this.fail();
+        return;
+      case "value":
+        this.beginValue(c, at);
+        return;
+      case "string": {
+        const entry = this.#current;
+        entry.end = at;
+        this.#current = null;
+        this.#mode = "comma-or-end";
+        return;
+      }
+      case "scalar":
+        this.stepScalar(c, at);
+        return;
+      case "nested":
+        this.stepNested(c, at);
+        return;
+      case "comma-or-end":
+        if (isWhitespace(c)) return;
+        if (c === ",") {
+          this.#mode = "key-only";
+          return;
+        }
+        if (c === "}") {
+          this.#mode = "closed";
+          return;
+        }
+        this.fail();
+        return;
+      case "closed":
+        if (isWhitespace(c)) return;
+        this.fail();
+        return;
+      /* v8 ignore next 2 -- scan() stops stepping once the view is invalid. */
+      case "invalid":
+        return;
+      /* v8 ignore next 2 -- Every scanner mode has a handler above. */
+      default:
+        assertNever(this.#mode);
+    }
+  }
+  fail() {
+    this.#invalidAt = this.#consumed;
+    this.#mode = "invalid";
+    this.#current = null;
+  }
+  beginKey(at) {
+    this.#mode = "key";
+    this.#keyStart = at + 1;
+    this.#keyEscaped = false;
+    this.#escape = false;
+  }
+  stepKey(c, at) {
+    if (c < " ") {
+      this.fail();
+      return;
+    }
+    if (this.#escape) {
+      this.#escape = false;
+      return;
+    }
+    if (c === "\\") {
+      this.#escape = true;
+      this.#keyEscaped = true;
+      return;
+    }
+    if (c !== '"') return;
+    const raw = this.slice(this.#keyStart, at);
+    if (this.#keyEscaped) {
+      try {
+        this.#key = JSON.parse(`"${raw}"`);
+      } catch (_error) {
+        this.fail();
+        return;
+      }
+    } else {
+      this.#key = raw;
+    }
+    this.#mode = "colon";
+  }
+  open(entry) {
+    if (!this.#entries.has(this.#key)) this.#order.push(this.#key);
+    this.#entries.set(this.#key, entry);
+    this.#current = entry;
+  }
+  beginValue(c, at) {
+    if (isWhitespace(c)) return;
+    if (c === '"') {
+      this.open({
+        kind: "string",
+        start: at + 1,
+        end: -1,
+        needsDecoding: false,
+        invalidAt: void 0,
+        length: void 0,
+        text: void 0,
+        prefixes: void 0
+      });
+      this.#escape = false;
+      this.#mode = "string";
+      return;
+    }
+    if (c === "}" || c === "," || c === ":" || c === "]") {
+      this.fail();
+      return;
+    }
+    this.open({ kind: "value", start: at, end: -1, parsed: void 0, invalid: false });
+    if (c === "{" || c === "[") {
+      this.#mode = "nested";
+      this.#nestedEnds = [c === "{" ? "}" : "]"];
+      this.#nestedInString = false;
+      this.#escape = false;
+      return;
+    }
+    this.#mode = "scalar";
+  }
+  stepScalar(c, at) {
+    if (c !== "," && c !== "}" && !isWhitespace(c)) return;
+    this.closeValue(at);
+    this.#mode = c === "," ? "key-only" : c === "}" ? "closed" : "comma-or-end";
+  }
+  stepNested(c, at) {
+    if (this.#nestedInString) {
+      this.#nestedInString = false;
+      return;
+    }
+    if (c === '"') {
+      this.#nestedInString = true;
+      return;
+    }
+    if (c === "{" || c === "[") {
+      this.#nestedEnds.push(c === "{" ? "}" : "]");
+      return;
+    }
+    if (c === "}" || c === "]") {
+      if (this.#nestedEnds.pop() !== c) {
+        this.fail();
+        return;
+      }
+      if (this.#nestedEnds.length === 0) {
+        this.closeValue(at + 1);
+        this.#mode = "comma-or-end";
+      }
+    }
+  }
+  closeValue(end) {
+    const entry = this.#current;
+    entry.end = end;
+    this.#current = null;
+  }
+};
+
 // packages/util/values/src/index.ts
 function assertNever(value, context) {
   const rendered = JSON.stringify(value) ?? String(value);
@@ -64637,7 +65251,6 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
   }
   /** Notify topology observers without letting one broken listener veto the commit. */
   emitAdaptersUpdated() {
-    let invariantFailure;
     for (const listener of this.ctx.events.dispatch("emit", ["llm/adapters-updated"])) {
       try {
         const returned = listener();
@@ -64647,14 +65260,9 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
           });
         }
       } catch (error51) {
-        if (error51?.code === "INVARIANT") {
-          invariantFailure ??= error51;
-          continue;
-        }
         this.warnAdaptersListenerFailure(error51);
       }
     }
-    if (invariantFailure !== void 0) throw invariantFailure;
   }
   /** Contained-listener diagnostic shared by the sync and async failure paths. */
   warnAdaptersListenerFailure(error51) {
@@ -65079,20 +65687,29 @@ var LlmRuntime = class extends (_a = TypertRemoteService, _listProviders_dec = [
    * Resolve one call under its current adapter registration. The returned
    * one-shot handle keeps that registration across header logging and dispatch,
    * so HMR cannot combine one adapter's capability result with another adapter.
-   * @param config - provider/model route and optional request controls.
+   * An optional synchronous callback selects concrete controls using captured
+   * model metadata. Defaults and validation apply to its result. Callback
+   * failures and cancellation reject preparation before dispatch.
+   * @param config - provider/model route and optional concrete request controls.
    * @param signal - optional cancellation for adapter-owned capability lookup.
+   * @param configure - pure control selection, called once before defaults and validation.
    * @returns a prepared config and its registration-bound stream entry point.
    */
-  async prepareCall(config2, signal) {
-    const registration = this.registration(config2.provider);
-    const adapterCall = await registration.adapter.prepareCall(config2.provider, config2.model, signal);
-    const modelInfo = this.normalizeModelInfo(registration, config2.model, adapterCall.model);
-    const resolved = this.resolveCallWithInfo(config2, modelInfo);
+  async prepareCall(config2, signal, configure2) {
+    signal?.throwIfAborted();
+    const { provider, model, ...controls } = config2;
+    const registration = this.registration(provider);
+    const adapterCall = await registration.adapter.prepareCall(provider, model, signal);
+    signal?.throwIfAborted();
+    const modelInfo = this.normalizeModelInfo(registration, model, adapterCall.model);
+    const proposed = configure2 === void 0 ? config2 : { ...configure2(deepFreeze(structuredClone(controls)), deepFreeze(modelInfo)), provider, model };
+    signal?.throwIfAborted();
+    const resolved = this.resolveCallWithInfo(proposed, modelInfo);
     const resolvedConfig = deepFreeze(structuredClone(resolved.config));
     const context = resolved.context === void 0 ? void 0 : deepFreeze(structuredClone(resolved.context));
     const adapterDefaults = deepFreeze({
-      ...config2.reasoningEffort === void 0 && resolvedConfig.reasoningEffort !== void 0 ? { reasoningEffort: true } : {},
-      ...config2.maxTokens === void 0 && resolvedConfig.maxTokens !== void 0 ? { maxTokens: true } : {}
+      ...proposed.reasoningEffort === void 0 && resolvedConfig.reasoningEffort !== void 0 ? { reasoningEffort: true } : {},
+      ...proposed.maxTokens === void 0 && resolvedConfig.maxTokens !== void 0 ? { maxTokens: true } : {}
     });
     let dispatched = false;
     return Object.freeze({
@@ -81085,6 +81702,7 @@ var KNOWN_SESSION_EVENT_TYPES = /* @__PURE__ */ new Set([
   "turn/start",
   "user/message",
   "web/deepseek-search-llm-request",
+  "working-directory/change",
   "workspace/changes"
 ]);
 var MESSAGE_PROJECTION_EVENT_TYPES = /* @__PURE__ */ new Set([
@@ -81106,14 +81724,8 @@ function deriveEventMessage(event, projectedMessages) {
   const projected = projectedMessages?.get(event.seq);
   if (projected !== void 0) return projected;
   switch (event.type) {
-    // Ordinary prompts and injected context project in user role: the event's
-    // model-facing content stays verbatim. Do NOT re-add per-type framing
-    // (e.g. `<context>`) here: framing is caller-owned — a producer bakes it
-    // into `content`, as agent-instructions does with `<system-reminder>` — or,
-    // if reintroduced, must be driven by the event `meta` map and a dedicated
-    // renderer, keeping this projection a verbatim pass-through. See the
-    // deferred design note in
-    // ../../../../.agents/notes/implemented/simplification/2026-07-20-unwrap-injected-content-envelopes.md
+    // Ordinary prompts and injected context retain producer-owned framing.
+    // See Derived history in packages/core/session/README.md.
     case "user/message": {
       return event.data;
     }
@@ -81801,6 +82413,17 @@ function invokeContainedSessionObservers(ctx, name2, id, args, callbacks) {
   }
 }
 var attachments = /* @__PURE__ */ new WeakMap();
+var PLUGIN_RECORD_TYPE = /^plugin:[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*$/u;
+function isPluginRecordType(type) {
+  return PLUGIN_RECORD_TYPE.test(type);
+}
+function assertPluginRecordEvent(value) {
+  const { type } = value;
+  if (!isPluginRecordType(type)) {
+    throw new Error(`plugin record type "${type}" must be "plugin:" followed by lowercase slash-separated segments`);
+  }
+}
+var commitPluginRecord;
 var Session = class _Session {
   log = [];
   /** Single incremental owner of surface acceptance and projection state. */
@@ -82036,10 +82659,7 @@ var Session = class _Session {
     if (surfaceMetadataSnapshot === void 0) {
       throw new Error(`session event "${type}" carries non-JSON-serializable surface metadata`);
     }
-    const entry = attachments.get(this);
-    if (entry?.appending) {
-      throw new Error("session append cannot reenter while another append is being published");
-    }
+    const entry = this.publicationEntry();
     const event = deepFreeze({
       type,
       seq: SessionSeq(this.log.length),
@@ -82048,6 +82668,54 @@ var Session = class _Session {
       ...surfaceMetadataSnapshot
     });
     validateSessionEventData(event, `session event "${type}" at seq ${event.seq}`);
+    this.commit(event, entry);
+    return event;
+  }
+  static {
+    commitPluginRecord = (session, type, data) => session.#appendRecord(type, data);
+  }
+  /**
+   * Commit one plugin record; {@link appendPluginRecord} is the only caller.
+   * @param type - record type, checked against the plugin record grammar.
+   * @param data - JSON payload, snapshotted before it enters the log.
+   * @returns the record's sequence number.
+   */
+  #appendRecord(type, data) {
+    const dataSnapshot = snapshotJsonValue(data);
+    if (dataSnapshot === void 0) {
+      throw new Error(`plugin record "${type}" carries non-JSON-serializable data`);
+    }
+    const entry = this.publicationEntry();
+    const record2 = deepFreeze({
+      type,
+      seq: SessionSeq(this.log.length),
+      time: Date.now(),
+      data: dataSnapshot,
+      ignorable: true
+    });
+    assertPluginRecordEvent(record2);
+    this.commit(record2, entry);
+    return record2.seq;
+  }
+  /**
+   * Read the store attachment for one append, refusing an append that
+   * reenters while another append is being published.
+   * @returns the attachment, or undefined for a detached Session.
+   */
+  publicationEntry() {
+    const entry = attachments.get(this);
+    if (entry?.appending) {
+      throw new Error("session append cannot reenter while another append is being published");
+    }
+    return entry;
+  }
+  /**
+   * Accept one frozen candidate at the next sequence number, enter it into the
+   * log, and notify `session/event` observers with per-listener containment.
+   * @param event - the candidate built at the current log length.
+   * @param entry - the attachment read before the candidate was built.
+   */
+  commit(event, entry) {
     this.surfaceManager.validateNext(event);
     if (entry !== void 0) entry.appending = true;
     try {
@@ -82061,7 +82729,6 @@ var Session = class _Session {
       if (callbacks !== void 0 && entry !== void 0) {
         invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
       }
-      return event;
     } finally {
       if (entry !== void 0) {
         entry.appending = false;
@@ -83004,13 +83671,14 @@ var SessionTitleService = class extends Service {
   }
   /**
    * Register the sole optional title provider. Disposal aborts its pending and
-   * active work before another provider may register.
+   * active work; a replacement may register once disposal has started, and the
+   * closing provider's late results never commit.
    * @param provider - provider identity, cadence, and generation function.
    * @returns exact Cordis effect disposer, which settles after active calls quiesce.
    */
   register(provider) {
     this.validateProvider(provider);
-    if (this.registration !== void 0) {
+    if (this.registration !== void 0 && !this.registration.closing) {
       throw new Error(`session-title provider "${this.registration.provider.id}" is already registered`);
     }
     const registration = {
@@ -83079,7 +83747,7 @@ var SessionTitleService = class extends Service {
     if (session === void 0 || state === void 0 || pending === void 0) return;
     const boundary = this.ctx.sessionProjections.stateOf(session, "turnBoundary")?.lastStepBoundary;
     const route = session.requestHeader()?.config;
-    if (boundary?.kind !== "start" || boundary.seq <= pending.throughSeq || route?.provider !== options.provider || route.model !== options.model) return;
+    if (boundary?.kind !== "start" || route?.provider !== options.provider || route.model !== options.model) return;
     this.startPending(session, state, pending, { provider: options.provider, model: options.model });
   }
   /** Consume one pending revision and schedule its non-blocking provider call. */
@@ -83107,11 +83775,14 @@ var SessionTitleService = class extends Service {
       this.assertCurrent(session, work);
       await this.ensureFallback(session);
       this.assertCurrent(session, work);
-      const messages = collectSessionTitleMessages(session.snapshotEvents(), work.throughSeq);
+      const events = session.snapshotEvents();
+      const messages = collectSessionTitleMessages(events, work.throughSeq);
+      const currentTitle = foldSessionTitle(events);
       const result = await work.registration.provider.generate({
         session,
         messages,
         ...route === void 0 ? {} : { route },
+        ...currentTitle === void 0 ? {} : { currentTitle },
         signal: work.signal
       });
       this.assertCurrent(session, work);

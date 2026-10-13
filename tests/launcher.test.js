@@ -675,6 +675,6 @@ test('engineCompatibility admits the bundle release line and rejects other lines
   assert.deepEqual(engineCompatibility('unknown'), { ok: true })
   const rejected = engineCompatibility('0.1.6-alpha.2')
   assert.equal(rejected.ok, false)
-  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.0-rc\.2/)
+  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.1-alpha\.2/)
   assert.deepEqual(engineCompatibility('0.1.6-alpha.2', { DSH_TUI_SKIP_ENGINE_CHECK: '1' }), { ok: true })
 })

@@ -561,7 +561,7 @@ export const internals: {
   clipboardSpawn: (command, args, options) => spawn(command, [...args], options),
 }
 
-/** Observable ownership facts checked by the package invariant companion. */
+/** Observable ownership facts about the TUI root effect. */
 export interface TuiRuntimeLifecycleSnapshot {
   /** Root-effect phase. */
   readonly phase: 'starting' | 'active' | 'ordinary-unload' | 'process-exit' | 'settled'
@@ -581,7 +581,7 @@ const runtimeLifecycleObservers = new Set<TuiRuntimeLifecycleObserver>()
 /**
  * Observe every live TUI root-effect ownership transition and seed the
  * observer with runtimes that already started.
- * @param observer - synchronous invariant check for one immutable snapshot.
+ * @param observer - synchronous observer for one immutable snapshot.
  * @returns a disposer that removes the observer.
  */
 export function observeTuiRuntimeLifecycle(
