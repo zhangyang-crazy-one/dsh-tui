@@ -44,6 +44,7 @@ import { applyTheme } from '../src/theme.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 import type { FakeTtyStdin } from './helpers.ts'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import { SessionId } from '@deepseek-ai/dsh-session'
 
 const IDLE_MODEL: ViewModel = {
   history: [],
@@ -195,6 +196,36 @@ function renderPhaseErrors(): string[] {
 }
 
 describe('TuiLoop real input path', () => {
+  it.each(['model', 'session'] as const)('selects the moved %s row when navigation and Enter share one stdin chunk', async (pane) => {
+    const actions: Parameters<TuiController['dispatch']>[0][] = []
+    const modelRows = ['first', 'second'].map(model => ({ id: `test:${model}`, provider: 'test', model, name: model, fallback: false, current: false }))
+    let model: ModelPaneState = { ...EMPTY_MODEL_PANE, open: pane === 'model', rows: modelRows }
+    let sessions: SessionPaneState = { ...EMPTY_PANE, open: pane === 'session',
+      rows: ['first', 'second'].map(id => ({ id: SessionId(id), title: id, updatedAt: 1 })) }
+    const controller: TuiController = {
+      ...stubController((action) => {
+        const value = action as Parameters<TuiController['dispatch']>[0]
+        actions.push(value)
+        if (value.kind === 'model-move') model = { ...model, selectedIndex: model.selectedIndex + value.delta }
+        if (value.kind === 'session-pane-move') sessions = { ...sessions, selectedIndex: sessions.selectedIndex + value.delta }
+      }, []),
+      getModelPane: () => model,
+      getSessionPane: () => sessions,
+    }
+    const { instance, stdin } = mount(controller, true)
+    try {
+      await instance.waitUntilRenderFlush()
+      await press(stdin, 'j\r')
+      await instance.waitUntilRenderFlush()
+      expect(actions).toContainEqual(pane === 'model'
+        ? { kind: 'select-model', id: 'test:second' }
+        : { kind: 'select-session', id: SessionId('second') })
+      expect(actions).not.toContainEqual(pane === 'model'
+        ? { kind: 'select-model', id: 'test:first' }
+        : { kind: 'select-session', id: SessionId('first') })
+    } finally { instance.unmount() }
+  })
+
   it.each([false, true])('keeps one model label and explicitly selects footer details=%s', (details) => {
     const footer = {
       provider: 'provider', model: 'unique-model', status: '空闲',

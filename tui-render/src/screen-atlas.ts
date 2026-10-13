@@ -367,7 +367,11 @@ export class ScreenAtlas {
     return { top: 1, bottom: this.height }
   }
 
-  /** Clamp screen point to selectable transcript rows and valid columns. */
+  /**
+   * Clamp a screen point to selectable transcript rows and valid columns.
+   * @param point - 1-based terminal coordinates.
+   * @returns coordinates inside the selectable transcript.
+   */
   clampToTranscript(point: ScreenPoint): ScreenPoint {
     const { top, bottom } = this.transcriptBounds
     return {
@@ -376,7 +380,13 @@ export class ScreenAtlas {
     }
   }
 
-  /** Plain text for a horizontal slice of one row with rail excluded. */
+  /**
+   * Plain text for a horizontal slice of one row, excluding the rail.
+   * @param row - 1-based terminal row.
+   * @param fromCol - first inclusive 1-based column.
+   * @param toCol - last inclusive 1-based column.
+   * @returns row text with trailing spaces removed.
+   */
   extractRowText(row: number, fromCol: number = 1, toCol: number = this.width): string {
     let line = ''
     for (let col = fromCol; col <= toCol; col++) {

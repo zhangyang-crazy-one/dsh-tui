@@ -161,6 +161,49 @@ describe('DeepSeek account page', () => {
     expect(b.controller.getAccountPane().status).toBe('signed-out')
   })
 
+  it('discards an old completed profile while its balance settles after sign-out and another login', async () => {
+    const b = await bench()
+    const oldBalance = Promise.withResolvers<Awaited<ReturnType<typeof b.account.getBalance>>>()
+    b.account.getBalance.mockImplementationOnce(() => oldBalance.promise)
+    b.account.getProfile.mockResolvedValueOnce({ status: 'ready', value: { id: null, name: 'Account A', contact: 'a@example.com' } })
+    b.account.publish(signedIn)
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.account.getProfile).toHaveBeenCalledTimes(1))
+    b.input('sign-out')
+    b.input('confirm')
+    await vi.waitFor(() => expect(b.controller.getAccountPane().status).toBe('signed-out'))
+    b.account.publish({ ...signedIn, attempt: { id: 'attempt-2' as SignInAttemptId, phase: 'succeeded' } })
+    await vi.waitFor(() => expect(b.controller.getAccountPane().profile).toBe('Ada · a***@example.com'))
+    oldBalance.resolve({ status: 'ready', value: [{ currency: 'CNY', balance: '1' }], bonusWallets: [] })
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    expect(b.controller.getAccountPane()).toMatchObject({ profile: 'Ada · a***@example.com', balance: 'CNY 12.30' })
+  })
+
+  it.each(['close', 'reopen', 'expiry', 'dispose'] as const)('discards pending account details after %s', async (action) => {
+    const b = await bench()
+    const oldBalance = Promise.withResolvers<Awaited<ReturnType<typeof b.account.getBalance>>>()
+    b.account.getBalance.mockImplementationOnce(() => oldBalance.promise)
+    b.account.publish(signedIn)
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.account.getProfile).toHaveBeenCalledTimes(1))
+    let disposal: Promise<void> | undefined
+    if (action === 'expiry') b.ctx.emit('deepseek-account/session-expired')
+    else if (action === 'dispose') disposal = b.controller.dispose()
+    else {
+      b.input('close')
+      if (action === 'reopen') {
+        b.account.getProfile.mockResolvedValueOnce({ status: 'ready', value: { id: null, name: 'Reopened', contact: '' } })
+        b.controller.dispatch({ kind: 'command', query: 'login' })
+        await vi.waitFor(() => expect(b.controller.getAccountPane().profile).toBe('Reopened'))
+      }
+    }
+    const snapshot = b.controller.getAccountPane()
+    oldBalance.resolve({ status: 'ready', value: [{ currency: 'CNY', balance: '1' }], bonusWallets: [] })
+    if (disposal !== undefined) await disposal
+    else await new Promise<void>(resolve => setTimeout(resolve, 0))
+    expect(b.controller.getAccountPane()).toEqual(snapshot)
+  })
+
   it('surfaces account sign-in-required and expiry events in the status row', async () => {
     const b = await bench()
     b.ctx.emit('deepseek-account/model-sign-in-required')

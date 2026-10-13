@@ -544,6 +544,31 @@ describe('session resume', () => {
     await test.ctx.fiber.dispose()
   })
 
+  it('switches to the requested session after a pending create settles', async () => {
+    const test = await transitionBench()
+    const candidateReady = Promise.withResolvers<undefined>()
+    const releaseCandidate = Promise.withResolvers<undefined>()
+    let candidate: TransitionHandle | undefined
+    test.setCreateOverride(async (ownerCtx, options) => {
+      candidate = await test.makeHandle(ownerCtx, options.sessionId, options.setup)
+      candidateReady.resolve(undefined)
+      await releaseCandidate.promise
+      return candidate
+    })
+    test.controller.dispatch({ kind: 'new-session' })
+    await candidateReady.promise
+    test.controller.dispatch({ kind: 'select-session', id: 'queued-target' })
+    test.controller.dispatch({ kind: 'select-session', id: 'queued-target' })
+    expect(test.resumeCalls).not.toHaveBeenCalled()
+    releaseCandidate.resolve(undefined)
+    await vi.waitFor(() => {
+      expect(test.controller.session?.id).toBe('queued-target')
+      expect(test.resumeCalls).toHaveBeenCalledTimes(1)
+      expect(candidate?.dispose).toHaveBeenCalledTimes(1)
+    })
+    await test.ctx.fiber.dispose()
+  })
+
   it('contains post-commit disposal and old-command cancellation failures', async () => {
     const test = await transitionBench()
     const warn = vi.spyOn(test.ctx.logger, 'warn')

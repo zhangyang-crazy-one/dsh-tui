@@ -62,6 +62,7 @@ Plugins 覆盖层渲染控制器提供的本地化清单、操作结果、预检
 
 ### 高级交互约定
 
+- Git 分支检测读取 `.git/HEAD` 或 worktree/submodule 的 gitdir 文件；绝对和相对 gitdir 路径均从工作目录解析。
 - Dialog 把 StreamView 留在内容槽并占用输入槽；浏览覆盖层替换内容，除编辑态外隐藏组合器。Todo、jobs 与 workflow HUD 行绝不捕获输入。默认状态行在 80 列及以上显示十格上下文用量条、百分比、缓存命中率与运行状态，空间允许时补充紧凑的绝对用量和操作提示。没有权威值的指标保持缺席。上下文与缓存摘要和显式详情共享计算口径；一般提示与绝对用量先于指标摘要省略，错误与重试优先显示。Retry 文案只存在于匹配的持久 `llm/retry` 与 `llm/retry-started` 记录之间。默认页脚只有一行，主动开启详情后最多保留三行。当前 goal 会在受限第一行替换 cwd，而不会消失。
 - [`ModelPane`](src/model-pane.tsx) 最多渲染 30 行目录，并让窗口跟随高亮索引移动，因此 Up/Down 或 j/k 可以到达长目录中的每个模型。脚注报告当前窗口上方与下方隐藏的数量；Enter 通过运行时控制器应用高亮的 provider/model 组合。
 - [`SessionPane`](src/session-pane.tsx) 按 `columns` 和 `maxRows` 为标题、时间、当前会话标记及重名 id 提示分配空间。当前行可见且高度允许时，其下方显示精确的 `会话 ID · {parentId}`。[`AgentHubPane`](src/agent-hub-pane.tsx) 保留 `子会话 ID · {childId}`。两个面板都接收控制器提供的类型化 `SessionId`；[`session-pane.spec.tsx`](tests/session-pane.spec.tsx) 与 [`agent-hub-pane.spec.tsx`](tests/agent-hub-pane.spec.tsx) 拥有身份和转义行为验证。

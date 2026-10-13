@@ -3,7 +3,7 @@
   "version": "0.2.1-alpha.2",
   "type": "module",
   "license": "MIT",
-  "description": "The deepseek-tui terminal render layer: session projection, DeepSeek theme tokens, Ink components, and the throttled render loop. A pure consumer — it registers no harness services.",
+  "description": "The deepseek-tui terminal render layer: session projection, DeepSeek theme tokens, Ink components, and the throttled render loop. A pure consumer \u2014 it registers no harness services.",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -32,7 +32,8 @@
     "@deepseek-ai/dsh-compaction": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-token-meter": "workspace:^"
+    "@deepseek-ai/dsh-token-meter": "workspace:^",
+    "@deepseek-ai/dsh-workspace-changes": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -40,7 +41,8 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-token-meter": "workspace:^",
-    "@types/react": "~19.2.18"
+    "@types/react": "~19.2.18",
+    "@deepseek-ai/dsh-workspace-changes": "workspace:^"
   },
   "repository": {
     "type": "git",

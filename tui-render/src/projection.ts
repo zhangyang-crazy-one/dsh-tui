@@ -25,12 +25,14 @@
  * Session identity before calling this module. The projection API receives no
  * Session object and therefore cannot verify Session identity.
  *
- * Durable replay and live delivery use the same fold through {@link Projector.seed} and {@link Projector.push}.
+ * Committed events fold through {@link Projector.seed} and {@link Projector.push};
+ * transient assistant frames enter through {@link Projector.pushStreamFrame}.
  * @module @deepseek-ai/dsh-tui-render/projection
  */
 
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
+import type {} from '@deepseek-ai/dsh-workspace-changes/types'
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import type { ToolCallId, ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
@@ -38,13 +40,6 @@ import type { TurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import { isHumanUserMessage } from './message-visibility.ts'
 import type { WorkspaceChangesCardView } from './workspace-changes-card.ts'
-
-declare module '@deepseek-ai/dsh-session' {
-  interface SessionEventMap {
-    'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
-    'workspace/changes': { turn: number }
-  }
-}
 
 /** One tool call observed inside the active turn. */
 export interface ProjectedToolCall {
@@ -627,13 +622,6 @@ export function createProjector(): Projector {
         if (!isHumanUserMessage(event)) return
         const text = projectUserContent(event.data.content)
         appendHistory({ id: event.seq, kind: 'user', text, timestamp: event.time })
-        return
-      }
-      case 'assistant/chunk': {
-        if (activeTurn === undefined) return
-        assembler ??= new BlockAssembler()
-        assembler.push(event.data.chunk)
-        replaceStep(assembler.blocks())
         return
       }
       case 'assistant/message': {

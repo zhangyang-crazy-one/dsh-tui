@@ -931,7 +931,7 @@ defineMethod("intersect", ["list"], ({ list }) => {
 defineMethod("transform", ["inner", "callback", "preserve"], ({ inner }, isInner) => inner.toString(isInner));
 var src_default = Schema;
 
-// ../../dsh-tui/plugins/zen-proxy/index.js
+// ../dsh-tui/plugins/zen-proxy/index.js
 import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";

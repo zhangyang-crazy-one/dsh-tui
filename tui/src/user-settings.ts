@@ -49,12 +49,16 @@ export const TuiUserSettings: z<TuiUserSettings> = z.object({
 
 /** Live read access to the current `tui` settings snapshot. */
 export interface TuiSettingsService {
-  /** @returns the current settings; never cached across edits. */
+  /**
+   * Read the current volatile TUI presentation preferences.
+   * @returns the current settings snapshot; reread after settings edits.
+   */
   get(): TuiUserSettings
 }
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
+    /** Live TUI presentation preferences supplied by the settings plugin. */
     tuiSettings: TuiSettingsService
   }
 }

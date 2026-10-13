@@ -1175,6 +1175,7 @@ export class RuntimeController implements TuiController {
   /** The one controller-owned transition and its shared in-flight promise. */
   private transitionState: SessionTransitionState = IDLE_TRANSITION
   private transitionInFlight: Promise<void> | undefined
+  private transitionInFlightRequest: SessionTransitionRequest | undefined
   /** The owned session, exposed for the exit flush. */
   session: Session | undefined
   /** Directory rows, newest activity first; refreshed from persistence. */
@@ -1352,6 +1353,7 @@ export class RuntimeController implements TuiController {
   /** DeepSeek account page; the watch subscription lives while the page is open. */
   private accountPane: AccountPaneState = { ...EMPTY_ACCOUNT_PANE }
   private accountWatch: AbortController | undefined
+  private accountDetailsRevision = 0
   private accountAttemptId: SignInAttemptId | undefined
   private accountUrlOpened: string | undefined
   private pluginsBundles: BundleInfo[] = []
@@ -1476,6 +1478,7 @@ export class RuntimeController implements TuiController {
         this.setFeedback(`✗ ${tuiCopy('accountSignInRequired', this.getLocale())}`)
       }),
       ctx.on('deepseek-account/session-expired', () => {
+        this.accountDetailsRevision++
         this.setFeedback(`✗ ${tuiCopy('accountSessionExpired', this.getLocale())}`)
         if (this.accountPane.open) this.updateAccount({ profile: undefined, balance: undefined })
       }),
@@ -2774,7 +2777,10 @@ export class RuntimeController implements TuiController {
     this.modelError = undefined
   }
 
-  /** Return the latest DeepSeek account page snapshot. */
+  /**
+   * Return the latest DeepSeek account page snapshot.
+   * @returns current account presentation state.
+   */
   getAccountPane(): AccountPaneState {
     return this.accountPane
   }
@@ -2819,11 +2825,13 @@ export class RuntimeController implements TuiController {
   /** Fold one account snapshot; a newly stored credential loads profile and balance. */
   private applyAccountView(view: AccountView): void {
     const attempt = view.attempt
+    const identityChanged = this.accountPane.status !== view.status || this.accountAttemptId !== attempt?.id
+    if (identityChanged) this.accountDetailsRevision++
     this.accountAttemptId = attempt?.id
-    const wasSignedIn = this.accountPane.status === 'credential-stored'
+    const wasSignedIn = this.accountPane.status === 'credential-stored' && !identityChanged
     this.updateAccount({ status: view.status, phase: attempt?.phase, authorizeUrl: attempt?.authorizeUrl,
       errorCode: attempt?.errorCode,
-      ...(view.status === 'signed-out' ? { profile: undefined, balance: undefined } : {}) })
+      ...(identityChanged || view.status === 'signed-out' ? { profile: undefined, balance: undefined } : {}) })
     if (attempt?.phase === 'waiting-browser' && attempt.authorizeUrl !== undefined && this.accountUrlOpened !== attempt.authorizeUrl) {
       this.accountUrlOpened = attempt.authorizeUrl
       // A remote terminal's browser cannot reach this host's loopback callback without a forward; show the link only.
@@ -2832,13 +2840,16 @@ export class RuntimeController implements TuiController {
     if (view.status === 'credential-stored' && !wasSignedIn) this.ownWork(this.loadAccountDetails(), 'account details')
   }
 
-  /** Read profile and balance independently; either failure leaves the other visible. */
+  /** Read profile and balance; only the originating page and credential revision may publish. */
   private async loadAccountDetails(): Promise<void> {
     const account = this.ctx.get('deepseekAccount')
     if (account === undefined) return
     const client = this.accountClient()
+    const watch = this.accountWatch
+    const revision = this.accountDetailsRevision
     const [profile, balance] = await Promise.allSettled([account.getProfile(client), account.getBalance(client)])
-    if (this.closed || this.accountPane.status !== 'credential-stored') return
+    if (this.closed || watch === undefined || watch.signal.aborted || this.accountWatch !== watch
+      || revision !== this.accountDetailsRevision || this.accountPane.status !== 'credential-stored') return
     const patch: Partial<AccountPaneState> = {}
     if (profile.status === 'fulfilled' && profile.value?.status === 'ready') {
       const value = profile.value.value
@@ -2853,6 +2864,8 @@ export class RuntimeController implements TuiController {
 
   /** Start or join browser sign-in with the loopback callback served by the webserver row. */
   private async startAccountSignIn(): Promise<void> {
+    const watch = this.accountWatch
+    const current = (): boolean => !this.closed && watch !== undefined && !watch.signal.aborted && this.accountWatch === watch
     const account = this.ctx.get('deepseekAccount')
     if (account === undefined) return
     const webServer = this.ctx.get('webServer')
@@ -2867,24 +2880,29 @@ export class RuntimeController implements TuiController {
     this.updateAccount({ busy: true, error: undefined,
       forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : undefined })
     try {
-      this.applyAccountView(await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, 'web'))
+      const view = await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, 'web')
+      if (current()) this.applyAccountView(view)
     } catch (error) {
-      this.updateAccount({ error: errorReason(error) })
+      if (current()) this.updateAccount({ error: errorReason(error) })
     } finally {
-      this.updateAccount({ busy: false })
+      if (current()) this.updateAccount({ busy: false })
     }
   }
 
   /** Run one account mutation and surface its failure on the page. */
   private async accountOperation(operation: () => Promise<AccountView>, done?: string): Promise<void> {
+    const watch = this.accountWatch
+    const current = (): boolean => !this.closed && watch !== undefined && !watch.signal.aborted && this.accountWatch === watch
     this.updateAccount({ busy: true, error: undefined })
     try {
-      this.applyAccountView(await operation())
+      const view = await operation()
+      if (!current()) return
+      this.applyAccountView(view)
       if (done !== undefined) this.setFeedback(`✓ ${done}`)
     } catch (error) {
-      this.updateAccount({ error: errorReason(error) })
+      if (current()) this.updateAccount({ error: errorReason(error) })
     } finally {
-      this.updateAccount({ busy: false })
+      if (current()) this.updateAccount({ busy: false })
     }
   }
 
@@ -2933,7 +2951,10 @@ export class RuntimeController implements TuiController {
     }
   }
 
-  /** Return the latest Plugins snapshot, including progress received while closed. */
+  /**
+   * Return the latest Plugins snapshot, including progress received while closed.
+   * @returns current plugin inventory and operation presentation.
+   */
   getPluginsPane(): PluginsPaneState {
     return this.pluginsPane
   }
@@ -4798,36 +4819,36 @@ export class RuntimeController implements TuiController {
   }
 
   /**
-   * Enter the single-flight session-transition slot. The first request owns the
-   * immutable intent; repeated create or switch requests receive its promise
-   * until all commit, rollback, and cleanup work settles.
+   * Serialize session transitions and coalesce consecutive identical intents.
+   * Distinct requests wait for the preceding transition's commit or rollback.
    * @param request - create intent or validated persisted Session identity.
-   * @param startup - whether a pre-commit failure must reject startup instead of
-   * becoming transient feedback.
-   * @returns the shared in-flight transition promise.
+   * @param startup - whether a pre-commit failure rejects startup.
+   * @returns completion of this request and its cleanup.
    */
   private transitionSession(
     request: SessionTransitionRequest,
     startup = false,
   ): Promise<void> {
-    if (this.transitionInFlight !== undefined) {
-      return this.transitionInFlight
+    const preceding = this.transitionInFlight
+    const pending = this.transitionInFlightRequest
+    if (preceding !== undefined && pending !== undefined
+      && pending.intent === request.intent
+      && (pending.intent !== 'switch'
+        || (request.intent === 'switch' && pending.id === request.id))) {
+      return preceding
     }
-    // Install the single-flight Promise before the first phase emits. A
-    // synchronous subscriber cannot re-enter between that emit and ownership
-    // of the operation becoming visible.
-    const operation = Promise.resolve().then(
-      () => this.performSessionTransition(request, startup),
-    )
+    const perform = (): Promise<void> => this.performSessionTransition(request, startup)
+    const operation = preceding === undefined
+      ? Promise.resolve().then(perform)
+      : preceding.then(perform, perform)
     this.transitionInFlight = operation
-    void operation.then(
-      () => {
-        this.transitionInFlight = undefined
-      },
-      () => {
-        this.transitionInFlight = undefined
-      },
-    )
+    this.transitionInFlightRequest = request
+    const settled = (): void => {
+      if (this.transitionInFlight !== operation) return
+      this.transitionInFlight = undefined
+      this.transitionInFlightRequest = undefined
+    }
+    void operation.then(settled, settled)
     return operation
   }
 

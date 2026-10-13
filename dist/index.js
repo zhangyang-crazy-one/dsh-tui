@@ -957,21 +957,21 @@ var require_react_development = __commonJS({
         );
         actScopeDepth = prevActScopeDepth;
       }
-      function recursivelyFlushAsyncActWork(returnValue, resolve5, reject) {
+      function recursivelyFlushAsyncActWork(returnValue, resolve6, reject) {
         var queue = ReactSharedInternals.actQueue;
         if (null !== queue)
           if (0 !== queue.length)
             try {
               flushActQueue(queue);
               enqueueTask(function() {
-                return recursivelyFlushAsyncActWork(returnValue, resolve5, reject);
+                return recursivelyFlushAsyncActWork(returnValue, resolve6, reject);
               });
               return;
             } catch (error51) {
               ReactSharedInternals.thrownErrors.push(error51);
             }
           else ReactSharedInternals.actQueue = null;
-        0 < ReactSharedInternals.thrownErrors.length ? (queue = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, reject(queue)) : resolve5(returnValue);
+        0 < ReactSharedInternals.thrownErrors.length ? (queue = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, reject(queue)) : resolve6(returnValue);
       }
       function flushActQueue(queue) {
         if (!isFlushing) {
@@ -1158,7 +1158,7 @@ var require_react_development = __commonJS({
             ));
           });
           return {
-            then: function(resolve5, reject) {
+            then: function(resolve6, reject) {
               didAwaitActCall = true;
               thenable.then(
                 function(returnValue) {
@@ -1168,7 +1168,7 @@ var require_react_development = __commonJS({
                       flushActQueue(queue), enqueueTask(function() {
                         return recursivelyFlushAsyncActWork(
                           returnValue,
-                          resolve5,
+                          resolve6,
                           reject
                         );
                       });
@@ -1182,7 +1182,7 @@ var require_react_development = __commonJS({
                       ReactSharedInternals.thrownErrors.length = 0;
                       reject(_thrownError);
                     }
-                  } else resolve5(returnValue);
+                  } else resolve6(returnValue);
                 },
                 function(error51) {
                   popActScope(prevActQueue, prevActScopeDepth);
@@ -1204,15 +1204,15 @@ var require_react_development = __commonJS({
         if (0 < ReactSharedInternals.thrownErrors.length)
           throw callback = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, callback;
         return {
-          then: function(resolve5, reject) {
+          then: function(resolve6, reject) {
             didAwaitActCall = true;
             0 === prevActScopeDepth ? (ReactSharedInternals.actQueue = queue, enqueueTask(function() {
               return recursivelyFlushAsyncActWork(
                 returnValue$jscomp$0,
-                resolve5,
+                resolve6,
                 reject
               );
-            })) : resolve5(returnValue$jscomp$0);
+            })) : resolve6(returnValue$jscomp$0);
           }
         };
       };
@@ -3294,8 +3294,8 @@ var require_react_reconciler_production = __commonJS({
           currentEntangledActionThenable = {
             status: "pending",
             value: void 0,
-            then: function(resolve5) {
-              entangledListeners.push(resolve5);
+            then: function(resolve6) {
+              entangledListeners.push(resolve6);
             }
           };
         }
@@ -3318,8 +3318,8 @@ var require_react_reconciler_production = __commonJS({
           status: "pending",
           value: null,
           reason: null,
-          then: function(resolve5) {
-            listeners.push(resolve5);
+          then: function(resolve6) {
+            listeners.push(resolve6);
           }
         };
         thenable.then(
@@ -12918,8 +12918,8 @@ var require_react_reconciler_development = __commonJS({
           currentEntangledActionThenable = {
             status: "pending",
             value: void 0,
-            then: function(resolve5) {
-              entangledListeners.push(resolve5);
+            then: function(resolve6) {
+              entangledListeners.push(resolve6);
             }
           };
         }
@@ -12942,8 +12942,8 @@ var require_react_reconciler_development = __commonJS({
           status: "pending",
           value: null,
           reason: null,
-          then: function(resolve5) {
-            listeners.push(resolve5);
+          then: function(resolve6) {
+            listeners.push(resolve6);
           }
         };
         thenable.then(
@@ -28022,22 +28022,22 @@ var init_devtools = __esm({
     init_devtools_window_polyfill();
     init_wrapper();
     init_react_devtools_core_stub();
-    isDevToolsReachable = async () => new Promise((resolve5) => {
+    isDevToolsReachable = async () => new Promise((resolve6) => {
       const socket = new wrapper_default("ws://localhost:8097");
       const timeout = setTimeout(() => {
         socket.terminate();
-        resolve5(false);
+        resolve6(false);
       }, 2e3);
       timeout.unref();
       socket.on("open", () => {
         clearTimeout(timeout);
         socket.terminate();
-        resolve5(true);
+        resolve6(true);
       });
       socket.on("error", () => {
         clearTimeout(timeout);
         socket.terminate();
-        resolve5(false);
+        resolve6(false);
       });
     });
     if (await isDevToolsReachable()) {
@@ -36559,8 +36559,8 @@ var kittyModifiers = {
 var noop = () => {
 };
 var textEncoder = new TextEncoder();
-var yieldImmediate = async () => new Promise((resolve5) => {
-  setImmediate(resolve5);
+var yieldImmediate = async () => new Promise((resolve6) => {
+  setImmediate(resolve6);
 });
 var kittyQueryEscapeByte = 27;
 var kittyQueryOpenBracketByte = 91;
@@ -36777,8 +36777,8 @@ var Ink = class {
       };
     }
     this.initKittyKeyboard();
-    this.exitPromise = new Promise((resolve5, reject) => {
-      this.resolveExitPromise = resolve5;
+    this.exitPromise = new Promise((resolve6, reject) => {
+      this.resolveExitPromise = resolve6;
       this.rejectExitPromise = reject;
     });
     void this.exitPromise.catch(noop);
@@ -37089,9 +37089,9 @@ var Ink = class {
     settleThrottle(this.throttledOnRender, canWriteToStdout);
     settleThrottle(this.throttledLog, canWriteToStdout);
     if (canWriteToStdout && hasWritableState) {
-      await new Promise((resolve5) => {
+      await new Promise((resolve6) => {
         this.options.stdout.write("", () => {
-          resolve5();
+          resolve6();
         });
       });
       return;
@@ -37177,8 +37177,8 @@ var Ink = class {
   async awaitNextRender() {
     if (!this.nextRenderCommit) {
       let resolveRender;
-      const promise2 = new Promise((resolve5) => {
-        resolveRender = resolve5;
+      const promise2 = new Promise((resolve6) => {
+        resolveRender = resolve6;
       });
       this.nextRenderCommit = { promise: promise2, resolve: resolveRender };
     }
@@ -41447,10 +41447,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve5 = constructs2[index2].resolveAll;
-    if (resolve5 && !called.includes(resolve5)) {
-      events = resolve5(events, context);
-      called.push(resolve5);
+    const resolve6 = constructs2[index2].resolveAll;
+    if (resolve6 && !called.includes(resolve6)) {
+      events = resolve6(events, context);
+      called.push(resolve6);
     }
   }
   return events;
@@ -52626,7 +52626,11 @@ var ScreenAtlas = class {
     }
     return { top: 1, bottom: this.height };
   }
-  /** Clamp screen point to selectable transcript rows and valid columns. */
+  /**
+   * Clamp a screen point to selectable transcript rows and valid columns.
+   * @param point - 1-based terminal coordinates.
+   * @returns coordinates inside the selectable transcript.
+   */
   clampToTranscript(point3) {
     const { top, bottom } = this.transcriptBounds;
     return {
@@ -52634,7 +52638,13 @@ var ScreenAtlas = class {
       row: Math.max(top, Math.min(bottom, point3.row))
     };
   }
-  /** Plain text for a horizontal slice of one row with rail excluded. */
+  /**
+   * Plain text for a horizontal slice of one row, excluding the rail.
+   * @param row - 1-based terminal row.
+   * @param fromCol - first inclusive 1-based column.
+   * @param toCol - last inclusive 1-based column.
+   * @returns row text with trailing spaces removed.
+   */
   extractRowText(row, fromCol = 1, toCol = this.width) {
     let line5 = "";
     for (let col = fromCol; col <= toCol; col++) {
@@ -58181,7 +58191,7 @@ function formatQuietStatusRow(view, columns) {
 
 // packages/tui/tui-render/src/git-branch.ts
 import { existsSync as existsSync2, readFileSync as readFileSync2, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 var branchCache = /* @__PURE__ */ new Map();
 var CACHE_TTL_MS = 2e3;
 function detectGitBranch(cwd2) {
@@ -58206,7 +58216,7 @@ function detectGitBranch(cwd2) {
           const match = /gitdir:\s*(.+)/u.exec(gitContent);
           if (match?.[1]) {
             const gitDir = match[1].trim();
-            headPath = join(dir, gitDir, "HEAD");
+            headPath = resolve(dir, gitDir, "HEAD");
           }
         }
         if (headPath && existsSync2(headPath)) {
@@ -60333,8 +60343,30 @@ function TuiLoop({
       setMouseRailListener(void 0);
     };
   }, [controller, frameMetrics, issueViewportCommand]);
+  const syncPaneRef = (ref, read) => {
+    if (read !== void 0) ref.current = read();
+  };
   const handleKey = (key, keyInfo) => {
     frameMetrics?.recordInputEvent();
+    syncPaneRef(paneRef, controller.getSessionPane?.bind(controller));
+    syncPaneRef(searchRef, controller.getSearchPane?.bind(controller));
+    syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller));
+    syncPaneRef(modelPaneRef, controller.getModelPane?.bind(controller));
+    syncPaneRef(helpPaneRef, controller.getHelpPane?.bind(controller));
+    syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller));
+    syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller));
+    syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller));
+    syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller));
+    syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller));
+    syncPaneRef(pluginsPaneRef, controller.getPluginsPane?.bind(controller));
+    syncPaneRef(accountPaneRef, controller.getAccountPane?.bind(controller));
+    syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller));
+    syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller));
+    syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller));
+    syncPaneRef(feedbackPaneRef, controller.getFeedbackPane?.bind(controller));
+    syncPaneRef(workflowOverlayRef, controller.getWorkflowOverlay?.bind(controller));
+    syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller));
+    syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller));
     controller.noteUserActivity();
     if (toolDetailsPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
       if (keyInfo.ctrl && key === "c") controller.dispatch({ kind: "sigint" });
@@ -62339,8 +62371,8 @@ var Fiber = class {
     let inFlight;
     let removeWrapper = () => false;
     const waitForSetup = () => {
-      setupBarrier ??= new Promise((resolve5, reject) => {
-        resolveSetup = resolve5;
+      setupBarrier ??= new Promise((resolve6, reject) => {
+        resolveSetup = resolve6;
         rejectSetup = reject;
       });
       return setupBarrier;
@@ -62894,14 +62926,14 @@ function Inject(name2, config2) {
   };
 }
 ((Inject2) => {
-  function resolve5(inject2, result = /* @__PURE__ */ Object.create(null)) {
+  function resolve6(inject2, result = /* @__PURE__ */ Object.create(null)) {
     if (!inject2) return result;
     if (Array.isArray(inject2)) {
       for (const name2 of inject2) {
         result[name2] = null;
       }
     } else if (Reflect.has(inject2, symbols.checkProto)) {
-      Object.assign(result, resolve5(Object.getPrototypeOf(inject2)));
+      Object.assign(result, resolve6(Object.getPrototypeOf(inject2)));
       for (const name2 of Object.keys(inject2)) {
         result[name2] = inject2[name2] ?? null;
       }
@@ -62912,7 +62944,7 @@ function Inject(name2, config2) {
     }
     return result;
   }
-  Inject2.resolve = resolve5;
+  Inject2.resolve = resolve6;
 })(Inject || (Inject = {}));
 var RegistryService = class {
   constructor(ctx) {
@@ -64448,10 +64480,10 @@ function validateVolatileSchema(schema, path2 = [], blocked = false, seen = /* @
     }
   }
 }
-Schema.extend = function extend(type, resolve5) {
-  resolvers[type] = resolve5;
+Schema.extend = function extend(type, resolve6) {
+  resolvers[type] = resolve6;
 };
-Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
+Schema.resolve = function resolve2(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
   if (!options[checkedVolatile]) {
     validateVolatileSchema(schema, options.path);
@@ -66532,13 +66564,6 @@ function createProjector() {
         appendHistory({ id: event.seq, kind: "user", text: text4, timestamp: event.time });
         return;
       }
-      case "assistant/chunk": {
-        if (activeTurn === void 0) return;
-        assembler ??= new BlockAssembler();
-        assembler.push(event.data.chunk);
-        replaceStep(assembler.blocks());
-        return;
-      }
       case "assistant/message": {
         if (activeTurn !== void 0) {
           replaceStep(
@@ -66856,7 +66881,7 @@ function relaunchProcess(argv, host) {
     stdio: "inherit",
     env: host.env
   });
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     let settled = false;
     child.on("error", (error51) => {
       if (settled) return;
@@ -66866,7 +66891,7 @@ function relaunchProcess(argv, host) {
     child.on("close", (code2, signal) => {
       if (settled) return;
       settled = true;
-      resolve5(exitStatus(code2, signal));
+      resolve6(exitStatus(code2, signal));
     });
   });
 }
@@ -66974,7 +66999,7 @@ import {
   readFile,
   rm
 } from "node:fs/promises";
-import { dirname as dirname2, join as join2, resolve as resolve2 } from "node:path";
+import { dirname as dirname2, join as join2, resolve as resolve3 } from "node:path";
 function parseEditorWords(value) {
   const words = [];
   let current = "";
@@ -67038,7 +67063,7 @@ async function createEditorFile(root, content3) {
   return path2;
 }
 async function validateEditorFile(root, path2) {
-  if (dirname2(resolve2(path2)) !== resolve2(root)) {
+  if (dirname2(resolve3(path2)) !== resolve3(root)) {
     throw new Error("editor draft escaped its private directory");
   }
   const stat2 = await lstat(path2, { bigint: true });
@@ -67190,7 +67215,7 @@ function truncateCodePoints(text4, limit) {
 import { constants as constants2, readFileSync as readFileSync3 } from "node:fs";
 import { access, lstat as lstat2, readFile as readFile2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname as dirname4, resolve as resolve4 } from "node:path";
+import { dirname as dirname4, resolve as resolve5 } from "node:path";
 
 // packages/core/scope/src/index.ts
 var kScope = /* @__PURE__ */ Symbol("dsh.scope");
@@ -84225,7 +84250,7 @@ function installSignalHooks(cleanup) {
 
 // packages/tui/tui/src/export.ts
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { dirname as dirname3, resolve as resolve4 } from "node:path";
 function timeHeaderOf(time3) {
   return new Date(time3).toISOString();
 }
@@ -84306,8 +84331,8 @@ function renderSessionMarkdown(events) {
 `;
 }
 async function exportSessionMarkdown(session, dir) {
-  const resolvedDir = resolve3(dir);
-  const target = resolve3(
+  const resolvedDir = resolve4(dir);
+  const target = resolve4(
     resolvedDir,
     `session-${encodeURIComponent(session.id)}.md`
   );
@@ -85360,6 +85385,7 @@ var RuntimeController = class _RuntimeController {
         this.setFeedback(`\u2717 ${tuiCopy("accountSignInRequired", this.getLocale())}`);
       }),
       ctx.on("deepseek-account/session-expired", () => {
+        this.accountDetailsRevision++;
         this.setFeedback(`\u2717 ${tuiCopy("accountSessionExpired", this.getLocale())}`);
         if (this.accountPane.open) this.updateAccount({ profile: void 0, balance: void 0 });
       })
@@ -85498,6 +85524,7 @@ var RuntimeController = class _RuntimeController {
   /** The one controller-owned transition and its shared in-flight promise. */
   transitionState = IDLE_TRANSITION;
   transitionInFlight;
+  transitionInFlightRequest;
   /** The owned session, exposed for the exit flush. */
   session;
   /** Directory rows, newest activity first; refreshed from persistence. */
@@ -85667,6 +85694,7 @@ var RuntimeController = class _RuntimeController {
   /** DeepSeek account page; the watch subscription lives while the page is open. */
   accountPane = { ...EMPTY_ACCOUNT_PANE };
   accountWatch;
+  accountDetailsRevision = 0;
   accountAttemptId;
   accountUrlOpened;
   pluginsBundles = [];
@@ -86010,7 +86038,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Write one explicitly requested source export without replacing an existing file. */
   async exportToolText(text4, locale) {
-    const path2 = resolve4(this.getCwd(), `tool-${randomUUID2()}.txt`);
+    const path2 = resolve5(this.getCwd(), `tool-${randomUUID2()}.txt`);
     try {
       await writeFile2(path2, text4, { flag: "wx", mode: 384 });
       if (!this.closed) this.setFeedback(`${tuiCopy("toolExported", locale)} \xB7 ${path2}`);
@@ -86777,7 +86805,10 @@ var RuntimeController = class _RuntimeController {
     this.modelStatus = "idle";
     this.modelError = void 0;
   }
-  /** Return the latest DeepSeek account page snapshot. */
+  /**
+   * Return the latest DeepSeek account page snapshot.
+   * @returns current account presentation state.
+   */
   getAccountPane() {
     return this.accountPane;
   }
@@ -86822,14 +86853,16 @@ var RuntimeController = class _RuntimeController {
   /** Fold one account snapshot; a newly stored credential loads profile and balance. */
   applyAccountView(view) {
     const attempt = view.attempt;
+    const identityChanged = this.accountPane.status !== view.status || this.accountAttemptId !== attempt?.id;
+    if (identityChanged) this.accountDetailsRevision++;
     this.accountAttemptId = attempt?.id;
-    const wasSignedIn = this.accountPane.status === "credential-stored";
+    const wasSignedIn = this.accountPane.status === "credential-stored" && !identityChanged;
     this.updateAccount({
       status: view.status,
       phase: attempt?.phase,
       authorizeUrl: attempt?.authorizeUrl,
       errorCode: attempt?.errorCode,
-      ...view.status === "signed-out" ? { profile: void 0, balance: void 0 } : {}
+      ...identityChanged || view.status === "signed-out" ? { profile: void 0, balance: void 0 } : {}
     });
     if (attempt?.phase === "waiting-browser" && attempt.authorizeUrl !== void 0 && this.accountUrlOpened !== attempt.authorizeUrl) {
       this.accountUrlOpened = attempt.authorizeUrl;
@@ -86837,13 +86870,15 @@ var RuntimeController = class _RuntimeController {
     }
     if (view.status === "credential-stored" && !wasSignedIn) this.ownWork(this.loadAccountDetails(), "account details");
   }
-  /** Read profile and balance independently; either failure leaves the other visible. */
+  /** Read profile and balance; only the originating page and credential revision may publish. */
   async loadAccountDetails() {
     const account = this.ctx.get("deepseekAccount");
     if (account === void 0) return;
     const client = this.accountClient();
+    const watch = this.accountWatch;
+    const revision = this.accountDetailsRevision;
     const [profile, balance] = await Promise.allSettled([account.getProfile(client), account.getBalance(client)]);
-    if (this.closed || this.accountPane.status !== "credential-stored") return;
+    if (this.closed || watch === void 0 || watch.signal.aborted || this.accountWatch !== watch || revision !== this.accountDetailsRevision || this.accountPane.status !== "credential-stored") return;
     const patch = {};
     if (profile.status === "fulfilled" && profile.value?.status === "ready") {
       const value = profile.value.value;
@@ -86857,6 +86892,8 @@ var RuntimeController = class _RuntimeController {
   }
   /** Start or join browser sign-in with the loopback callback served by the webserver row. */
   async startAccountSignIn() {
+    const watch = this.accountWatch;
+    const current = () => !this.closed && watch !== void 0 && !watch.signal.aborted && this.accountWatch === watch;
     const account = this.ctx.get("deepseekAccount");
     if (account === void 0) return;
     const webServer = this.ctx.get("webServer");
@@ -86874,23 +86911,28 @@ var RuntimeController = class _RuntimeController {
       forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : void 0
     });
     try {
-      this.applyAccountView(await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, "web"));
+      const view = await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, "web");
+      if (current()) this.applyAccountView(view);
     } catch (error51) {
-      this.updateAccount({ error: errorReason(error51) });
+      if (current()) this.updateAccount({ error: errorReason(error51) });
     } finally {
-      this.updateAccount({ busy: false });
+      if (current()) this.updateAccount({ busy: false });
     }
   }
   /** Run one account mutation and surface its failure on the page. */
   async accountOperation(operation, done) {
+    const watch = this.accountWatch;
+    const current = () => !this.closed && watch !== void 0 && !watch.signal.aborted && this.accountWatch === watch;
     this.updateAccount({ busy: true, error: void 0 });
     try {
-      this.applyAccountView(await operation());
+      const view = await operation();
+      if (!current()) return;
+      this.applyAccountView(view);
       if (done !== void 0) this.setFeedback(`\u2713 ${done}`);
     } catch (error51) {
-      this.updateAccount({ error: errorReason(error51) });
+      if (current()) this.updateAccount({ error: errorReason(error51) });
     } finally {
-      this.updateAccount({ busy: false });
+      if (current()) this.updateAccount({ busy: false });
     }
   }
   /** Enforce the page's state at the action executor. */
@@ -86937,7 +86979,10 @@ var RuntimeController = class _RuntimeController {
         assertNever(input.kind, "AccountPaneInput");
     }
   }
-  /** Return the latest Plugins snapshot, including progress received while closed. */
+  /**
+   * Return the latest Plugins snapshot, including progress received while closed.
+   * @returns current plugin inventory and operation presentation.
+   */
   getPluginsPane() {
     return this.pluginsPane;
   }
@@ -88499,12 +88544,12 @@ var RuntimeController = class _RuntimeController {
       received += chunk2.length;
       if (received <= limit) chunks.push(chunk2);
     });
-    const closed = await new Promise((resolve5) => {
+    const closed = await new Promise((resolve6) => {
       child.on("error", (error51) => {
-        resolve5(error51);
+        resolve6(error51);
       });
       child.on("close", (code2) => {
-        resolve5(code2);
+        resolve6(code2);
       });
     });
     if (closed instanceof Error) {
@@ -88788,30 +88833,28 @@ var RuntimeController = class _RuntimeController {
     }
   }
   /**
-   * Enter the single-flight session-transition slot. The first request owns the
-   * immutable intent; repeated create or switch requests receive its promise
-   * until all commit, rollback, and cleanup work settles.
+   * Serialize session transitions and coalesce consecutive identical intents.
+   * Distinct requests wait for the preceding transition's commit or rollback.
    * @param request - create intent or validated persisted Session identity.
-   * @param startup - whether a pre-commit failure must reject startup instead of
-   * becoming transient feedback.
-   * @returns the shared in-flight transition promise.
+   * @param startup - whether a pre-commit failure rejects startup.
+   * @returns completion of this request and its cleanup.
    */
   transitionSession(request, startup = false) {
-    if (this.transitionInFlight !== void 0) {
-      return this.transitionInFlight;
+    const preceding = this.transitionInFlight;
+    const pending = this.transitionInFlightRequest;
+    if (preceding !== void 0 && pending !== void 0 && pending.intent === request.intent && (pending.intent !== "switch" || request.intent === "switch" && pending.id === request.id)) {
+      return preceding;
     }
-    const operation = Promise.resolve().then(
-      () => this.performSessionTransition(request, startup)
-    );
+    const perform = () => this.performSessionTransition(request, startup);
+    const operation = preceding === void 0 ? Promise.resolve().then(perform) : preceding.then(perform, perform);
     this.transitionInFlight = operation;
-    void operation.then(
-      () => {
-        this.transitionInFlight = void 0;
-      },
-      () => {
-        this.transitionInFlight = void 0;
-      }
-    );
+    this.transitionInFlightRequest = request;
+    const settled = () => {
+      if (this.transitionInFlight !== operation) return;
+      this.transitionInFlight = void 0;
+      this.transitionInFlightRequest = void 0;
+    };
+    void operation.then(settled, settled);
     return operation;
   }
   /**
@@ -90562,10 +90605,10 @@ var RuntimeController = class _RuntimeController {
    * @returns the user's one-shot outcome, or `'cancelled'` if the signal aborts.
    */
   enqueueApproval(request) {
-    return new Promise((resolve5) => {
+    return new Promise((resolve6) => {
       const entry = {
         request,
-        resolve: resolve5,
+        resolve: resolve6,
         seq: ++this.slotSeq,
         settled: false,
         detailsOpen: false,
@@ -90652,10 +90695,10 @@ var RuntimeController = class _RuntimeController {
     if (request.signal?.aborted === true) {
       return Promise.reject(askAborted());
     }
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve6, reject) => {
       const entry = {
         request,
-        resolve: resolve5,
+        resolve: resolve6,
         reject,
         seq: ++this.slotSeq,
         settled: false,
@@ -90991,7 +91034,7 @@ function askUserOptionCount(entry) {
   return entry.request.questions[0]?.options?.length ?? 0;
 }
 async function frameStatsTarget(input) {
-  const absolute = resolve4(input);
+  const absolute = resolve5(input);
   let target;
   try {
     target = await stat(absolute);

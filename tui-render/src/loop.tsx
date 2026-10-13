@@ -2370,8 +2370,31 @@ export function TuiLoop({
       setMouseRailListener(undefined)
     }
   }, [controller, frameMetrics, issueViewportCommand])
+  // One stdin chunk can dispatch navigation and Enter before React commits.
+  const syncPaneRef = <T,>(ref: { current: T }, read: (() => T) | undefined): void => {
+    if (read !== undefined) ref.current = read()
+  }
   const handleKey = (key: string, keyInfo: Key): void => {
     frameMetrics?.recordInputEvent()
+    syncPaneRef(paneRef, controller.getSessionPane?.bind(controller))
+    syncPaneRef(searchRef, controller.getSearchPane?.bind(controller))
+    syncPaneRef(timelineOpenRef, controller.getTimelineOpen?.bind(controller))
+    syncPaneRef(modelPaneRef, controller.getModelPane?.bind(controller))
+    syncPaneRef(helpPaneRef, controller.getHelpPane?.bind(controller))
+    syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller))
+    syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller))
+    syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller))
+    syncPaneRef(permissionPaneRef, controller.getPermissionPane?.bind(controller))
+    syncPaneRef(settingsPaneRef, controller.getSettingsPane?.bind(controller))
+    syncPaneRef(pluginsPaneRef, controller.getPluginsPane?.bind(controller))
+    syncPaneRef(accountPaneRef, controller.getAccountPane?.bind(controller))
+    syncPaneRef(agentHubPaneRef, controller.getAgentHubPane?.bind(controller))
+    syncPaneRef(planDirectoryPaneRef, controller.getPlanDirectoryPane?.bind(controller))
+    syncPaneRef(workspacePaneRef, controller.getWorkspacePane?.bind(controller))
+    syncPaneRef(feedbackPaneRef, controller.getFeedbackPane?.bind(controller))
+    syncPaneRef(workflowOverlayRef, controller.getWorkflowOverlay?.bind(controller))
+    syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller))
+    syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller))
     controller.noteUserActivity()
     if (toolDetailsPaneRef.current.open
       && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
