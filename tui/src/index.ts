@@ -567,7 +567,7 @@ export const internals: {
   editorTtyPath: '/dev/tty',
   processArgv: process.argv,
   clipboardSpawn: (command, args, options) => spawn(command, [...args], options),
-  openUrl: href => { openUrl(href) },
+  openUrl: (href) => { openUrl(href) },
   accountEnvironment: process.env,
 }
 
@@ -587,7 +587,8 @@ type TuiRuntimeLifecycleObserver = (snapshot: TuiRuntimeLifecycleSnapshot) => vo
 
 /**
  * Read this package's version for the account client identity headers.
- * @returns the `version` of the nearest package manifest above the running module: the bundle's in a built install, the TUI workspace package's from source.
+ * @returns the nearest package manifest's version: the installed bundle's version
+ * or the TUI workspace package's version when running from source.
  */
 function tuiClientVersion(): string {
   const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version?: unknown }
@@ -5236,7 +5237,7 @@ export class RuntimeController implements TuiController {
       name: commandName,
       description: `${tuiCopy(key, locale)} (${tuiCopy(this.presentationFlag(field) ? 'on' : 'off', locale)})`,
     }))
-    const localized = [...registry, ...LOCAL_COMMANDS].map(command => {
+    const localized = [...registry, ...LOCAL_COMMANDS].map((command) => {
       const zh = locale === 'zh-CN' ? ZH_COMMAND_DESCRIPTIONS[command.name] : undefined
       return zh === undefined ? command : { ...command, description: zh }
     })
@@ -6382,7 +6383,8 @@ export class RuntimeController implements TuiController {
 
   /**
    * Return the directory the footer shows and `@` mentions and `/files` resolve under.
-   * @returns the bound Session's working directory when the working-directory service is mounted, else the configured run cwd, else the process cwd.
+   * @returns the bound Session's directory when the working-directory service is
+   * mounted, otherwise the configured run cwd or process cwd.
    */
   getCwd(): string {
     return this.sessionDirectory() ?? process.cwd()
@@ -6390,7 +6392,8 @@ export class RuntimeController implements TuiController {
 
   /**
    * The explicit base directory for filesystem lookups.
-   * @returns the bound Session's working directory when the service is mounted, else the configured run cwd; undefined lets the filesystem provider apply its own base.
+   * @returns the bound Session's directory when the service is mounted, otherwise
+   * the configured run cwd; undefined leaves base selection to the filesystem provider.
    */
   private sessionDirectory(): string | undefined {
     const agent = this.agent

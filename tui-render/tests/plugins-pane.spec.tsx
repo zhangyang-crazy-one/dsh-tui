@@ -26,6 +26,11 @@ const opened: PluginsPaneState = { ...EMPTY_PLUGINS_PANE, open: true, available:
 function output(state: PluginsPaneState, columns = 80, rows = 24, locale: 'zh-CN' | 'en-US' = 'en-US') {
   return stripTerminalControls(renderToString(createElement(PluginsPane, { state, locale, maxCols: columns, maxRows: rows }), { columns }))
 }
+async function pressInput(stdin: ReturnType<typeof fakeTtyStdin>, instance: ReturnType<typeof render>, text: string): Promise<void> {
+  stdin.push(text)
+  await new Promise(resolve => setTimeout(resolve, 20))
+  await instance.waitUntilRenderFlush()
+}
 const draft: LoopInputState = { text: 'draft-草稿', commandQuery: undefined, prefixG: false, renaming: false,
   mentionSelectedIndex: 0, mentionDismissed: false, caretIndex: 5 }
 function key(state: PluginsPaneState | undefined, input: string, flags: Record<string, boolean> = {}, buffer = draft) {
@@ -126,29 +131,24 @@ describe('Plugins input', () => {
     const stdout = fakeTtyStdout(), stdin = fakeTtyStdin()
     Object.assign(stdout, { isTTY: true, rows: 24, columns: 80 })
     const instance = render(createElement(TuiLoop, { title: 'test', controller }), { stdout, stdin, patchConsole: false, exitOnCtrlC: false, interactive: true })
-    const press = async (text: string) => {
-      stdin.push(text)
-      await new Promise(resolve => setTimeout(resolve, 20))
-      await instance.waitUntilRenderFlush()
-    }
     try {
       await instance.waitUntilRenderFlush()
-      await press('\x1b[5~')
+      await pressInput(stdin, instance, '\x1b[5~')
       await vi.waitFor(() => expect(visibleFrameSnapshot()?.rows.length).toBeGreaterThan(0))
       await new Promise(resolve => setTimeout(resolve, 180))
       const anchor = visibleFrameSnapshot()?.rows.find(row => row.line.text.includes('message-'))?.id
       expect(anchor).toBeDefined()
-      await press('draft-草稿')
+      await pressInput(stdin, instance, 'draft-草稿')
       controller.dispatch({ kind: 'plugins-pane' })
       await instance.waitUntilRenderFlush()
       page = { ...page, busy: false, result: ['Saved · restart required'] }
       model = { ...model, history: [...model.history, { id: 100, kind: 'user', text: 'new-while-hidden', timestamp: 100 }] }
       notify()
       await instance.waitUntilRenderFlush()
-      await press('\x1b')
+      await pressInput(stdin, instance, '\x1b')
       await vi.waitFor(() => expect(page.open).toBe(false))
       await vi.waitFor(() => expect(visibleFrameSnapshot()?.rows.some(row => row.id === anchor)).toBe(true))
-      await press('!'); await press('\r')
+      await pressInput(stdin, instance, '!'); await pressInput(stdin, instance, '\r')
       expect(sent).toEqual(['draft-草稿!'])
     } finally { instance.unmount(); await instance.waitUntilExit() }
   })
@@ -187,19 +187,14 @@ describe('Plugins input', () => {
     const stdout = fakeTtyStdout(), stdin = fakeTtyStdin()
     Object.assign(stdout, { isTTY: true, rows: 24, columns: 80 })
     const instance = render(createElement(TuiLoop, { title: 'test', controller }), { stdout, stdin, patchConsole: false, exitOnCtrlC: false, interactive: true })
-    const press = async (text: string) => {
-      stdin.push(text)
-      await new Promise(resolve => setTimeout(resolve, 20))
-      await instance.waitUntilRenderFlush()
-    }
     try {
       await instance.waitUntilRenderFlush()
-      await press('jjjj')
-      await press('kjk')
+      await pressInput(stdin, instance, 'jjjj')
+      await pressInput(stdin, instance, 'kjk')
       expect(moves).toEqual([1, 1, 1, 1, -1, 1, -1])
       // The spec field takes the same chunk as typed text, not as navigation.
-      await press('i')
-      await press('jjk')
+      await pressInput(stdin, instance, 'i')
+      await pressInput(stdin, instance, 'jjk')
       expect(texts).toEqual(['jjk'])
       expect(moves).toHaveLength(7)
     } finally { instance.unmount(); await instance.waitUntilExit() }

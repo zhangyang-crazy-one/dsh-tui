@@ -90214,14 +90214,16 @@ var RuntimeController = class _RuntimeController {
   }
   /**
    * Return the directory the footer shows and `@` mentions and `/files` resolve under.
-   * @returns the bound Session's working directory when the working-directory service is mounted, else the configured run cwd, else the process cwd.
+   * @returns the bound Session's directory when the working-directory service is
+   * mounted, otherwise the configured run cwd or process cwd.
    */
   getCwd() {
     return this.sessionDirectory() ?? process.cwd();
   }
   /**
    * The explicit base directory for filesystem lookups.
-   * @returns the bound Session's working directory when the service is mounted, else the configured run cwd; undefined lets the filesystem provider apply its own base.
+   * @returns the bound Session's directory when the service is mounted, otherwise
+   * the configured run cwd; undefined leaves base selection to the filesystem provider.
    */
   sessionDirectory() {
     const agent = this.agent;
