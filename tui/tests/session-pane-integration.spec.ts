@@ -433,6 +433,8 @@ describe('session directory controller', () => {
     await controller.start()
     await vi.waitFor(() => {
       expect(controller.getSessionPane().rows).toHaveLength(4)
+      // Capture the durable-title snapshot after asynchronous metadata folding.
+      expect(controller.getSessionPane().rows.map(row => row.title)).toEqual(expect.arrayContaining(['alpha', 'beta', 'gamma']))
     })
     controller.dispatch({ kind: 'session-pane' })
     highlightRow(controller, 'session-1')

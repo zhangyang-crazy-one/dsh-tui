@@ -190,10 +190,10 @@ TUI 是 dsh 插件 bundle，不是 fork，也不是独立的 agent 运行时：
 
 ### DeepSeek 账号、模型与工作目录
 
-- 当 dsh 挂载 `deepseek-account` 服务时，`/login` 打开 DeepSeek 账号页：Enter 发起浏览器登录，`o` 重新打开授权链接，`c` 取消；登录后页面显示账号资料与余额。浏览器回调到本 bundle 的 `webserver` 行，监听 `127.0.0.1` 上由系统分配的端口。通过 SSH 使用时，页面显示 `ssh -L` 端口转发命令而不打开浏览器；在 `webserver` 行固定 `port` 可让转发保持稳定。未挂载账号服务时，`/login` 与 `/key` 打开 API 密钥编辑器。
+- 当 dsh 挂载 `deepseek-account` 服务时，`/login` 打开 DeepSeek 账号页：Enter 发起浏览器登录，`o` 重新打开授权链接，`c` 取消；登录后页面显示账号资料与余额。浏览器回调到本 bundle 的 `webserver` 行，监听 `127.0.0.1` 上由系统分配的端口。通过 SSH 使用时，页面显示 `ssh -L` 端口转发命令而不打开浏览器；在 `webserver` 行固定 `port` 可让转发保持稳定。关闭重开页面会继续已有登录并恢复转发提示；按 `o` 才显式打开链接。未挂载账号服务时，`/login` 与 `/key` 打开 API 密钥编辑器。
 - `/logout` 确认后退出登录，已保存的 API 密钥保留。
 - `/model` 在 `deepseek-account` 与 `deepseek-official` 目录为空时列出它们，并注明使模型可用的步骤（`/login` 或 `/key`），且拒绝选中此类行。
-- `/cd [路径]` 在 dsh 0.2.1 及以后版本查看或切换会话工作目录。顶栏、`@` 提及与 `/files` 随之切换，模型会收到变更通知；已有 shell 保留各自的目录。
+- `/cd [路径]` 在 dsh 0.2.1 及以后版本查看或切换会话工作目录。顶栏、`@` 提及与 `/files` 随之切换，文件面板输入的相对路径也以当前会话目录为基准；模型会收到变更通知；已有 shell 保留各自的目录。
 - `/plugins` 将官方 bundle 单独分组。文件尚未安装的官方目录条目标记为可安装，按 Space 打开其精确安装目标的安装预览。
 
 ### OpenCode Zen 免费模型

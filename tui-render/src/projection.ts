@@ -802,9 +802,9 @@ export function createProjector(): Projector {
         replaceStep(assembler.blocks())
         return
       case 'end':
-        // A committed attempt is settled by its durable event, which already
-        // replaced this partial; an abandoned one leaves no durable content.
-        if (frame.outcome.kind !== 'committed' && !stepCommitted) replaceStep([])
+        // Only assistant/message commits surface content. A committed
+        // assistant/attempt is audit-only, so discard any remaining partial.
+        if (!stepCommitted) replaceStep([])
         assembler = undefined
         return
     }

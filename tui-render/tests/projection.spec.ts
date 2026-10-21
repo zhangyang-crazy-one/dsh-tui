@@ -981,6 +981,116 @@ describe('createProjector', () => {
     expect(live?.content?.find(item => item.kind === 'reasoning')).toMatchObject({ durationMs: 1500 })
   })
 
+  it('drops a committed failed attempt so live history matches durable replay', () => {
+    const durable = [
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/attempt', {
+        turn: 1,
+        step: 1,
+        stream: [{ type: 'text-chunks', time0: 2, index: 0, dt: [], texts: ['DISCARDED PARTIAL'] }],
+      }),
+      event(4, 'step/end', { turn: 1, step: 1 }),
+      event(5, 'turn/end', {
+        turn: 1,
+        reason: { kind: 'error', error: { name: 'NetworkError', message: 'Connection reset by peer' } },
+      }),
+    ]
+    const live = createProjector()
+    live.seed(durable.slice(0, 2))
+    live.pushStreamFrame({ type: 'start' })
+    live.pushStreamFrame({ type: 'chunk', time: 2, chunk: { type: 'text-delta', index: 0, text: 'DISCARDED PARTIAL' } })
+    expect(live.snapshot().activeTurn?.assistantText).toBe('DISCARDED PARTIAL')
+    live.push(durable[2]!)
+    const outcome = { kind: 'committed', eventType: 'assistant/attempt', seq: 3 }
+    live.pushStreamFrame({ type: 'end', outcome })
+    live.seed(durable.slice(3))
+
+    const replay = createProjector()
+    replay.seed(durable)
+    expect(live.snapshot()).toEqual(replay.snapshot())
+    expect(live.snapshot().history).toHaveLength(1)
+    expect(live.snapshot().history[0]?.text).toContain('Connection reset by peer')
+    expect(JSON.stringify(live.snapshot())).not.toContain('DISCARDED PARTIAL')
+  })
+
+  it.each([
+    { interrupted: false, block: { type: 'text', text: 'committed answer' } },
+    { interrupted: true, block: { type: 'text', text: 'interrupted prefix' } },
+    { interrupted: false, block: { type: 'reasoning', text: 'committed reasoning' } },
+    { interrupted: true, block: { type: 'reasoning', text: 'interrupted reasoning' } },
+  ])('preserves committed $block.type content with interrupted=$interrupted', ({ interrupted, block }) => {
+    const durable = [
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: { id: 'a1', role: 'assistant', content: [block] },
+        stream: [],
+        ...(interrupted ? { interrupted: true } : {}),
+      }),
+      event(4, 'step/end', { turn: 1, step: 1 }),
+      event(5, 'turn/end', {
+        turn: 1,
+        reason: interrupted ? { kind: 'aborted', reason: { kind: 'user' } } : { kind: 'completed' },
+      }),
+    ]
+    const live = createProjector()
+    live.seed(durable.slice(0, 2))
+    live.pushStreamFrame({ type: 'start' })
+    live.pushStreamFrame({ type: 'chunk', time: 2, chunk: { type: 'text-delta', index: 0, text: 'uncommitted partial' } })
+    live.push(durable[2]!)
+    const outcome = { kind: 'committed', eventType: 'assistant/message', seq: 3 }
+    live.pushStreamFrame({ type: 'end', outcome })
+    expect(live.snapshot().activeTurn?.content).toEqual([
+      expect.objectContaining({ kind: block.type, text: block.text }),
+    ])
+    live.seed(durable.slice(3))
+
+    const replay = createProjector()
+    replay.seed(durable)
+    expect(live.snapshot()).toEqual(replay.snapshot())
+    expect(live.snapshot().history).toHaveLength(1)
+    expect(JSON.stringify(live.snapshot())).toContain(block.text)
+    expect(JSON.stringify(live.snapshot())).not.toContain('uncommitted partial')
+  })
+
+  it('drops a committed failed attempt before a successful retry in the same step', () => {
+    const durable = [
+      event(1, 'turn/start', { turn: 1 }),
+      event(2, 'step/start', { turn: 1, step: 1 }),
+      event(3, 'assistant/attempt', { turn: 1, step: 1, stream: [] }),
+      event(4, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: { id: 'retry', role: 'assistant', content: [{ type: 'text', text: 'retry answer' }] },
+        stream: [],
+      }),
+      event(5, 'step/end', { turn: 1, step: 1 }),
+      event(6, 'turn/end', { turn: 1, reason: { kind: 'completed' } }),
+    ]
+    const live = createProjector()
+    live.seed(durable.slice(0, 2))
+    live.pushStreamFrame({ type: 'start' })
+    live.pushStreamFrame({ type: 'chunk', time: 2, chunk: { type: 'text-delta', index: 0, text: 'DISCARDED PARTIAL' } })
+    live.push(durable[2]!)
+    const failedOutcome = { kind: 'committed', eventType: 'assistant/attempt', seq: 3 }
+    live.pushStreamFrame({ type: 'end', outcome: failedOutcome })
+    expect(live.snapshot().activeTurn?.assistantText).toBe('')
+    live.pushStreamFrame({ type: 'start' })
+    live.pushStreamFrame({ type: 'chunk', time: 3, chunk: { type: 'text-delta', index: 0, text: 'retry par' } })
+    live.push(durable[3]!)
+    const successfulOutcome = { kind: 'committed', eventType: 'assistant/message', seq: 4 }
+    live.pushStreamFrame({ type: 'end', outcome: successfulOutcome })
+    live.seed(durable.slice(4))
+
+    const replay = createProjector()
+    replay.seed(durable)
+    expect(live.snapshot()).toEqual(replay.snapshot())
+    expect(live.snapshot().history[0]?.text).toBe('retry answer')
+  })
+
   it('drops an abandoned attempt and lets a retry replace its partial', () => {
     const projector = createProjector()
     projector.push(event(1, 'turn/start', { turn: 1 }))

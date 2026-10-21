@@ -7,6 +7,10 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type {
@@ -141,6 +145,69 @@ function defaultTree(): FsFake {
 }
 
 describe('workspace overlay', () => {
+  it.each([true, false])('resolves edited relative paths from the active Session after /cd (launch src exists: %s)', async (launchHasSrc) => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'tui-issue16-')))
+    const launch = join(root, 'A')
+    const active = join(root, 'B')
+    const { ctx, controller } = await bench(undefined, launch)
+    try {
+      await mkdir(launch)
+      await mkdir(join(active, 'src'), { recursive: true })
+      await writeFile(join(active, 'src', 'marker.txt'), 'ACTIVE PROJECT')
+      if (launchHasSrc) {
+        await mkdir(join(launch, 'src'))
+        await writeFile(join(launch, 'src', 'marker.txt'), 'LAUNCH PROJECT')
+      }
+      await ctx.plugin(LocalFileSystem, { cwd: launch })
+      let directory = launch
+      ctx.provide('workingDirectory', {
+        get: () => directory,
+        set: async (_agent: Agent, path: string) => {
+          directory = path
+          return path
+        },
+      } as never)
+      controller.dispatch({ kind: 'command', query: `cd ${active}` })
+      await vi.waitFor(() => expect(controller.getCwd()).toBe(active))
+      controller.dispatch({ kind: 'workspace-pane' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().root).toBe(active))
+      controller.dispatch({ kind: 'workspace-edit' })
+      controller.dispatch({ kind: 'workspace-apply', value: 'src' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().root).toBe(join(active, 'src')))
+      expect(controller.getWorkspacePane().nodes[0]?.path).toBe(join(active, 'src', 'marker.txt'))
+      expect((await ctx.fs.resolve('.')).displayPath).toBe(launch)
+      controller.dispatch({ kind: 'workspace-edit' })
+      controller.dispatch({ kind: 'workspace-apply', value: launch })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().root).toBe(launch))
+      controller.dispatch({ kind: 'workspace-edit' })
+      controller.dispatch({ kind: 'workspace-apply', value: 'missing' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().resolveError).toBeDefined())
+      expect(controller.getWorkspacePane().root).toBe(launch)
+    } finally {
+      await controller.dispose()
+      await ctx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it.each([true, false])('uses the configured cwd or filesystem default without workingDirectory (configured: %s)', async (configured) => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'tui-issue16-fallback-')))
+    const { ctx, controller } = await bench(undefined, configured ? root : null)
+    try {
+      await mkdir(join(root, 'src'))
+      await ctx.plugin(LocalFileSystem, { cwd: configured ? tmpdir() : root })
+      controller.dispatch({ kind: 'workspace-pane' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().root).toBe(root))
+      controller.dispatch({ kind: 'workspace-edit' })
+      controller.dispatch({ kind: 'workspace-apply', value: 'src' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().root).toBe(join(root, 'src')))
+    } finally {
+      await controller.dispose()
+      await ctx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it('paints the S19 error when fs is not composed', async () => {
     const { ctx, controller } = await bench()
     controller.dispatch({ kind: 'workspace-pane' })

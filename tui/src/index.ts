@@ -2408,7 +2408,8 @@ export class RuntimeController implements TuiController {
     const fs = this.ctx.get('fs')
     if (fs === undefined) return
     try {
-      const root = await fs.resolve(value)
+      const cwd = this.sessionDirectory()
+      const root = await fs.resolve(value, cwd === undefined ? undefined : { cwd })
       const children = await fs.listDir(root)
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       this.commitResolvedWorkspaceRoot(root, children)
@@ -3238,14 +3239,25 @@ export class RuntimeController implements TuiController {
     this.accountAttemptId = attempt?.id
     const wasSignedIn = this.accountPane.status === 'credential-stored' && !identityChanged
     this.updateAccount({ status: view.status, phase: attempt?.phase, authorizeUrl: attempt?.authorizeUrl,
-      errorCode: attempt?.errorCode,
+      errorCode: attempt?.errorCode, forward: attempt === null ? undefined : this.accountForward(),
       ...(identityChanged || view.status === 'signed-out' ? { profile: undefined, balance: undefined } : {}) })
     if (attempt?.phase === 'waiting-browser' && attempt.authorizeUrl !== undefined && this.accountUrlOpened !== attempt.authorizeUrl) {
       this.accountUrlOpened = attempt.authorizeUrl
       // A remote terminal's browser cannot reach this host's loopback callback without a forward; show the link only.
-      if (this.accountPane.forward === undefined) internals.openUrl(attempt.authorizeUrl)
+      if (!this.accountIsRemote()) internals.openUrl(attempt.authorizeUrl)
     }
     if (view.status === 'credential-stored' && !wasSignedIn) this.ownWork(this.loadAccountDetails(), 'account details')
+  }
+
+  private accountIsRemote(): boolean {
+    const environment = internals.accountEnvironment
+    return environment.SSH_CONNECTION !== undefined || environment.SSH_TTY !== undefined
+  }
+
+  private accountForward(): string | undefined {
+    const webServer = this.ctx.get('webServer')
+    if (!this.accountIsRemote() || webServer?.protocol !== 'http:' || webServer.port === undefined) return undefined
+    return `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>`
   }
 
   /** Read profile and balance; only the originating page and credential revision may publish. */
@@ -3282,11 +3294,9 @@ export class RuntimeController implements TuiController {
       return
     }
     const host = webServer.host.includes(':') ? `[${webServer.host}]` : webServer.host
-    const environment = internals.accountEnvironment
-    const remote = environment.SSH_CONNECTION !== undefined || environment.SSH_TTY !== undefined
     this.accountUrlOpened = undefined
     this.updateAccount({ busy: true, error: undefined,
-      forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : undefined })
+      forward: this.accountForward() })
     try {
       const view = await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, 'web')
       if (current()) this.applyAccountView(view)

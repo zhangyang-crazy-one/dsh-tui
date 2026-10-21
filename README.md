@@ -190,10 +190,10 @@ Clipboard image paste uses `pngpaste -` on macOS ([installation: `brew install p
 
 ### DeepSeek account, models, and working directory
 
-- `/login` opens the DeepSeek account page when dsh mounts the `deepseek-account` service: Enter starts browser sign-in, `o` reopens the authorization link, `c` cancels, and the page shows the profile and balance once signed in. The browser returns to the bundle's `webserver` row on `127.0.0.1` with an OS-assigned port. Over SSH the page prints the `ssh -L` forward instead of opening a browser; pin `port` on the `webserver` row so the forward stays stable. Without the account service, `/login` and `/key` open the API-key editor.
+- `/login` opens the DeepSeek account page when dsh mounts the `deepseek-account` service: Enter starts browser sign-in, `o` reopens the authorization link, `c` cancels, and the page shows the profile and balance once signed in. The browser returns to the bundle's `webserver` row on `127.0.0.1` with an OS-assigned port. Over SSH the page prints the `ssh -L` forward instead of opening a browser; pin `port` on the `webserver` row so the forward stays stable. Closing and reopening this page retains the active attempt and restores its forwarding instructions; `o` opens the link only when explicitly requested. Without the account service, `/login` and `/key` open the API-key editor.
 - `/logout` signs out after confirmation; stored API keys remain.
 - `/model` lists `deepseek-account` and `deepseek-official` with the step that makes their models available (`/login` or `/key`) while their catalogs are empty, and refuses to select such a row.
-- `/cd [path]` shows or changes the Session working directory on dsh 0.2.1 and later. The header, `@` mentions, and `/files` follow it, and the model receives the change notice; existing shells keep their own directories.
+- `/cd [path]` shows or changes the Session working directory on dsh 0.2.1 and later. The header, `@` mentions, and `/files` follow it, including relative paths entered in the file panel, and the model receives the change notice; existing shells keep their own directories.
 - `/plugins` lists official bundles in their own group. An official catalog entry whose files are not installed is marked installable, and Space opens the install preview for its exact target.
 
 ### OpenCode Zen free models

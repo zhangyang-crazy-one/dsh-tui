@@ -69350,7 +69350,7 @@ ${formattedError}` });
         replaceStep(assembler.blocks());
         return;
       case "end":
-        if (frame.outcome.kind !== "committed" && !stepCommitted) replaceStep([]);
+        if (!stepCommitted) replaceStep([]);
         assembler = void 0;
         return;
     }
@@ -101246,7 +101246,8 @@ var RuntimeController = class _RuntimeController {
     const fs3 = this.ctx.get("fs");
     if (fs3 === void 0) return;
     try {
-      const root = await fs3.resolve(value);
+      const cwd2 = this.sessionDirectory();
+      const root = await fs3.resolve(value, cwd2 === void 0 ? void 0 : { cwd: cwd2 });
       const children = await fs3.listDir(root);
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
       this.commitResolvedWorkspaceRoot(root, children);
@@ -102010,13 +102011,23 @@ var RuntimeController = class _RuntimeController {
       phase: attempt?.phase,
       authorizeUrl: attempt?.authorizeUrl,
       errorCode: attempt?.errorCode,
+      forward: attempt === null ? void 0 : this.accountForward(),
       ...identityChanged || view.status === "signed-out" ? { profile: void 0, balance: void 0 } : {}
     });
     if (attempt?.phase === "waiting-browser" && attempt.authorizeUrl !== void 0 && this.accountUrlOpened !== attempt.authorizeUrl) {
       this.accountUrlOpened = attempt.authorizeUrl;
-      if (this.accountPane.forward === void 0) internals.openUrl(attempt.authorizeUrl);
+      if (!this.accountIsRemote()) internals.openUrl(attempt.authorizeUrl);
     }
     if (view.status === "credential-stored" && !wasSignedIn) this.ownWork(this.loadAccountDetails(), "account details");
+  }
+  accountIsRemote() {
+    const environment2 = internals.accountEnvironment;
+    return environment2.SSH_CONNECTION !== void 0 || environment2.SSH_TTY !== void 0;
+  }
+  accountForward() {
+    const webServer = this.ctx.get("webServer");
+    if (!this.accountIsRemote() || webServer?.protocol !== "http:" || webServer.port === void 0) return void 0;
+    return `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>`;
   }
   /** Read profile and balance; only the originating page and credential revision may publish. */
   async loadAccountDetails() {
@@ -102050,13 +102061,11 @@ var RuntimeController = class _RuntimeController {
       return;
     }
     const host = webServer.host.includes(":") ? `[${webServer.host}]` : webServer.host;
-    const environment2 = internals.accountEnvironment;
-    const remote = environment2.SSH_CONNECTION !== void 0 || environment2.SSH_TTY !== void 0;
     this.accountUrlOpened = void 0;
     this.updateAccount({
       busy: true,
       error: void 0,
-      forward: remote ? `ssh -L ${String(webServer.port)}:${webServer.host}:${String(webServer.port)} <host>` : void 0
+      forward: this.accountForward()
     });
     try {
       const view = await account.startSignIn(this.accountClient(), `http://${host}:${String(webServer.port)}/`, "web");

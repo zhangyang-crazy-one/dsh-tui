@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- [#14](https://github.com/zhangyang-crazy-one/dsh-tui/issues/14): discard transient text from failed `assistant/attempt` streams, keeping live history consistent with durable replay. Successful retries and officially committed interrupted messages remain visible.
+- [#15](https://github.com/zhangyang-crazy-one/dsh-tui/issues/15): restore SSH port-forward instructions when reopening an in-progress DeepSeek login. Automatic browser opening now checks the actual SSH environment; explicit `o` still opens the link.
+- [#16](https://github.com/zhangyang-crazy-one/dsh-tui/issues/16): resolve file-panel relative paths against the current Session directory after `/cd`, with configured-cwd/filesystem fallback. Absolute paths and the previous root on failure retain their behavior.
+
+### 中文变更说明
+
+- 修复失败流式片段残留为普通消息，保证实时历史与持久化回放一致；保留成功重试和官方已提交的中断消息。
+- 修复 SSH 登录页关闭重开后丢失转发命令、错误自动打开远端浏览器；显式按 `o` 仍可打开链接。
+- 修复 `/cd` 后文件面板相对路径仍使用启动目录；改用当前会话目录，保留绝对路径及失败时原目录。
+
 ## 0.1.0-alpha.50 — 2026-10-21
 
 Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`. The changes below include the unreleased work since `0.1.0-alpha.49`.

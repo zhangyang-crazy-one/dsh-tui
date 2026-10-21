@@ -123,6 +123,45 @@ describe('DeepSeek account page', () => {
     expect(b.opened).toEqual([waiting.attempt?.authorizeUrl])
   })
 
+  it.each(['initializing', 'waiting-browser'] as const)('restores SSH forwarding after closing and reopening during %s', async (phase) => {
+    const b = await bench({ remote: true })
+    const initial: AccountView = phase === 'waiting-browser' ? waiting : {
+      ...signedOut, attempt: { id: attemptId, phase },
+    }
+    b.account.startSignIn.mockImplementationOnce(async () => {
+      b.account.publish(initial)
+      return initial
+    })
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.controller.getAccountPane().status).toBe('signed-out'))
+    b.input('sign-in')
+    await vi.waitFor(() => expect(b.controller.getAccountPane()).toMatchObject({ phase, busy: false }))
+    const forward = b.controller.getAccountPane().forward
+    expect(forward).toBe('ssh -L 43123:127.0.0.1:43123 <host>')
+    b.input('close')
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.controller.getAccountPane().phase).toBe(phase))
+    b.account.publish(waiting)
+    await vi.waitFor(() => expect(b.controller.getAccountPane().phase).toBe('waiting-browser'))
+    expect(b.controller.getAccountPane().forward).toBe(forward)
+    expect(b.opened).toEqual([])
+    expect(b.account.startSignIn).toHaveBeenCalledTimes(1)
+    b.input('open-url')
+    expect(b.opened).toEqual([waiting.attempt?.authorizeUrl])
+  })
+
+  it('does not automatically open a local authorization URL again after reopening', async () => {
+    const b = await bench()
+    b.account.publish(waiting)
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.opened).toHaveLength(1))
+    b.input('close')
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.controller.getAccountPane().phase).toBe('waiting-browser'))
+    expect(b.opened).toEqual([waiting.attempt?.authorizeUrl])
+    expect(b.controller.getAccountPane().forward).toBeUndefined()
+  })
+
   it('reports a missing callback server and cancels only the running attempt', async () => {
     const missing = await bench({ webServer: false })
     missing.controller.dispatch({ kind: 'command', query: 'login' })
