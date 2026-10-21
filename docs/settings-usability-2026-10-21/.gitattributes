@@ -1,0 +1,2 @@
+# Terminal cell dumps retain padding at the end of physical rows.
+*.txt whitespace=-blank-at-eol

@@ -43,6 +43,7 @@ import type { ApprovalPaneState } from './approval-pane.tsx'
 import { PermissionPane } from './permission-pane.tsx'
 import type { PermissionPaneState } from './permission-pane.tsx'
 import { SettingsPane } from './settings-pane.tsx'
+import { canToggleSetting } from './settings-browser.tsx'
 import type { SettingsPaneState } from './settings-pane.tsx'
 import { AgentHubPane } from './agent-hub-pane.tsx'
 import type { AgentHubPaneState, AgentHubViewport } from './agent-hub-pane.tsx'
@@ -828,6 +829,8 @@ export function mapKeyEvent(
     editValue?: string | undefined
     onboarding?: boolean | undefined
     navigable?: boolean | undefined
+    toggleable?: boolean | undefined
+    busy?: boolean | undefined
     editable?: boolean | undefined
     searching?: boolean | undefined
     filter?: string | undefined
@@ -1116,10 +1119,15 @@ export function mapKeyEvent(
     })
   }
   if (settings.open) {
+    if (settings.busy === true) return { kind: 'none' }
     if (settings.searching === true) {
       const query = settings.filter ?? ''
       if (keyInfo.escape) return holdComposer(state, { kind: 'settings-search', query: '', active: false })
       if (keyInfo.return) return holdComposer(state, { kind: 'settings-search', query, active: false })
+      if (keyInfo.tab) return holdComposer(state, { kind: 'settings-group', delta: keyInfo.shift ? -1 : 1 })
+      if (keyInfo.downArrow || keyInfo.upArrow) return holdComposer(state, { kind: 'settings-move', delta: keyInfo.downArrow ? 1 : -1 })
+      if (keyInfo.pageDown || keyInfo.pageUp) return holdComposer(state, { kind: 'settings-move', delta: keyInfo.pageDown ? 5 : -5 })
+      if (keyInfo.home || keyInfo.end) return holdComposer(state, { kind: 'settings-move', delta: keyInfo.end ? 10000 : -10000 })
       if (keyInfo.backspace || keyInfo.delete) return holdComposer(state, { kind: 'settings-search', query: Array.from(query).slice(0, -1).join(''), active: true })
       if (!keyInfo.ctrl && !keyInfo.meta && !keyInfo.upArrow && !keyInfo.downArrow && key !== '') return holdComposer(state, { kind: 'settings-search', query: query + key, active: true })
       return { kind: 'none' }
@@ -1132,7 +1140,9 @@ export function mapKeyEvent(
     }
     if (keyInfo.return || keyInfo.rightArrow || key === 'i') {
       if (key !== 'i' && settings.navigable === true) return holdComposer(state, { kind: 'settings-edit' })
+      if (keyInfo.rightArrow) return { kind: 'none' }
       if (settings.editable === false) return { kind: 'none' }
+      if (keyInfo.return && settings.toggleable === true) return holdComposer(state, { kind: 'settings-toggle' })
       return {
         kind: 'dispatch',
         action: { kind: key === 'i' ? 'settings-edit-json' : 'settings-edit' },
@@ -2791,6 +2801,8 @@ export function TuiLoop({
         editing: settingsPaneRef.current.editing,
         onboarding: settingsPaneRef.current.onboarding,
         navigable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.navigable,
+        toggleable: canToggleSetting(settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]),
+        busy: settingsPaneRef.current.busy,
         editable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editable,
         searching: settingsPaneRef.current.searching,
         filter: settingsPaneRef.current.filter,
@@ -3418,6 +3430,8 @@ export function TuiLoop({
       locale,
       rows: settingsPane.rows,
       ...(settingsPane.breadcrumb === undefined ? {} : { breadcrumb: settingsPane.breadcrumb }),
+      ...(settingsPane.categories === undefined ? {} : { categories: settingsPane.categories }),
+      ...(settingsPane.activeCategory === undefined ? {} : { activeCategory: settingsPane.activeCategory }),
       ...(settingsPane.filter === undefined ? {} : { filter: settingsPane.filter }),
       ...(settingsPane.searching === undefined ? {} : { searching: settingsPane.searching }),
       selectedIndex: settingsPane.selectedIndex,
@@ -3581,6 +3595,10 @@ export function TuiLoop({
       selectionAnchor: state.selectionAnchor,
       secret: settingsPane.editing && (settingsPane.onboarding === true
         || settingsPane.rows[settingsPane.selectedIndex]?.namespace === 'credentials'),
+      ...(settingsPane.editing ? {
+        actionHint: locale === 'en-US' ? 'Setting value · Enter save · Esc cancel' : '设置值 · Enter 保存 · Esc 取消',
+        modelChip: '', modeChip: '',
+      } : {}),
     })
   } else if (toolDetailsPane.open) {
     inputSlot = undefined

@@ -1,4 +1,5 @@
 import { settingsGroup, SETTINGS_GROUP_LABELS } from './settings-groups.ts'
+import { SettingsBrowser } from './settings-browser.tsx'
 /**
  * SettingsPane: the overlay for host settings fields. Presentational only —
  * keys route through {@link mapKeyEvent} in the loop owner, and the runtime
@@ -59,6 +60,8 @@ export interface SettingsFieldRow {
 
 /** SettingsPane props. */
 export interface SettingsPaneProps {
+  categories?: readonly { id: string; label: string; count: number }[]
+  activeCategory?: string
   /** Presentation-copy locale, Chinese when omitted. */
   locale?: TuiLocale
   breadcrumb?: readonly string[]
@@ -82,6 +85,8 @@ export interface SettingsPaneProps {
 
 /** Controller snapshot backing the settings overlay. */
 export interface SettingsPaneState {
+  categories?: readonly { id: string; label: string; count: number }[]
+  activeCategory?: string
   /** Whether the overlay currently replaces the conversation column. */
   open: boolean
   breadcrumb?: readonly string[]
@@ -237,51 +242,37 @@ export function computeSettingsWindow(
  */
 export function SettingsPane({
   rows, selectedIndex, editing, onboarding, updateError, busy, locale, maxRows,
-  breadcrumb, filter, searching,
+  breadcrumb, filter, searching, categories, activeCategory,
 }: SettingsPaneProps): ReactNode {
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
+  if (breadcrumb !== undefined && onboarding !== true) return <SettingsBrowser
+    rows={rows} selectedIndex={selectedIndex} editing={editing} columns={width} breadcrumb={breadcrumb}
+    {...(locale === undefined ? {} : { locale })}
+    {...(filter === undefined ? {} : { filter })}
+    {...(searching === undefined ? {} : { searching })}
+    {...(categories === undefined ? {} : { categories })}
+    {...(activeCategory === undefined ? {} : { activeCategory })}
+    {...(maxRows === undefined ? {} : { maxRows })}
+    {...(updateError === undefined ? {} : { updateError })}
+    {...(busy === undefined ? {} : { busy })}
+  />
   const selected = Math.min(Math.max(0, selectedIndex), Math.max(0, rows.length - 1))
   const active = rows[selected]
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON : undefined)
-  const hierarchy = breadcrumb !== undefined
-  const escapeHint = (breadcrumb?.length ?? 0) > 1 ? 'Esc 返回' : 'Esc 关闭'
-  let footer = searching === true ? ['输入搜索 · Enter 确定 · Esc 清除']
-    : onboarding === true
+  const footer = onboarding === true
     ? [editing ? ONBOARDING_FOOTNOTE : '↑↓ 选择密钥 · Enter 输入 · Esc 关闭']
-    : editing ? [EDIT_FOOTNOTE]
-      : !hierarchy ? ['↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭']
-      : width < 80
-        ? ['↑↓ 选择  Enter 打开  ← 返回', `/ 搜索  i 编辑  Tab 分类  ${escapeHint}`]
-        : ['↑↓/jk 选择 · Enter 进入/编辑 · ← 返回 · / 搜索', `i JSON编辑 · Space 切换 · Tab 分类 · e 导出 · r 重载 · ${escapeHint}`]
-  const budget = maxRows ?? SETTINGS_WINDOW + 10
-  const compact = hierarchy && budget < 8
-  if (compact && footer.length > 1) footer = [`Enter 打开 ←返回 /搜索 ${escapeHint}`]
-  const hasSearch = !compact && (searching === true || (filter !== undefined && filter !== ''))
-  const errorLines = errorReason === undefined ? 0 : errorReason === EMPTY_TABLE_REASON || compact ? 1 : 2
-  const showBusy = busy === true && (!compact || errorReason === undefined && budget >= 5)
-  let room = budget - 1 - footer.length - errorLines - (hasSearch ? 1 : 0) - (showBusy ? 1 : 0) - 1
-  const selectedValue = hierarchy && active !== undefined && room-- > 0
-  const description = hierarchy && room-- > 0 ? active?.description : undefined
-  const fixed = 1 + footer.length + (selectedValue ? 1 : 0) + (description === undefined ? 0 : 1) + errorLines + (hasSearch ? 1 : 0) + (showBusy ? 1 : 0)
-  const available = Math.max(1, budget - fixed)
-  const showOverflow = !compact && available >= 3
-  const size = hierarchy
-    ? Math.min(rows.length, rows.length > available && showOverflow ? available - 2 : available, maxRows === undefined ? SETTINGS_WINDOW : rows.length)
-    : Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason, busy === true))
+    : [editing ? EDIT_FOOTNOTE : '↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭']
+  const size = Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason, busy === true))
   const start = Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, rows.length - size))
   const renderLine = (text: string, token: 'fg' | 'fgDim' | 'error' | 'accent', bold = false) => (
     <Box width="100%" height={1} flexShrink={0}><Text wrap="truncate-end">
       {paintBackgroundRow([styled(fitValue(escapeContent(text), width), token, undefined, bold)], 'settingsCardBg', width)}
     </Text></Box>
   )
-  let heading = hierarchy ? breadcrumb.join(' › ') : active === undefined ? TITLE : `${TITLE} · ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`
-  if (displayWidth(escapeContent(heading)) > width && hierarchy) {
-    heading = `设置 › … › ${breadcrumb[breadcrumb.length - 1] ?? ''}`
-  }
-  if (compact && searching === true) heading = `搜索 /${filter ?? ''}`
+  let heading = active === undefined ? TITLE : `${TITLE} · ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`
   if (onboarding === true) heading = rows.length > 1 ? 'API 密钥' : ONBOARDING_TITLE
-  const counter = rows.length === 0 ? '' : `${!hierarchy && active !== undefined ? `${active.namespace} · ` : ''}${String(selected + 1)}/${String(rows.length)}`
+  const counter = rows.length === 0 ? '' : `${active !== undefined ? `${active.namespace} · ` : ''}${String(selected + 1)}/${String(rows.length)}`
   if (counter !== '') heading = `${fitValue(escapeContent(heading), Math.max(1, width - displayWidth(counter) - 2))}  ${counter}`
   const localizedLabel = (row: SettingsFieldRow): string => {
     if (row.label !== undefined && !(row.namespace === 'tui' && row.label === row.field)) return row.label
@@ -291,21 +282,18 @@ export function SettingsPane({
       : row.namespace === 'tui' && row.field in TUI_EXTRA_LABELS
         ? `${row.field} · ${TUI_EXTRA_LABELS[row.field]![resolved === 'en-US' ? 'en-US' : 'zh-CN']}`
         : row.field === 'apiKeyEnv' ? `${row.field} · 环境变量名` : row.field
-    return hierarchy ? label : `${row.namespace} · ${label}`
+    return `${row.namespace} · ${label}`
   }
   return <Box flexDirection="column" width="100%">
     {renderLine(heading, 'fg', true)}
-    {hasSearch ? renderLine(`搜索 /${filter ?? ''}${searching === true ? '▏' : ''}`, 'accent') : null}
-    {start > 0 && (!hierarchy || showOverflow) ? renderLine(`↑ 上方还有 ${String(start)} 项 (… 还有 ${String(start)} 项)`, 'fgDim') : null}
+    {start > 0 ? renderLine(`↑ 上方还有 ${String(start)} 项 (… 还有 ${String(start)} 项)`, 'fgDim') : null}
     {rows.slice(start, start + size).map((row, index) => <Box key={`${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index)}`} width="100%" height={1} flexShrink={0}><Text wrap="truncate-end">
       {paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? '› ' : ''}${row.value}`, start + index === selected, width, row.required === true), 'settingsCardBg', width)}
     </Text></Box>)}
-    {rows.length > start + size && (!hierarchy || showOverflow) ? renderLine(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim') : null}
-    {selectedValue ? renderLine(`值: ${active.value === '' ? '—' : active.value}`, 'fg') : null}
-    {description === undefined ? null : renderLine(description, 'fgDim')}
+    {rows.length > start + size ? renderLine(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim') : null}
     {errorReason === undefined ? null : renderLine(errorReason === EMPTY_TABLE_REASON ? EMPTY_TABLE_REASON : `✗ 更新失败：${errorReason}`, 'error')}
-    {errorLines < 2 ? null : renderLine(FAIL_NEXT, 'fgDim')}
-    {showBusy ? renderLine(DISCOVERY_BUSY, 'fgDim') : null}
+    {errorReason === undefined || errorReason === EMPTY_TABLE_REASON ? null : renderLine(FAIL_NEXT, 'fgDim')}
+    {busy === true ? renderLine(DISCOVERY_BUSY, 'fgDim') : null}
     {footer.map((line, index) => <Box key={index} width="100%" height={1} flexShrink={0}>{renderLine(line, 'fgDim')}</Box>)}
   </Box>
 }

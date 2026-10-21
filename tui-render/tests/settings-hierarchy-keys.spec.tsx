@@ -18,3 +18,11 @@ it('searches Unicode text without changing the chat draft and handles acceptance
   expect(map('\r', { return: true }, { open: true, searching: true, filter: 'model' })).toMatchObject({ action: { kind: 'settings-search', query: 'model', active: false } })
   expect(map('', { escape: true }, { open: true, searching: true, filter: 'model' })).toMatchObject({ action: { kind: 'settings-search', query: '', active: false } })
 })
+it('uses Enter for supported quick changes without replacing the chat draft', () => {
+  expect(map('\r', { return: true }, { open: true, toggleable: true, editValue: 'false' })).toMatchObject({ action: { kind: 'settings-toggle' }, text: draft.text })
+  expect(map('', { rightArrow: true }, { open: true, editValue: 'text' }).kind).toBe('none')
+})
+it('allows navigating results and changing tabs while search is active', () => {
+  expect(map('', { downArrow: true }, { open: true, searching: true, filter: 'model' })).toMatchObject({ action: { kind: 'settings-move', delta: 1 }, text: draft.text })
+  expect(map('\t', { tab: true, shift: true }, { open: true, searching: true, filter: 'model' })).toMatchObject({ action: { kind: 'settings-group', delta: -1 }, text: draft.text })
+})

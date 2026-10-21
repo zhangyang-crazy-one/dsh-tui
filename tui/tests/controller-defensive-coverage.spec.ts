@@ -23,6 +23,7 @@ type ControllerInternals = {
   applyOnboardingKey(field: string, value: string): void
   exportSettingsDocument(): void
   applyColorTierSetting(): void
+  openSettingsPane(): void
   maybeOpenOnboarding(): Promise<void>
   rowFor(id: SessionId): Promise<{ id: SessionId; title: string; updatedAt: number }>
   rowForLiveSession(session: Session): { id: SessionId; title: string; updatedAt: number }
@@ -287,7 +288,7 @@ describe('RuntimeController defensive lifecycle paths', () => {
     } as never)
 
     const primeSettings = (): void => {
-      state.settingsOpen = true
+      state.openSettingsPane()
       state.settingsEditing = true
       state.settingsOnboarding = false
       state.settingsRows = [{ namespace: 'detached', field: 'value', value: '' }]
@@ -309,7 +310,7 @@ describe('RuntimeController defensive lifecycle paths', () => {
     await Promise.resolve()
     state.closed = false
 
-    state.settingsOpen = true
+    state.openSettingsPane()
     state.settingsEditing = true
     state.settingsOnboarding = true
     state.settingsRows = [{ namespace: 'credentials', field: 'DEEPSEEK_API_KEY', value: '' }]
@@ -320,7 +321,7 @@ describe('RuntimeController defensive lifecycle paths', () => {
     await Promise.resolve()
     state.closed = false
 
-    state.settingsOpen = true
+    state.openSettingsPane()
     state.settingsEditing = true
     state.settingsOnboarding = true
     state.settingsRows = [{ namespace: 'credentials', field: 'DEEPSEEK_API_KEY', value: '' }]

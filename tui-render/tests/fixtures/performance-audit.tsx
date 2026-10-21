@@ -45,10 +45,13 @@ const descriptors = [
   { ns: 'agent-loop', value: { maxSteps: 100, policy: { retries: 5, timeoutMs: 120000 } } },
 ]
 const settingsNavigation = new SettingsNavigation(scene === 'settings' ? settingsTreeFromDescribe(descriptors as never, []) : [])
+if (variant === 'settings-tabs') settingsNavigation.open()
 let settings: SettingsPaneState = { ...EMPTY_SETTINGS_PANE, open: scene === 'settings', rows: settingsNavigation.rows, breadcrumb: settingsNavigation.breadcrumb }
 const syncSettings = () => {
-  settings = { ...settings, rows: settingsNavigation.rows, selectedIndex: settingsNavigation.selectedIndex, breadcrumb: settingsNavigation.breadcrumb, filter: settingsNavigation.filter }
+  settings = { ...settings, rows: settingsNavigation.rows, selectedIndex: settingsNavigation.selectedIndex, breadcrumb: settingsNavigation.breadcrumb, filter: settingsNavigation.filter, categories: settingsNavigation.categories,
+    ...(settingsNavigation.activeCategory === undefined ? {} : { activeCategory: settingsNavigation.activeCategory }) }
 }
+syncSettings()
 const emptySession = { rows: [], selectedIndex: 0, open: false, confirmDelete: false, deleteUnavailable: false, currentId: undefined }
 const emptySearch = { query: '', results: [], selectedIndex: 0, open: false, status: 'idle' as const }
 const emptyModel = { open: false, filter: '', rows: [], selectedIndex: 0, status: 'idle' as const }
@@ -71,7 +74,7 @@ const controller: TuiController = {
   commands: [], getCwd: () => '/offline-fixture', listMentions: async () => [],
   dispatch: action => {
     if (action.kind === 'settings-move') settingsNavigation.selectedIndex = Math.max(0, Math.min(settings.rows.length - 1, settingsNavigation.selectedIndex + action.delta))
-    else if (action.kind === 'settings-group') settingsNavigation.group(action.delta)
+    else if (action.kind === 'settings-group') { settingsNavigation.group(action.delta); settings = { ...settings, searching: false } }
     else if (action.kind === 'settings-search') { settingsNavigation.search(action.query); settings = { ...settings, searching: action.active } }
     else if (action.kind === 'settings-edit' || action.kind === 'settings-edit-json') {
       if (action.kind === 'settings-edit-json' || !settingsNavigation.enter()) settings = { ...settings, editing: true }
@@ -158,7 +161,7 @@ const save = () => writeFileSync(statsPath, JSON.stringify({ scene, count, varia
   clockOffsetMs: Number(process.hrtime.bigint()) / 1e6 - performance.now(),
   events, frameMetrics: metrics.snapshot(), memory: process.memoryUsage(), cpu: process.cpuUsage(),
   eventLoop: { meanMs: delay.mean / 1e6, maxMs: delay.max / 1e6, p95Ms: delay.percentile(95) / 1e6 },
-  settings: { rowCount: settings.rows.length, selected: settings.selectedIndex, breadcrumb: settings.breadcrumb,
+  settings: { rowCount: settings.rows.length, selected: settings.selectedIndex, breadcrumb: settings.breadcrumb, activeCategory: settings.activeCategory, filter: settings.filter, searching: settings.searching,
     fields: settings.rows.map(row => ({ label: row.label, field: row.field, value: row.value })), editing: settings.editing },
 }))
 process.on('SIGUSR2', save)

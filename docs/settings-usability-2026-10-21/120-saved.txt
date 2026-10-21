@@ -1,0 +1,24 @@
+TUI performance audit                                                                                offline 25 settings
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+设置  3/5                                                                                                               
+   外观与输入  [模型与凭据]  Subagent   Agent Loop                                                                      
+llm-pi-ai › providers › provider-0-long-route-name › models › model-0                                                   
+  id                                            model-0                                                                 
+  name                                          Audit Model 0                                                           
+› contextWindow                                 131072                                                                  
+  maxTokens                                     8192                                                                    
+  extension                                     › 1 个字段                                                              
+当前项: contextWindow                                                                                                   
+当前值: 131072                                                                                                          
+↑↓ 选择 · PgUp/PgDn 翻页 · Enter 编辑 · ←/Esc 返回                                                                      
+Tab/Shift+Tab 分类 · / 搜索 · e 导出 · r 重载                                                                           
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+/offline-fixture · 状态 空闲                                                                                            
+offline 25 settings · / 命令 · @ 提及                                                                                   

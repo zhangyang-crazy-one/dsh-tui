@@ -1,0 +1,6 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.51 dev:setup
+> node scripts/dev-setup.js
+
+generate-typert: wrote 30 Typert artifact(s) for 30 package(s) in 9.3s
+Editor dependencies and upstream declarations are ready.

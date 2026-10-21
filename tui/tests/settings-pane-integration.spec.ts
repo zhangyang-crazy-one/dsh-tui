@@ -147,7 +147,6 @@ async function bench(options?: {
 /** Browse the actual category and namespace before exercising field behavior. */
 function openNamespace(controller: RuntimeController, name?: string): void {
   if (controller.getSettingsPane().rows.length === 0) return
-  controller.dispatch({ kind: 'settings-edit' })
   const pane = controller.getSettingsPane()
   const index = name === undefined ? 0 : pane.rows.findIndex(row => row.label === name)
   if (index < 0) throw new Error(`Missing namespace ${name}`)
@@ -984,8 +983,8 @@ it('browses providers and model details, saves nested arrays in place, and retai
   }
   try {
     controller.dispatch({ kind: 'command', query: 'settings' })
-    expect(controller.getSettingsPane().rows.map(row => row.label)).toEqual(['模型与凭据'])
-    enter('模型与凭据'); enter('llm-pi-ai'); enter('providers'); enter('long_provider_name'); enter('models')
+    expect(controller.getSettingsPane().rows.map(row => row.label)).toEqual(['llm-pi-ai'])
+    enter('llm-pi-ai'); enter('providers'); enter('long_provider_name'); enter('models')
     expect(controller.getSettingsPane().rows).toHaveLength(65)
     enter('model-32')
     expect(controller.getSettingsPane().rows.map(row => row.label)).toEqual(['id', 'contextWindow', 'extension'])
@@ -1005,5 +1004,97 @@ it('browses providers and model details, saves nested arrays in place, and retai
     expect(controller.getSettingsPane().rows.some(row => row.value === 'model-64')).toBe(true)
     controller.dispatch({ kind: 'settings-search', query: '', active: false })
     expect(controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.label).toBe('costs')
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
+})
+
+
+it('opens visible category tabs, clears search on category changes and restores deep positions', async () => {
+  const { ctx, controller } = await bench()
+  ctx.settings.describe = () => [
+    { ns: NS, value: { nested: { enabled: true, other: false } } },
+    { ns: 'tui', value: { theme: 'dark' } },
+  ] as never
+  try {
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    expect(controller.getSettingsPane()).toMatchObject({
+      categories: [
+        { id: 'group:providers', label: '模型与凭据', count: 1 },
+        { id: 'group:appearance', label: '外观与输入', count: 1 },
+      ], activeCategory: 'group:providers', rows: [{ label: NS }],
+    })
+    openNamespace(controller)
+    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    controller.dispatch({ kind: 'settings-search', query: 'true', active: true })
+    controller.dispatch({ kind: 'settings-group', delta: 1 })
+    expect(controller.getSettingsPane()).toMatchObject({ activeCategory: 'group:appearance', searching: false, filter: '', rows: [{ label: 'tui' }] })
+    controller.dispatch({ kind: 'settings-group', delta: -1 })
+    expect(controller.getSettingsPane()).toMatchObject({ breadcrumb: ['设置', '模型与凭据', NS, 'nested'], selectedIndex: 1 })
+    controller.dispatch({ kind: 'settings-escape' })
+    controller.dispatch({ kind: 'settings-escape' })
+    expect(controller.getSettingsPane().open).toBe(true)
+    controller.dispatch({ kind: 'settings-escape' })
+    expect(controller.getSettingsPane().open).toBe(false)
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
+})
+
+it.each([
+  { reject: false, edit: false }, { reject: true, edit: false },
+  { reject: false, edit: true }, { reject: true, edit: true },
+])('blocks overlapping setting writes and releases busy after $reject rejection with editor=$edit', async ({ reject, edit }) => {
+  const { ctx, controller, update } = await bench()
+  const live = { enabled: false }
+  ctx.settings.describe = () => [{ ns: NS, value: live }] as never
+  const pending: (() => void)[] = []
+  update.mockImplementation((_ns: unknown, patch: object) => new Promise<void>((resolve, rejectWrite) => {
+    pending.push(() => { if (reject) rejectWrite(new Error('write failed')); else { Object.assign(live, patch); resolve() } })
+  }))
+  try {
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
+    if (edit) {
+      controller.dispatch({ kind: 'settings-edit' })
+      controller.dispatch({ kind: 'settings-apply', value: 'true' })
+    } else controller.dispatch({ kind: 'settings-toggle' })
+    controller.dispatch({ kind: 'settings-toggle' })
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(controller.getSettingsPane().busy).toBe(true)
+    controller.dispatch({ kind: 'settings-escape' })
+    controller.dispatch({ kind: 'settings-cancel-edit' })
+    expect(controller.getSettingsPane()).toMatchObject({ open: true, busy: true, editing: false, breadcrumb: ['设置', '模型与凭据', NS] })
+    controller.dispatch({ kind: 'settings-toggle' })
+    expect(update).toHaveBeenCalledTimes(1)
+    pending[0]!()
+    await vi.waitFor(() => expect(controller.getSettingsPane().busy).not.toBe(true))
+    expect(controller.getSettingsPane().rows[0]?.value).toBe(reject ? 'false' : 'true')
+    expect(controller.getSettingsPane().updateError).toBe(reject ? 'write failed' : undefined)
+  } finally { for (const settle of pending) settle(); await controller.dispose(); await ctx.fiber.dispose() }
+})
+
+it('does not quick-toggle a read-only boolean row', async () => {
+  const { ctx, controller, update } = await bench()
+  try {
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    const internals = controller as unknown as { settingsRows: { namespace: string; field: string; value: string; editable: boolean }[] }
+    internals.settingsRows = [{ namespace: NS, field: 'enabled', value: 'false', editable: false }]
+    controller.dispatch({ kind: 'settings-toggle' })
+    await Promise.resolve()
+    expect(update).not.toHaveBeenCalled()
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
+})
+
+
+it('retains the chosen search result when Enter completes search input', async () => {
+  const { ctx, controller } = await bench()
+  ctx.settings.describe = () => [{ ns: NS, value: { first: false, second: false } }] as never
+  try {
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
+    controller.dispatch({ kind: 'settings-search', query: 'false', active: true })
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    expect(controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.field).toBe('second')
+    controller.dispatch({ kind: 'settings-search', query: 'false', active: false })
+    expect(controller.getSettingsPane()).toMatchObject({ searching: false, filter: 'false', selectedIndex: 1 })
+    expect(controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.field).toBe('second')
   } finally { await controller.dispose(); await ctx.fiber.dispose() }
 })

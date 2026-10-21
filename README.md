@@ -33,6 +33,8 @@ For a running source-linked installation, `/reload` loads the rebuilt bundle but
 
 `/settings` now opens a hierarchy. Use Enter to open a category, namespace, provider, model or field; ←/Esc returns one level; `/` searches; `i` edits an object's JSON; Space toggles supported values. Successful edits stay in the current location and use DSH's official settings/credential services. In the recorded PTY comparison, a nine-line wheel burst reached its target in 17.93 ms instead of 168.07 ms; 2,812 frames with published transcript snapshots had no text mismatches or input-area leaks. These are synthetic PTY results, not hardware latency guarantees. See the [fix verification](docs/performance-audit-2026-10-21/fix-verification.md) for fixtures and limits.
 
+The source branch also includes unreleased settings usability improvements: visible category tabs, remembered per-category locations, selected-row highlighting, long-value details and contextual save/cancel controls. These changes are not in npm `0.1.0-alpha.51`; see [Unreleased](CHANGELOG.md#unreleased).
+
 ## Table of Contents
 
 - [Release and upgrade](#release-010-alpha51)

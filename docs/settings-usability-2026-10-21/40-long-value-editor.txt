@@ -1,0 +1,24 @@
+TUI performance audit offline 25 settin…
+────────────────────────────────────────
+设置  2/6                               
+   外观与输入  [模型与凭据] ›           
+… › providers › provider-0-long-route-n…
+  api               openai-completions  
+› baseURL           https://provider-0.…
+  apiKeyEnv         PROVIDER_0_API_KEY  
+  defaultInput      › 2 项              
+  displayName       Provider 0          
+  models            › 65 项             
+当前项: baseURL                         
+当前值: https://provider-0.example/v1   
+Enter 保存 · Esc 取消                   
+
+
+
+
+
+│ › 设置值 · Enter 保存 · Esc 取消      
+│ > ‹ute/route/route/route/route/route/ 
+────────────────────────────────────────
+/offline-fixture · 状态 空闲            
+offline 25 settings · / 命令 · @ 提及   

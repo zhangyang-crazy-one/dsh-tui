@@ -1,0 +1,869 @@
+[
+  {
+    "status": "PASS",
+    "columns": 40,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "外观与输入"
+          ],
+          "activeCategory": "group:appearance",
+          "filter": "",
+          "editing": false,
+          "selectedField": {
+            "label": "tui",
+            "field": "",
+            "value": "4 个字段"
+          }
+        }
+      },
+      {
+        "name": "providers",
+        "settings": {
+          "rowCount": 26,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "provider-0-long-route-name",
+            "field": "providers.provider-0-long-route-name",
+            "value": "65 模型 · openai-completions"
+          }
+        }
+      },
+      {
+        "name": "model-field",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "other-category",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "Subagent"
+          ],
+          "activeCategory": "group:subagents",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "subagent",
+            "field": "",
+            "value": "2 个字段"
+          }
+        }
+      },
+      {
+        "name": "restored",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": true,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-accepted",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-cleared",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "editing",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "saved",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "131072"
+          }
+        }
+      },
+      {
+        "name": "long-value-editor",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      },
+      {
+        "name": "long-value-cancelled",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "status": "PASS",
+    "columns": 80,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "外观与输入"
+          ],
+          "activeCategory": "group:appearance",
+          "filter": "",
+          "editing": false,
+          "selectedField": {
+            "label": "tui",
+            "field": "",
+            "value": "4 个字段"
+          }
+        }
+      },
+      {
+        "name": "providers",
+        "settings": {
+          "rowCount": 26,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "provider-0-long-route-name",
+            "field": "providers.provider-0-long-route-name",
+            "value": "65 模型 · openai-completions"
+          }
+        }
+      },
+      {
+        "name": "model-field",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "other-category",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "Subagent"
+          ],
+          "activeCategory": "group:subagents",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "subagent",
+            "field": "",
+            "value": "2 个字段"
+          }
+        }
+      },
+      {
+        "name": "restored",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": true,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-accepted",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-cleared",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "editing",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "saved",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "131072"
+          }
+        }
+      },
+      {
+        "name": "long-value-editor",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      },
+      {
+        "name": "long-value-cancelled",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "status": "PASS",
+    "columns": 120,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "外观与输入"
+          ],
+          "activeCategory": "group:appearance",
+          "filter": "",
+          "editing": false,
+          "selectedField": {
+            "label": "tui",
+            "field": "",
+            "value": "4 个字段"
+          }
+        }
+      },
+      {
+        "name": "providers",
+        "settings": {
+          "rowCount": 26,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "provider-0-long-route-name",
+            "field": "providers.provider-0-long-route-name",
+            "value": "65 模型 · openai-completions"
+          }
+        }
+      },
+      {
+        "name": "model-field",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "other-category",
+        "settings": {
+          "rowCount": 1,
+          "selected": 0,
+          "breadcrumb": [
+            "设置",
+            "Subagent"
+          ],
+          "activeCategory": "group:subagents",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "subagent",
+            "field": "",
+            "value": "2 个字段"
+          }
+        }
+      },
+      {
+        "name": "restored",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": true,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-accepted",
+        "settings": {
+          "rowCount": 1625,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "contextWindow",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.1.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "search-cleared",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "editing",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "32768"
+          }
+        }
+      },
+      {
+        "name": "saved",
+        "settings": {
+          "rowCount": 5,
+          "selected": 2,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name",
+            "models",
+            "model-0"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "contextWindow",
+            "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+            "value": "131072"
+          }
+        }
+      },
+      {
+        "name": "long-value-editor",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": true,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      },
+      {
+        "name": "long-value-cancelled",
+        "settings": {
+          "rowCount": 6,
+          "selected": 1,
+          "breadcrumb": [
+            "设置",
+            "模型与凭据",
+            "llm-pi-ai",
+            "providers",
+            "provider-0-long-route-name"
+          ],
+          "activeCategory": "group:providers",
+          "filter": "",
+          "searching": false,
+          "editing": false,
+          "selectedField": {
+            "label": "baseURL",
+            "field": "providers.provider-0-long-route-name.baseURL",
+            "value": "https://provider-0.example/v1"
+          }
+        }
+      }
+    ]
+  }
+]

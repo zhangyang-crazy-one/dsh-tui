@@ -33,6 +33,8 @@ dsh-tui
 
 `/settings` 现在支持多级浏览。Enter 进入分类、namespace、Provider、model 或字段；←/Esc 返回上一层；`/` 搜索；`i` 编辑对象 JSON；Space 切换支持的值。保存后停留当前位置，继续使用 DSH 官方 settings/credentials 服务。本次 PTY 对照中，9 行滚动到达目标从 168.07 ms 降至 17.93 ms；2,812 个有正文快照的比较帧未发现正文不一致或越界。这是合成数据的 PTY 实测，不是硬件延迟保证。数据与边界见[修复验证](docs/performance-audit-2026-10-21/fix-verification.md)。
 
+源码分支另包含尚未发布的设置易用性改进：可见分类选项卡、分类内位置记忆、选中行高亮、长值详情和明确的保存/取消提示。这些改进尚未包含在 npm `0.1.0-alpha.51` 中，见 [Unreleased](CHANGELOG.md#unreleased)。
+
 ## 目录
 
 - [版本与升级](#010-alpha51-版本)

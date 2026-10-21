@@ -58990,8 +58990,114 @@ var SETTINGS_GROUP_LABELS = {
   other: "\u5176\u4ED6"
 };
 
-// packages/tui/tui-render/src/settings-pane.tsx
+// packages/tui/tui-render/src/settings-browser.tsx
 var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
+function fit(text4, width) {
+  const safe = escapeContent(text4).replace(/\n/gu, " \u21B5 ");
+  return displayWidth(safe) <= width ? safe : `${wcwidthSafeSlice(safe, Math.max(0, width - 1))}\u2026`;
+}
+function canToggleSetting(row) {
+  return row !== void 0 && row.navigable !== true && row.editable !== false && (row.value === "true" || row.value === "false" || row.namespace === "tui" && ["brandAnimation", "locale", "theme", "colorTier"].includes(row.field));
+}
+function tabLine(categories, activeId, width) {
+  const active = Math.max(0, categories.findIndex((category) => category.id === activeId));
+  let start = active;
+  let end = active + 1;
+  const label = (index2) => index2 === active ? `[${categories[index2].label}]` : ` ${categories[index2].label} `;
+  const used = (from2, to2) => categories.slice(from2, to2).reduce((sum, _2, i2) => sum + displayWidth(escapeContent(label(from2 + i2))) + 1, 4);
+  while (start > 0 || end < categories.length) {
+    if (start > 0 && used(start - 1, end) <= width) {
+      start--;
+      continue;
+    }
+    if (end < categories.length && used(start, end + 1) <= width) {
+      end++;
+      continue;
+    }
+    break;
+  }
+  return [
+    styled(start > 0 ? "\u2039 " : "  ", "fgDim"),
+    ...categories.slice(start, end).map((_2, index2) => styled(
+      fit(label(start + index2), Math.max(1, width - 5)) + " ",
+      start + index2 === active ? "accentText" : "fgDim",
+      void 0,
+      start + index2 === active
+    )),
+    styled(end < categories.length ? "\u203A" : "", "fgDim")
+  ];
+}
+function fieldLabel(row, locale) {
+  const label = row.label ?? row.field;
+  if (row.namespace !== "tui" || label !== row.field) return label;
+  if (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") return `${tuiCopy(row.field, locale)} (${row.field})`;
+  const names = { theme: "\u660E\u6697\u4E3B\u9898", brandAnimation: "\u54C1\u724C\u52A8\u753B", submitOnEnter: "\u56DE\u8F66\u53D1\u9001", colorTier: "\u8272\u5F69\u6863\u4F4D" };
+  return locale !== "en-US" && names[row.field] !== void 0 ? `${names[row.field]} (${row.field})` : label;
+}
+function SettingsBrowser(props) {
+  const { rows, selectedIndex, editing, updateError, busy, searching, filter = "", breadcrumb = ["\u8BBE\u7F6E"], categories = [], activeCategory, locale } = props;
+  const width = Math.max(1, props.columns);
+  const budget = Math.max(1, props.maxRows ?? 18);
+  const selected = Math.max(0, Math.min(selectedIndex, rows.length - 1));
+  const active = rows[selected];
+  const compact = budget < 8;
+  const filtered = filter !== "" || searching === true;
+  const category = categories.find((entry) => entry.id === activeCategory)?.label ?? breadcrumb[1];
+  const back = breadcrumb.length > 2 ? "\u8FD4\u56DE" : "\u5173\u95ED";
+  const action = active?.navigable === true ? "\u8FDB\u5165" : active?.editable === false ? "\u53EA\u8BFB" : canToggleSetting(active) ? "\u5207\u6362" : "\u7F16\u8F91";
+  const primary = action === "\u53EA\u8BFB" ? action : `Enter ${action}`;
+  let footer = busy === true ? ["\u6B63\u5728\u5904\u7406\uFF0C\u8BF7\u7A0D\u5019\u2026"] : editing ? ["Enter \u4FDD\u5B58 \xB7 Esc \u53D6\u6D88"] : searching === true ? ["\u2191\u2193 \u9009\u62E9 \xB7 Enter \u5B8C\u6210\u641C\u7D22 \xB7 Esc \u6E05\u9664", "Tab/Shift+Tab \u5206\u7C7B"] : compact ? [`${primary} \xB7 Esc ${back}`] : width < 80 ? [`\u2191\u2193 \u9009\u62E9 \xB7 ${primary} \xB7 Esc ${back}`, `Tab \u5206\u7C7B \xB7 / \u641C\u7D22${active?.navigable === true && active.editable !== false ? " \xB7 i JSON" : ""}`] : [`\u2191\u2193 \u9009\u62E9 \xB7 PgUp/PgDn \u7FFB\u9875 \xB7 ${primary} \xB7 \u2190/Esc ${back}`, `Tab/Shift+Tab \u5206\u7C7B \xB7 / \u641C\u7D22${active?.navigable === true && active.editable !== false ? " \xB7 i JSON \u7F16\u8F91" : canToggleSetting(active) ? " \xB7 Space \u5207\u6362" : ""} \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D`];
+  if (budget <= 2) footer = [];
+  const lines = [];
+  const add = (text4, token = "fg", bold = false, bg = "bg") => lines.push({ parts: [styled(fit(text4, width), token, void 0, bold)], bg });
+  const count = `${rows.length === 0 ? 0 : selected + 1}/${rows.length}`;
+  const title = compact && category !== void 0 ? `[${category}]` : "\u8BBE\u7F6E";
+  add(`${fit(title, Math.max(1, width - displayWidth(count) - 2))}  ${count}`, "fg", true);
+  const showTabs = !compact && categories.length > 0;
+  if (showTabs) lines.push({ parts: tabLine(categories, activeCategory, width), bg: "bg" });
+  if (!compact) {
+    const path2 = breadcrumb.slice(showTabs ? 2 : 1).join(" \u203A ") || category || "\u9009\u62E9\u5206\u7C7B";
+    const location = displayWidth(escapeContent(path2)) <= width ? path2 : `\u2026 \u203A ${breadcrumb.slice(-2).join(" \u203A ")}`;
+    add(filtered ? `\u641C\u7D22\u7ED3\u679C /${filter}${searching === true ? "\u258F" : ""}` : location, filtered ? "accentText" : "fgDim");
+  } else if (searching === true) {
+    lines[0] = { parts: [styled(fit(`\u641C\u7D22 /${filter}\u258F`, width), "accentText")], bg: "bg" };
+  }
+  const status = updateError !== void 0 ? `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${updateError}` : busy === true ? "\u6B63\u5728\u5904\u7406\u8BBE\u7F6E\u2026" : void 0;
+  const space = Math.max(0, budget - lines.length - footer.length - (status === void 0 ? 0 : 1));
+  const detail = [];
+  const detailBudget = compact || active === void 0 ? 0 : Math.min(6, Math.max(0, space - Math.min(3, Math.max(1, rows.length))));
+  if (active !== void 0 && detailBudget > 0) {
+    const source = filtered ? `${active.namespace} \xB7 ${active.field}` : fieldLabel(active, locale);
+    detail.push(...wrapDisplayLines(escapeContent(`\u5F53\u524D\u9879: ${source}`), width).slice(0, filtered ? 2 : 1));
+    const value = active.value === "" ? "\u2014" : active.value;
+    detail.push(...wrapDisplayLines(escapeContent(`${active.navigable === true ? "\u5305\u542B" : "\u5F53\u524D\u503C"}: ${value}`), width));
+    if (active.description !== void 0) detail.push(...wrapDisplayLines(escapeContent(active.description), width));
+    if (detail.length > detailBudget) {
+      detail.length = detailBudget;
+      detail[detail.length - 1] = `${wcwidthSafeSlice(detail[detail.length - 1], Math.max(0, width - 1))}\u2026`;
+    }
+  }
+  const size = Math.min(rows.length, Math.max(0, space - detail.length));
+  const start = Math.max(0, Math.min(rows.length - size, selected - Math.floor(size / 2)));
+  if (size === 0 && space > detail.length) add(filtered ? "\u6CA1\u6709\u5339\u914D\u7684\u8BBE\u7F6E \xB7 Esc \u6E05\u9664\u641C\u7D22" : "\u65E0\u53EF\u7528\u8BBE\u7F6E", "fgDim");
+  for (const [offset, row] of rows.slice(start, start + size).entries()) {
+    const isSelected = start + offset === selected;
+    const rawValue = row.value === "true" ? "\u2713 \u5F00\u542F" : row.value === "false" ? "\u25CB \u5173\u95ED" : row.value;
+    const value = rawValue || (row.navigable === true ? "\u6253\u5F00 \u203A" : "\u2014");
+    const labelWidth = Math.max(1, Math.min(44, Math.floor((width - 4) * 0.45)));
+    const label = fit(`${fieldLabel(row, locale)}${row.required === true ? " *" : ""}`, labelWidth);
+    const gap = Math.max(2, labelWidth - displayWidth(label) + 2);
+    const text4 = `${isSelected ? "\u203A " : "  "}${label}${" ".repeat(gap)}${fit(`${row.navigable === true ? "\u203A " : ""}${value}`, Math.max(1, width - 2 - displayWidth(label) - gap))}`;
+    add(text4, isSelected ? "fg" : "fgSoft", isSelected, isSelected ? "settingsCardBg" : "bg");
+  }
+  for (const text4 of detail) add(text4, "fgDim");
+  if (status !== void 0) add(status, updateError === void 0 ? "fgDim" : "error");
+  for (const text4 of footer) add(text4, "fgDim");
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: lines.slice(0, budget).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { height: 1, flexShrink: 0, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(line5.parts, line5.bg, width) }) }, index2)) });
+}
+
+// packages/tui/tui-render/src/settings-pane.tsx
+var import_jsx_runtime16 = __toESM(require_jsx_runtime(), 1);
 var TITLE2 = "\u8BBE\u7F6E";
 var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
 var EDIT_FOOTNOTE = "Enter \u5E94\u7528 \xB7 Esc \u53D6\u6D88";
@@ -59086,57 +59192,56 @@ function SettingsPane({
   maxRows,
   breadcrumb,
   filter,
-  searching
+  searching,
+  categories,
+  activeCategory
 }) {
   const { columns } = use_window_size_default();
   const width = columns > 0 ? columns : 80;
+  if (breadcrumb !== void 0 && onboarding !== true) return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+    SettingsBrowser,
+    {
+      rows,
+      selectedIndex,
+      editing,
+      columns: width,
+      breadcrumb,
+      ...locale === void 0 ? {} : { locale },
+      ...filter === void 0 ? {} : { filter },
+      ...searching === void 0 ? {} : { searching },
+      ...categories === void 0 ? {} : { categories },
+      ...activeCategory === void 0 ? {} : { activeCategory },
+      ...maxRows === void 0 ? {} : { maxRows },
+      ...updateError === void 0 ? {} : { updateError },
+      ...busy === void 0 ? {} : { busy }
+    }
+  );
   const selected = Math.min(Math.max(0, selectedIndex), Math.max(0, rows.length - 1));
   const active = rows[selected];
   const errorReason2 = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON2 : void 0);
-  const hierarchy = breadcrumb !== void 0;
-  const escapeHint = (breadcrumb?.length ?? 0) > 1 ? "Esc \u8FD4\u56DE" : "Esc \u5173\u95ED";
-  let footer = searching === true ? ["\u8F93\u5165\u641C\u7D22 \xB7 Enter \u786E\u5B9A \xB7 Esc \u6E05\u9664"] : onboarding === true ? [editing ? ONBOARDING_FOOTNOTE : "\u2191\u2193 \u9009\u62E9\u5BC6\u94A5 \xB7 Enter \u8F93\u5165 \xB7 Esc \u5173\u95ED"] : editing ? [EDIT_FOOTNOTE] : !hierarchy ? ["\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED"] : width < 80 ? ["\u2191\u2193 \u9009\u62E9  Enter \u6253\u5F00  \u2190 \u8FD4\u56DE", `/ \u641C\u7D22  i \u7F16\u8F91  Tab \u5206\u7C7B  ${escapeHint}`] : ["\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u8FDB\u5165/\u7F16\u8F91 \xB7 \u2190 \u8FD4\u56DE \xB7 / \u641C\u7D22", `i JSON\u7F16\u8F91 \xB7 Space \u5207\u6362 \xB7 Tab \u5206\u7C7B \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 ${escapeHint}`];
-  const budget = maxRows ?? SETTINGS_WINDOW + 10;
-  const compact = hierarchy && budget < 8;
-  if (compact && footer.length > 1) footer = [`Enter \u6253\u5F00 \u2190\u8FD4\u56DE /\u641C\u7D22 ${escapeHint}`];
-  const hasSearch = !compact && (searching === true || filter !== void 0 && filter !== "");
-  const errorLines = errorReason2 === void 0 ? 0 : errorReason2 === EMPTY_TABLE_REASON2 || compact ? 1 : 2;
-  const showBusy = busy === true && (!compact || errorReason2 === void 0 && budget >= 5);
-  let room = budget - 1 - footer.length - errorLines - (hasSearch ? 1 : 0) - (showBusy ? 1 : 0) - 1;
-  const selectedValue = hierarchy && active !== void 0 && room-- > 0;
-  const description = hierarchy && room-- > 0 ? active?.description : void 0;
-  const fixed = 1 + footer.length + (selectedValue ? 1 : 0) + (description === void 0 ? 0 : 1) + errorLines + (hasSearch ? 1 : 0) + (showBusy ? 1 : 0);
-  const available = Math.max(1, budget - fixed);
-  const showOverflow = !compact && available >= 3;
-  const size = hierarchy ? Math.min(rows.length, rows.length > available && showOverflow ? available - 2 : available, maxRows === void 0 ? SETTINGS_WINDOW : rows.length) : Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason2, busy === true));
+  const footer = onboarding === true ? [editing ? ONBOARDING_FOOTNOTE : "\u2191\u2193 \u9009\u62E9\u5BC6\u94A5 \xB7 Enter \u8F93\u5165 \xB7 Esc \u5173\u95ED"] : [editing ? EDIT_FOOTNOTE : "\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED"];
+  const size = Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason2, busy === true));
   const start = Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, rows.length - size));
-  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow([styled(fitValue(escapeContent(text4), width), token, void 0, bold)], "settingsCardBg", width) }) });
-  let heading = hierarchy ? breadcrumb.join(" \u203A ") : active === void 0 ? TITLE2 : `${TITLE2} \xB7 ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`;
-  if (displayWidth(escapeContent(heading)) > width && hierarchy) {
-    heading = `\u8BBE\u7F6E \u203A \u2026 \u203A ${breadcrumb[breadcrumb.length - 1] ?? ""}`;
-  }
-  if (compact && searching === true) heading = `\u641C\u7D22 /${filter ?? ""}`;
+  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow([styled(fitValue(escapeContent(text4), width), token, void 0, bold)], "settingsCardBg", width) }) });
+  let heading = active === void 0 ? TITLE2 : `${TITLE2} \xB7 ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`;
   if (onboarding === true) heading = rows.length > 1 ? "API \u5BC6\u94A5" : ONBOARDING_TITLE;
-  const counter = rows.length === 0 ? "" : `${!hierarchy && active !== void 0 ? `${active.namespace} \xB7 ` : ""}${String(selected + 1)}/${String(rows.length)}`;
+  const counter = rows.length === 0 ? "" : `${active !== void 0 ? `${active.namespace} \xB7 ` : ""}${String(selected + 1)}/${String(rows.length)}`;
   if (counter !== "") heading = `${fitValue(escapeContent(heading), Math.max(1, width - displayWidth(counter) - 2))}  ${counter}`;
   const localizedLabel = (row) => {
     if (row.label !== void 0 && !(row.namespace === "tui" && row.label === row.field)) return row.label;
     const resolved = locale ?? "zh-CN";
     const label = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.namespace === "tui" && row.field in TUI_EXTRA_LABELS ? `${row.field} \xB7 ${TUI_EXTRA_LABELS[row.field][resolved === "en-US" ? "en-US" : "zh-CN"]}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
-    return hierarchy ? label : `${row.namespace} \xB7 ${label}`;
+    return `${row.namespace} \xB7 ${label}`;
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
     renderLine(heading, "fg", true),
-    hasSearch ? renderLine(`\u641C\u7D22 /${filter ?? ""}${searching === true ? "\u258F" : ""}`, "accent") : null,
-    start > 0 && (!hierarchy || showOverflow) ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null,
-    rows.slice(start, start + size).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? "\u203A " : ""}${row.value}`, start + index2 === selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index2)}`)),
-    rows.length > start + size && (!hierarchy || showOverflow) ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
-    selectedValue ? renderLine(`\u503C: ${active.value === "" ? "\u2014" : active.value}`, "fg") : null,
-    description === void 0 ? null : renderLine(description, "fgDim"),
+    start > 0 ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null,
+    rows.slice(start, start + size).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? "\u203A " : ""}${row.value}`, start + index2 === selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index2)}`)),
+    rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
     errorReason2 === void 0 ? null : renderLine(errorReason2 === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason2}`, "error"),
-    errorLines < 2 ? null : renderLine(FAIL_NEXT2, "fgDim"),
-    showBusy ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
-    footer.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: renderLine(line5, "fgDim") }, index2))
+    errorReason2 === void 0 || errorReason2 === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim"),
+    busy === true ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
+    footer.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: renderLine(line5, "fgDim") }, index2))
   ] });
 }
 
@@ -59187,7 +59292,7 @@ function tokenizeComposer(text4) {
 }
 
 // packages/tui/tui-render/src/input-bar.tsx
-var import_jsx_runtime16 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime17 = __toESM(require_jsx_runtime(), 1);
 var PROMPT_WIDTH = 2;
 var COMPOSER_PLACEHOLDER = tuiCopy("inputHint");
 function InputBar({
@@ -59200,7 +59305,8 @@ function InputBar({
   modelChip,
   modeChip,
   locale,
-  secret
+  secret,
+  actionHint
 }) {
   const { text: text4, caretIndex } = maskComposerInput(sourceText, sourceCaretIndex ?? sourceText.length, secret);
   const selectionAnchor = sourceSelectionAnchor === void 0 ? void 0 : maskComposerInput(sourceText, sourceSelectionAnchor, secret).caretIndex;
@@ -59241,7 +59347,7 @@ function InputBar({
   const leftPrefix = "\u2502 ";
   const placeholder = tuiCopy("inputHint", locale);
   const sendHint = tuiCopy("sendHint", locale);
-  const modeHint = commandMode ? tuiCopy("commandModeHint", locale) : mentionMode ? tuiCopy("mentionModeHint", locale) : void 0;
+  const modeHint = actionHint ?? (commandMode ? tuiCopy("commandModeHint", locale) : mentionMode ? tuiCopy("mentionModeHint", locale) : void 0);
   const leftHint = modeHint === void 0 ? `\u203A ${placeholder} \xB7 ${sendHint}` : `\u203A ${modeHint}`;
   const leftWidth = displayWidth(leftPrefix + leftHint);
   const chipWidth = chipText !== "" ? displayWidth(chipText) : 0;
@@ -59257,14 +59363,14 @@ function InputBar({
       styled(escapeContent(chipText), "fgDim")
     ] : []
   ];
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
     Box_default,
     {
       flexDirection: "column",
       width: "100%",
       backgroundColor: inkColor("inputBg"),
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(headerParts, "inputBg", columns) }),
+        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(headerParts, "inputBg", columns) }),
         lines.map((line5, lineIndex) => {
           const window2 = windows[lineIndex];
           let sourceColumn = 0;
@@ -59288,7 +59394,7 @@ function InputBar({
               return selection !== void 0 && start + begin >= selection.start && start + begin < selection.end && visible !== "" && currentTier() !== "none" ? `\x1B[7m${painted}\x1B[27m` : painted;
             });
           });
-          return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
+          return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
             styled(escapeContent("\u2502 "), "accentText"),
             styled(escapeContent(lineIndex === 0 ? "> " : "  "), "accentText"),
             ...window2.hiddenPrefix ? [styled("\u2039", "fgDim")] : [],
@@ -59301,7 +59407,7 @@ function InputBar({
 }
 
 // packages/tui/tui-render/src/agent-hub-pane.tsx
-var import_jsx_runtime17 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime18 = __toESM(require_jsx_runtime(), 1);
 function formatTokens(value) {
   const scaled = (next) => next >= 100 ? String(Math.round(next)) : String(Math.round(next * 10) / 10);
   if (value < 1e3) return String(value);
@@ -59338,14 +59444,14 @@ function aggregateLine(rows) {
 }
 function hubRow(row, selected) {
   const label = [row.label, row.execution ?? (row.activity === "" ? void 0 : row.activity), ...metricSegments(row)].filter((value) => value !== void 0).join(" \xB7 ");
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(Box_default, { width: "100%", flexDirection: "column", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(Text, { wrap: "truncate", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", flexDirection: "column", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Text, { wrap: "truncate", children: [
       selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
       paintRow([styled(escapeContent(label), selected ? "fg" : "fgSoft", void 0, selected)])
     ] }),
-    row.task !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u4EFB\u52A1 \xB7 ${escapeContent(row.task)}`, "fgSoft")]) }),
-    row.summary !== void 0 && row.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u5F53\u524D \xB7 ${escapeContent(row.summary)}`, "accent")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  ${escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${row.id}`)}`, "fgDim")]) })
+    row.task !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u4EFB\u52A1 \xB7 ${escapeContent(row.task)}`, "fgSoft")]) }),
+    row.summary !== void 0 && row.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u5F53\u524D \xB7 ${escapeContent(row.summary)}`, "accent")]) }),
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  ${escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${row.id}`)}`, "fgDim")]) })
   ] }, row.id);
 }
 function hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth) {
@@ -59391,7 +59497,7 @@ function AgentHubBody({
     if (view === "transcript") onViewportChange?.({ offset: start, maxOffset: maximum, pageRows: pageSize });
   }, [view, start, maximum, pageSize, onViewportChange]);
   if (missing) {
-    return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59404,13 +59510,13 @@ function AgentHubBody({
   const selected = rows[clamped];
   const addressable = selected?.parentSessionId !== void 0 && selected.parentSessionId !== selected.id && selected.mode !== void 0;
   const controls = prompt === void 0 ? [addressable && selected.mode === "continuable" ? "c \u7EED\u804A" : "", addressable ? "s \u8BF7\u6C42\u505C\u6B62" : "", "v \u5E76\u6392"].filter(Boolean).join(" \xB7 ") : `Enter \u6392\u961F \xB7 Ctrl+Enter \u5F15\u5BFC \xB7 Esc \u53D6\u6D88${busy ? " \xB7 \u53D1\u9001\u4E2D" : ""}`;
-  const editor = /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(import_jsx_runtime17.Fragment, { children: [
-    notice !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(notice), "fgDim")]) }),
-    renderEditor && prompt !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(InputBar, { text: prompt, caretIndex, commandMode: false, mentionMode: false })
+  const editor = /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(import_jsx_runtime18.Fragment, { children: [
+    notice !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(notice), "fgDim")]) }),
+    renderEditor && prompt !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(InputBar, { text: prompt, caretIndex, commandMode: false, mentionMode: false })
   ] });
   if (view === "transcript") {
     if (error51 !== void 0 && error51 !== "" && prompt === void 0) {
-      return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
         OverlayShell,
         {
           title: "\u5B50\u4EE3\u7406",
@@ -59428,7 +59534,7 @@ function AgentHubBody({
     const total = lines.length;
     const slice = lines.slice(start, start + pageSize);
     const scrollInfo = total > pageSize ? ` (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)})` : "";
-    return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
+    return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59438,10 +59544,10 @@ ${controls}
 Esc \u8FD4\u56DE \xB7 ${scrollOffset === Number.MAX_SAFE_INTEGER ? "\u8DDF\u968F\u6700\u65B0" : "\u9605\u8BFB\u4E2D"}${scrollInfo}
 ${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u4F1A\u8BDD\u7EE7\u7EED\u8FD0\u884C`,
         children: [
-          headerSegments.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(Box_default, { width: "100%", flexDirection: "column", marginY: 0, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(headerSegments.join(" \xB7 ")), "accent", void 0, true)]) }),
-            selectedRow?.id && /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${selectedRow.id}`), "fgDim")]) }),
-            /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500\u2500\u2500 \u6267\u884C\u60C5\u51B5 \u2500\u2500\u2500"), "fgDim")]) })
+          headerSegments.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", flexDirection: "column", marginY: 0, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(headerSegments.join(" \xB7 ")), "accent", void 0, true)]) }),
+            selectedRow?.id && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${selectedRow.id}`), "fgDim")]) }),
+            /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500\u2500\u2500 \u6267\u884C\u60C5\u51B5 \u2500\u2500\u2500"), "fgDim")]) })
           ] }),
           slice.map((lineText, index2) => {
             const isUser = lineText.startsWith("> ");
@@ -59452,7 +59558,7 @@ ${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u
             if (isUser) token = "accent";
             else if (isTool) token = "codeKeyword";
             else if (isResult || isTurn) token = "fgDim";
-            return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { children: paintRow([styled(escapeContent(lineText), token)]) }, start + index2);
+            return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(lineText), token)]) }, start + index2);
           }),
           editor
         ]
@@ -59460,7 +59566,7 @@ ${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u
     );
   }
   if (error51 !== void 0 && error51 !== "" && prompt === void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59470,7 +59576,7 @@ ${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u
     );
   }
   if (rows.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59487,7 +59593,7 @@ ${controls}`;
   const footerRows = wrapDisplayLines(footnote, columns || 80).length;
   const windowSize = Math.max(1, Math.floor((height - 9 - footerRows) / 4));
   const rowStart = Math.max(0, Math.min(rows.length - windowSize, clamped - Math.floor(windowSize / 2)));
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
     OverlayShell,
     {
       title: "\u5B50\u4EE3\u7406",
@@ -59495,18 +59601,18 @@ ${controls}`;
       footnote,
       children: [
         rows.slice(rowStart, rowStart + windowSize).map((row) => hubRow(row, row.id === rows[clamped]?.id)),
-        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(aggregateLine(rows)), "fgDim")]) }),
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(aggregateLine(rows)), "fgDim")]) }),
         editor
       ]
     }
   );
 }
 function AgentHubPane(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Box_default, { width: props.maxCols ?? "100%", flexDirection: "column", children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(AgentHubBody, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Box_default, { width: props.maxCols ?? "100%", flexDirection: "column", children: /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(AgentHubBody, { ...props }) });
 }
 
 // packages/tui/tui-render/src/plan-directory-pane.tsx
-var import_jsx_runtime18 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime19 = __toESM(require_jsx_runtime(), 1);
 var TITLE3 = "\u8BA1\u5212";
 var FOOTNOTE2 = "j/k \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED";
 var SWITCH_NEXT = "\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8 \xB7 \u53EF\u91CD\u8BD5";
@@ -59519,13 +59625,13 @@ var EMPTY_PLAN_DIRECTORY_PANE = {
 };
 function directoryRow(label, selected, current) {
   const text4 = current ? `${label} \xB7 \u5F53\u524D` : label;
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(text4), selected ? "fg" : "fgDim")]) })
+  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(Box_default, { width: "100%", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
+    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: paintRow([styled(escapeContent(text4), selected ? "fg" : "fgDim")]) })
   ] }, label);
 }
 function line3(text4, token) {
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(text4), token)]) });
+  return /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: paintRow([styled(escapeContent(text4), token)]) });
 }
 function PlanDirectoryPane({
   selectedIndex = 0,
@@ -59534,7 +59640,7 @@ function PlanDirectoryPane({
   statusError
 }) {
   if (statusError !== void 0 && statusError !== "") {
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(
       OverlayShell,
       {
         title: TITLE3,
@@ -59543,7 +59649,7 @@ function PlanDirectoryPane({
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(OverlayShell, { title: TITLE3, footnote: FOOTNOTE2, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(OverlayShell, { title: TITLE3, footnote: FOOTNOTE2, children: [
     ROWS.map(
       (label, index2) => directoryRow(
         label,
@@ -59551,7 +59657,7 @@ function PlanDirectoryPane({
         label === "\u5F00\u542F" ? currentActive : !currentActive
       )
     ),
-    switchError !== void 0 && switchError !== "" ? /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    switchError !== void 0 && switchError !== "" ? /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
       line3(`\u2717 \u5207\u6362\u8BA1\u5212\u5931\u8D25\uFF1A${switchError}`, "error"),
       line3(SWITCH_NEXT, "fgDim")
     ] }) : null
@@ -59560,7 +59666,7 @@ function PlanDirectoryPane({
 
 // packages/tui/tui-render/src/plan-review-pane.tsx
 var import_react43 = __toESM(require_react(), 1);
-var import_jsx_runtime19 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime20 = __toESM(require_jsx_runtime(), 1);
 var TITLE4 = "\u8BA1\u5212\u8BC4\u5BA1";
 var FOOTNOTE3 = "y \u6279\u51C6 \xB7 n \u7EE7\u7EED\u89C4\u5212 \xB7 Esc \u53D6\u6D88";
 var EMPTY_BODY = "\u8BA1\u5212\u6B63\u6587\u4E3A\u7A7A";
@@ -59570,7 +59676,7 @@ var EMPTY_PLAN_REVIEW_PANE = {
   open: false
 };
 function line4(text4, token, bold = false) {
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(text4), token, void 0, bold)]) });
+  return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(text4), token, void 0, bold)]) });
 }
 function PlanReviewPane({
   plan = "",
@@ -59604,20 +59710,20 @@ ${DELIVERY_NEXT2}` : "", width);
   const view = failed ? errorView : planView;
   const position2 = view.total > 0 ? ` ${view.start + 1}\u2013${view.start + view.visible.length}/${view.total}` : "";
   let body;
-  if (failed) body = errorView.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "error")]) }, errorView.start + index2));
+  if (failed) body = errorView.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "error")]) }, errorView.start + index2));
   else if (plan.trim() === "") body = line4(EMPTY_BODY, "fg");
-  else body = planView.visible.map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: row.spans.length === 0 ? " " : paintLineFromRenderLine(row, links) }, planView.start + index2));
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled(TITLE4, "fg", void 0, true), styled(position2, "fgDim")]) }),
+  else body = planView.visible.map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: row.spans.length === 0 ? " " : paintLineFromRenderLine(row, links) }, planView.start + index2));
+  return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(TITLE4, "fg", void 0, true), styled(position2, "fgDim")]) }),
     body,
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [y] ", "success", void 0, true), styled("\u6279\u51C6", "fg", void 0, true), styled(" (\u5F00\u59CB\u6267\u884C\u8BA1\u5212)", "fgDim")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [n] ", "warning", void 0, true), styled("\u7EE7\u7EED\u89C4\u5212", "fg", void 0, true), styled(" (\u8FD4\u56DE\u8C03\u6574\u65B9\u6848)", "fgDim")]) }),
+    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [y] ", "success", void 0, true), styled("\u6279\u51C6", "fg", void 0, true), styled(" (\u5F00\u59CB\u6267\u884C\u8BA1\u5212)", "fgDim")]) }),
+    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [n] ", "warning", void 0, true), styled("\u7EE7\u7EED\u89C4\u5212", "fg", void 0, true), styled(" (\u8FD4\u56DE\u8C03\u6574\u65B9\u6848)", "fgDim")]) }),
     line4(width < 70 ? "\u2191\u2193/PgUp/PgDn \xB7 Home/End \xB7 Esc \u53D6\u6D88" : `${FOOTNOTE3} \xB7 \u2191\u2193/PgUp/PgDn \u6D4F\u89C8`, "fgDim")
   ] });
 }
 
 // packages/tui/tui-render/src/ask-user-pane.tsx
-var import_jsx_runtime20 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime21 = __toESM(require_jsx_runtime(), 1);
 var FOOTNOTE4 = "Enter \u4F5C\u7B54 \xB7 Esc \u53D6\u6D88\u63D0\u95EE";
 var INVALID_TITLE = "\u2717 \u63D0\u95EE\u65E0\u6548";
 var INVALID_NEXT = "Esc \u53D6\u6D88";
@@ -59662,9 +59768,9 @@ function AskUserPane({
   const detailRows = useDialogTextRows(source, width);
   const view = useDialogWindow(detailRows, offset, limit, detailsOpen ? onOffsetChange : void 0);
   const progress = questionCount === void 0 ? "" : ` (${questionNumber}/${questionCount})`;
-  if (editingCustom && !detailsOpen) return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`${escapeContent(header)}${progress}`, "fg", void 0, true)]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
+  if (editingCustom && !detailsOpen) return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`${escapeContent(header)}${progress}`, "fg", void 0, true)]) }),
+    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
       InputBar,
       {
         text: (customText ?? "").replace(/[\r\n]/gu, "\u21B5"),
@@ -59674,10 +59780,10 @@ function AskUserPane({
         rowsBelow: customRowsBelow ?? 2
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled("Enter \u786E\u8BA4 \xB7 Tab \u5168\u6587 \xB7 Esc \u53D6\u6D88", "fgDim")]) })
+    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled("Enter \u786E\u8BA4 \xB7 Tab \u5168\u6587 \xB7 Esc \u53D6\u6D88", "fgDim")]) })
   ] });
   if (options.length === 0 && !editingCustom) {
-    return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
       renderPaneLine(INVALID_TITLE, "error", true),
       renderPaneLine(INVALID_NEXT, "fgDim")
     ] });
@@ -59685,28 +59791,28 @@ function AskUserPane({
   const start = Math.max(0, Math.min(options.length - limit, selected - Math.floor(limit / 2)));
   const position2 = detailsOpen ? ` ${view.start + 1}\u2013${view.start + view.visible.length}/${view.total}` : "";
   const heading = detailsOpen ? `\u63D0\u95EE\u5168\u6587${options.length === 0 ? progress : ` \xB7 \u9009\u9879 ${selected + 1}/${options.length}`}${position2}` : `${escapeContent(header || "\u8BF7\u9009\u62E9").replace(/\n/g, " \u21B5 ")}${progress}`;
-  return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(heading, "fg", void 0, true)]) }),
-    detailsOpen ? view.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "fg")]) }, view.start + index2)) : options.slice(start, start + limit).map((label, index2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(heading, "fg", void 0, true)]) }),
+    detailsOpen ? view.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "fg")]) }, view.start + index2)) : options.slice(start, start + limit).map((label, index2) => {
       const actualIndex = start + index2;
       const active = actualIndex === selected;
       const marker = multiSelect ? selectedIndices?.includes(actualIndex) ? "[x] " : "[ ] " : "";
       const numbered = escapeContent(`${actualIndex + 1} ${marker}${label}`).replace(/\n/g, " \u21B5 ");
-      return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([
+      return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([
         styled(active ? "\u203A " : "  ", "accent", void 0, active),
         styled(numbered, active ? "fg" : "fgDim", void 0, active)
       ]) }, actualIndex);
     }),
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE4, "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "\u2191\u2193/jk \u6EDA\u52A8 \xB7 Home/End \u9996\u5C3E" : multiSelect ? "\u2191\u2193 \u79FB\u52A8 \xB7 Space \u591A\u9009 \xB7 c \u81EA\u5B9A\u4E49" : "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 c \u81EA\u5B9A\u4E49", "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "PgUp/PgDn \u7FFB\u9875" : customText === void 0 ? "[i] \u5168\u6587 \xB7 PgUp/PgDn \u7FFB\u9875" : "\u5DF2\u6709\u81EA\u5B9A\u4E49\u56DE\u7B54 \xB7 [i] \u5168\u6587", "fgDim")]) })
+    /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE4, "fgDim")]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "\u2191\u2193/jk \u6EDA\u52A8 \xB7 Home/End \u9996\u5C3E" : multiSelect ? "\u2191\u2193 \u79FB\u52A8 \xB7 Space \u591A\u9009 \xB7 c \u81EA\u5B9A\u4E49" : "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 c \u81EA\u5B9A\u4E49", "fgDim")]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "PgUp/PgDn \u7FFB\u9875" : customText === void 0 ? "[i] \u5168\u6587 \xB7 PgUp/PgDn \u7FFB\u9875" : "\u5DF2\u6709\u81EA\u5B9A\u4E49\u56DE\u7B54 \xB7 [i] \u5168\u6587", "fgDim")]) })
     ] })
   ] });
 }
 
 // packages/tui/tui-render/src/timeline-view.tsx
-var import_jsx_runtime21 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime22 = __toESM(require_jsx_runtime(), 1);
 var FIRST_LINE_MAX = 120;
 var TIMELINE_WINDOW = 60;
 function TimelineView({
@@ -59721,19 +59827,19 @@ function TimelineView({
   const start = Math.max(0, end - TIMELINE_WINDOW);
   const visible = history.slice(start, end);
   const current = end >= history.length ? visible.length - 1 : -1;
-  return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    history.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { dimColor: true, children: "\uFF08\u65E0\u5386\u53F2\u6D88\u606F\uFF09" }) : null,
-    start > 0 ? /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Text, { dimColor: true, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    history.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Text, { dimColor: true, children: "\uFF08\u65E0\u5386\u53F2\u6D88\u606F\uFF09" }) : null,
+    start > 0 ? /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Text, { dimColor: true, children: [
       "\u2026 \u8FD8\u6709 ",
       start,
       " \u6761"
     ] }) : null,
-    visible.map((message, index2) => /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Text, { children: [
+    visible.map((message, index2) => /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Text, { children: [
       styled(relativeTime(message.timestamp, clock), "fgDim"),
       ` ${message.kind === "user" ? "> " : "\u25CF "}`,
       index2 === current ? styled(escapeContent(firstLine(message.text)), "accent") : escapeContent(firstLine(message.text))
     ] }, start + index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc \u5173\u95ED"), "fgDim") })
+    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc \u5173\u95ED"), "fgDim") })
   ] });
 }
 function firstLine(text4) {
@@ -59742,7 +59848,7 @@ function firstLine(text4) {
 }
 
 // packages/tui/tui-render/src/command-menu.tsx
-var import_jsx_runtime22 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime23 = __toESM(require_jsx_runtime(), 1);
 var COMMAND_MENU_WINDOW = 8;
 var MARKER_COLS2 = 2;
 var NAME_GAP = 2;
@@ -59809,11 +59915,11 @@ function CommandMenu({
     const widthName = displayWidth(`/${item.name}`);
     if (widthName > nameCols) nameCols = widthName;
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Box_default, { flexDirection: "column", width, children: matches.map((item, index2) => /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Text, { children: paintRow(paletteRow(item, offset + index2 === clampedIndex, nameCols, width)) }) }, item.name)) }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", width, children: matches.map((item, index2) => /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Text, { children: paintRow(paletteRow(item, offset + index2 === clampedIndex, nameCols, width)) }) }, item.name)) }) });
 }
 
 // packages/tui/tui-render/src/mention.tsx
-var import_jsx_runtime23 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime24 = __toESM(require_jsx_runtime(), 1);
 var KIND_LABELS = {
   file: "\u6587\u4EF6",
   directory: "\u76EE\u5F55",
@@ -59831,10 +59937,10 @@ function Mention({
   const { columns } = use_window_size_default();
   const width = conversationWidth(columns > 0 ? columns : 80);
   if (phase === "loading") {
-    return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Text, { dimColor: true, children: "\u52A0\u8F7D\u4E2D\u2026" }) }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { dimColor: true, children: "\u52A0\u8F7D\u4E2D\u2026" }) }) });
   }
   if (candidates.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Text, { dimColor: true, children: "\u65E0\u5339\u914D" }) }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { dimColor: true, children: "\u65E0\u5339\u914D" }) }) });
   }
   const clampedIndex = Math.max(0, Math.min(selectedIndex, candidates.length - 1));
   const sections = /* @__PURE__ */ new Map();
@@ -59850,12 +59956,12 @@ function Mention({
   let rowIndex = 0;
   for (const [kind, group] of sections) {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Text, { wrap: "truncate", children: styled(KIND_LABELS[kind], "accentText", void 0, true) }, kind)
+      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { wrap: "truncate", children: styled(KIND_LABELS[kind], "accentText", void 0, true) }, kind)
     );
     for (const candidate of group) {
       const selected = rowIndex === clampedIndex;
       rows.push(
-        /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)(Text, { wrap: "truncate", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(Text, { wrap: "truncate", children: [
           selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
           styled(`@ ${escapeContent(candidate.name)}`, selected ? "fg" : "fgSoft", void 0, selected),
           candidate.description !== void 0 ? styled(` \u2014 ${escapeContent(candidate.description)}`, "fgDim") : ""
@@ -59864,7 +59970,7 @@ function Mention({
       rowIndex += 1;
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", width, children: rows }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { flexDirection: "column", width, children: rows }) });
 }
 
 // packages/tui/tui-render/src/goal-footer.ts
@@ -60248,7 +60354,7 @@ function layoutHud(input) {
 }
 
 // packages/tui/tui-render/src/workflow-overlay.tsx
-var import_jsx_runtime24 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime25 = __toESM(require_jsx_runtime(), 1);
 var WORKFLOW_OVERLAY_WINDOW = 8;
 var EMPTY_WORKFLOW_OVERLAY = { open: false, offset: 0 };
 function WorkflowOverlay({
@@ -60256,15 +60362,15 @@ function WorkflowOverlay({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (state.run === void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", body: "\u5F53\u524D\u65E0\u5DE5\u4F5C\u6D41\u8FD0\u884C", footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", body: "\u5F53\u524D\u65E0\u5DE5\u4F5C\u6D41\u8FD0\u884C", footnote: "Esc \u5173\u95ED" });
   }
   const rows = [];
   if (state.run.phase !== void 0 && state.run.phase !== "") {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { children: paintRow([styled(escapeContent(`\u9636\u6BB5 ${state.run.phase}`), "fg")]) }, "phase")
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { children: paintRow([styled(escapeContent(`\u9636\u6BB5 ${state.run.phase}`), "fg")]) }, "phase")
     );
   }
   const windowed = state.run.members.slice(
@@ -60274,17 +60380,17 @@ function WorkflowOverlay({
   for (const member of windowed) {
     const outcomeSuffix = member.outcome === void 0 ? "" : ` \xB7 ${member.outcome}`;
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { children: paintRow([
+      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { children: paintRow([
         styled(escapeContent(`${member.seq} \xB7 ${member.label}${outcomeSuffix}`), "fgDim")
       ]) }, member.seq)
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", footnote: "j/k \u6EDA\u52A8 \xB7 Esc \u5173\u95ED", children: rows });
+  return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", footnote: "j/k \u6EDA\u52A8 \xB7 Esc \u5173\u95ED", children: rows });
 }
 
 // packages/tui/tui-render/src/workspace-pane.tsx
 var import_react44 = __toESM(require_react(), 1);
-var import_jsx_runtime25 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_WORKSPACE_PANE = {
   open: false,
   root: "",
@@ -60377,12 +60483,12 @@ function WorkspacePreview({ preview, columns, maxRows, onLayout, systemOpen }) {
         if (start >= fragment.end) break;
       }
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(parts, "codeBg", columns) }, `${fragment.line}:${fragment.start}`);
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(parts, "codeBg", columns) }, `${fragment.line}:${fragment.start}`);
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime25.jsxs)(Box_default, { flexDirection: "column", width: columns, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintRow([styled(title, "fg", void 0, true)]) }),
+  return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(Box_default, { flexDirection: "column", width: columns, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(title, "fg", void 0, true)]) }),
     rows,
-    maxRows > 1 ? /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintRow([styled(footnote, "fgDim")]) }) : null
+    maxRows > 1 ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(footnote, "fgDim")]) }) : null
   ] });
 }
 function WorkspacePane({
@@ -60394,10 +60500,10 @@ function WorkspacePane({
   const { rows: windowRows, columns: windowColumns } = use_window_size_default();
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u533A", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u533A", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (state.preview !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
       WorkspacePreview,
       {
         preview: state.preview,
@@ -60418,7 +60524,7 @@ function WorkspacePane({
     const selected = index2 === state.selectedIndex && !state.editing;
     const head = `${selected ? "\u203A " : "  "}${"  ".repeat(node2.depth)}${glyph} `;
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { wrap: "truncate", children: paintRow([
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([
         styled(escapeContent(head), selected ? "accent" : "fgDim"),
         styled(
           truncateDisplay(
@@ -60430,7 +60536,7 @@ function WorkspacePane({
       ]) }, node2.path)
     );
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
     OverlayShell,
     {
       title: state.mode === "deliveries" ? "\u4EA4\u4ED8\u6587\u4EF6" : "\u5DE5\u4F5C\u533A",
@@ -60444,7 +60550,7 @@ function WorkspacePane({
 }
 
 // packages/tui/tui-render/src/plugins-pane.tsx
-var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_PLUGINS_PANE = {
   open: false,
   available: false,
@@ -60549,11 +60655,11 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
     return { text: text4, token };
   });
   const visible = [...lines.slice(start, start + bodyBudget), ...statusEntries];
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint), children: visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(clean(line5.text), line5.token ?? (line5.selected ? "accent" : "fg"), void 0, line5.bold === true)]) }, index2)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint), children: visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: paintRow([styled(clean(line5.text), line5.token ?? (line5.selected ? "accent" : "fg"), void 0, line5.bold === true)]) }, index2)) });
 }
 
 // packages/tui/tui-render/src/account-pane.tsx
-var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_ACCOUNT_PANE = {
   open: false,
   available: false,
@@ -60648,11 +60754,11 @@ function AccountPane({ state, locale = "zh-CN", maxCols }) {
     }
     if (state.busy) hint = copy("accountBusyHint");
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error, children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token, void 0, line5.bold === true)]) }, index2)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error, children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token, void 0, line5.bold === true)]) }, index2)) });
 }
 
 // packages/tui/tui-render/src/feedback-pane.tsx
-var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_FEEDBACK_PANE = {
   open: false,
   hasTarget: false,
@@ -60668,10 +60774,10 @@ function FeedbackPane({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (!state.hasTarget) {
-    return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
       OverlayShell,
       {
         title: "\u53CD\u9988",
@@ -60687,7 +60793,7 @@ function FeedbackPane({
     { key: "negative", shortcut: "[d] ", label: "\u8E29", token: "warning" }
   ].map((row) => {
     const isCurrent = state.rating === row.key;
-    return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: paintRow([
+    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([
       styled(escapeContent(`  ${row.shortcut}`), isCurrent ? row.token : "fgDim", void 0, isCurrent),
       styled(
         escapeContent(`${row.label}${isCurrent ? " \xB7 \u5F53\u524D" : ""}`),
@@ -60699,13 +60805,13 @@ function FeedbackPane({
   });
   if (state.note !== void 0 && state.note.trim() !== "") {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: paintRow([
+      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([
         styled("  \u5907\u6CE8: ", "fgDim"),
         styled(escapeContent(state.note), "fgSoft")
       ]) }, "note")
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
     OverlayShell,
     {
       title: "\u53CD\u9988",
@@ -60757,7 +60863,7 @@ function toolDetailsKeyAction(key, info) {
 
 // packages/tui/tui-render/src/todo-pane.tsx
 var import_react45 = __toESM(require_react(), 1);
-var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
 function TodoPane({ todos, offset, onOffsetChange, locale }) {
   const { columns, rows } = use_window_size_default();
   const width = Math.max(1, (columns || 80) - 4);
@@ -60790,15 +60896,15 @@ function TodoPane({ todos, offset, onOffsetChange, locale }) {
   }, [start, offset, onOffsetChange]);
   const summary2 = english ? `${todos.length} tasks \xB7 ${counts.in_progress} active \xB7 ${counts.pending} pending \xB7 ${counts.completed} done` : `\u5171 ${todos.length} \u9879 \xB7 \u8FDB\u884C\u4E2D ${counts.in_progress} \xB7 \u5F85\u529E ${counts.pending} \xB7 \u5DF2\u5B8C\u6210 ${counts.completed}`;
   const position2 = lines.length === 0 ? "" : ` ${start + 1}\u2013${Math.min(start + height, lines.length)}/${lines.length}`;
-  return /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
     OverlayShell,
     {
       title: english ? "TODO list" : "\u5F85\u529E\u6E05\u5355",
       footnote: `${english ? "\u2191\u2193/jk Scroll \xB7 PgUp/PgDn Page \xB7 Esc Back" : "\u2191\u2193/jk \u6EDA\u52A8 \xB7 PgUp/PgDn \u7FFB\u9875 \xB7 Esc \u8FD4\u56DE"}${position2}`,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([styled(summary2, "fgDim")]) }),
-        todos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { children: english ? "No TODO list in this turn." : "\u5F53\u524D\u56DE\u5408\u6682\u65E0\u5F85\u529E\u6E05\u5355\u3002" }),
-        lines.slice(start, start + height).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.text || " ", line5.token)]) }, start + index2))
+        /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(summary2, "fgDim")]) }),
+        todos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { children: english ? "No TODO list in this turn." : "\u5F53\u524D\u56DE\u5408\u6682\u65E0\u5F85\u529E\u6E05\u5355\u3002" }),
+        lines.slice(start, start + height).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.text || " ", line5.token)]) }, start + index2))
       ]
     }
   );
@@ -60806,7 +60912,7 @@ function TodoPane({ todos, offset, onOffsetChange, locale }) {
 
 // packages/tui/tui-render/src/schedule-pane.tsx
 var import_react46 = __toESM(require_react(), 1);
-var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime31 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_SCHEDULE_PANE = {
   open: false,
   rows: [],
@@ -60853,14 +60959,14 @@ ${escapeContent(selected.id)}
     if (lines.length === 0) lines = [state.loading ? "\u6B63\u5728\u8BFB\u53D6\u4EFB\u52A1\u2026" : "\u6682\u65E0\u4EFB\u52A1\uFF1B\u53EF\u8BA9\u6A21\u578B\u521B\u5EFA\u5B9A\u65F6\u63D0\u9192\u3002"];
   }
   const footnote = state.busy ? "\u6B63\u5728\u53D6\u6D88\u4EFB\u52A1\u2026" : state.confirmDelete ? "y \u786E\u8BA4\u53D6\u6D88 \xB7 n/Esc \u4FDD\u7559" : state.details ? "\u2191\u2193/PgUp/PgDn \u9605\u8BFB \xB7 Enter \u539F\u4F1A\u8BDD \xB7 d \u53D6\u6D88\u4EFB\u52A1 \xB7 Esc \u5217\u8868" : "\u2191\u2193 \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 d \u53D6\u6D88\u4EFB\u52A1 \xB7 r \u5237\u65B0 \xB7 Esc \u8FD4\u56DE";
-  return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(OverlayShell, { title: `\u5B9A\u65F6\u4EFB\u52A1 \xB7 ${state.rows.length}`, footnote, children: [
-    state.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(truncateDisplay(escapeContent(state.error), width), "fg")]) }),
-    lines.slice(0, Math.max(0, capacity - (state.error === void 0 ? 0 : 1))).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5 || " ", "fg")]) }, index2))
+  return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(OverlayShell, { title: `\u5B9A\u65F6\u4EFB\u52A1 \xB7 ${state.rows.length}`, footnote, children: [
+    state.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: paintRow([styled(truncateDisplay(escapeContent(state.error), width), "fg")]) }),
+    lines.slice(0, Math.max(0, capacity - (state.error === void 0 ? 0 : 1))).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5 || " ", "fg")]) }, index2))
   ] });
 }
 
 // packages/tui/tui-render/src/tool-details-pane.tsx
-var import_jsx_runtime31 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime32 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_TOOL_DETAILS_PANE = Object.freeze({
   open: false,
   cards: [],
@@ -60897,21 +61003,21 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
     }
     lines.push(truncateDisplay(`${state.page + 1} \xB7 ${page.remainingLines} ${tuiCopy("remaining", locale)} \xB7 d ${tuiCopy("diagnostics", locale)} ${tuiCopy(state.diagnostics ? "on" : "off", locale)}`, columns));
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: heading }),
-    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
+  return /* @__PURE__ */ (0, import_jsx_runtime32.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { wrap: "truncate", children: heading }),
+    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
   ] });
 }
 
 // packages/tui/tui-render/src/queue-chip.tsx
-var import_jsx_runtime32 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime33 = __toESM(require_jsx_runtime(), 1);
 function queueChipText(count) {
   return count <= 0 ? void 0 : `\u5F85\u53D1 ${String(count)} \xB7 \u2191 \u53D6\u51FA`;
 }
 function QueueChip({ count }) {
   const text4 = queueChipText(count);
-  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
+  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
 }
 
 // packages/tui/tui-render/src/loop.tsx
@@ -61365,10 +61471,15 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     });
   }
   if (settings.open) {
+    if (settings.busy === true) return { kind: "none" };
     if (settings.searching === true) {
       const query = settings.filter ?? "";
       if (keyInfo.escape) return holdComposer(state, { kind: "settings-search", query: "", active: false });
       if (keyInfo.return) return holdComposer(state, { kind: "settings-search", query, active: false });
+      if (keyInfo.tab) return holdComposer(state, { kind: "settings-group", delta: keyInfo.shift ? -1 : 1 });
+      if (keyInfo.downArrow || keyInfo.upArrow) return holdComposer(state, { kind: "settings-move", delta: keyInfo.downArrow ? 1 : -1 });
+      if (keyInfo.pageDown || keyInfo.pageUp) return holdComposer(state, { kind: "settings-move", delta: keyInfo.pageDown ? 5 : -5 });
+      if (keyInfo.home || keyInfo.end) return holdComposer(state, { kind: "settings-move", delta: keyInfo.end ? 1e4 : -1e4 });
       if (keyInfo.backspace || keyInfo.delete) return holdComposer(state, { kind: "settings-search", query: Array.from(query).slice(0, -1).join(""), active: true });
       if (!keyInfo.ctrl && !keyInfo.meta && !keyInfo.upArrow && !keyInfo.downArrow && key !== "") return holdComposer(state, { kind: "settings-search", query: query + key, active: true });
       return { kind: "none" };
@@ -61381,7 +61492,9 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     }
     if (keyInfo.return || keyInfo.rightArrow || key === "i") {
       if (key !== "i" && settings.navigable === true) return holdComposer(state, { kind: "settings-edit" });
+      if (keyInfo.rightArrow) return { kind: "none" };
       if (settings.editable === false) return { kind: "none" };
+      if (keyInfo.return && settings.toggleable === true) return holdComposer(state, { kind: "settings-toggle" });
       return {
         kind: "dispatch",
         action: { kind: key === "i" ? "settings-edit-json" : "settings-edit" },
@@ -62855,6 +62968,8 @@ function TuiLoop({
         editing: settingsPaneRef.current.editing,
         onboarding: settingsPaneRef.current.onboarding,
         navigable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.navigable,
+        toggleable: canToggleSetting(settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]),
+        busy: settingsPaneRef.current.busy,
         editable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editable,
         searching: settingsPaneRef.current.searching,
         filter: settingsPaneRef.current.filter,
@@ -63386,6 +63501,8 @@ function TuiLoop({
       locale,
       rows: settingsPane.rows,
       ...settingsPane.breadcrumb === void 0 ? {} : { breadcrumb: settingsPane.breadcrumb },
+      ...settingsPane.categories === void 0 ? {} : { categories: settingsPane.categories },
+      ...settingsPane.activeCategory === void 0 ? {} : { activeCategory: settingsPane.activeCategory },
       ...settingsPane.filter === void 0 ? {} : { filter: settingsPane.filter },
       ...settingsPane.searching === void 0 ? {} : { searching: settingsPane.searching },
       selectedIndex: settingsPane.selectedIndex,
@@ -63537,7 +63654,12 @@ function TuiLoop({
       mentionMode: false,
       caretIndex: state.caretIndex,
       selectionAnchor: state.selectionAnchor,
-      secret: settingsPane.editing && (settingsPane.onboarding === true || settingsPane.rows[settingsPane.selectedIndex]?.namespace === "credentials")
+      secret: settingsPane.editing && (settingsPane.onboarding === true || settingsPane.rows[settingsPane.selectedIndex]?.namespace === "credentials"),
+      ...settingsPane.editing ? {
+        actionHint: locale === "en-US" ? "Setting value \xB7 Enter save \xB7 Esc cancel" : "\u8BBE\u7F6E\u503C \xB7 Enter \u4FDD\u5B58 \xB7 Esc \u53D6\u6D88",
+        modelChip: "",
+        modeChip: ""
+      } : {}
     });
   } else if (toolDetailsPane.open) {
     inputSlot = void 0;
@@ -69385,13 +69507,13 @@ ${formattedError}` });
 }
 
 // packages/tui/tui-render/src/todo-hud.tsx
-var import_jsx_runtime33 = __toESM(require_jsx_runtime(), 1);
-
-// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime34 = __toESM(require_jsx_runtime(), 1);
 
-// packages/tui/tui-render/src/workflow-hud.tsx
+// packages/tui/tui-render/src/jobs-hud.tsx
 var import_jsx_runtime35 = __toESM(require_jsx_runtime(), 1);
+
+// packages/tui/tui-render/src/workflow-hud.tsx
+var import_jsx_runtime36 = __toESM(require_jsx_runtime(), 1);
 
 // packages/tui/tui-render/src/interaction-state.ts
 function reduceInteraction(state, event) {
@@ -99609,6 +99731,7 @@ var SettingsNavigation = class {
   parentId = "";
   query = "";
   selections = /* @__PURE__ */ new Map();
+  categoryPositions = /* @__PURE__ */ new Map();
   beforeSearchIndex = 0;
   get rows() {
     const query = this.query.toLocaleLowerCase();
@@ -99624,10 +99747,28 @@ var SettingsNavigation = class {
     }
     return [...labels, ...tail];
   }
+  get categories() {
+    return this.nodes.filter((node2) => node2.parentId === "").map((node2) => ({
+      id: node2.id,
+      label: node2.label ?? node2.field,
+      count: this.nodes.filter((child) => child.parentId === node2.id).length
+    }));
+  }
+  get activeCategory() {
+    let node2 = this.nodes.find((entry) => entry.id === this.parentId);
+    while (node2 !== void 0 && node2.parentId !== "") node2 = this.nodes.find((entry) => entry.id === node2?.parentId);
+    return node2?.id;
+  }
+  open() {
+    if (this.parentId === "") this.group(1);
+  }
   get filter() {
     return this.query;
   }
   remember() {
+    if (this.query !== "") return;
+    const category = this.activeCategory;
+    if (category !== void 0) this.categoryPositions.set(category, this.parentId);
     const id = this.rows[this.selectedIndex]?.id;
     if (id !== void 0) this.selections.set(this.parentId, id);
   }
@@ -99638,8 +99779,22 @@ var SettingsNavigation = class {
   replace(nodes) {
     const selected = this.rows[this.selectedIndex]?.id;
     this.remember();
+    const previous3 = this.nodes;
     this.nodes = nodes;
-    if (!nodes.some((node2) => node2.id === this.parentId)) this.parentId = "";
+    const survivingParent = (parent) => {
+      while (parent !== "" && !nodes.some((node2) => node2.id === parent)) {
+        parent = previous3.find((node2) => node2.id === parent)?.parentId ?? "";
+      }
+      return parent;
+    };
+    this.parentId = survivingParent(this.parentId);
+    for (const [parent, id] of this.selections) {
+      if (!nodes.some((node2) => node2.id === id && node2.parentId === parent)) this.selections.delete(parent);
+    }
+    for (const [category, parent] of this.categoryPositions) {
+      if (!nodes.some((node2) => node2.id === category && node2.parentId === "")) this.categoryPositions.delete(category);
+      else this.categoryPositions.set(category, survivingParent(parent));
+    }
     const index2 = this.rows.findIndex((node2) => node2.id === selected);
     if (index2 >= 0) this.selectedIndex = index2;
     else this.restore();
@@ -99660,7 +99815,7 @@ var SettingsNavigation = class {
       return true;
     }
     const node2 = this.nodes.find((entry) => entry.id === this.parentId);
-    if (node2 === void 0) return false;
+    if (node2 === void 0 || node2.parentId === "") return false;
     this.remember();
     this.parentId = node2.parentId;
     this.selectedIndex = 0;
@@ -99668,6 +99823,7 @@ var SettingsNavigation = class {
     return true;
   }
   search(query) {
+    if (query === this.query) return;
     if (this.query === "") {
       this.remember();
       this.beforeSearchIndex = this.selectedIndex;
@@ -99677,14 +99833,14 @@ var SettingsNavigation = class {
     if (query === "") this.restore();
   }
   group(delta) {
+    if (this.query !== "") this.search("");
     this.remember();
-    const groups = this.nodes.filter((node2) => node2.parentId === "");
-    const current = this.breadcrumb[1];
-    const index2 = groups.findIndex((node2) => node2.label === current);
-    const next = groups[(index2 + (delta < 0 ? -1 : 1) + groups.length) % groups.length];
+    const groups = this.categories;
+    const index2 = groups.findIndex((node2) => node2.id === this.activeCategory);
+    const nextIndex = index2 < 0 ? delta < 0 ? groups.length - 1 : 0 : (index2 + (delta < 0 ? -1 : 1) + groups.length) % groups.length;
+    const next = groups[nextIndex];
     if (next === void 0) return;
-    this.parentId = next.id;
-    this.query = "";
+    this.parentId = this.categoryPositions.get(next.id) ?? next.id;
     this.selectedIndex = 0;
     this.restore();
   }
@@ -101091,7 +101247,7 @@ var RuntimeController = class _RuntimeController {
         rows: this.settingsRows,
         selectedIndex: this.settingsSelectedIndex,
         editing: this.settingsEditing,
-        ...!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching } : {},
+        ...!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching, categories: this.settingsNavigation.categories, ...this.settingsNavigation.activeCategory === void 0 ? {} : { activeCategory: this.settingsNavigation.activeCategory } } : {},
         ...this.settingsOnboarding ? { onboarding: true } : {},
         ...this.settingsBusy ? { busy: true } : {},
         ...this.settingsUpdateError === void 0 ? {} : { updateError: this.settingsUpdateError }
@@ -103323,7 +103479,7 @@ ${line5}`.slice(-64e3);
         return;
       }
       case "settings-escape":
-        if (!this.settingsOpen) return;
+        if (!this.settingsOpen || this.settingsBusy) return;
         if (this.settingsOnboarding) {
           this.settingsOnboarding = false;
           this.settingsOpen = false;
@@ -103356,6 +103512,7 @@ ${line5}`.slice(-64e3);
         if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
         this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
         this.settingsNavigation.group(action.delta);
+        this.settingsSearching = false;
         this.syncSettingsNavigation();
         return;
       case "settings-move":
@@ -103390,7 +103547,7 @@ ${line5}`.slice(-64e3);
         this.emit();
         return;
       case "settings-cancel-edit":
-        if (!this.settingsOpen) return;
+        if (!this.settingsOpen || this.settingsBusy) return;
         if (this.settingsOnboarding) {
           this.settingsOnboarding = false;
           this.settingsOpen = false;
@@ -105170,7 +105327,10 @@ ${row.hint ?? ""}` });
     this.settingsNavigation = new SettingsNavigation([]);
     this.settingsSelectedIndex = 0;
     this.settingsSearching = false;
-    this.settingsRows = this.readSettingsRows();
+    this.readSettingsRows();
+    this.settingsNavigation.open();
+    this.settingsRows = this.settingsNavigation.rows;
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex;
     this.settingsOnboarding = false;
     this.settingsOpen = true;
     this.emit();
@@ -105297,7 +105457,7 @@ ${row.hint ?? ""}` });
    * @param value - composer draft captured by the key reducer.
    */
   applySettingsValue(value) {
-    if (!this.settingsOpen || !this.settingsEditing) return;
+    if (!this.settingsOpen || !this.settingsEditing || this.settingsBusy) return;
     this.settingsEditing = false;
     const row = this.settingsRows[this.settingsSelectedIndex];
     if (row === void 0) {
@@ -105345,6 +105505,9 @@ ${row.hint ?? ""}` });
       this.applyAutoDiscoverProvider(row.namespace, row.field, parsed);
       return;
     }
+    this.settingsBusy = true;
+    this.settingsUpdateError = void 0;
+    this.emit();
     this.ownWork((async () => {
       try {
         const descriptor = settings.describe().find((form) => String(form.ns) === row.namespace);
@@ -105358,6 +105521,7 @@ ${row.hint ?? ""}` });
         this.setFeedback(`\u2713 \u5DF2\u66F4\u65B0 ${row.field}`);
       } catch (error51) {
         if (this.closed) return;
+        this.settingsBusy = false;
         this.settingsUpdateError = errorReason(error51);
         this.settingsRows = this.readSettingsRows();
         this.emit();
@@ -105371,7 +105535,7 @@ ${row.hint ?? ""}` });
   toggleSelectedSettingValue() {
     if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
     const row = this.settingsRows[this.settingsSelectedIndex];
-    if (row === void 0) return;
+    if (row === void 0 || row.editable === false) return;
     let nextValue;
     if (row.value === "true") {
       nextValue = false;
@@ -105395,17 +105559,22 @@ ${row.hint ?? ""}` });
     }
     const settings = this.ctx.get("settings");
     if (settings === void 0) return;
+    this.settingsBusy = true;
+    this.settingsUpdateError = void 0;
+    this.emit();
     this.ownWork((async () => {
       try {
         const descriptor = settings.describe().find((form) => String(form.ns) === row.namespace);
         await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split("."), nextValue, descriptor?.user));
         if (this.closed) return;
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting();
+        this.settingsBusy = false;
         this.settingsUpdateError = void 0;
         this.settingsRows = this.readSettingsRows();
         this.setFeedback(`\u2713 \u5DF2\u66F4\u65B0 ${row.field}`);
       } catch (error51) {
         if (this.closed) return;
+        this.settingsBusy = false;
         this.settingsUpdateError = errorReason(error51);
         this.settingsRows = this.readSettingsRows();
         this.emit();

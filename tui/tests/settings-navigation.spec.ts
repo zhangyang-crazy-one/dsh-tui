@@ -81,3 +81,104 @@ it('omits secret fields and refuses editing their containing JSON while retainin
   expect(nodes.find(row => row.field === 'nested')).toMatchObject({ editable: false, navigable: true })
   expect(nodes.find(row => row.field === 'nested.enabled')?.value).toBe('true')
 })
+
+
+describe('settings category tabs', () => {
+  function categories() {
+    return settingsTreeFromDescribe([
+      { ns: 'llm-pi-ai', value },
+      { ns: 'tui', value: { theme: 'dark', nested: { enabled: true, other: false } } },
+      { ns: 'web-search', value: { enabled: true } },
+      { ns: 'llm-deepseek', value: { model: 'deepseek' } },
+    ] as SettingsDescriptor[], [])
+  }
+  it('retains the constructor root but opens the first category without a redundant overview', () => {
+    const nav = new SettingsNavigation(categories())
+    expect(nav.rows.map(row => row.label)).toEqual(['模型与凭据', '外观与输入', 'Web'])
+    expect(nav.categories).toEqual([
+      { id: 'group:providers', label: '模型与凭据', count: 2 },
+      { id: 'group:appearance', label: '外观与输入', count: 1 },
+      { id: 'group:web', label: 'Web', count: 1 },
+    ])
+    expect(nav.activeCategory).toBeUndefined()
+    nav.open()
+    expect(nav.activeCategory).toBe('group:providers')
+    expect(nav.rows.map(row => row.label)).toEqual(['llm-pi-ai', 'llm-deepseek'])
+    expect(nav.back()).toBe(false)
+  })
+  it('visits the last category when cycling backwards from the constructor root', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.group(-1)
+    expect(nav.activeCategory).toBe('group:web')
+    expect(nav.rows.map(row => row.label)).toEqual(['web-search'])
+  })
+  it('remembers each category deep location and selection in either direction', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.open()
+    enter(nav, 'llm-pi-ai'); enter(nav, 'providers'); enter(nav, 'very-long-provider-name')
+    nav.selectedIndex = nav.rows.findIndex(row => row.label === 'models')
+    nav.group(1)
+    expect(nav.rows.map(row => row.label)).toEqual(['tui'])
+    enter(nav, 'tui'); enter(nav, 'nested'); nav.selectedIndex = 1
+    nav.group(-1)
+    expect(nav.breadcrumb.at(-1)).toBe('very-long-provider-name')
+    expect(nav.rows[nav.selectedIndex]?.label).toBe('models')
+    nav.group(1)
+    expect(nav.breadcrumb.at(-1)).toBe('nested')
+    expect(nav.rows[nav.selectedIndex]?.label).toBe('other')
+    expect(nav.back()).toBe(true)
+    expect(nav.rows[nav.selectedIndex]?.label).toBe('nested')
+  })
+  it('returns search to the prior selection and does not save search results as category positions', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.open(); enter(nav, 'llm-pi-ai'); enter(nav, 'providers'); enter(nav, 'very-long-provider-name')
+    nav.selectedIndex = nav.rows.findIndex(row => row.label === 'models')
+    nav.search('32768')
+    expect(nav.rows).toHaveLength(1)
+    expect(nav.back()).toBe(true)
+    expect(nav.rows[nav.selectedIndex]?.label).toBe('models')
+    nav.search('32768'); nav.group(1); nav.group(-1)
+    expect(nav.filter).toBe('')
+    expect(nav.breadcrumb.at(-1)).toBe('very-long-provider-name')
+    expect(nav.rows[nav.selectedIndex]?.label).toBe('models')
+  })
+  it('keeps the selected result when completing the same search query', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.open(); enter(nav, 'llm-pi-ai')
+    nav.search('false')
+    expect(nav.rows.length).toBeGreaterThan(1)
+    nav.selectedIndex = 1
+    const selectedId = nav.rows[1]!.id
+    nav.search('false')
+    expect(nav.selectedIndex).toBe(1)
+    expect(nav.rows[nav.selectedIndex]?.id).toBe(selectedId)
+    nav.search('true')
+    expect(nav.selectedIndex).toBe(0)
+  })
+  it('prunes deleted deep locations in inactive categories before returning to them', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.open(); enter(nav, 'llm-pi-ai'); enter(nav, 'providers'); enter(nav, 'very-long-provider-name')
+    nav.group(1)
+    const providerId = 'ns:llm-pi-ai:"providers":"very-long-provider-name"'
+    nav.replace(categories().filter(node => !node.id.startsWith(providerId)))
+    nav.group(-1)
+    expect(nav.breadcrumb.at(-1)).toBe('providers')
+    expect(nav.rows.map(row => row.label)).toEqual(['+ 添加 Provider'])
+  })
+  it('cleans removed category positions and falls back to the surviving parent after deletion', () => {
+    const nav = new SettingsNavigation(categories())
+    nav.open(); enter(nav, 'llm-pi-ai'); enter(nav, 'providers'); enter(nav, 'very-long-provider-name')
+    nav.group(1); enter(nav, 'tui'); enter(nav, 'nested')
+    const changed = categories().filter(node => node.id !== 'ns:tui:"nested"' && node.parentId !== 'ns:tui:"nested"')
+    nav.replace(changed)
+    expect(nav.breadcrumb.at(-1)).toBe('tui')
+    expect(nav.rows.map(row => row.label)).toEqual(['theme'])
+    nav.group(-1); nav.group(1)
+    expect(nav.breadcrumb.at(-1)).toBe('tui')
+    nav.replace(categories().filter(node => !node.id.startsWith('ns:tui') && node.id !== 'group:appearance'))
+    nav.group(1)
+    expect(nav.activeCategory).toBe('group:providers')
+    nav.group(-1)
+    expect(nav.activeCategory).toBe('group:web')
+  })
+})

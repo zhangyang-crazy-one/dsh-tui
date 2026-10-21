@@ -1,0 +1,30 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.51 build
+> node scripts/build.js
+
+Building dist/index.js...
+
+  ../dsh-tui/dist/index.js  4.3mb ⚠️
+
+⚡ Done in 338ms
+Building dist/startup.js...
+
+  ../dsh-tui/dist/startup.js  110.5kb
+
+⚡ Done in 30ms
+Building dist/settings.js...
+
+  ../dsh-tui/dist/settings.js  35.3kb
+
+⚡ Done in 23ms
+Building dist/schedule.js...
+
+  ../dsh-tui/dist/schedule.js  1.4mb ⚠️
+
+⚡ Done in 143ms
+Building dist/zen-proxy.js...
+
+  ../dsh-tui/dist/zen-proxy.js  38.0kb
+
+⚡ Done in 26ms
+dsh-tui bundle built against dsh 0.2.1-rc.2.

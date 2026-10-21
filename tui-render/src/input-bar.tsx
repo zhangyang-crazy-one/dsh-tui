@@ -105,6 +105,8 @@ export function handleInput(
 
 /** InputBar props: display state the keymap owner supplies. */
 export interface InputBarProps {
+  /** Instructions for a value editor that temporarily owns the composer. */
+  actionHint?: string
   /** Mask a credential editor while keeping the owner-controlled source buffer intact. */
   secret?: boolean
   /** Presentation-copy locale, Chinese when omitted. */
@@ -156,6 +158,7 @@ export function InputBar({
   modeChip,
   locale,
   secret,
+  actionHint,
 }: InputBarProps): ReactNode {
   const { text, caretIndex } = maskComposerInput(sourceText, sourceCaretIndex ?? sourceText.length, secret)
   const selectionAnchor = sourceSelectionAnchor === undefined ? undefined
@@ -205,9 +208,9 @@ export function InputBar({
   const placeholder = tuiCopy('inputHint', locale)
   const sendHint = tuiCopy('sendHint', locale)
   // The open palette owns Enter/Esc, so the header names the active mode.
-  const modeHint = commandMode
+  const modeHint = actionHint ?? (commandMode
     ? tuiCopy('commandModeHint', locale)
-    : mentionMode ? tuiCopy('mentionModeHint', locale) : undefined
+    : mentionMode ? tuiCopy('mentionModeHint', locale) : undefined)
   const leftHint = modeHint === undefined ? `› ${placeholder} · ${sendHint}` : `› ${modeHint}`
   const leftWidth = displayWidth(leftPrefix + leftHint)
   const chipWidth = chipText !== '' ? displayWidth(chipText) : 0

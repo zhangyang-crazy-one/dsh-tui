@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Settings now shows a visible category tab bar, a contrasting selected row, bounded long-value details and the selected search result's source path. Narrow terminals keep the active category visible; plain-color mode retains bracket markers.
+- Tab / Shift+Tab restores the last nested location in each category. Search supports arrow/page navigation and preserves selection when accepted. Enter changes supported booleans/choices; Right only opens nested objects. Controls describe the selected item's actual actions, and the value editor says save/cancel instead of send-message.
+- Settings writes reject duplicate submissions and read-only quick changes while preserving official settings/credential ownership and unknown user fields.
+
+### 中文变更说明
+
+- 设置增加可见分类选项卡、选中行背景、长值详情和搜索结果来源路径；窄屏保留当前分类，无色模式也可识别选中项。
+- Tab / Shift+Tab 切换分类并恢复深层位置；搜索中可用方向键/翻页，确认搜索保留选择。Enter 快速切换支持的布尔/枚举值，右方向键仅进入分支；编辑框明确显示保存/取消。
+- 保存期间防止重复写入或切换编辑位置，禁止只读项快速修改；继续使用 DSH 官方 settings/credentials 服务并保留未知字段。
+
 ## 0.1.0-alpha.51 — 2026-10-21
 
 Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`.

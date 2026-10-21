@@ -1,0 +1,9 @@
+{
+  "tui/src/settings-navigation.ts": "33678028252c68d6c952c19de8e6f99f77ac2efe36fbf1c0da5aa9c57f34a73f",
+  "tui/src/index.ts": "52873cdc84ad5fe086df0836360cebe004d1fcb6dd4bf35f699ef8fb208d9de8",
+  "tui-render/src/settings-pane.tsx": "3982c3e2e3e0c21d65a14c2c2d0f9288939e00cdb4ba0a67bb8e0450a9c5c557",
+  "tui-render/src/settings-browser.tsx": "b26ef9577a79daab64682e0389a289e2ace19941d86dd71fc6a38fb063628623",
+  "tui-render/src/input-bar.tsx": "fda9de5356354d1cbf057dfd82acde53674567f198d742b4c6ba25d36687a44f",
+  "tui-render/src/loop.tsx": "b86c728be70f6d9b5288862bb2463fac2abcb3be3658028ff6d44b5c3f1a574b",
+  "dist/index.js": "2df2b3855218264c6a02f095ced2e5068594b928ba3b623184f2e63184f6e7e9"
+}

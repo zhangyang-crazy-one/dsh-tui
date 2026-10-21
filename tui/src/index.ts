@@ -2154,7 +2154,7 @@ export class RuntimeController implements TuiController {
         rows: this.settingsRows,
         selectedIndex: this.settingsSelectedIndex,
         editing: this.settingsEditing,
-        ...(!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching } : {}),
+        ...(!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching, categories: this.settingsNavigation.categories, ...(this.settingsNavigation.activeCategory === undefined ? {} : { activeCategory: this.settingsNavigation.activeCategory }) } : {}),
         ...(this.settingsOnboarding ? { onboarding: true } : {}),
         ...(this.settingsBusy ? { busy: true } : {}),
         ...(this.settingsUpdateError === undefined
@@ -4413,7 +4413,7 @@ export class RuntimeController implements TuiController {
         return
       }
       case 'settings-escape':
-        if (!this.settingsOpen) return
+        if (!this.settingsOpen || this.settingsBusy) return
         if (this.settingsOnboarding) {
           this.settingsOnboarding = false
           this.settingsOpen = false
@@ -4446,6 +4446,7 @@ export class RuntimeController implements TuiController {
         if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
         this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
         this.settingsNavigation.group(action.delta)
+        this.settingsSearching = false
         this.syncSettingsNavigation()
         return
       case 'settings-move':
@@ -4476,7 +4477,7 @@ export class RuntimeController implements TuiController {
         this.emit()
         return
       case 'settings-cancel-edit':
-        if (!this.settingsOpen) return
+        if (!this.settingsOpen || this.settingsBusy) return
         if (this.settingsOnboarding) {
           this.settingsOnboarding = false
           this.settingsOpen = false
@@ -6340,7 +6341,10 @@ export class RuntimeController implements TuiController {
     this.settingsNavigation = new SettingsNavigation([])
     this.settingsSelectedIndex = 0
     this.settingsSearching = false
-    this.settingsRows = this.readSettingsRows()
+    this.readSettingsRows()
+    this.settingsNavigation.open()
+    this.settingsRows = this.settingsNavigation.rows
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex
     // This pane is the settings list, not the /key onboarding overlay, so a
     // credential row here stores a secret without leaving the pane.
     this.settingsOnboarding = false
@@ -6481,7 +6485,7 @@ export class RuntimeController implements TuiController {
    * @param value - composer draft captured by the key reducer.
    */
   private applySettingsValue(value: string): void {
-    if (!this.settingsOpen || !this.settingsEditing) return
+    if (!this.settingsOpen || !this.settingsEditing || this.settingsBusy) return
     this.settingsEditing = false
     const row = this.settingsRows[this.settingsSelectedIndex]
     if (row === undefined) {
@@ -6526,6 +6530,9 @@ export class RuntimeController implements TuiController {
       this.applyAutoDiscoverProvider(row.namespace, row.field, parsed)
       return
     }
+    this.settingsBusy = true
+    this.settingsUpdateError = undefined
+    this.emit()
     this.ownWork((async () => {
       try {
         const descriptor = settings.describe().find(form => String(form.ns) === row.namespace)
@@ -6539,6 +6546,7 @@ export class RuntimeController implements TuiController {
         this.setFeedback(`✓ 已更新 ${row.field}`)
       } catch (error: unknown) {
         if (this.closed) return
+        this.settingsBusy = false
         this.settingsUpdateError = errorReason(error)
         this.settingsRows = this.readSettingsRows()
         this.emit()
@@ -6553,7 +6561,7 @@ export class RuntimeController implements TuiController {
   private toggleSelectedSettingValue(): void {
     if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
     const row = this.settingsRows[this.settingsSelectedIndex]
-    if (row === undefined) return
+    if (row === undefined || row.editable === false) return
     let nextValue: unknown
     if (row.value === 'true') {
       nextValue = false
@@ -6577,17 +6585,22 @@ export class RuntimeController implements TuiController {
     }
     const settings = this.ctx.get('settings')
     if (settings === undefined) return
+    this.settingsBusy = true
+    this.settingsUpdateError = undefined
+    this.emit()
     this.ownWork((async () => {
       try {
         const descriptor = settings.describe().find(form => String(form.ns) === row.namespace)
         await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split('.'), nextValue, descriptor?.user))
         if (this.closed) return
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting()
+        this.settingsBusy = false
         this.settingsUpdateError = undefined
         this.settingsRows = this.readSettingsRows()
         this.setFeedback(`✓ 已更新 ${row.field}`)
       } catch (error: unknown) {
         if (this.closed) return
+        this.settingsBusy = false
         this.settingsUpdateError = errorReason(error)
         this.settingsRows = this.readSettingsRows()
         this.emit()

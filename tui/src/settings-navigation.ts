@@ -124,6 +124,7 @@ export class SettingsNavigation {
   private parentId = ''
   private query = ''
   private selections = new Map<string, string>()
+  private categoryPositions = new Map<string, string>()
   private beforeSearchIndex = 0
   constructor(private nodes: SettingsNode[]) {}
   get rows(): SettingsNode[] {
@@ -138,8 +139,25 @@ export class SettingsNavigation {
     while (node !== undefined) { tail.unshift(node.label ?? node.field); node = this.nodes.find(entry => entry.id === node?.parentId) }
     return [...labels, ...tail]
   }
+  get categories(): { id: string; label: string; count: number }[] {
+    return this.nodes.filter(node => node.parentId === '').map(node => ({
+      id: node.id, label: node.label ?? node.field,
+      count: this.nodes.filter(child => child.parentId === node.id).length,
+    }))
+  }
+  get activeCategory(): string | undefined {
+    let node = this.nodes.find(entry => entry.id === this.parentId)
+    while (node !== undefined && node.parentId !== '') node = this.nodes.find(entry => entry.id === node?.parentId)
+    return node?.id
+  }
+  open(): void {
+    if (this.parentId === '') this.group(1)
+  }
   get filter(): string { return this.query }
   private remember(): void {
+    if (this.query !== '') return
+    const category = this.activeCategory
+    if (category !== undefined) this.categoryPositions.set(category, this.parentId)
     const id = this.rows[this.selectedIndex]?.id
     if (id !== undefined) this.selections.set(this.parentId, id)
   }
@@ -149,8 +167,23 @@ export class SettingsNavigation {
   }
   replace(nodes: SettingsNode[]): void {
     const selected = this.rows[this.selectedIndex]?.id
-    this.remember(); this.nodes = nodes
-    if (!nodes.some(node => node.id === this.parentId)) this.parentId = ''
+    this.remember()
+    const previous = this.nodes
+    this.nodes = nodes
+    const survivingParent = (parent: string): string => {
+      while (parent !== '' && !nodes.some(node => node.id === parent)) {
+        parent = previous.find(node => node.id === parent)?.parentId ?? ''
+      }
+      return parent
+    }
+    this.parentId = survivingParent(this.parentId)
+    for (const [parent, id] of this.selections) {
+      if (!nodes.some(node => node.id === id && node.parentId === parent)) this.selections.delete(parent)
+    }
+    for (const [category, parent] of this.categoryPositions) {
+      if (!nodes.some(node => node.id === category && node.parentId === '')) this.categoryPositions.delete(category)
+      else this.categoryPositions.set(category, survivingParent(parent))
+    }
     const index = this.rows.findIndex(node => node.id === selected)
     if (index >= 0) this.selectedIndex = index
     else this.restore()
@@ -164,23 +197,28 @@ export class SettingsNavigation {
   back(): boolean {
     if (this.query !== '') { this.search(''); return true }
     const node = this.nodes.find(entry => entry.id === this.parentId)
-    if (node === undefined) return false
+    if (node === undefined || node.parentId === '') return false
     this.remember(); this.parentId = node.parentId; this.selectedIndex = 0; this.restore()
     return true
   }
   search(query: string): void {
+    if (query === this.query) return
     if (this.query === '') { this.remember(); this.beforeSearchIndex = this.selectedIndex }
     this.query = query
     this.selectedIndex = query === '' ? this.beforeSearchIndex : 0
     if (query === '') this.restore()
   }
   group(delta: number): void {
+    if (this.query !== '') this.search('')
     this.remember()
-    const groups = this.nodes.filter(node => node.parentId === '')
-    const current = this.breadcrumb[1]
-    const index = groups.findIndex(node => node.label === current)
-    const next = groups[(index + (delta < 0 ? -1 : 1) + groups.length) % groups.length]
+    const groups = this.categories
+    const index = groups.findIndex(node => node.id === this.activeCategory)
+    const nextIndex = index < 0 ? (delta < 0 ? groups.length - 1 : 0)
+      : (index + (delta < 0 ? -1 : 1) + groups.length) % groups.length
+    const next = groups[nextIndex]
     if (next === undefined) return
-    this.parentId = next.id; this.query = ''; this.selectedIndex = 0; this.restore()
+    this.parentId = this.categoryPositions.get(next.id) ?? next.id
+    this.selectedIndex = 0
+    this.restore()
   }
 }
