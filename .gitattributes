@@ -1,2 +1,2 @@
-# The generated bundle embeds Zod code-generation templates with indented blank lines.
-dist/index.js whitespace=-blank-at-eol
+# Bundled code includes dependency templates whose whitespace is intentional.
+dist/*.js linguist-generated=true -whitespace
