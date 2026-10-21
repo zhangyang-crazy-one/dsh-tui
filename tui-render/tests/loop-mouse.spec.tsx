@@ -20,6 +20,7 @@ import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
 import type { SettingsPaneState } from '../src/settings-pane.tsx'
 import { PASSIVE_CONTROLLER, fakeTtyStdin, fakeTtyStdout, disposeRenderer } from './helpers.ts'
+import { visibleFrameSnapshot } from '../src/frame-snapshot.ts'
 
 const IDLE_MODEL: ViewModel = {
   history: [],
@@ -100,6 +101,36 @@ async function mount(ctrl: TuiController) {
 }
 
 describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
+  it('preserves every wheel delta arriving before React commits', async () => {
+    const stdout = fakeTtyStdout()
+    Object.assign(stdout, { isTTY: true, rows: 24, columns: 80 })
+    stdout.on('data', () => {})
+    const value: ViewModel = { ...IDLE_MODEL,
+      history: [{ id: 1, kind: 'user', timestamp: 0,
+        text: Array.from({ length: 100 }, (_, index) => `WHEEL_${index}`).join('\n') }],
+    }
+    const ctrl = controller({ dispatch: vi.fn(), getModel: () => value })
+    const instance = render(createElement(TuiLoop, { title: 't', controller: ctrl }), {
+      stdout, stdin: fakeTtyStdin(), exitOnCtrlC: false, patchConsole: false, interactive: true,
+    })
+    const first = () => Number(/WHEEL_(\d+)/u.exec(visibleFrameSnapshot()?.rows[0]?.line.text ?? '')?.[1])
+    try {
+      await instance.waitUntilRenderFlush()
+      await new Promise(resolve => setTimeout(resolve, 20))
+      const initial = first()
+      expect(Number.isFinite(initial)).toBe(true)
+      notifyMouseScroll(3)
+      notifyMouseScroll(3)
+      notifyMouseScroll(3)
+      await instance.waitUntilRenderFlush()
+      await expect.poll(first).toBe(initial - 9)
+      notifyMouseScroll(-3)
+      notifyMouseScroll(-3)
+      await instance.waitUntilRenderFlush()
+      await expect.poll(first).toBe(initial - 3)
+    } finally { await disposeRenderer(instance) }
+  })
+
   it('keeps conversation scroll inside the measured viewport', async () => {
     const dispatch = vi.fn()
     const instance = await mount(controller({ dispatch }))

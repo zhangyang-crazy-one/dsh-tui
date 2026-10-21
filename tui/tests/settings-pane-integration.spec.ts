@@ -144,6 +144,17 @@ async function bench(options?: {
   return { ctx, controller, stored, update, setCredential }
 }
 
+/** Browse the actual category and namespace before exercising field behavior. */
+function openNamespace(controller: RuntimeController, name?: string): void {
+  if (controller.getSettingsPane().rows.length === 0) return
+  controller.dispatch({ kind: 'settings-edit' })
+  const pane = controller.getSettingsPane()
+  const index = name === undefined ? 0 : pane.rows.findIndex(row => row.label === name)
+  if (index < 0) throw new Error(`Missing namespace ${name}`)
+  controller.dispatch({ kind: 'settings-move', delta: index - pane.selectedIndex })
+  controller.dispatch({ kind: 'settings-edit' })
+}
+
 describe('SettingsPane intercept', () => {
   it('starts quiet with thinking hidden and exposes each display command with its current state', async () => {
     const { ctx, controller } = await bench({ settings: false })
@@ -222,6 +233,7 @@ describe('SettingsPane intercept', () => {
   it('opens the overlay from empty /settings with the host baseURL row', async () => {
     const { ctx, controller } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane()).toMatchObject({
       open: true,
       editing: false,
@@ -244,6 +256,7 @@ describe('SettingsPane intercept', () => {
   it('applies the draft through ctx.settings.update and then get() returns it', async () => {
     const { ctx, controller, stored, update } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-move', delta: 1 })
     controller.dispatch({ kind: 'settings-move', delta: -1 })
     expect(controller.getSettingsPane().selectedIndex).toBe(0)
@@ -251,7 +264,8 @@ describe('SettingsPane intercept', () => {
     expect(controller.getSettingsPane().editing).toBe(true)
     controller.dispatch({ kind: 'settings-apply', value: 'https://next.example' })
     await vi.waitFor(() => {
-      expect(controller.getSettingsPane().open).toBe(false)
+      expect(controller.getFeedback()).toMatch(/^✓ 已更新/u)
+      expect(controller.getSettingsPane().open).toBe(true)
     })
     expect(update).toHaveBeenCalledWith(NS, { baseURL: 'https://next.example' })
     expect(stored.baseURL).toBe('https://next.example')
@@ -262,6 +276,7 @@ describe('SettingsPane intercept', () => {
   it('keeps the overlay open and paints the failure pair when update rejects', async () => {
     const { ctx, controller, stored } = await bench({ rejectUpdate: 'unreadable' })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: 'https://bad.example' })
     await vi.waitFor(() => {
@@ -278,6 +293,7 @@ describe('SettingsPane intercept', () => {
   it('cancels edit without writing', async () => {
     const { ctx, controller, update } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-cancel-edit' })
     expect(controller.getSettingsPane()).toMatchObject({ open: true, editing: false })
@@ -288,6 +304,9 @@ describe('SettingsPane intercept', () => {
   it('closes the overlay on escape from browse', async () => {
     const { ctx, controller } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
+    controller.dispatch({ kind: 'settings-escape' })
+    controller.dispatch({ kind: 'settings-escape' })
     controller.dispatch({ kind: 'settings-escape' })
     expect(controller.getSettingsPane().open).toBe(false)
     await ctx.fiber.dispose()
@@ -303,6 +322,7 @@ describe('SettingsPane intercept', () => {
   it('shows the empty table when ctx.settings is missing', async () => {
     const { ctx, controller, update } = await bench({ settings: false })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane()).toMatchObject({
       open: true,
       rows: [],
@@ -323,18 +343,22 @@ describe('SettingsPane intercept', () => {
     const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
     settings.get = () => undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().rows).toEqual([])
     controller.dispatch({ kind: 'settings-escape' })
     settings.get = () => ({ baseURL: 1 })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().rows[0]?.value).toBe('1')
     controller.dispatch({ kind: 'settings-escape' })
     settings.get = () => null
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().rows).toEqual([])
     controller.dispatch({ kind: 'settings-escape' })
     settings.get = () => []
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().rows).toEqual([])
     const internals = controller as unknown as {
       settingsRows: Array<{ namespace: string; field: string; value: string }>
@@ -363,6 +387,7 @@ describe('SettingsPane intercept', () => {
       throw 'unreadable-string'
     }
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: 'https://bad.example' })
     await vi.waitFor(() => {
@@ -384,6 +409,7 @@ describe('SettingsPane intercept', () => {
       }
     })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: 'https://late.example' })
     const disposing = controller.dispose()
@@ -392,6 +418,7 @@ describe('SettingsPane intercept', () => {
     await disposing
     expect(controller.getFeedback()).toBeUndefined()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getFeedback()).toBeUndefined()
     ;(controller as unknown as { setFeedback(text: string): void }).setFeedback('late')
     expect(controller.getFeedback()).toBeUndefined()
@@ -461,6 +488,7 @@ describe('SettingsPane intercept', () => {
       }
     })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: 'https://late.example' })
     const disposing = controller.dispose()
@@ -482,15 +510,18 @@ describe('SettingsPane intercept', () => {
     settings.describe = () => [NS, openaiNs].map(ns => ({ ns, value: settings.get(ns) }))
     settings.get = (ns: unknown) => ns === NS ? stored : ns === openaiNs ? openaiStored : undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
-    expect(controller.getSettingsPane().rows).toEqual([
-      { namespace: 'llm-deepseek', field: 'baseURL', value: 'https://api.deepseek.com' },
+    openNamespace(controller)
+    controller.dispatch({ kind: 'settings-escape' })
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    controller.dispatch({ kind: 'settings-edit' })
+    expect(controller.getSettingsPane().rows).toMatchObject([
       { namespace: 'llm-openai', field: 'baseURL', value: 'https://api.openai.com/v1' },
     ])
-    controller.dispatch({ kind: 'settings-move', delta: 1 })
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-apply', value: 'https://openai-next.example' })
     await vi.waitFor(() => {
-      expect(controller.getSettingsPane().open).toBe(false)
+      expect(controller.getFeedback()).toMatch(/^✓ 已更新/u)
+      expect(controller.getSettingsPane().open).toBe(true)
     })
     expect(update).toHaveBeenCalledWith(openaiNs, { baseURL: 'https://openai-next.example' })
     await ctx.fiber.dispose()
@@ -502,15 +533,17 @@ describe('SettingsPane intercept', () => {
     const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
     settings.get = () => stored
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().rows.map(row => row.field)).toEqual(['baseURL', 'models'])
     controller.dispatch({ kind: 'settings-move', delta: 1 })
-    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-edit-json' })
     controller.dispatch({
       kind: 'settings-apply',
       value: '[{"id":"deepseek-v4-pro"}]',
     })
     await vi.waitFor(() => {
-      expect(controller.getSettingsPane().open).toBe(false)
+      expect(controller.getFeedback()).toMatch(/^✓ 已更新/u)
+      expect(controller.getSettingsPane().open).toBe(true)
     })
     expect(update).toHaveBeenCalledWith(NS, { models: [{ id: 'deepseek-v4-pro' }] })
     expect(controller.getFeedback()).toBe('✓ 已更新 models')
@@ -530,18 +563,19 @@ describe('SettingsPane intercept', () => {
     settings.describe = () => [NS, piNs].map(ns => ({ ns, value: settings.get(ns) }))
     settings.get = (ns: unknown) => ns === NS ? stored : ns === piNs ? piStored : undefined
     controller.dispatch({ kind: 'command', query: 'settings' })
-    controller.dispatch({ kind: 'settings-move', delta: 1 })
-    expect(controller.getSettingsPane().rows[1]).toMatchObject({
+    openNamespace(controller, 'llm-pi-ai')
+    expect(controller.getSettingsPane().rows[0]).toMatchObject({
       namespace: 'llm-pi-ai',
       field: 'providers',
     })
-    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-edit-json' })
     controller.dispatch({
       kind: 'settings-apply',
       value: '{"acme":{"api":"openai-completions","baseURL":"https://next.example"}}',
     })
     await vi.waitFor(() => {
-      expect(controller.getSettingsPane().open).toBe(false)
+      expect(controller.getFeedback()).toMatch(/^✓ 已更新/u)
+      expect(controller.getSettingsPane().open).toBe(true)
     })
     expect(update).toHaveBeenCalledWith(piNs, {
       providers: { acme: { api: 'openai-completions', baseURL: 'https://next.example' } },
@@ -556,7 +590,8 @@ describe('SettingsPane intercept', () => {
     const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
     settings.get = () => stored
     controller.dispatch({ kind: 'command', query: 'settings' })
-    controller.dispatch({ kind: 'settings-edit' })
+    openNamespace(controller)
+    controller.dispatch({ kind: 'settings-edit-json' })
     controller.dispatch({ kind: 'settings-apply', value: '{' })
     expect(controller.getSettingsPane()).toMatchObject({
       open: true,
@@ -572,6 +607,7 @@ describe('SettingsPane intercept', () => {
     const prepareDocument = vi.fn(async () => '/tmp/settings.yaml')
     Object.assign(ctx.get('settings') as object, { prepareDocument })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-export' })
     await vi.waitFor(() => {
       expect(controller.getFeedback()).toBe('✓ 设置文件 /tmp/settings.yaml')
@@ -584,6 +620,7 @@ describe('SettingsPane intercept', () => {
   it('reports a missing settings file on export', async () => {
     const { ctx, controller } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-export' })
     expect(controller.getFeedback()).toBe('无可用设置文件')
     expect(controller.getSettingsPane().open).toBe(true)
@@ -593,6 +630,7 @@ describe('SettingsPane intercept', () => {
   it('reloads overlay rows from the live host', async () => {
     const { ctx, controller, stored } = await bench()
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     stored.baseURL = 'https://reloaded.example'
     controller.dispatch({ kind: 'settings-reload' })
     expect(controller.getSettingsPane().rows[0]?.value).toBe('https://reloaded.example')
@@ -627,6 +665,7 @@ describe('SettingsPane intercept', () => {
       piAi: { providers: { goat: { apiKeyEnv: 'GOAT_API_KEY', baseURL: 'https://goat.example/v1' } } },
     })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller, '凭据管理')
     const pane = controller.getSettingsPane()
     const index = pane.rows.findIndex(row => row.namespace === 'credentials' && row.field === 'GOAT_API_KEY')
     expect(pane.open).toBe(true)
@@ -716,6 +755,7 @@ describe('SettingsPane intercept', () => {
     const prepareDocument = vi.fn(async () => undefined)
     Object.assign(ctx.get('settings') as object, { prepareDocument })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-export' })
     await vi.waitFor(() => {
       expect(controller.getFeedback()).toBe('无可用设置文件')
@@ -734,6 +774,7 @@ describe('SettingsPane intercept', () => {
     const prepareDocument = vi.fn(async () => '/tmp/settings.yaml')
     Object.assign(ctx.get('settings') as object, { prepareDocument })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-edit' })
     controller.dispatch({ kind: 'settings-export' })
     controller.dispatch({ kind: 'settings-reload' })
@@ -747,6 +788,7 @@ describe('SettingsPane intercept', () => {
     const settings = ctx.get('settings') as never as { get: (ns: unknown) => unknown }
     settings.get = () => ({ ...stored, models: [] })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     controller.dispatch({ kind: 'settings-move', delta: 1 })
     expect(controller.getSettingsPane().selectedIndex).toBe(1)
     settings.get = () => stored
@@ -854,6 +896,7 @@ describe('SettingsPane intercept', () => {
       Object.assign(tuiStored, patch)
     })
     controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
     expect(controller.getSettingsPane().open).toBe(true)
     controller.dispatch({ kind: 'settings-toggle' })
     await vi.waitFor(() => {
@@ -920,4 +963,47 @@ it('validates and persists composer keybinding edits without dropping other over
     await vi.waitFor(() => expect(live.keybindings['copy-message']).toBe('none'))
     expect(controller.getKeybindings()).toEqual({ 'toggle-reasoning': 'Ctrl+R', 'copy-message': 'none' })
   } finally { await controller.dispose();await ctx.fiber.dispose() }
+})
+
+it('browses providers and model details, saves nested arrays in place, and retains unknown model fields', async () => {
+  const { ctx, controller, update } = await bench()
+  const profile = {
+    baseURL: 'https://gateway.example/v1',
+    models: Array.from({ length: 65 }, (_, index) => ({ id: `model-${String(index)}`, contextWindow: 32768, extension: { costs: [1, 2], untouched: 'keep' } })),
+    unknownProviderField: { enabled: true },
+  }
+  const live = { providers: { long_provider_name: profile } }
+  ctx.settings.describe = () => [{ ns: 'llm-pi-ai', value: live, schema: {} }] as never
+  update.mockImplementation(async (_ns: unknown, patch: { providers: { long_provider_name: Partial<typeof profile> } }) => { Object.assign(live.providers.long_provider_name, patch.providers.long_provider_name) })
+  const enter = (label: string) => {
+    const pane = controller.getSettingsPane()
+    const index = pane.rows.findIndex(row => row.label === label)
+    expect(index).toBeGreaterThanOrEqual(0)
+    controller.dispatch({ kind: 'settings-move', delta: index - pane.selectedIndex })
+    controller.dispatch({ kind: 'settings-edit' })
+  }
+  try {
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    expect(controller.getSettingsPane().rows.map(row => row.label)).toEqual(['模型与凭据'])
+    enter('模型与凭据'); enter('llm-pi-ai'); enter('providers'); enter('long_provider_name'); enter('models')
+    expect(controller.getSettingsPane().rows).toHaveLength(65)
+    enter('model-32')
+    expect(controller.getSettingsPane().rows.map(row => row.label)).toEqual(['id', 'contextWindow', 'extension'])
+    enter('extension'); enter('costs')
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-apply', value: '9' })
+    await vi.waitFor(() => expect(controller.getFeedback()).toBe('✓ 已更新 providers.long_provider_name.models.32.extension.costs.1'))
+    expect(controller.getSettingsPane()).toMatchObject({ open: true, editing: false, selectedIndex: 1 })
+    expect(controller.getSettingsPane().rows[1]?.value).toBe('9')
+    expect(live.providers.long_provider_name.models[32]).toMatchObject({ contextWindow: 32768, extension: { costs: [1, 9], untouched: 'keep' } })
+    expect(live.providers.long_provider_name.unknownProviderField).toEqual({ enabled: true })
+    expect(live.providers.long_provider_name.models[33]?.extension.costs).toEqual([1, 2])
+    controller.dispatch({ kind: 'settings-escape' })
+    expect(controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.label).toBe('costs')
+    controller.dispatch({ kind: 'settings-search', query: 'model-64', active: false })
+    expect(controller.getSettingsPane().rows.some(row => row.value === 'model-64')).toBe(true)
+    controller.dispatch({ kind: 'settings-search', query: '', active: false })
+    expect(controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.label).toBe('costs')
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
 })

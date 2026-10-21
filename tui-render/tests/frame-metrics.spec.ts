@@ -306,3 +306,36 @@ describe('FrameMetricsHandle API surface', () => {
     expect(typeof probe.elapsedMs()).toBe('number')
   })
 })
+
+
+describe('scroll output revision lifecycle', () => {
+  it('coalesces in constant space and refuses stale output revisions', async () => {
+    const { markScrollInput, takeScrollPaintCompletion } = await import('../src/frame-metrics.ts')
+    const probe = createFrameMetrics()
+    const start = performance.now()
+    for (let revision = 1; revision <= 1000; revision += 1) markScrollInput(probe, revision, start)
+    expect(probe.snapshot().coalescedInputs.total).toBe(999)
+    expect(takeScrollPaintCompletion(probe, 999)).toBeUndefined()
+    const complete = takeScrollPaintCompletion(probe, 1000)
+    expect(probe.snapshot().scrollInputToPaintMs.count).toBe(0)
+    complete?.()
+    complete?.()
+    expect(probe.snapshot().scrollInputToPaintMs.count).toBe(1)
+    expect(takeScrollPaintCompletion(probe, 1000)).toBeUndefined()
+  })
+
+  it('cancels pending and already claimed samples during viewport teardown', async () => {
+    const { clearScrollInputs, markScrollInput, takeScrollPaintCompletion } = await import('../src/frame-metrics.ts')
+    const probe = createFrameMetrics()
+    markScrollInput(probe, 1)
+    const stale = takeScrollPaintCompletion(probe, 1)
+    markScrollInput(probe, 2)
+    clearScrollInputs(probe)
+    stale?.()
+    expect(takeScrollPaintCompletion(probe, 2)).toBeUndefined()
+    expect(probe.snapshot().scrollInputToPaintMs.count).toBe(0)
+    markScrollInput(probe, 1)
+    takeScrollPaintCompletion(probe, 1)?.()
+    expect(probe.snapshot().scrollInputToPaintMs.count).toBe(1)
+  })
+})

@@ -1,0 +1,4 @@
+> @crazyhappyone/dsh-tui@0.1.0-alpha.50 typecheck
+> node scripts/typecheck.js
+
+Plugin sources and tests passed strict type checking (4 projects).

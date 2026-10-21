@@ -1,0 +1,13 @@
+{
+  "source": "/tmp/dsh-perf-fix/verified-live-markdown-100-80x24/final.ansi",
+  "columns": 80,
+  "rows": 24,
+  "frames": 501,
+  "snapshotComparedFrames": 500,
+  "comparedRows": 8500,
+  "suppressedGeometryFrames": 0,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

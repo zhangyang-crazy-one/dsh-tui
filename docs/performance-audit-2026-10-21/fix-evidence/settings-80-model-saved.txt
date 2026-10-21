@@ -1,0 +1,24 @@
+TUI performance audit                                        offline 25 settings
+────────────────────────────────────────────────────────────────────────────────
+设置 › … › model-0  3/5
+  id                                                                     model-0
+  name                                                             Audit Model 0
+› contextWindow                                                           131072
+  maxTokens                                                                 8192
+  extension                                                           › 1 个字段
+值: 131072
+↑↓/jk 选择 · Enter 进入/编辑 · ← 返回 · / 搜索
+i JSON编辑 · Space 切换 · Tab 分类 · e 导出 · r 重载 · Esc 返回
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+/offline-fixture · 状态 空闲
+offline 25 settings · / 命令 · @ 提及

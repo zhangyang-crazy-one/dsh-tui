@@ -31,6 +31,8 @@ Earlier lightweight versions used `tui`, while source mode used `deepseek-tui`. 
 
 For a running source-linked installation, `/reload` loads the rebuilt bundle but preserves that process's selected profile. To change from `tui` to `deepseek-tui`, quit and launch again (or pass the desired profile explicitly). Resumed Goals require `/goal resume` to enable automatic continuation.
 
+The source tree also includes unreleased rendering and settings fixes: TTY transcript content has one physical painter, wheel input lands without animated catch-up, and `/settings` opens a hierarchy. Use Enter to open a category, namespace, provider, model or field; ←/Esc returns one level; `/` searches; `i` edits an object's JSON; Space toggles supported values. Successful edits stay in the current location and use DSH's official settings/credential services. See [Unreleased](CHANGELOG.md#unreleased) and the [performance audit](docs/performance-audit-2026-10-21/analysis.md). These source changes are not part of npm `0.1.0-alpha.50`.
+
 ## Table of Contents
 
 - [Release and upgrade](#release-010-alpha50)

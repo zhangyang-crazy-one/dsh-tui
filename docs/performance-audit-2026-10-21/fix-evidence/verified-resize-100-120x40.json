@@ -1,0 +1,13 @@
+{
+  "source": "/tmp/dsh-perf-fix/verified-resize-100-120x40/final.ansi",
+  "columns": 120,
+  "rows": 40,
+  "frames": 81,
+  "snapshotComparedFrames": 75,
+  "comparedRows": 2384,
+  "suppressedGeometryFrames": 2,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

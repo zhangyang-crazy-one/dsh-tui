@@ -1,0 +1,44 @@
+{
+  "rowCount": 6,
+  "selected": 0,
+  "breadcrumb": [
+    "设置",
+    "模型与凭据",
+    "llm-pi-ai",
+    "providers",
+    "provider-0-long-route-name"
+  ],
+  "fields": [
+    {
+      "label": "api",
+      "field": "providers.provider-0-long-route-name.api",
+      "value": "openai-completions"
+    },
+    {
+      "label": "baseURL",
+      "field": "providers.provider-0-long-route-name.baseURL",
+      "value": "https://provider-0.example/v1"
+    },
+    {
+      "label": "apiKeyEnv",
+      "field": "providers.provider-0-long-route-name.apiKeyEnv",
+      "value": "PROVIDER_0_API_KEY"
+    },
+    {
+      "label": "defaultInput",
+      "field": "providers.provider-0-long-route-name.defaultInput",
+      "value": "2 项"
+    },
+    {
+      "label": "displayName",
+      "field": "providers.provider-0-long-route-name.displayName",
+      "value": "Provider 0"
+    },
+    {
+      "label": "models",
+      "field": "providers.provider-0-long-route-name.models",
+      "value": "65 项"
+    }
+  ],
+  "editing": false
+}

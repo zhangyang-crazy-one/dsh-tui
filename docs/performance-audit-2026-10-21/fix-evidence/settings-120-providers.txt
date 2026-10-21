@@ -1,0 +1,24 @@
+TUI performance audit                                                                                offline 25 settings
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+设置 › 模型与凭据 › llm-pi-ai › providers  1/26
+› provider-0-long-route-name                                                              › 65 模型 · openai-completions
+  provider-1-long-route-name                                                              › 65 模型 · openai-completions
+  provider-2-long-route-name                                                              › 65 模型 · openai-completions
+  provider-3-long-route-name                                                              › 65 模型 · openai-completions
+  provider-4-long-route-name                                                              › 65 模型 · openai-completions
+  provider-5-long-route-name                                                              › 65 模型 · openai-completions
+  provider-6-long-route-name                                                              › 65 模型 · openai-completions
+  provider-7-long-route-name                                                              › 65 模型 · openai-completions
+  provider-8-long-route-name                                                              › 65 模型 · openai-completions
+  provider-9-long-route-name                                                              › 65 模型 · openai-completions
+  provider-10-long-route-name                                                             › 65 模型 · openai-completions
+  provider-11-long-route-name                                                             › 65 模型 · openai-completions
+  provider-12-long-route-name                                                             › 65 模型 · openai-completions
+… 还有 13 项
+值: 65 模型 · openai-completions
+↑↓/jk 选择 · Enter 进入/编辑 · ← 返回 · / 搜索
+i JSON编辑 · Space 切换 · Tab 分类 · e 导出 · r 重载 · Esc 返回
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+/offline-fixture · 状态 空闲
+offline 25 settings · / 命令 · @ 提及

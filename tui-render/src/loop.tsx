@@ -177,6 +177,8 @@ export type LoopAction =
   | { kind: 'settings-move'; delta: number }
   | { kind: 'settings-group'; delta: number }
   | { kind: 'settings-edit' }
+  | { kind: 'settings-edit-json' }
+  | { kind: 'settings-search'; query: string; active: boolean }
   | { kind: 'settings-cancel-edit' }
   | { kind: 'settings-apply'; value: string }
   | { kind: 'settings-toggle' }
@@ -825,6 +827,10 @@ export function mapKeyEvent(
     editing?: boolean | undefined
     editValue?: string | undefined
     onboarding?: boolean | undefined
+    navigable?: boolean | undefined
+    editable?: boolean | undefined
+    searching?: boolean | undefined
+    filter?: string | undefined
   } = {
     open: false,
   },
@@ -1110,14 +1116,26 @@ export function mapKeyEvent(
     })
   }
   if (settings.open) {
+    if (settings.searching === true) {
+      const query = settings.filter ?? ''
+      if (keyInfo.escape) return holdComposer(state, { kind: 'settings-search', query: '', active: false })
+      if (keyInfo.return) return holdComposer(state, { kind: 'settings-search', query, active: false })
+      if (keyInfo.backspace || keyInfo.delete) return holdComposer(state, { kind: 'settings-search', query: Array.from(query).slice(0, -1).join(''), active: true })
+      if (!keyInfo.ctrl && !keyInfo.meta && !keyInfo.upArrow && !keyInfo.downArrow && key !== '') return holdComposer(state, { kind: 'settings-search', query: query + key, active: true })
+      return { kind: 'none' }
+    }
+    if (key === '/' && settings.onboarding !== true) return holdComposer(state, { kind: 'settings-search', query: '', active: true })
+    if (keyInfo.leftArrow || keyInfo.backspace) return holdComposer(state, { kind: 'settings-escape' })
     if (keyInfo.tab) return holdComposer(state, { kind: 'settings-group', delta: keyInfo.shift ? -1 : 1 })
     if (keyInfo.escape) {
       return holdComposer(state, { kind: 'settings-escape' })
     }
-    if (keyInfo.return) {
+    if (keyInfo.return || keyInfo.rightArrow || key === 'i') {
+      if (key !== 'i' && settings.navigable === true) return holdComposer(state, { kind: 'settings-edit' })
+      if (settings.editable === false) return { kind: 'none' }
       return {
         kind: 'dispatch',
-        action: { kind: 'settings-edit' },
+        action: { kind: key === 'i' ? 'settings-edit-json' : 'settings-edit' },
         text: settings.editValue ?? '',
         commandQuery: undefined,
         prefixG: false,
@@ -2136,13 +2154,20 @@ export function TuiLoop({
   askUserDetailsRef.current = askUserDetails
   const viewportSequenceRef = useRef(0)
   const [viewportCommand, setViewportCommand] = useState<TranscriptViewportCommand>()
+  const viewportCommandRef = useRef<((command: TranscriptViewportCommand) => void) | undefined>(undefined)
+  const onViewportCommandConsumed = useCallback((sequence: number): void => {
+    setViewportCommand(current => current?.sequence === sequence ? undefined : current)
+  }, [])
   const [topDividerLabel, setTopDividerLabel] = useState<string | undefined>()
   const issueViewportCommand = useCallback((
     command: TranscriptViewportCommandInput,
+    inputAt = performance.now(),
   ): void => {
     frameProbe?.beginMeasurement()
     viewportSequenceRef.current += 1
-    setViewportCommand({ ...command, sequence: viewportSequenceRef.current })
+    const next = { ...command, sequence: viewportSequenceRef.current, inputAt }
+    if (viewportCommandRef.current === undefined) setViewportCommand(next)
+    else viewportCommandRef.current(next)
   }, [frameProbe])
   const brandRevealStartedRef = useRef(false)
   const brandRevealStoppedRef = useRef(false)
@@ -2436,6 +2461,7 @@ export function TuiLoop({
   // loop-owned windows, and everything else scrolls the conversation.
   useEffect(() => {
     const listener = (delta: number): void => {
+      const inputAt = performance.now()
       frameMetrics?.recordInputEvent()
       syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller))
       syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller))
@@ -2499,7 +2525,7 @@ export function TuiLoop({
         )
         return
       }
-      issueViewportCommand({ kind: 'scroll', delta })
+      issueViewportCommand({ kind: 'scroll', delta, source: 'wheel' }, inputAt)
     }
     setMouseScrollListener(listener)
     setMouseRailListener((fraction) => {
@@ -2764,6 +2790,10 @@ export function TuiLoop({
         open: settingsPaneRef.current.open,
         editing: settingsPaneRef.current.editing,
         onboarding: settingsPaneRef.current.onboarding,
+        navigable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.navigable,
+        editable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editable,
+        searching: settingsPaneRef.current.searching,
+        filter: settingsPaneRef.current.filter,
         editValue:
           settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]
             ?.editValue
@@ -2811,7 +2841,7 @@ export function TuiLoop({
     }
     if (effect.kind === 'dispatch') {
       const action = effect.action
-      if (action.kind === 'settings-edit' && settingsComposerRef.current === undefined) settingsComposerRef.current = current
+      if ((action.kind === 'settings-edit' || action.kind === 'settings-edit-json') && settingsComposerRef.current === undefined) settingsComposerRef.current = current
       if (
         isSessionTransitionAction(action)
         && isSessionTransitionStatus(feedbackRef.current)
@@ -3309,6 +3339,8 @@ export function TuiLoop({
     scrollbar,
     brandFrameProbe,
     viewportCommand,
+    viewportCommandRef,
+    onViewportCommandConsumed,
     renderPolicy,
     frameMetrics,
     motionPaused: viewportMotionPaused,
@@ -3385,6 +3417,9 @@ export function TuiLoop({
     content = createElement(SettingsPane, {
       locale,
       rows: settingsPane.rows,
+      ...(settingsPane.breadcrumb === undefined ? {} : { breadcrumb: settingsPane.breadcrumb }),
+      ...(settingsPane.filter === undefined ? {} : { filter: settingsPane.filter }),
+      ...(settingsPane.searching === undefined ? {} : { searching: settingsPane.searching }),
       selectedIndex: settingsPane.selectedIndex,
       editing: settingsPane.editing,
       maxRows: settingsMaxRows,

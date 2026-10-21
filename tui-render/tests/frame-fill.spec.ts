@@ -20,7 +20,7 @@ import {
   writePublishedFrameSnapshot,
   wrapStdoutForFrameBg,
 } from '../src/frame-fill.ts'
-import { createFrameMetrics, markDeltaIngress } from '../src/frame-metrics.ts'
+import { createFrameMetrics, markDeltaIngress, markScrollInput } from '../src/frame-metrics.ts'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import {
   createFrameSnapshotRow,
@@ -930,4 +930,293 @@ it.each(['ABCDE', '甲乙A', '🌍甲A', 'A甲乙', 'A甲🌍'])('retains the fi
     atlas.feed(chunks.join(''))
     expect(atlas.extract({ col: 1, row: 2 }, { col: 5, row: 2 })).toBe('X')
   } finally { setFrameCaret(undefined) }
+})
+
+
+it('clears the former footer when a sparse diff is followed by a shorter Ink frame', () => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 24, columns: 80 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const atlas = new ScreenAtlas(80, 24)
+  try {
+    setFrameCaret({ row: 20, col: 5 })
+    wrapped.write(`HEADER${'\n'.repeat(23)}OLD FOOTER\x1b[?2026l`)
+    wrapped.write(`\x1b[?2026h\x1b[23A\x1b[E\x1b[Gchanged\x1b[K\n${'\x1b[E'.repeat(21)}\x1b[?2026l`)
+    atlas.feed(chunks.splice(0).join(''))
+    // Ink 7 erases the two removed rows from its previous logical bottom,
+    // then returns to the top before walking the shorter 22-row frame.
+    wrapped.write(`\x1b[?2026h\x1b[2K\x1b[1A\x1b[2K\x1b[G\x1b[22A${'\x1b[E'.repeat(21)}\x1b[GNEW FOOTER\x1b[K\x1b[?2026l`)
+    atlas.feed(chunks.join(''))
+    expect(atlas.extractRowText(22)).toBe('NEW FOOTER')
+    expect(atlas.extractRowText(24)).toBe('')
+  } finally { setFrameCaret(undefined) }
+})
+
+it('restores an unchanged transcript after Ink erases it, while footer-only diffs stay sparse', () => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 6, columns: 20 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const atlas = new ScreenAtlas(20, 6)
+  const snapshot = {
+    revision: 'stable-transcript',
+    geometry: { columns: 20, rows: 6, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 17, transcriptRows: 3 },
+    rows: [createFrameSnapshotRow({ id: 'stable-row', row: 2, col: 2, line: createPhysicalLine({ blockId: 'stable-row', spans: [{ text: 'TRANSCRIPT', token: 'fg' }], sourceStart: 0, sourceEnd: 10, blockRow: 0 }) })],
+  }
+  try {
+    setFrameCaret({ row: 5, col: 3 })
+    setVisibleFrameSnapshot(snapshot)
+    wrapped.write(`HEADER${'\n'.repeat(5)}FOOTER\x1b[?2026l`)
+    atlas.feed(chunks.splice(0).join(''))
+    // No snapshot change: a full Ink repaint still overwrites its empty slot.
+    wrapped.write(`\x1b[?2026h${'\x1b[2K\x1b[1A'.repeat(5)}\x1b[2K\x1b[GHEADER${'\n'.repeat(5)}FOOTER\x1b[?2026l`)
+    atlas.feed(chunks.splice(0).join(''))
+    expect(atlas.extractRowText(2)).toBe(' TRANSCRIPT')
+    wrapped.write(`\x1b[?2026h\x1b[5A${'\x1b[E'.repeat(5)}\x1b[GNEW FOOTER\x1b[K\x1b[?2026l`)
+    expect(chunks.join('')).not.toContain('TRANSCRIPT')
+    atlas.feed(chunks.splice(0).join(''))
+    expect(atlas.extractRowText(2)).toBe(' TRANSCRIPT')
+    expect(atlas.extractRowText(6)).toBe('NEW FOOTER')
+  } finally {
+    setFrameCaret(undefined)
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
+})
+
+
+it.each([false, true])('tracks real Ink 7 height changes after sparse frames (incremental=%s)', async incremental => {
+  // Import the installed Ink implementation rather than reproducing its diff.
+  const { default: logUpdate } = await import(new URL('../node_modules/ink/build/log-update.js', import.meta.url).href)
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 24, columns: 80 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const update = logUpdate.create(wrapped, { incremental })
+  const atlas = new ScreenAtlas(80, 24)
+  const paint = (lines: string[]): void => {
+    wrapped.write('\x1b[?2026h')
+    update(lines.join('\n'))
+    wrapped.write('\x1b[?2026l')
+    atlas.feed(chunks.splice(0).join(''))
+  }
+  try {
+    setFrameCaret({ row: 20, col: 5 })
+    const lines = Array.from({ length: 24 }, (_, index) => `row ${index + 1}`)
+    paint(lines)
+    lines[1] = 'changed'
+    paint(lines)
+    paint([...lines.slice(0, 21), 'new footer'])
+    expect(atlas.extractRowText(1)).toBe('row 1')
+    expect(atlas.extractRowText(2)).toBe('changed')
+    expect(atlas.extractRowText(22)).toBe('new footer')
+    expect(atlas.extractRowText(23)).toBe('')
+    expect(atlas.extractRowText(24)).toBe('')
+    expect(atlas.cursorPosition).toEqual({ row: 20, col: 5 })
+  } finally { setFrameCaret(undefined) }
+})
+
+
+it('completes scroll latency only in the write callback carrying its overlay revision', () => {
+  const callbacks: (() => void)[] = []
+  const sink = {
+    isTTY: true, rows: 6, columns: 20,
+    write(_chunk: unknown, ...args: unknown[]) {
+      const callback = args.at(-1)
+      if (typeof callback === 'function') callbacks.push(callback as () => void)
+      return true
+    },
+  } as unknown as NodeJS.WriteStream
+  const metrics = createFrameMetrics()
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none', metrics)
+  const publish = (text: string, scrollRevision?: number): void => setVisibleFrameSnapshot({
+    revision: text,
+    ...(scrollRevision === undefined ? {} : { scrollRevision }),
+    geometry: { columns: 20, rows: 6, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 17, transcriptRows: 3 },
+    rows: [createFrameSnapshotRow({ id: 'row', row: 2, col: 2, line: createPhysicalLine({ blockId: 'row', spans: [{ text, token: 'fg' }], sourceStart: 0, sourceEnd: text.length, blockRow: 0 }) })],
+  })
+  try {
+    publish('before')
+    writePublishedFrameSnapshot(wrapped, 'none')
+    callbacks.shift()?.()
+    markScrollInput(metrics, 1, performance.now() - 10)
+    // Unrelated chrome finishes before the scroll's snapshot is published.
+    wrapped.write('\x1b[6;1Hfooter\x1b[?2026l')
+    callbacks.shift()?.()
+    expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(0)
+    publish('first', 1)
+    writePublishedFrameSnapshot(wrapped, 'none')
+    const firstPaint = callbacks.shift()
+    expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(0)
+    markScrollInput(metrics, 2, performance.now() - 5)
+    firstPaint?.()
+    expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(1)
+    publish('second', 2)
+    // Also cover an overlay appended to Ink's synchronized frame.
+    wrapped.write('\x1b[?2026l')
+    expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(1)
+    callbacks.shift()?.()
+    expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(2)
+  } finally {
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
+})
+
+it('counts ST-terminated hyperlinks without swallowing intervening rows', () => {
+  expect(countWrittenCells('\x1b]8;;https://example.test\x1b\\first\x1b]8;;\x1b\\\nsecond')).toBe(11)
+})
+
+it('releases overlay cells before real incremental Ink paints a short pane or home', async () => {
+  const { default: logUpdate } = await import(new URL('../node_modules/ink/build/log-update.js', import.meta.url).href)
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 6, columns: 20 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const update = logUpdate.create(wrapped, { incremental: true })
+  const atlas = new ScreenAtlas(20, 6)
+  const paint = (lines: string[]): void => {
+    wrapped.write('\x1b[?2026h')
+    update(lines.join('\n'))
+    wrapped.write('\x1b[?2026l')
+    atlas.feed(chunks.splice(0).join(''))
+  }
+  const publish = (text: string): void => setVisibleFrameSnapshot({
+    revision: text,
+    geometry: { columns: 20, rows: 6, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 17, transcriptRows: 3 },
+    rows: [createFrameSnapshotRow({ id: text, row: 3, col: 2, line: createPhysicalLine({ blockId: text, spans: [{ text, token: 'fg' }], sourceStart: 0, sourceEnd: text.length, blockRow: 0 }) })],
+  })
+  try {
+    setFrameCaret({ row: 5, col: 3 })
+    publish('old transcript')
+    paint(['CHAT', '', '', '', 'input', 'footer'])
+    setVisibleFrameSnapshot(undefined)
+    hideFrameCaret()
+    paint(['SETTINGS', 'entry', '', '', '', 'footer'])
+    expect(atlas.extractRowText(1)).toBe('SETTINGS')
+    expect(atlas.extractRowText(2)).toBe('entry')
+    expect(atlas.extractRowText(3)).toBe('')
+    setFrameCaret({ row: 5, col: 3 })
+    publish('new transcript')
+    paint(['CHAT', '', '', '', 'input', 'footer'])
+    expect(atlas.extractRowText(3)).toBe(' new transcript')
+    setVisibleFrameSnapshot(undefined)
+    paint(['HOME', '', '', '', 'input', 'footer'])
+    expect(atlas.extractRowText(1)).toBe('HOME')
+    expect(atlas.extractRowText(3)).toBe('')
+  } finally {
+    setFrameCaret(undefined)
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
+})
+
+it.each(['snapshot', 'rail', 'ink suffix'])('defers stale resize geometry at the %s painter without consuming dirty state', painter => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 40, columns: 120 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const paint = (): void => {
+    if (painter === 'snapshot') writePublishedFrameSnapshot(wrapped, 'none')
+    else if (painter === 'rail') writePublishedFrameRail(wrapped, 'none')
+    else wrapped.write('\x1b[?2026l')
+  }
+  try {
+    setFrameCaret({ row: 38, col: 5 })
+    setFrameRail({ col: 120, topRow: 2, rows: 34, thumbStart: 0, thumbRows: 2 })
+    setVisibleFrameSnapshot({
+      revision: 'before-resize',
+      geometry: { columns: 120, rows: 40, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 117, transcriptRows: 34 },
+      rows: [createFrameSnapshotRow({ id: 'resize-row', row: 30, col: 2, line: createPhysicalLine({ blockId: 'resize-row', spans: [{ text: 'OLD GEOMETRY', token: 'fg' }], sourceStart: 0, sourceEnd: 12, blockRow: 0 }) })],
+    })
+    writePublishedFrameSnapshot(wrapped, 'none')
+    chunks.length = 0
+    Object.assign(sink, { rows: 24, columns: 80 })
+    // Ink can flush its resize erase before React publishes the new geometry.
+    wrapped.write('\x1b[?2026h\x1b[2J\x1b[H\x1b[?2026l')
+    paint()
+    const stale = chunks.splice(0).join('')
+    expect(stale).not.toContain('OLD GEOMETRY')
+    expect(stale).not.toContain('\x1b[30;2H')
+    expect(stale).not.toContain('\x1b[2;120H')
+    expect(stale).not.toContain('\x1b[38;5H')
+    // The same snapshot can become valid again. The skipped dirty repaint
+    // must remain pending, rather than treating its rows as already restored.
+    Object.assign(sink, { rows: 40, columns: 120 })
+    writePublishedFrameSnapshot(wrapped, 'none')
+    expect(chunks.join('')).toContain('OLD GEOMETRY')
+  } finally {
+    setFrameCaret(undefined)
+    releaseFrameRail()
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
+})
+
+it.each([
+  { isTTY: false, columns: 80, rows: 24 },
+  { isTTY: true, columns: undefined, rows: undefined },
+  { isTTY: true, columns: 0, rows: 0 },
+])('keeps snapshot fallback for streams without live TTY dimensions: %j', dimensions => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, dimensions)
+  try {
+    setVisibleFrameSnapshot({
+      revision: 'fallback-dimensions',
+      geometry: { columns: 120, rows: 40, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 117, transcriptRows: 2 },
+      rows: [createFrameSnapshotRow({ id: 'fallback-row', row: 2, col: 2, line: createPhysicalLine({ blockId: 'fallback-row', spans: [{ text: 'FALLBACK', token: 'fg' }], sourceStart: 0, sourceEnd: 8, blockRow: 0 }) })],
+    })
+    writePublishedFrameSnapshot(sink, 'none')
+    expect(chunks.join('')).toContain('FALLBACK')
+  } finally {
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
+})
+
+it.each(['HUD', ''])('waits for Ink before moving an existing transcript slot into new chrome: %j', async hud => {
+  const { default: logUpdate } = await import(new URL('../node_modules/ink/build/log-update.js', import.meta.url).href)
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 6, columns: 20 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const update = logUpdate.create(wrapped, { incremental: true })
+  const atlas = new ScreenAtlas(20, 6)
+  const paint = (lines: string[]): void => {
+    wrapped.write('\x1b[?2026h')
+    update(lines.join('\n'))
+    wrapped.write('\x1b[?2026l')
+    atlas.feed(chunks.splice(0).join(''))
+  }
+  const publish = (text: string, transcriptRows: number): void => {
+    setFrameRail({ col: 20, topRow: 2, rows: transcriptRows, thumbStart: 0, thumbRows: 1 })
+    setVisibleFrameSnapshot({
+      revision: text,
+      geometry: { columns: 20, rows: 6, transcriptTop: 2, transcriptLeft: 2, transcriptWidth: 17, transcriptRows },
+      rows: [createFrameSnapshotRow({ id: text, row: 1 + transcriptRows, col: 2, line: createPhysicalLine({ blockId: text, spans: [{ text, token: 'fg' }], sourceStart: 0, sourceEnd: text.length, blockRow: 0 }) })],
+    })
+  }
+  try {
+    setFrameCaret({ row: 5, col: 3 })
+    publish('old tail', 3)
+    paint(['HEADER', '', '', '', 'input', 'footer'])
+    expect(atlas.extractRowText(4)).toContain('old tail')
+    publish('new tail', 2)
+    // A layout effect can run while Ink's new HUD frame is still throttled.
+    writePublishedFrameSnapshot(wrapped, 'none')
+    writePublishedFrameRail(wrapped, 'none')
+    expect(chunks).toEqual([])
+    paint(['HEADER', '', '', hud, 'input', 'footer'])
+    expect(atlas.extractRowText(3)).toContain('new tail')
+    // Clear the vacated slot before Ink, including an empty row it skips.
+    expect(atlas.extractRowText(4)).toBe(hud)
+    expect(atlas.extractRowText(5)).toBe('input')
+  } finally {
+    setFrameCaret(undefined)
+    releaseFrameRail()
+    setVisibleFrameSnapshot(undefined)
+    transformFrameChunk('\x1b[?2026l', 'none')
+  }
 })

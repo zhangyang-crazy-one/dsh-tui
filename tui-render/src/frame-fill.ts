@@ -49,7 +49,7 @@ import {
 import type { ColorTier } from './terminal-capabilities.ts'
 import { displayWidth } from './content.ts'
 import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
-import { completeDeltaStdoutDrain } from './frame-metrics.ts'
+import { completeDeltaStdoutDrain, takeScrollPaintCompletion } from './frame-metrics.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
 import {
   diffVisibleFrameSnapshots,
@@ -111,6 +111,7 @@ let frameRail: FrameRail | undefined
 let paintedFrameRail: FrameRail | undefined
 let paintedVisibleFrame: VisibleFrameSnapshot | undefined
 let paintedTranscriptRepaintKey: string | number | undefined
+let transcriptInvalidated = false
 
 /**
  * Publish the composer caret for the next frame writes. Called during the
@@ -283,20 +284,25 @@ function transcriptOverlay(
   if (next === undefined) {
     paintedVisibleFrame = undefined
     paintedTranscriptRepaintKey = undefined
+    transcriptInvalidated = false
     return ''
   }
-  if (paintedVisibleFrame === next && (next.repaintKey === undefined || next.repaintKey === paintedTranscriptRepaintKey)) {
+  if (!transcriptInvalidated && paintedVisibleFrame === next && (next.repaintKey === undefined || next.repaintKey === paintedTranscriptRepaintKey)) {
     return ''
   }
   const diff = diffVisibleFrameSnapshots(paintedVisibleFrame, next)
   // Old row coordinates and clear widths belong to the previous terminal
   // geometry. Wait for Ink's completed frame, then repaint only the new slot.
-  if (diff.forced && !synchronizedFrameEnded) return ''
+  if ((diff.forced || transcriptInvalidated) && !synchronizedFrameEnded) return ''
   const repaintAll = synchronizedFrameEnded && (
     diff.forced
+    || transcriptInvalidated
     || (next.repaintKey !== undefined && next.repaintKey !== paintedTranscriptRepaintKey)
   )
-  if (repaintAll) paintedTranscriptRepaintKey = next.repaintKey
+  if (repaintAll) {
+    paintedTranscriptRepaintKey = next.repaintKey
+    transcriptInvalidated = false
+  }
   paintedVisibleFrame = next
   let cells = ''
   if (repaintAll) {
@@ -331,6 +337,47 @@ function transcriptOverlay(
   return cells === '' ? '' : `\x1b7${cells}\x1b8`
 }
 
+/** Structural slot moves must be committed together with their Ink chrome. */
+function transcriptSlotChanged(): boolean {
+  const previous = paintedVisibleFrame?.geometry
+  const next = visibleFrameSnapshot()?.geometry
+  return previous !== undefined && next !== undefined && (
+    previous.columns !== next.columns || previous.rows !== next.rows
+    || previous.transcriptTop !== next.transcriptTop
+    || previous.transcriptLeft !== next.transcriptLeft
+    || previous.transcriptWidth !== next.transcriptWidth
+    || previous.transcriptRows !== next.transcriptRows
+  )
+}
+
+/** Clear a released or relocated slot before Ink paints replacement chrome. */
+function prepareTranscriptOverlay(
+  columns: number,
+  rows: number,
+  tier: ColorTier,
+  inkFrameStarting: boolean,
+): string {
+  const previous = paintedVisibleFrame
+  if (previous === undefined) return ''
+  if (visibleFrameSnapshot() === undefined) {
+    paintedVisibleFrame = undefined
+    paintedTranscriptRepaintKey = undefined
+    transcriptInvalidated = false
+  } else {
+    if (!inkFrameStarting || !transcriptSlotChanged()) return ''
+    // Keep the old snapshot until the suffix, so the replacement geometry is
+    // forced to repaint. Only START_SYNC prepares; body/END must not clear HUD.
+    transcriptInvalidated = true
+  }
+  const blank = blankPad(Math.min(columns, previous.geometry.columns), tier)
+  let cells = ''
+  const bottom = Math.min(rows, previous.geometry.transcriptTop + previous.geometry.transcriptRows - 1)
+  for (let row = previous.geometry.transcriptTop; row <= bottom; row += 1) {
+    cells += `\x1b[${String(row)};1H${blank}`
+  }
+  return cells === '' ? '' : `\x1b7${cells}\x1b8`
+}
+
 /** The appended caret bytes for the current anchor, or '' when unset. */
 function caretSuffix(): string {
   if (frameCaret === undefined) return ''
@@ -348,6 +395,15 @@ export function publishedCaretBytes(): string {
   return caretSuffix()
 }
 
+/** Resize events can precede React's replacement snapshot publication. */
+function snapshotFitsStdout(stdout: NodeJS.WriteStream): boolean {
+  const snapshot = visibleFrameSnapshot()
+  if (!stdout.isTTY || snapshot === undefined
+    || !Number.isFinite(stdout.columns) || stdout.columns < 1
+    || !Number.isFinite(stdout.rows) || stdout.rows < 1) return true
+  return snapshot.geometry.columns === stdout.columns && snapshot.geometry.rows === stdout.rows
+}
+
 /**
  * Paint a newly measured rail in synchronized output even when Ink's visible
  * frame is unchanged.
@@ -360,6 +416,7 @@ export function writePublishedFrameRail(
   stdout: NodeJS.WriteStream,
   tier: ColorTier = currentTier(),
 ): void {
+  if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return
   const overlay = railOverlay(tier, true)
   if (overlay === '') return
   const bytes = START_SYNC + overlay + caretSuffix() + END_SYNC
@@ -373,8 +430,8 @@ export function writePublishedFrameRail(
 
 /**
  * Flush the current visible-frame transcript snapshot and scroll rail to stdout.
- * Used during TTY scrolling to paint rows at CUP coordinates without waiting
- * for React/Ink reconciler commits.
+ * Paints published viewport rows at CUP coordinates without waiting for an
+ * Ink chrome flush. Structural slot changes wait for that flush atomically.
  * @param stdout - the stdout exposed by Ink's render context.
  * @param tier - color tier used for content and chrome cells.
  */
@@ -382,6 +439,7 @@ export function writePublishedFrameSnapshot(
   stdout: NodeJS.WriteStream,
   tier: ColorTier = currentTier(),
 ): void {
+  if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return
   const transcript = transcriptOverlay(tier, true)
   const rail = railOverlay(tier, false)
   const overlay = transcript + rail
@@ -392,7 +450,7 @@ export function writePublishedFrameSnapshot(
     stdout.write(bytes)
     return
   }
-  writer(bytes)
+  writer(bytes, visibleFrameSnapshot()?.scrollRevision)
 }
 
 /**
@@ -413,6 +471,7 @@ export function transformFrameChunk(
   chunk: string,
   tier: ColorTier = currentTier(),
   publishFrame = true,
+  onTranscriptPaint?: () => void,
 ): string {
   let out = chunk
   const on = bgSequence(tier)
@@ -439,7 +498,9 @@ export function transformFrameChunk(
     out.includes(SHOW_CURSOR) ||
     out.includes(HIDE_CURSOR)
   if (isFrame && publishFrame) {
-    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier, true) + caretSuffix()
+    const transcript = transcriptOverlay(tier, out.includes(END_SYNC))
+    if (transcript !== '') onTranscriptPaint?.()
+    const overlay = transcript + railOverlay(tier, true) + caretSuffix()
     const syncIndex = out.lastIndexOf(END_SYNC)
     out = syncIndex < 0 ? out + overlay : out.slice(0, syncIndex) + overlay + out.slice(syncIndex)
   }
@@ -451,7 +512,7 @@ type WriteCall = (chunk: unknown, ...args: unknown[]) => boolean
 
 /** Wrapped stdout with a raw path for an already transformed rail overlay. */
 type FrameOverlayStream = NodeJS.WriteStream & {
-  [WRITE_FRAME_OVERLAY]?: (chunk: string) => boolean
+  [WRITE_FRAME_OVERLAY]?: (chunk: string, scrollRevision?: number) => boolean
 }
 
 /** Ink 7 appends EL at the last column; terminals erase that just-painted glyph. */
@@ -479,8 +540,9 @@ export function wrapStdoutForFrameBg(
   const wrapped = Object.create(stdout) as NodeJS.WriteStream
   let synchronizedFrameOpen = false
   let inkBottomRow = stdout.rows
+  let inkCursorRow = 1
   const transformingWrite: WriteCall = (chunk, ...args) => {
-    if (typeof chunk !== 'string') return writeMeasured(chunk, ...args)
+    if (typeof chunk !== 'string') return writeMeasured(chunk, args)
     if (chunk.includes(START_SYNC)) synchronizedFrameOpen = true
     if (chunk.includes(END_SYNC)) synchronizedFrameOpen = false
     const source = stdout.isTTY ? preserveFullWidthRows(chunk, stdout.columns) : chunk
@@ -491,24 +553,44 @@ export function wrapStdoutForFrameBg(
       && /\x1b\[\d*A|\x1b\[2K/u.test(source)
       ? `\x1b[${Math.min(inkBottomRow, stdout.rows)};1H${source}`
       : source
-    const transformed = transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen)
-    // Ink's non-incremental body writes contain the complete output, including
-    // a trailing newline for a frame shorter than the terminal.
-    if (chunk.includes('\n')) inkBottomRow = Math.min(stdout.rows, chunk.split('\n').length)
-    return writeMeasured(transformed, ...args)
+    if (stdout.isTTY) {
+      const position = trackInkRows(inkChunk, inkCursorRow, stdout.rows)
+      if (position !== undefined) {
+        inkCursorRow = position
+        inkBottomRow = position
+      }
+    }
+    const tier = getTier()
+    // Ink's virtual transcript slot contains blank lines. Once another pane
+    // takes over, its diff can skip those blanks even though our overlay left
+    // real text there. Clear before Ink paints replacement content, never after.
+    const released = stdout.isTTY ? prepareTranscriptOverlay(stdout.columns, stdout.rows, tier, source.includes(START_SYNC)) : ''
+    const frameChunk = released === '' ? inkChunk
+      : inkChunk.includes(START_SYNC) ? inkChunk.replace(START_SYNC, START_SYNC + released)
+        : synchronizedFrameOpen ? released + inkChunk : START_SYNC + released + END_SYNC + inkChunk
+    let onScrollPaint: (() => void) | undefined
+    const transformed = transformFrameChunk(frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
+      const revision = visibleFrameSnapshot()?.scrollRevision
+      if (frameMetrics !== undefined && revision !== undefined) {
+        onScrollPaint = takeScrollPaintCompletion(frameMetrics, revision)
+      }
+    })
+    return writeMeasured(transformed, args, onScrollPaint)
   }
-  const writeMeasured: WriteCall = (transformed, ...args) => {
+  const writeMeasured = (transformed: unknown, args: unknown[], onScrollPaint?: () => void): boolean => {
     if (frameMetrics !== undefined && typeof transformed === 'string') {
       frameMetrics.addWrittenCells(countWrittenCells(transformed))
       const last = args.at(-1)
-      const onDrain = (): void => {
+      const onDrain = (error?: unknown): void => {
+        if (error !== undefined && error !== null) return
+        onScrollPaint?.()
         completeDeltaStdoutDrain(frameMetrics)
         if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented()
       }
       if (typeof last === 'function') {
         const original = last as (...callbackArgs: unknown[]) => void
         args[args.length - 1] = (...callbackArgs: unknown[]) => {
-          onDrain()
+          onDrain(callbackArgs[0])
           original(...callbackArgs)
         }
       } else {
@@ -519,12 +601,15 @@ export function wrapStdoutForFrameBg(
   }
   wrapped.write = transformingWrite
   const overlayStream = wrapped as FrameOverlayStream
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk: string) => writeMeasured(chunk)
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk, revision) => writeMeasured(chunk, [],
+    frameMetrics !== undefined && revision !== undefined
+      ? takeScrollPaintCompletion(frameMetrics, revision)
+      : undefined)
   return wrapped
 }
 
 /** ANSI/OSC controls do not occupy cells in a completed terminal write. */
-const TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu
+const TERMINAL_CONTROL_PATTERN = /\x1b\](?:[^\x07\x1b]|\x1b(?!\\))*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu
 
 /**
  * Count printable display cells carried by one terminal write. Cursor moves,
@@ -541,4 +626,65 @@ export function countWrittenCells(chunk: string): number {
   // Cursor movement separates graphemes; SGR and hyperlink spans do not.
   // Keeping these segments short also bounds the width library's temporary work.
   return printable.split('\n').reduce((cells, line) => cells + displayWidth(line), 0)
+}
+
+/**
+ * Track Ink's cursor before our absolute overlays. Incremental bodies contain
+ * both LF and CNL, so counting only newlines loses the logical bottom. Ink
+ * already wraps its physical lines; printable spans do not advance rows until
+ * LF or a cursor control. Also invalidate snapshots only when Ink actually
+ * overwrites their slot, keeping footer-only chrome updates differential.
+ */
+function trackInkRows(chunk: string, startRow: number, rows: number): number | undefined {
+  let row = Math.max(1, Math.min(startRow, rows))
+  let active = false
+  const geometry = visibleFrameSnapshot()?.geometry
+  const touch = (first: number, last = first): void => {
+    if (geometry !== undefined && first < geometry.transcriptTop + geometry.transcriptRows
+      && last >= geometry.transcriptTop) transcriptInvalidated = true
+  }
+  const move = (next: number): void => {
+    row = Math.max(1, Math.min(next, rows))
+    active = true
+  }
+  const text = (value: string): void => {
+    if (value === '') return
+    for (const [index, line] of value.split('\n').entries()) {
+      if (index > 0) move(row + 1)
+      if (/[^\u0000-\u001f\u007f]/u.test(line)) {
+        touch(row)
+        active = true
+      }
+    }
+  }
+  let index = 0
+  for (const match of chunk.matchAll(TERMINAL_CONTROL_PATTERN)) {
+    text(chunk.slice(index, match.index))
+    const control = match[0]
+    if (control === ENTER_ALTERNATE_SCREEN) {
+      touch(1, rows)
+      move(1)
+    } else if (control.startsWith('\x1b[')) {
+      const final = control.at(-1)
+      // Styling dominates colored frames; only parse parameters for row work.
+      if (final !== undefined && 'ABEFHfdKJ'.includes(final)) {
+        const parameter = Number.parseInt(control.slice(2, -1), 10)
+        const count = parameter || 1
+        if (final === 'A' || final === 'F') move(row - count)
+        else if (final === 'B' || final === 'E') move(row + count)
+        else if (final === 'H' || final === 'f' || final === 'd') move(count)
+        else if (final === 'K') { touch(row); active = true }
+        else if (final === 'J') {
+          const mode = parameter || 0
+          if (mode === 0) touch(row, rows)
+          else if (mode === 1) touch(1, row)
+          else if (mode === 2) touch(1, rows)
+          active = true
+        }
+      }
+    }
+    index = match.index + control.length
+  }
+  text(chunk.slice(index))
+  return active ? row : undefined
 }

@@ -225,6 +225,7 @@ describe('TUI provider auto-discover apply path', () => {
       // Open the providers overlay; the [+ 添加 Provider] row carries the
       // seeded multi-line template, which is what the user types into.
       controller.dispatch({ kind: 'command', query: 'settings' })
+      controller.dispatch({ kind: 'settings-search', query: '+ 添加 Provider', active: false })
 
       // The form leaves models= blank and supplies name + baseURL + api.
       const draft = [
@@ -244,7 +245,8 @@ describe('TUI provider auto-discover apply path', () => {
       expect(controller.getSettingsPane().editing).toBe(true)
       controller.dispatch({ kind: 'settings-apply', value: draft })
 
-      await waitFor(() => !controller.getSettingsPane().open, 2_000)
+      await waitFor(() => controller.getFeedback()?.startsWith('✓ 已写入') === true, 2_000)
+      expect(controller.getSettingsPane().open).toBe(true)
       expect(controller.getSettingsPane().updateError).toBeUndefined()
 
       // The user-layer providers dict now carries the discovered profile,
@@ -275,6 +277,7 @@ describe('TUI provider auto-discover apply path', () => {
       server.setNext({ status: 500, body: JSON.stringify({ error: 'upstream down' }) })
 
       controller.dispatch({ kind: 'command', query: 'settings' })
+      controller.dispatch({ kind: 'settings-search', query: '+ 添加 Provider', active: false })
       const draft = [
         'name=my-gw',
         `baseURL=${server.url}/v1`,
@@ -310,6 +313,7 @@ describe('TUI provider auto-discover apply path', () => {
       server.setNext({ status: 401, body: '{}' })
 
       controller.dispatch({ kind: 'command', query: 'settings' })
+      controller.dispatch({ kind: 'settings-search', query: '+ 添加 Provider', active: false })
       const draft = [
         'name=my-gw',
         `baseURL=${server.url}/v1`,
@@ -340,6 +344,7 @@ describe('TUI provider auto-discover apply path', () => {
       server.setNext({ status: 200, body: JSON.stringify({ data: [] }) })
 
       controller.dispatch({ kind: 'command', query: 'settings' })
+      controller.dispatch({ kind: 'settings-search', query: '+ 添加 Provider', active: false })
       const draft = [
         'name=my-gw',
         `baseURL=${server.url}/v1`,
@@ -381,16 +386,18 @@ describe('TUI provider auto-discover apply path', () => {
       server.setNext({ status: 200, body: JSON.stringify({ data: [{ id: 'gamma' }, { id: 'delta' }] }) })
 
       controller.dispatch({ kind: 'command', query: 'settings' })
+      controller.dispatch({ kind: 'settings-search', query: 'providers.my-gw.models', active: false })
       const pane = controller.getSettingsPane()
       const modelsRowIndex = pane.rows.findIndex(row => row.field === 'providers.my-gw.models')
       // Walk down to the `providers.my-gw.models` row to enter edit mode there.
       for (let i = 0; i < modelsRowIndex; i++) {
         controller.dispatch({ kind: 'settings-move', delta: 1 })
       }
-      controller.dispatch({ kind: 'settings-edit' })
+      controller.dispatch({ kind: 'settings-edit-json' })
       controller.dispatch({ kind: 'settings-apply', value: 'auto' })
 
-      await waitFor(() => !controller.getSettingsPane().open, 2_000)
+      await waitFor(() => controller.getFeedback()?.startsWith('✓ 已写入') === true, 2_000)
+      expect(controller.getSettingsPane().open).toBe(true)
       const yaml = layer()
       expect(yaml).toContain('id: gamma')
       expect(yaml).toContain('id: delta')

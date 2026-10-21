@@ -1,0 +1,13 @@
+{
+  "source": "/tmp/dsh-perf-fix/verified-overlap-100-80x24/final.ansi",
+  "columns": 80,
+  "rows": 24,
+  "frames": 704,
+  "snapshotComparedFrames": 648,
+  "comparedRows": 10698,
+  "suppressedGeometryFrames": 0,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

@@ -1,0 +1,106 @@
+{
+  "source": "/tmp/dsh-perf-audit/live-markdown-100-108x48/final.ansi",
+  "columns": 108,
+  "rows": 48,
+  "frames": 426,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 7,
+  "mismatchExamples": [
+    {
+      "frame": 102,
+      "rows": [
+        {
+          "row": 14,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                        ·"
+        },
+        {
+          "row": 33,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    转平移。这样我只需要从图上量 12 个目标点。                                                             ·"
+        }
+      ]
+    },
+    {
+      "frame": 152,
+      "rows": [
+        {
+          "row": 14,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                        ·"
+        },
+        {
+          "row": 33,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    转平移。这样我只需要从图上量 12 个目标点。                                                             ·"
+        }
+      ]
+    },
+    {
+      "frame": 201,
+      "rows": [
+        {
+          "row": 14,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                        ·"
+        },
+        {
+          "row": 33,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    转平移。这样我只需要从图上量 12 个目标点。                                                             ·"
+        }
+      ]
+    },
+    {
+      "frame": 246,
+      "rows": [
+        {
+          "row": 14,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                        ·"
+        },
+        {
+          "row": 33,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    转平移。这样我只需要从图上量 12 个目标点。                                                             ·"
+        }
+      ]
+    },
+    {
+      "frame": 294,
+      "rows": [
+        {
+          "row": 14,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                        ·"
+        },
+        {
+          "row": 33,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    转平移。这样我只需要从图上量 12 个目标点。                                                             ·"
+        }
+      ]
+    }
+  ]
+}

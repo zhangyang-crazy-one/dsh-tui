@@ -1,0 +1,14 @@
+{
+  "tui-render/src/stream-view.tsx": "cd0ff6bf0976ef6ec0187a0a9ec20688926cb632d1cbc271509b5c1123423510",
+  "tui-render/src/frame-fill.ts": "0b96f1af693415f1cf7c50f128d9b3df90539e0e6917c806e96951df24b06edd",
+  "tui-render/src/frame-snapshot.ts": "da7e92be695ed811f7a3606e1a9095be55b541752ec414d04727102d9eedd18b",
+  "tui-render/src/frame-metrics.ts": "30374d73544481659acb04449dccc0e7218181b100ef90235f69ef0c25fc19e6",
+  "tui-render/src/loop.tsx": "505c51f35f77e33f51da47776b8523e684b748a788ca5af86e8495dc2fabc37b",
+  "tui-render/src/scroll-scheduler.ts": "7f3808badef9e18dd14597f468711d07cdcc3d706bb2235ad5da55330f5a6139",
+  "tui-render/src/transcript-viewport.ts": "579dcf1b5be7789c94f48dfce12e7a1d71e845608cf6659a1da2d34b559d4fb4",
+  "tui-render/src/transcript-line-store.ts": "d82938b8d00d3cc2f3e3fef534c559b181c30de85fee9140e97b2618b81c934b",
+  "tui-render/src/settings-pane.tsx": "832355359db238ba11381f87e9a132451b557f043b6a01f2200713315136dcc9",
+  "tui/src/settings-navigation.ts": "0606fb379713402ab03b55af0309edfa59eaddecab650388b5b65d9977f09cad",
+  "tui/src/index.ts": "21de11522507a2af8b8210274f0a0337052e0ed7dbac543fc937807acfc8e4ef",
+  "dist/index.js": "c93bc294e99f6d0844ac316210a43b9f9dcca40b54c674c19ed7bcc187c9c4a5"
+}

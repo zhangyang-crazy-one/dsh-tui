@@ -62,12 +62,13 @@ export type TranscriptViewportAction =
   | Readonly<{ kind: 'reset' }>
 
 /** One loop-issued navigation command consumed after Ink has measured layout. */
-export type TranscriptViewportCommand =
-  | Readonly<{ sequence: number; kind: 'scroll'; delta: number }>
+export type TranscriptViewportCommand = Readonly<{ inputAt?: number }> & (
+  | Readonly<{ sequence: number; kind: 'scroll'; delta: number; source?: 'wheel' }>
   | Readonly<{ sequence: number; kind: 'page'; delta: -1 | 1 }>
   | Readonly<{ sequence: number; kind: 'position'; fraction: number }>
   | Readonly<{ sequence: number; kind: 'edge'; edge: 'oldest' | 'latest' }>
   | Readonly<{ sequence: number; kind: 'reset' }>
+)
 
 /** Empty live-edge viewport before the first Ink layout. */
 export const EMPTY_TRANSCRIPT_VIEWPORT: TranscriptViewportState = Object.freeze({

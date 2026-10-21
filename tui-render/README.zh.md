@@ -123,3 +123,5 @@ Plugins 覆盖层渲染控制器提供的本地化清单、操作结果、预检
 无。
 
 </details>
+
+TTY 正文只由 `VisibleFrameSnapshot` 的物理绘制器写入；Ink 仅保留正文尺寸并绘制外围界面。非 TTY 保留文本 JSX 输出。滚轮/触控板直接提交完整位移，键盘翻页仍使用配置的步进；切换面板、改变尺寸及 Ink 擦写正文区域时恢复正确的绘制归属。`scrollInputToPaintMs` 从输入入口计到对应 revision 的 stdout 成功回调，属于主机输出延迟，不表示显示器完成绘制。缓存预算采用增量统计和驻留 LRU。

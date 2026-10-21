@@ -123,3 +123,5 @@ The renderer does not alter request prefixes or issue model requests, so it has 
 None.
 
 </details>
+
+TTY transcript text is painted exclusively from `VisibleFrameSnapshot`; Ink reserves its geometry and paints surrounding chrome. Non-TTY output retains its text JSX. Wheel/touchpad input applies its full movement directly, while keyboard page navigation retains configured stepping. Pane changes, resize and Ink erases restore the correct paint ownership. `scrollInputToPaintMs` measures input ingress to the matching revision’s successful stdout callback, not monitor presentation. Cache budgets use incremental totals and resident LRU order.

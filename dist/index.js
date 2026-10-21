@@ -51995,9 +51995,9 @@ function fileUrlFromToolArguments(argumentsJson) {
   try {
     const parsed = JSON.parse(argumentsJson);
     if (parsed === null || typeof parsed !== "object") return void 0;
-    const record2 = parsed;
+    const record3 = parsed;
     for (const key of FILE_PATH_KEYS) {
-      const value = record2[key];
+      const value = record3[key];
       if (typeof value !== "string" || !isAbsolute2(value)) continue;
       if (/[\u0000-\u001f\u007f]/.test(value)) continue;
       return pathToFileURL2(value).href;
@@ -52378,20 +52378,20 @@ function toolHeadingRow(card, width, expanded, locale) {
     if (subagentInfo?.model !== void 0) {
       parts2.push({ text: ` [${subagentInfo.model}]`, token: "markdownCode" });
     }
-    let summary2;
+    let summary3;
     if (status === "error") {
-      summary2 = collapsedToolCardSummary(card);
+      summary3 = collapsedToolCardSummary(card);
     } else if (!expanded) {
       if (subagentInfo?.prompt !== void 0 && subagentInfo.prompt !== "") {
-        summary2 = escapeContent(subagentInfo.prompt).replace(/\n/g, " ");
+        summary3 = escapeContent(subagentInfo.prompt).replace(/\n/g, " ");
       } else {
-        summary2 = collapsedToolCardSummary(card);
+        summary3 = collapsedToolCardSummary(card);
       }
     }
     const available2 = width - parts2.reduce((sum, part) => sum + displayWidth(part.text), 0) - 1;
     const href2 = fileUrlFromToolArguments(card.arguments);
-    if (summary2 !== void 0 && available2 >= 2) {
-      parts2.push({ text: ` ${truncateDisplay(summary2, available2)}`, token: "fgSoft", ...href2 === void 0 ? {} : { href: href2 } });
+    if (summary3 !== void 0 && available2 >= 2) {
+      parts2.push({ text: ` ${truncateDisplay(summary3, available2)}`, token: "fgSoft", ...href2 === void 0 ? {} : { href: href2 } });
     }
     return toolRow(parts2, 0, width, "toolBg");
   }
@@ -52402,10 +52402,10 @@ function toolHeadingRow(card, width, expanded, locale) {
   const fitted = truncateMiddleDisplay(heading, Math.max(1, width - displayWidth(`${glyph}  \xB7 ${label}`)), terminal ? 0.72 : 0.5);
   const parts = expanded && terminal ? [{ text: `${glyph} `, token: "fgDim" }, ...tokenizeCommandHeading(fitted), { text: " \xB7 ", token: "fgDim" }] : [{ text: `${glyph} ${fitted} \xB7 `, token: "fgSoft" }];
   parts.push({ text: label, token: status === "error" ? "error" : status === "running" ? "accentText" : "fgDim" });
-  const summary = !expanded || status === "error" ? collapsedToolCardSummary(card) : void 0;
+  const summary2 = !expanded || status === "error" ? collapsedToolCardSummary(card) : void 0;
   const available = width - parts.reduce((sum, part) => sum + displayWidth(part.text), 0) - 1;
   const href = fileUrlFromToolArguments(card.arguments);
-  if (summary !== void 0 && available >= 2) parts.push({ text: ` ${truncateDisplay(summary, available)}`, token: "fgDim", ...href === void 0 ? {} : { href } });
+  if (summary2 !== void 0 && available >= 2) parts.push({ text: ` ${truncateDisplay(summary2, available)}`, token: "fgDim", ...href === void 0 ? {} : { href } });
   return toolRow(parts, 0, width, "toolBg");
 }
 var GUTTER_SEPARATOR = " \u2502 ";
@@ -53302,6 +53302,39 @@ function completeDeltaStdoutDrain(metrics, nowMs = performance.now()) {
   PENDING_DELTA_INGRESS.delete(metrics);
   metrics.recordDeltaIngressToStdoutDrain(Math.max(0, nowMs - startedAt));
 }
+var PENDING_SCROLL_INPUTS = /* @__PURE__ */ new WeakMap();
+function markScrollInput(metrics, revision, nowMs = performance.now()) {
+  let state = PENDING_SCROLL_INPUTS.get(metrics);
+  if (state === void 0) {
+    state = { pending: void 0, generation: 0 };
+    PENDING_SCROLL_INPUTS.set(metrics, state);
+  }
+  if (state.pending === void 0) state.pending = { revision, startedAt: nowMs };
+  else {
+    metrics.recordCoalescedInput();
+    state.pending.revision = Math.max(state.pending.revision, revision);
+    state.pending.startedAt = Math.min(state.pending.startedAt, nowMs);
+  }
+}
+function clearScrollInputs(metrics) {
+  const state = PENDING_SCROLL_INPUTS.get(metrics);
+  if (state === void 0) return;
+  state.pending = void 0;
+  state.generation += 1;
+}
+function takeScrollPaintCompletion(metrics, revision) {
+  const state = PENDING_SCROLL_INPUTS.get(metrics);
+  const pending = state?.pending;
+  if (state === void 0 || pending === void 0 || revision < pending.revision) return void 0;
+  state.pending = void 0;
+  const { generation } = state;
+  let completed = false;
+  return () => {
+    if (completed || state.generation !== generation) return;
+    completed = true;
+    metrics.recordScrollInputToPaint(Math.max(0, performance.now() - pending.startedAt));
+  };
+}
 function emptyCounter() {
   return { total: 0, windowCount: 0, windowSum: 0, windowMax: 0 };
 }
@@ -53537,6 +53570,7 @@ var frameRail;
 var paintedFrameRail;
 var paintedVisibleFrame;
 var paintedTranscriptRepaintKey;
+var transcriptInvalidated = false;
 function setFrameCaret(caret) {
   frameCaret = caret;
 }
@@ -53638,15 +53672,19 @@ function transcriptOverlay(tier, synchronizedFrameEnded) {
   if (next === void 0) {
     paintedVisibleFrame = void 0;
     paintedTranscriptRepaintKey = void 0;
+    transcriptInvalidated = false;
     return "";
   }
-  if (paintedVisibleFrame === next && (next.repaintKey === void 0 || next.repaintKey === paintedTranscriptRepaintKey)) {
+  if (!transcriptInvalidated && paintedVisibleFrame === next && (next.repaintKey === void 0 || next.repaintKey === paintedTranscriptRepaintKey)) {
     return "";
   }
   const diff2 = diffVisibleFrameSnapshots(paintedVisibleFrame, next);
-  if (diff2.forced && !synchronizedFrameEnded) return "";
-  const repaintAll = synchronizedFrameEnded && (diff2.forced || next.repaintKey !== void 0 && next.repaintKey !== paintedTranscriptRepaintKey);
-  if (repaintAll) paintedTranscriptRepaintKey = next.repaintKey;
+  if ((diff2.forced || transcriptInvalidated) && !synchronizedFrameEnded) return "";
+  const repaintAll = synchronizedFrameEnded && (diff2.forced || transcriptInvalidated || next.repaintKey !== void 0 && next.repaintKey !== paintedTranscriptRepaintKey);
+  if (repaintAll) {
+    paintedTranscriptRepaintKey = next.repaintKey;
+    transcriptInvalidated = false;
+  }
   paintedVisibleFrame = next;
   let cells = "";
   if (repaintAll) {
@@ -53675,6 +53713,30 @@ function transcriptOverlay(tier, synchronizedFrameEnded) {
   }
   return cells === "" ? "" : `\x1B7${cells}\x1B8`;
 }
+function transcriptSlotChanged() {
+  const previous3 = paintedVisibleFrame?.geometry;
+  const next = visibleFrameSnapshot()?.geometry;
+  return previous3 !== void 0 && next !== void 0 && (previous3.columns !== next.columns || previous3.rows !== next.rows || previous3.transcriptTop !== next.transcriptTop || previous3.transcriptLeft !== next.transcriptLeft || previous3.transcriptWidth !== next.transcriptWidth || previous3.transcriptRows !== next.transcriptRows);
+}
+function prepareTranscriptOverlay(columns, rows, tier, inkFrameStarting) {
+  const previous3 = paintedVisibleFrame;
+  if (previous3 === void 0) return "";
+  if (visibleFrameSnapshot() === void 0) {
+    paintedVisibleFrame = void 0;
+    paintedTranscriptRepaintKey = void 0;
+    transcriptInvalidated = false;
+  } else {
+    if (!inkFrameStarting || !transcriptSlotChanged()) return "";
+    transcriptInvalidated = true;
+  }
+  const blank = blankPad(Math.min(columns, previous3.geometry.columns), tier);
+  let cells = "";
+  const bottom = Math.min(rows, previous3.geometry.transcriptTop + previous3.geometry.transcriptRows - 1);
+  for (let row = previous3.geometry.transcriptTop; row <= bottom; row += 1) {
+    cells += `\x1B[${String(row)};1H${blank}`;
+  }
+  return cells === "" ? "" : `\x1B7${cells}\x1B8`;
+}
 function caretSuffix() {
   if (frameCaret === void 0) return "";
   if (frameCaret === "hide") return HIDE_CURSOR;
@@ -53683,7 +53745,13 @@ function caretSuffix() {
 function publishedCaretBytes() {
   return caretSuffix();
 }
+function snapshotFitsStdout(stdout) {
+  const snapshot2 = visibleFrameSnapshot();
+  if (!stdout.isTTY || snapshot2 === void 0 || !Number.isFinite(stdout.columns) || stdout.columns < 1 || !Number.isFinite(stdout.rows) || stdout.rows < 1) return true;
+  return snapshot2.geometry.columns === stdout.columns && snapshot2.geometry.rows === stdout.rows;
+}
 function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
+  if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return;
   const transcript = transcriptOverlay(tier, true);
   const rail = railOverlay(tier, false);
   const overlay = transcript + rail;
@@ -53694,9 +53762,9 @@ function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
     stdout.write(bytes);
     return;
   }
-  writer(bytes);
+  writer(bytes, visibleFrameSnapshot()?.scrollRevision);
 }
-function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true) {
+function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true, onTranscriptPaint) {
   let out = chunk2;
   const on2 = bgSequence(tier);
   if (on2 !== "") {
@@ -53716,7 +53784,9 @@ function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true) 
   }
   const isFrame = out.includes(END_SYNC) || out.includes(SHOW_CURSOR) || out.includes(HIDE_CURSOR);
   if (isFrame && publishFrame) {
-    const overlay = transcriptOverlay(tier, out.includes(END_SYNC)) + railOverlay(tier, true) + caretSuffix();
+    const transcript = transcriptOverlay(tier, out.includes(END_SYNC));
+    if (transcript !== "") onTranscriptPaint?.();
+    const overlay = transcript + railOverlay(tier, true) + caretSuffix();
     const syncIndex = out.lastIndexOf(END_SYNC);
     out = syncIndex < 0 ? out + overlay : out.slice(0, syncIndex) + overlay + out.slice(syncIndex);
   }
@@ -53731,28 +53801,46 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
   const wrapped = Object.create(stdout);
   let synchronizedFrameOpen = false;
   let inkBottomRow = stdout.rows;
+  let inkCursorRow = 1;
   const transformingWrite = (chunk2, ...args) => {
-    if (typeof chunk2 !== "string") return writeMeasured(chunk2, ...args);
+    if (typeof chunk2 !== "string") return writeMeasured(chunk2, args);
     if (chunk2.includes(START_SYNC)) synchronizedFrameOpen = true;
     if (chunk2.includes(END_SYNC)) synchronizedFrameOpen = false;
     const source = stdout.isTTY ? preserveFullWidthRows(chunk2, stdout.columns) : chunk2;
     const inkChunk = stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(source) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${source}` : source;
-    const transformed = transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen);
-    if (chunk2.includes("\n")) inkBottomRow = Math.min(stdout.rows, chunk2.split("\n").length);
-    return writeMeasured(transformed, ...args);
+    if (stdout.isTTY) {
+      const position2 = trackInkRows(inkChunk, inkCursorRow, stdout.rows);
+      if (position2 !== void 0) {
+        inkCursorRow = position2;
+        inkBottomRow = position2;
+      }
+    }
+    const tier = getTier();
+    const released = stdout.isTTY ? prepareTranscriptOverlay(stdout.columns, stdout.rows, tier, source.includes(START_SYNC)) : "";
+    const frameChunk = released === "" ? inkChunk : inkChunk.includes(START_SYNC) ? inkChunk.replace(START_SYNC, START_SYNC + released) : synchronizedFrameOpen ? released + inkChunk : START_SYNC + released + END_SYNC + inkChunk;
+    let onScrollPaint;
+    const transformed = transformFrameChunk(frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
+      const revision = visibleFrameSnapshot()?.scrollRevision;
+      if (frameMetrics !== void 0 && revision !== void 0) {
+        onScrollPaint = takeScrollPaintCompletion(frameMetrics, revision);
+      }
+    });
+    return writeMeasured(transformed, args, onScrollPaint);
   };
-  const writeMeasured = (transformed, ...args) => {
+  const writeMeasured = (transformed, args, onScrollPaint) => {
     if (frameMetrics !== void 0 && typeof transformed === "string") {
       frameMetrics.addWrittenCells(countWrittenCells(transformed));
       const last = args.at(-1);
-      const onDrain = () => {
+      const onDrain = (error51) => {
+        if (error51 !== void 0 && error51 !== null) return;
+        onScrollPaint?.();
         completeDeltaStdoutDrain(frameMetrics);
         if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented();
       };
       if (typeof last === "function") {
         const original = last;
         args[args.length - 1] = (...callbackArgs) => {
-          onDrain();
+          onDrain(callbackArgs[0]);
           original(...callbackArgs);
         };
       } else {
@@ -53763,13 +53851,70 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
   };
   wrapped.write = transformingWrite;
   const overlayStream = wrapped;
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2) => writeMeasured(chunk2);
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2, revision) => writeMeasured(
+    chunk2,
+    [],
+    frameMetrics !== void 0 && revision !== void 0 ? takeScrollPaintCompletion(frameMetrics, revision) : void 0
+  );
   return wrapped;
 }
-var TERMINAL_CONTROL_PATTERN = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
+var TERMINAL_CONTROL_PATTERN = /\x1b\](?:[^\x07\x1b]|\x1b(?!\\))*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
 function countWrittenCells(chunk2) {
   const printable = chunk2.replace(TERMINAL_CONTROL_PATTERN, (control) => control.startsWith("\x1B]") || control.startsWith("\x1B[") && control.endsWith("m") ? "" : "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/gu, "");
   return printable.split("\n").reduce((cells, line5) => cells + displayWidth(line5), 0);
+}
+function trackInkRows(chunk2, startRow, rows) {
+  let row = Math.max(1, Math.min(startRow, rows));
+  let active = false;
+  const geometry = visibleFrameSnapshot()?.geometry;
+  const touch = (first, last = first) => {
+    if (geometry !== void 0 && first < geometry.transcriptTop + geometry.transcriptRows && last >= geometry.transcriptTop) transcriptInvalidated = true;
+  };
+  const move = (next) => {
+    row = Math.max(1, Math.min(next, rows));
+    active = true;
+  };
+  const text4 = (value) => {
+    if (value === "") return;
+    for (const [index3, line5] of value.split("\n").entries()) {
+      if (index3 > 0) move(row + 1);
+      if (/[^\u0000-\u001f\u007f]/u.test(line5)) {
+        touch(row);
+        active = true;
+      }
+    }
+  };
+  let index2 = 0;
+  for (const match of chunk2.matchAll(TERMINAL_CONTROL_PATTERN)) {
+    text4(chunk2.slice(index2, match.index));
+    const control = match[0];
+    if (control === ENTER_ALTERNATE_SCREEN) {
+      touch(1, rows);
+      move(1);
+    } else if (control.startsWith("\x1B[")) {
+      const final = control.at(-1);
+      if (final !== void 0 && "ABEFHfdKJ".includes(final)) {
+        const parameter = Number.parseInt(control.slice(2, -1), 10);
+        const count = parameter || 1;
+        if (final === "A" || final === "F") move(row - count);
+        else if (final === "B" || final === "E") move(row + count);
+        else if (final === "H" || final === "f" || final === "d") move(count);
+        else if (final === "K") {
+          touch(row);
+          active = true;
+        } else if (final === "J") {
+          const mode = parameter || 0;
+          if (mode === 0) touch(row, rows);
+          else if (mode === 1) touch(1, row);
+          else if (mode === 2) touch(1, rows);
+          active = true;
+        }
+      }
+    }
+    index2 = match.index + control.length;
+  }
+  text4(chunk2.slice(index2));
+  return active ? row : void 0;
 }
 
 // packages/tui/tui-render/src/screen-atlas.ts
@@ -55223,9 +55368,9 @@ function projectCompactionEntry(entry, scope) {
   const lines = [
     lineForText(marker, "fgDim", false, 0)
   ];
-  const summary = entry.meta?.compactionSummary ?? "";
-  if (expanded && summary !== "") {
-    const wrapped = wrapDisplayLines(escapeContent(summary), Math.max(1, scope.width - 4));
+  const summary2 = entry.meta?.compactionSummary ?? "";
+  if (expanded && summary2 !== "") {
+    const wrapped = wrapDisplayLines(escapeContent(summary2), Math.max(1, scope.width - 4));
     for (const row of wrapped) {
       lines.push(surfaceLine([
         { text: "\u2502 ", token: "accentText", bold: false },
@@ -55473,14 +55618,14 @@ var MutableRevisionImpl = class {
     this.buffer.push(...lines);
     this.revision += 1;
     this.store.recordTailRerender(lines.length);
-    this.store.touchActiveBlock(this.blockId);
+    this.store.recordActiveLines(this, lines, true);
   }
   reset(lines) {
     this.requireAlive();
     this.buffer = [...lines];
     this.revision += 1;
     this.store.recordTailRerender(lines.length);
-    this.store.touchActiveBlock(this.blockId);
+    this.store.recordActiveLines(this, lines, false);
   }
   replace(input) {
     this.requireAlive();
@@ -55488,7 +55633,7 @@ var MutableRevisionImpl = class {
     this.buffer = [...input.lines];
     this.revision += 1;
     this.store.recordTailRerender(input.lines.length);
-    this.store.touchActiveBlock(this.blockId);
+    this.store.recordActiveLines(this, input.lines, false);
   }
   settle() {
     this.requireAlive();
@@ -55512,8 +55657,12 @@ var MutableRevisionImpl = class {
 var TranscriptRenderStoreImpl = class {
   config;
   entries = /* @__PURE__ */ new Map();
+  /** Insertion order is LRU order; evicted history is never inspected. */
+  settledEntries = /* @__PURE__ */ new Set();
   pins = /* @__PURE__ */ new Set();
-  accessCounter = 0;
+  cachedBlocks = 0;
+  cachedRows = 0;
+  cachedBytes = 0;
   counters = {
     hits: 0,
     evictions: 0,
@@ -55543,7 +55692,10 @@ var TranscriptRenderStoreImpl = class {
         settledLines: void 0,
         priorSettled: null,
         activeRevision: null,
-        lastAccess: this.nextAccess()
+        cachedRows: 0,
+        cachedBytes: 0,
+        resident: false,
+        settledBytes: 0
       });
       this.enforceBudget();
       return;
@@ -55557,10 +55709,14 @@ var TranscriptRenderStoreImpl = class {
     const sourceChanged = existing.source !== input.source;
     existing.source = input.source;
     existing.scopeKey = input.scopeKey;
-    existing.lastAccess = this.nextAccess();
     if (scopeChanged || sourceChanged) {
       existing.revision += 1;
       existing.settledLines = null;
+      existing.settledBytes = 0;
+      this.settledEntries.delete(existing);
+      this.updateResident(existing, 0, 0, false);
+    } else if (this.settledEntries.delete(existing)) {
+      this.settledEntries.add(existing);
     }
     this.enforceBudget();
   }
@@ -55577,7 +55733,10 @@ var TranscriptRenderStoreImpl = class {
         settledLines: void 0,
         priorSettled: null,
         activeRevision: null,
-        lastAccess: this.nextAccess()
+        cachedRows: 0,
+        cachedBytes: 0,
+        resident: false,
+        settledBytes: 0
       };
       this.entries.set(input.blockId, entry);
     }
@@ -55589,19 +55748,22 @@ var TranscriptRenderStoreImpl = class {
     const owned = entry;
     const revision = new MutableRevisionImpl(this, owned, input.source, input.scopeKey);
     owned.activeRevision = revision;
+    this.settledEntries.delete(owned);
+    this.updateResident(owned, 0, 0, true);
     return revision;
   }
   readBlock(input) {
     this.assertBlockId(input.blockId);
     const entry = this.entries.get(input.blockId);
     if (entry === void 0) return void 0;
-    entry.lastAccess = this.nextAccess();
     const active = entry.activeRevision;
     if (active !== null) {
       this.counters.stableRowsReused += active.lines.length;
       return snapshotFromEntry(entry, active.lines);
     }
     if (entry.settledLines !== void 0 && entry.settledLines !== null) {
+      this.settledEntries.delete(entry);
+      this.settledEntries.add(entry);
       this.counters.hits += 1;
       this.counters.stableRowsReused += entry.settledLines.length;
       return snapshotFromEntry(entry, entry.settledLines);
@@ -55614,6 +55776,9 @@ var TranscriptRenderStoreImpl = class {
     });
     const frozen = Object.freeze([...rebuilt]);
     entry.settledLines = frozen;
+    entry.settledBytes = lineBytes(frozen);
+    this.settledEntries.add(entry);
+    this.updateResident(entry, frozen.length, entry.settledBytes, true);
     this.counters.rebuilds += 1;
     this.counters.stableRowsReused += frozen.length;
     this.enforceBudget();
@@ -55633,8 +55798,11 @@ var TranscriptRenderStoreImpl = class {
   }
   reset() {
     this.entries.clear();
+    this.settledEntries.clear();
     this.pins.clear();
-    this.accessCounter = 0;
+    this.cachedBlocks = 0;
+    this.cachedRows = 0;
+    this.cachedBytes = 0;
     this.counters.hits = 0;
     this.counters.evictions = 0;
     this.counters.rebuilds = 0;
@@ -55659,34 +55827,18 @@ var TranscriptRenderStoreImpl = class {
     return { start, end: start + target.rowCount };
   }
   totalRows() {
-    let total = 0;
-    for (const entry of this.entries.values()) {
-      total += this.linesFor(entry.blockId).length;
-    }
-    return total;
+    return this.cachedRows;
   }
   stats() {
-    let cachedBlocks = 0;
-    let cachedRows = 0;
-    let cachedBytes = 0;
-    for (const entry of this.entries.values()) {
-      const lines = this.linesFor(entry.blockId);
-      if (lines.length === 0 && entry.settledLines === void 0 && entry.activeRevision === null) {
-        continue;
-      }
-      cachedBlocks += 1;
-      cachedRows += lines.length;
-      for (const line5 of lines) cachedBytes += physicalLineByteSize(line5);
-    }
     return {
       hits: this.counters.hits,
       evictions: this.counters.evictions,
       rebuilds: this.counters.rebuilds,
       stableRowsReused: this.counters.stableRowsReused,
       tailRowsRerendered: this.counters.tailRowsRerendered,
-      cachedBlocks,
-      cachedRows,
-      cachedBytes
+      cachedBlocks: this.cachedBlocks,
+      cachedRows: this.cachedRows,
+      cachedBytes: this.cachedBytes
     };
   }
   /** Internal: called by MutableRevisionImpl on settle. */
@@ -55701,8 +55853,9 @@ var TranscriptRenderStoreImpl = class {
     entry.activeRevision = null;
     entry.scopeKey = scopeKey;
     entry.settledLines = frozen;
+    entry.settledBytes = entry.cachedBytes;
     entry.priorSettled = null;
-    entry.lastAccess = this.nextAccess();
+    this.settledEntries.add(entry);
     this.enforceBudget();
     return snapshotFromEntry(entry, frozen);
   }
@@ -55715,17 +55868,29 @@ var TranscriptRenderStoreImpl = class {
     entry.activeRevision = null;
     entry.settledLines = entry.priorSettled ?? null;
     entry.priorSettled = null;
-    entry.lastAccess = this.nextAccess();
+    if (entry.settledLines !== null) this.settledEntries.add(entry);
+    this.updateResident(
+      entry,
+      entry.settledLines?.length ?? 0,
+      entry.settledBytes,
+      entry.settledLines !== null
+    );
     this.enforceBudget();
   }
   /** Internal: called from the revision to bump tail counters. */
   recordTailRerender(rowCount) {
     this.counters.tailRowsRerendered += rowCount;
   }
-  /** Internal: called from the revision to refresh LRU access on the owning block. */
-  touchActiveBlock(blockId) {
-    const entry = this.entries.get(blockId);
-    if (entry !== void 0) entry.lastAccess = this.nextAccess();
+  /** Internal: measure only changed rows of the active block. */
+  recordActiveLines(revision, lines, append) {
+    const entry = this.entries.get(revision.blockId);
+    if (entry === void 0 || entry.activeRevision !== revision) return;
+    this.updateResident(
+      entry,
+      (append ? entry.cachedRows : 0) + lines.length,
+      (append ? entry.cachedBytes : 0) + lineBytes(lines),
+      true
+    );
   }
   /** Internal: keep source authority current while an active handle lives. */
   replaceActiveSource(blockId, source) {
@@ -55736,12 +55901,13 @@ var TranscriptRenderStoreImpl = class {
     entry.source = source;
     entry.revision += 1;
   }
-  linesFor(blockId) {
-    const entry = this.entries.get(blockId);
-    if (entry === void 0) return EMPTY_LINES;
-    if (entry.activeRevision !== null) return entry.activeRevision.lines;
-    if (entry.settledLines !== void 0 && entry.settledLines !== null) return entry.settledLines;
-    return EMPTY_LINES;
+  updateResident(entry, rows, bytes, resident) {
+    this.cachedRows += rows - entry.cachedRows;
+    this.cachedBytes += bytes - entry.cachedBytes;
+    this.cachedBlocks += Number(resident) - Number(entry.resident);
+    entry.cachedRows = rows;
+    entry.cachedBytes = bytes;
+    entry.resident = resident;
   }
   assertBlockId(blockId) {
     if (typeof blockId !== "string" || blockId === "") {
@@ -55753,49 +55919,25 @@ var TranscriptRenderStoreImpl = class {
       throw new Error("TranscriptRenderStore: scopeKey must be a non-empty string");
     }
   }
-  nextAccess() {
-    this.accessCounter += 1;
-    return this.accessCounter;
-  }
   /** Evict unpinned settled blocks until both row and byte budgets fit. */
   enforceBudget() {
-    const totals = this.computeTotals();
-    if (totals.rows <= this.config.maxRows && totals.bytes <= this.config.maxBytes) return;
-    const candidates = [];
-    for (const entry of this.entries.values()) {
+    if (this.cachedRows <= this.config.maxRows && this.cachedBytes <= this.config.maxBytes) return;
+    for (const entry of this.settledEntries) {
+      if (this.cachedRows <= this.config.maxRows && this.cachedBytes <= this.config.maxBytes) break;
       if (this.pins.has(entry.blockId)) continue;
-      if (entry.activeRevision !== null) continue;
-      if (entry.settledLines === null || entry.settledLines === void 0) continue;
-      candidates.push(entry);
-    }
-    candidates.sort((a2, b2) => a2.lastAccess - b2.lastAccess);
-    for (const entry of candidates) {
-      if (totals.rows <= this.config.maxRows && totals.bytes <= this.config.maxBytes) break;
-      const settled = entry.settledLines;
-      const rowCount = settled.length;
-      let byteCount = 0;
-      for (const line5 of settled) byteCount += physicalLineByteSize(line5);
       entry.settledLines = null;
-      entry.lastAccess = 0;
+      entry.settledBytes = 0;
+      this.settledEntries.delete(entry);
+      this.updateResident(entry, 0, 0, false);
       this.counters.evictions += 1;
-      totals.rows -= rowCount;
-      totals.bytes -= byteCount;
     }
-  }
-  computeTotals() {
-    let rows = 0;
-    let bytes = 0;
-    for (const entry of this.entries.values()) {
-      const lines = entry.activeRevision === null ? entry.settledLines ?? EMPTY_LINES : entry.activeRevision.lines;
-      for (const line5 of lines) {
-        rows += 1;
-        bytes += physicalLineByteSize(line5);
-      }
-    }
-    return { rows, bytes };
   }
 };
-var EMPTY_LINES = Object.freeze([]);
+function lineBytes(lines) {
+  let bytes = 0;
+  for (const line5 of lines) bytes += physicalLineByteSize(line5);
+  return bytes;
+}
 function snapshotFromEntry(entry, lines) {
   return Object.freeze({
     blockId: entry.blockId,
@@ -56128,32 +56270,32 @@ function displayedParts(parts, reasoningExpanded) {
   return parts.filter((part) => isVisiblePart(part) && (part.kind !== "reasoning" || reasoningExpanded));
 }
 var COLLAPSED_TOOL_CARD_LIMIT = 3;
-function toolSummaryStatus(summary) {
-  if (summary.errorCount > 0) return "error";
-  return summary.runningCount > 0 ? "running" : "ok";
+function toolSummaryStatus(summary2) {
+  if (summary2.errorCount > 0) return "error";
+  return summary2.runningCount > 0 ? "running" : "ok";
 }
-function toolSummaryText(summary, maxCols) {
+function toolSummaryText(summary2, maxCols) {
   const status = [
-    summary.okCount > 0 && (summary.errorCount > 0 || summary.runningCount > 0) ? `\u5B8C\u6210 ${String(summary.okCount)}` : void 0,
-    summary.errorCount > 0 ? `\u5931\u8D25 ${String(summary.errorCount)}` : void 0,
-    summary.runningCount > 0 ? `\u8FD0\u884C\u4E2D ${String(summary.runningCount)}` : void 0
+    summary2.okCount > 0 && (summary2.errorCount > 0 || summary2.runningCount > 0) ? `\u5B8C\u6210 ${String(summary2.okCount)}` : void 0,
+    summary2.errorCount > 0 ? `\u5931\u8D25 ${String(summary2.errorCount)}` : void 0,
+    summary2.runningCount > 0 ? `\u8FD0\u884C\u4E2D ${String(summary2.runningCount)}` : void 0
   ].filter((value) => value !== void 0);
   const full = [
-    `\u25B8 \u5DE5\u5177\u8BB0\u5F55 \xB7 \u5DF2\u6536\u8D77 ${String(summary.hiddenCount)} \u4E2A`,
+    `\u25B8 \u5DE5\u5177\u8BB0\u5F55 \xB7 \u5DF2\u6536\u8D77 ${String(summary2.hiddenCount)} \u4E2A`,
     ...status,
     "Ctrl+E \u5C55\u5F00"
   ].join(" \xB7 ");
   if (displayWidth(full) <= maxCols) return full;
   const compactStatus = [
-    summary.errorCount > 0 ? `\u5931\u8D25${String(summary.errorCount)}` : void 0,
-    summary.runningCount > 0 ? `\u8FD0\u884C${String(summary.runningCount)}` : void 0
+    summary2.errorCount > 0 ? `\u5931\u8D25${String(summary2.errorCount)}` : void 0,
+    summary2.runningCount > 0 ? `\u8FD0\u884C${String(summary2.runningCount)}` : void 0
   ].filter((value) => value !== void 0);
-  const compact = [`\u25B8 \u5DE5\u5177 ${String(summary.hiddenCount)}`, ...compactStatus, "Ctrl+E"].join(" \xB7 ");
+  const compact = [`\u25B8 \u5DE5\u5177 ${String(summary2.hiddenCount)}`, ...compactStatus, "Ctrl+E"].join(" \xB7 ");
   if (displayWidth(compact) <= maxCols) return compact;
   const suffix = " \xB7 Ctrl+E";
   const prefixBudget = maxCols - displayWidth(suffix);
   if (prefixBudget <= 0) return truncateDisplay("Ctrl+E", maxCols);
-  return `${truncateDisplay(`\u25B8 ${String(summary.hiddenCount)} \u5DE5\u5177`, prefixBudget)}${suffix}`;
+  return `${truncateDisplay(`\u25B8 ${String(summary2.hiddenCount)} \u5DE5\u5177`, prefixBudget)}${suffix}`;
 }
 function compactToolParts(parts, toolCardsExpanded, presenters, mode, cache4) {
   if (mode === "focus") {
@@ -56175,7 +56317,7 @@ function compactToolParts(parts, toolCardsExpanded, presenters, mode, cache4) {
   }
   const hidden = cards.filter((card) => !retained.has(card.index));
   const firstHiddenIndex = hidden[0]?.index;
-  const summary = {
+  const summary2 = {
     hiddenCount: hidden.length,
     okCount: hidden.filter((card) => card.status === "ok").length,
     errorCount: hidden.filter((card) => card.status === "error").length,
@@ -56183,7 +56325,7 @@ function compactToolParts(parts, toolCardsExpanded, presenters, mode, cache4) {
   };
   return presentedParts.flatMap((part, index2) => {
     if (part.kind !== "card" || retained.has(index2)) return [part];
-    return index2 === firstHiddenIndex ? [{ kind: "tool-summary", summary }] : [];
+    return index2 === firstHiddenIndex ? [{ kind: "tool-summary", summary: summary2 }] : [];
   });
 }
 function turnPartGap(parts, index2) {
@@ -56532,9 +56674,20 @@ function framePhysicalLine(blockId, line5, lead, active, prompt) {
   const spans = overlayPromptOnSpans(initialSpans, prompt);
   return clonePhysicalLineWithSpans(base, blockId, spans);
 }
+var projectorSourceIndexes = /* @__PURE__ */ new WeakMap();
 function projectorStateFor(cache4, blockId, scope, aliases2 = [], source) {
   const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)$/u, "");
   const key = `${blockId}|${projectorScope}`;
+  let index2 = projectorSourceIndexes.get(cache4);
+  if (index2 === void 0) {
+    index2 = { byScope: /* @__PURE__ */ new Map(), previousSource: /* @__PURE__ */ new WeakMap() };
+    projectorSourceIndexes.set(cache4, index2);
+  }
+  let bySource = index2.byScope.get(projectorScope);
+  if (bySource === void 0) {
+    bySource = /* @__PURE__ */ new Map();
+    index2.byScope.set(projectorScope, bySource);
+  }
   let state = cache4.get(key);
   if (state === void 0) {
     for (const alias of aliases2) {
@@ -56542,19 +56695,20 @@ function projectorStateFor(cache4, blockId, scope, aliases2 = [], source) {
       if (state !== void 0) break;
     }
   }
-  if (state === void 0 && source !== void 0) {
-    for (const candidate of cache4.values()) {
-      const candidateScope = candidate.scopeKey.replace(/\|(streaming|settled)$/u, "");
-      if (candidateScope === projectorScope && candidate.lastSource === source) {
-        state = candidate;
-        break;
-      }
-    }
+  if (state === void 0 && source !== void 0 && scope.renderMode === "settled") {
+    const candidate = bySource.get(source);
+    if (candidate?.lastSource === source) state = candidate;
   }
   if (state === void 0) {
     state = createMarkdownProjectorState(blockId, scope);
   }
   cache4.set(key, state);
+  if (source !== void 0) {
+    const previous3 = index2.previousSource.get(state);
+    if (previous3 !== void 0 && previous3 !== source && bySource.get(previous3) === state) bySource.delete(previous3);
+    bySource.set(source, state);
+    index2.previousSource.set(state, source);
+  }
   return state;
 }
 function stickyToolTitle(card) {
@@ -56577,17 +56731,6 @@ var GAP_LINE = Object.freeze({
   sourceEnd: -1,
   rawTail: false
 });
-function slicedLead(prefix, textRanges, index2) {
-  for (const range of textRanges) {
-    if (index2 === range.start) {
-      return prefix.first;
-    }
-    if (index2 > range.start && index2 < range.end) {
-      return prefix.rest;
-    }
-  }
-  return "";
-}
 function snapshotLead(textRanges, index2) {
   for (const range of textRanges) {
     if (index2 === range.start) return "\u25CF ";
@@ -56619,51 +56762,6 @@ function intersectingLayoutIndexes(layouts, start, end) {
   }
   return indexes;
 }
-var paintedRenderLineCache = /* @__PURE__ */ new WeakMap();
-function cachedPaintedRenderLine(line5, cacheKey, hyperlinks2) {
-  let variants = paintedRenderLineCache.get(line5);
-  if (variants === void 0) {
-    variants = /* @__PURE__ */ new Map();
-    paintedRenderLineCache.set(line5, variants);
-  }
-  const cached2 = variants.get(cacheKey);
-  if (cached2 !== void 0) return cached2;
-  const painted = paintLineFromRenderLine(line5, hyperlinks2);
-  variants.set(cacheKey, painted);
-  return painted;
-}
-function areSlicedLinesBlockPropsEqual(prev, next) {
-  return prev.lines === next.lines && prev.sliceStart === next.sliceStart && prev.sliceEnd === next.sliceEnd && prev.textRanges === next.textRanges && prev.tailRow === next.tailRow && prev.tail === next.tail && prev.prefix.first === next.prefix.first && prev.prefix.rest === next.prefix.rest;
-}
-var SlicedLinesBlock = (0, import_react37.memo)(function SlicedLinesBlock2(props) {
-  const { lines, sliceStart, sliceEnd, prefix, textRanges, tailRow, tail } = props;
-  const end = Math.min(lines.length, Math.max(0, sliceEnd));
-  const start = Math.max(0, Math.min(end, sliceStart));
-  const effectiveTailRow = tailRow ?? lines.length - 1;
-  const out = [];
-  const hyperlinks2 = hyperlinksEnabled();
-  const paintCacheKey = `${currentAppearance()}:${currentTier()}:${hyperlinks2 ? "links" : "plain"}`;
-  for (let index2 = start; index2 < end; index2 += 1) {
-    const line5 = lines.at(index2);
-    if (line5 === void 0) {
-      continue;
-    }
-    const painted = cachedPaintedRenderLine(line5, paintCacheKey, hyperlinks2);
-    const lead = slicedLead(prefix, textRanges, index2);
-    const trailing = index2 === effectiveTailRow ? tail : void 0;
-    out.push(
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Text, { wrap: "truncate", children: [
-        lead,
-        painted,
-        trailing
-      ] }, index2)
-    );
-  }
-  if (out.length === 0) {
-    return null;
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { flexDirection: "column", width: "100%", children: out });
-}, areSlicedLinesBlockPropsEqual);
 function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
   if (entry.kind === "tool-card" && entry.meta?.toolCard !== void 0) {
     return { lines: deps.toolRows.rows(entry.id, entry.meta.toolCard, scope.width, scope.fold.tools, deps.locale) };
@@ -56707,12 +56805,12 @@ function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
 function makeBlockProjector(deps, storeBlocks) {
   return (ownerId, entry, scope, state, active) => projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active);
 }
-function makeToolSummaryBlockEntry(id, summary, contentWidth) {
+function makeToolSummaryBlockEntry(id, summary2, contentWidth) {
   return {
     id: `${id}-tool-summary`,
     kind: "tool-summary",
-    source: toolSummaryText(summary, contentWidth),
-    meta: { toolSummaryStatus: toolSummaryStatus(summary) }
+    source: toolSummaryText(summary2, contentWidth),
+    meta: { toolSummaryStatus: toolSummaryStatus(summary2) }
   };
 }
 function makeToolCardBlockEntry(id, card) {
@@ -56743,6 +56841,8 @@ function StreamView({
   scrollbar = true,
   brandFrameProbe,
   viewportCommand,
+  viewportCommandRef,
+  onViewportCommandConsumed,
   renderPolicy,
   frameMetrics,
   motionPaused = false,
@@ -56778,7 +56878,6 @@ function StreamView({
   const contentWidth = conversationWidth(columns);
   const contentLeft = conversationLeft(columns, contentWidth);
   const viewportRef = (0, import_react37.useRef)(null);
-  const blockRefs = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
   const layoutCache = (0, import_react37.useRef)(new TranscriptLayoutCache());
   const projectorStates = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
   const rebuildBlocks = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
@@ -56808,7 +56907,6 @@ function StreamView({
   const scrollScheduler = (0, import_react37.useRef)(void 0);
   const presentationQueue = (0, import_react37.useRef)(void 0);
   const frameArbiter = (0, import_react37.useRef)(void 0);
-  const pendingScrollInputAt = (0, import_react37.useRef)(void 0);
   const lastDispatchedOffset = (0, import_react37.useRef)(viewport.offsetFromBottom);
   (0, import_react37.useLayoutEffect)(() => {
     const scroll = createScrollScheduler({
@@ -56851,12 +56949,6 @@ function StreamView({
           offsetFromBottom: snapshot2.scroll.presented
         });
       }
-      if (pendingScrollInputAt.current !== void 0 && frameMetrics !== void 0) {
-        frameMetrics.recordScrollInputToPaint(
-          Math.max(0, performance.now() - pendingScrollInputAt.current)
-        );
-        pendingScrollInputAt.current = void 0;
-      }
       if (frameMetrics !== void 0) {
         const queue = stream.getStats(snapshot2.nowMs);
         frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs);
@@ -56866,6 +56958,7 @@ function StreamView({
     presentationQueue.current = stream;
     frameArbiter.current = arbiter;
     return () => {
+      if (frameMetrics !== void 0) clearScrollInputs(frameMetrics);
       unsubscribe();
       arbiter.dispose();
       if (scrollScheduler.current === scroll) scrollScheduler.current = void 0;
@@ -57234,7 +57327,9 @@ function StreamView({
       }, assistantBlockRowsScope, projectorStateFor(
         projectorCache,
         partId,
-        assistantBlockRowsScope
+        assistantBlockRowsScope,
+        [],
+        part.text
       ), status === "generating").lines);
       ranges.push({ start, end: rows2.length });
     }
@@ -57603,14 +57698,6 @@ function StreamView({
     () => physicalViewport ? intersectingLayoutIndexes(virtualLayouts, overscanTop, overscanBottom) : renderEntries.map((_entry, index2) => index2),
     [overscanBottom, overscanTop, physicalViewport, renderEntries, virtualLayouts]
   );
-  const firstVisibleIndex = visibleIndexes[0];
-  const lastVisibleIndex = visibleIndexes.at(-1);
-  const leadingRows = firstVisibleIndex === void 0 ? 0 : virtualLayouts[firstVisibleIndex]?.top ?? 0;
-  const lastVisibleLayout = lastVisibleIndex === void 0 ? void 0 : virtualLayouts[lastVisibleIndex];
-  const trailingRows = lastVisibleLayout === void 0 ? 0 : Math.max(
-    0,
-    virtualContentRows - lastVisibleLayout.top - lastVisibleLayout.rows
-  );
   const visibleEntryPairs = (0, import_react37.useMemo)(
     () => visibleIndexes.flatMap((index2) => {
       const entry = renderEntries[index2];
@@ -57657,13 +57744,17 @@ function StreamView({
   const effectiveViewportRowsRef = (0, import_react37.useRef)(effectiveViewportRows);
   effectiveViewportRowsRef.current = effectiveViewportRows;
   const executeViewportCommand = (0, import_react37.useCallback)((command) => {
-    if (command.sequence === lastCommandSequence.current) return;
+    if (command.sequence <= lastCommandSequence.current) {
+      onViewportCommandConsumed?.(command.sequence);
+      return;
+    }
     const vp = viewportStateRef.current;
     if (command.kind !== "reset" && (vp.viewportRows === 0 || vp.contentRows === 0)) return;
-    lastCommandSequence.current = command.sequence;
     const scheduler = scrollScheduler.current;
     const arbiter = frameArbiter.current;
     if (scheduler === void 0 || arbiter === void 0) return;
+    lastCommandSequence.current = command.sequence;
+    onViewportCommandConsumed?.(command.sequence);
     const effectiveContentRows = Math.max(vp.contentRows, virtualContentRowsRef.current);
     const maximum = Math.max(0, effectiveContentRows - effectiveViewportRowsRef.current);
     const clamp = (value) => Math.max(0, Math.min(maximum, value));
@@ -57674,11 +57765,14 @@ function StreamView({
       scheduler.setTarget(clamp((reversing ? presented : target) + delta));
       scheduler.tick();
     };
-    if (pendingScrollInputAt.current !== void 0) frameMetrics?.recordCoalescedInput();
-    pendingScrollInputAt.current ??= performance.now();
     switch (command.kind) {
       case "scroll":
-        advance(command.delta);
+        if (command.source === "wheel") {
+          const presented = scheduler.getPresented();
+          const target = scheduler.getTarget();
+          const reversing = command.delta * (target - presented) < 0;
+          scheduler.snapTo(clamp((reversing ? presented : target) + command.delta));
+        } else advance(command.delta);
         break;
       case "page":
         advance(command.delta * Math.max(1, vp.viewportRows - 1));
@@ -57694,21 +57788,29 @@ function StreamView({
       case "reset":
         scheduler.snapTo(0);
         lastDispatchedOffset.current = 0;
-        pendingScrollInputAt.current = void 0;
         dispatchViewport({ kind: "reset" });
         return;
     }
     const presentedOffset = scheduler.getPresented();
+    if (frameMetrics !== void 0 && presentedOffset !== lastDispatchedOffset.current) {
+      markScrollInput(frameMetrics, command.sequence, command.inputAt);
+    }
     lastDispatchedOffset.current = presentedOffset;
     dispatchViewport({
       kind: "offset",
       offsetFromBottom: presentedOffset
     });
     arbiter.requestScroll();
-  }, [frameMetrics]);
+  }, [frameMetrics, onViewportCommandConsumed]);
+  (0, import_react37.useLayoutEffect)(() => {
+    if (viewportCommandRef === void 0 || viewport.viewportRows === 0 || viewport.contentRows === 0) return;
+    viewportCommandRef.current = executeViewportCommand;
+    return () => {
+      viewportCommandRef.current = void 0;
+    };
+  }, [executeViewportCommand, viewportCommandRef, viewport.viewportRows, viewport.contentRows]);
   (0, import_react37.useLayoutEffect)(() => {
     if (viewportCommand === void 0) return;
-    if (viewportCommand.sequence === lastCommandSequence.current) return;
     executeViewportCommand(viewportCommand);
   }, [
     viewportCommand,
@@ -57851,6 +57953,7 @@ function StreamView({
       }
     }
     return Object.freeze({
+      scrollRevision: lastCommandSequence.current,
       revision: [
         contentRevision,
         String(viewport.offsetFromBottom),
@@ -57913,13 +58016,8 @@ function StreamView({
   (0, import_react37.useLayoutEffect)(() => {
     if (publishTranscript) writePublishedFrameSnapshot(stdout);
   }, [
-    columns,
-    rows,
     publishTranscript,
-    viewport.offsetFromBottom,
-    rail?.rows,
-    rail?.thumbRows,
-    rail?.thumbStart,
+    visibleFrame,
     stdout
   ]);
   (0, import_react37.useLayoutEffect)(() => () => {
@@ -58137,148 +58235,47 @@ function StreamView({
             maxRows: viewport.viewportRows > 0 ? viewport.viewportRows : Math.max(0, rows - 7),
             frameProbe: brandFrameProbe
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        ) : physicalViewport ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           Box_default,
           {
             flexDirection: "column",
-            position: physicalViewport ? "absolute" : "relative",
-            top: physicalViewport && virtualContentRows <= effectiveViewportRows ? 0 : void 0,
-            bottom: physicalViewport && virtualContentRows > effectiveViewportRows ? -effectiveOffset : void 0,
-            left: physicalViewport ? contentLeft : void 0,
-            marginLeft: physicalViewport ? void 0 : contentLeft,
+            marginLeft: contentLeft,
             width: contentWidth,
             flexShrink: 0,
-            children: [
-              leadingRows > 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: leadingRows, flexShrink: 0 }) : null,
-              visibleEntryPairs.map(({ entry, index: layoutIndex }) => {
-                const blockId = entry.id;
-                const entryLines = entry.lines;
-                const layout = virtualLayouts[layoutIndex];
-                let window2;
-                if (physicalViewport) {
-                  window2 = sliceWindow(
-                    entryLines.length,
-                    layout?.top ?? 0,
-                    overscanTop,
-                    overscanBottom
-                  );
-                }
-                if (entry.kind === "active") {
-                  if (window2 !== void 0) {
-                    const ranges = activeEntryRows.textRanges.get(blockId) ?? EMPTY_TEXT_RANGES;
-                    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
-                      Box_default,
-                      {
-                        ref: (element) => {
-                          if (element === null) blockRefs.current.delete(blockId);
-                          else blockRefs.current.set(blockId, element);
-                        },
-                        flexDirection: "column",
-                        width: "100%",
-                        flexShrink: 0,
-                        children: [
-                          window2.start > 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: window2.start, flexShrink: 0 }) : null,
-                          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                            SlicedLinesBlock,
-                            {
-                              lines: entryLines,
-                              sliceStart: window2.start,
-                              sliceEnd: window2.end,
-                              prefix: { first: activeMarker(), rest: restIndent() },
-                              textRanges: ranges
-                            }
-                          ),
-                          window2.end < entryLines.length ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: entryLines.length - window2.end, flexShrink: 0 }) : null
-                        ]
-                      },
-                      blockId
-                    );
-                  }
-                  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                    Box_default,
-                    {
-                      ref: (element) => {
-                        if (element === null) blockRefs.current.delete(blockId);
-                        else blockRefs.current.set(blockId, element);
-                      },
-                      flexDirection: "column",
-                      width: "100%",
-                      flexShrink: 0,
-                      children: renderActiveTurn(entry.turn)
-                    },
-                    blockId
-                  );
-                }
-                const row = entry.row;
-                if (window2 !== void 0) {
-                  const assistant = row.kind === "message" && row.message.kind === "assistant";
-                  const ranges = assistant ? activeEntryRows.textRanges.get(blockId) ?? EMPTY_TEXT_RANGES : EMPTY_TEXT_RANGES;
-                  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
-                    Box_default,
-                    {
-                      ref: (element) => {
-                        if (element === null) blockRefs.current.delete(blockId);
-                        else blockRefs.current.set(blockId, element);
-                      },
-                      flexDirection: "column",
-                      width: "100%",
-                      paddingBottom: entry.gapRows,
-                      flexShrink: 0,
-                      children: [
-                        window2.start > 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: window2.start, flexShrink: 0 }) : null,
-                        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                          SlicedLinesBlock,
-                          {
-                            lines: entryLines,
-                            sliceStart: window2.start,
-                            sliceEnd: window2.end,
-                            prefix: {
-                              first: kindMarker("\u25CF ", "accentText"),
-                              rest: restIndent()
-                            },
-                            textRanges: ranges
-                          }
-                        ),
-                        window2.end < entryLines.length ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: entryLines.length - window2.end, flexShrink: 0 }) : null
-                      ]
-                    },
-                    blockId
-                  );
-                }
-                let rowNode;
-                if (row.kind === "compaction") {
-                  rowNode = renderCompaction(row.divider);
-                } else if (row.message.kind === "user") {
-                  const hasSubsequent = layoutIndex < renderEntries.length - 1 || activeTurn !== void 0;
-                  rowNode = /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { width: "100%", backgroundColor: inkColor("messageBg"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "wrap", children: userRun(row.message.text, contentWidth) }) }),
-                    hasSubsequent ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled("\u2500".repeat(contentWidth), "line") }) : null
-                  ] });
-                } else {
-                  rowNode = renderFrozenMessage(row.message);
-                }
-                const isUserWithGap = row.kind === "message" && row.message.kind === "user" && (layoutIndex < renderEntries.length - 1 || activeTurn !== void 0);
-                return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                  Box_default,
-                  {
-                    ref: (element) => {
-                      if (element === null) blockRefs.current.delete(blockId);
-                      else blockRefs.current.set(blockId, element);
-                    },
-                    flexDirection: "column",
-                    width: "100%",
-                    paddingBottom: isUserWithGap ? 1 : entry.gapRows,
-                    flexShrink: 0,
-                    children: rowNode
-                  },
-                  blockId
-                );
-              }),
-              trailingRows > 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { height: trailingRows, flexShrink: 0 }) : null
-            ]
+            children: visibleEntryPairs.map(({ entry, index: layoutIndex }) => {
+              const blockId = entry.id;
+              if (entry.kind === "active") {
+                return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: renderActiveTurn(entry.turn) }, blockId);
+              }
+              const row = entry.row;
+              let rowNode;
+              if (row.kind === "compaction") {
+                rowNode = renderCompaction(row.divider);
+              } else if (row.message.kind === "user") {
+                const hasSubsequent = layoutIndex < renderEntries.length - 1 || activeTurn !== void 0;
+                rowNode = /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { width: "100%", backgroundColor: inkColor("messageBg"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "wrap", children: userRun(row.message.text, contentWidth) }) }),
+                  hasSubsequent ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled("\u2500".repeat(contentWidth), "line") }) : null
+                ] });
+              } else {
+                rowNode = renderFrozenMessage(row.message);
+              }
+              const isUserWithGap = row.kind === "message" && row.message.kind === "user" && (layoutIndex < renderEntries.length - 1 || activeTurn !== void 0);
+              return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+                Box_default,
+                {
+                  flexDirection: "column",
+                  width: "100%",
+                  paddingBottom: isUserWithGap ? 1 : entry.gapRows,
+                  flexShrink: 0,
+                  children: rowNode
+                },
+                blockId
+              );
+            })
           }
         ),
-        viewport.follow ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { position: "absolute", right: 2, bottom: 0, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled(
+        physicalViewport || viewport.follow ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { position: "absolute", right: 2, bottom: 0, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled(
           viewport.unseenRows > 0 ? `\u2193 \u6700\u65B0\u6D88\u606F \xB7 ${String(viewport.unseenRows)} \xB7 End/G \u5230\u5E95\u90E8` : "\u2193 \u5E95\u90E8 \xB7 End/G",
           "accentText"
         ) }) })
@@ -58992,19 +58989,11 @@ var SETTINGS_GROUP_LABELS = {
   plugins: "\u63D2\u4EF6",
   other: "\u5176\u4ED6"
 };
-function nextSettingsGroup(rows, selected, direction) {
-  const groups = [...new Set(rows.map(settingsGroup))];
-  const current = rows[selected];
-  if (current === void 0 || groups.length === 0) return 0;
-  const next = groups[(groups.indexOf(settingsGroup(current)) + (direction < 0 ? -1 : 1) + groups.length) % groups.length];
-  return Math.max(0, rows.findIndex((row) => settingsGroup(row) === next));
-}
 
 // packages/tui/tui-render/src/settings-pane.tsx
 var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
 var TITLE2 = "\u8BBE\u7F6E";
 var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
-var FOOTNOTE2 = "\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED";
 var EDIT_FOOTNOTE = "Enter \u5E94\u7528 \xB7 Esc \u53D6\u6D88";
 var ONBOARDING_FOOTNOTE = "Enter \u4FDD\u5B58 \xB7 Esc \u8DF3\u8FC7";
 var DISCOVERY_BUSY = "\u6B63\u5728\u83B7\u53D6\u6A21\u578B\u5217\u8868\u2026";
@@ -59050,7 +59039,9 @@ function fieldRow(label, value, selected, columns, required2 = false) {
   const marker = selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ";
   const reqMark = required2 ? styled("* ", "error", void 0, true) : "";
   const reqWidth = required2 ? 2 : 0;
-  const escapedLabel = escapeContent(label);
+  const rawLabel = escapeContent(label);
+  const labelBudget = displayWidth(rawLabel) + displayWidth(escapeContent(value)) + MARKER_COLS + reqWidth + VALUE_GAP <= columns ? displayWidth(rawLabel) : Math.max(1, Math.floor((columns - MARKER_COLS - reqWidth - VALUE_GAP) * 0.48));
+  const escapedLabel = fitValue(rawLabel, labelBudget);
   const escapedValue = escapeContent(value);
   const labelToken = selected ? "fg" : "fgSoft";
   const labelCols = MARKER_COLS + reqWidth + displayWidth(escapedLabel);
@@ -59092,72 +59083,60 @@ function SettingsPane({
   updateError,
   busy,
   locale,
-  maxRows
+  maxRows,
+  breadcrumb,
+  filter,
+  searching
 }) {
   const { columns } = use_window_size_default();
   const width = columns > 0 ? columns : 80;
+  const selected = Math.min(Math.max(0, selectedIndex), Math.max(0, rows.length - 1));
+  const active = rows[selected];
   const errorReason2 = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON2 : void 0);
-  let footnote = `Tab/Shift+Tab \u5206\u7EC4 \xB7 ${FOOTNOTE2}`;
-  if (onboarding === true) {
-    footnote = editing ? ONBOARDING_FOOTNOTE : "\u2191\u2193/jk \u9009\u62E9\u5BC6\u94A5 \xB7 Enter \u8F93\u5165 \xB7 Esc \u5173\u95ED";
-  } else if (editing) {
-    footnote = EDIT_FOOTNOTE;
+  const hierarchy = breadcrumb !== void 0;
+  const escapeHint = (breadcrumb?.length ?? 0) > 1 ? "Esc \u8FD4\u56DE" : "Esc \u5173\u95ED";
+  let footer = searching === true ? ["\u8F93\u5165\u641C\u7D22 \xB7 Enter \u786E\u5B9A \xB7 Esc \u6E05\u9664"] : onboarding === true ? [editing ? ONBOARDING_FOOTNOTE : "\u2191\u2193 \u9009\u62E9\u5BC6\u94A5 \xB7 Enter \u8F93\u5165 \xB7 Esc \u5173\u95ED"] : editing ? [EDIT_FOOTNOTE] : !hierarchy ? ["\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED"] : width < 80 ? ["\u2191\u2193 \u9009\u62E9  Enter \u6253\u5F00  \u2190 \u8FD4\u56DE", `/ \u641C\u7D22  i \u7F16\u8F91  Tab \u5206\u7C7B  ${escapeHint}`] : ["\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u8FDB\u5165/\u7F16\u8F91 \xB7 \u2190 \u8FD4\u56DE \xB7 / \u641C\u7D22", `i JSON\u7F16\u8F91 \xB7 Space \u5207\u6362 \xB7 Tab \u5206\u7C7B \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 ${escapeHint}`];
+  const budget = maxRows ?? SETTINGS_WINDOW + 10;
+  const compact = hierarchy && budget < 8;
+  if (compact && footer.length > 1) footer = [`Enter \u6253\u5F00 \u2190\u8FD4\u56DE /\u641C\u7D22 ${escapeHint}`];
+  const hasSearch = !compact && (searching === true || filter !== void 0 && filter !== "");
+  const errorLines = errorReason2 === void 0 ? 0 : errorReason2 === EMPTY_TABLE_REASON2 || compact ? 1 : 2;
+  const showBusy = busy === true && (!compact || errorReason2 === void 0 && budget >= 5);
+  let room = budget - 1 - footer.length - errorLines - (hasSearch ? 1 : 0) - (showBusy ? 1 : 0) - 1;
+  const selectedValue = hierarchy && active !== void 0 && room-- > 0;
+  const description = hierarchy && room-- > 0 ? active?.description : void 0;
+  const fixed = 1 + footer.length + (selectedValue ? 1 : 0) + (description === void 0 ? 0 : 1) + errorLines + (hasSearch ? 1 : 0) + (showBusy ? 1 : 0);
+  const available = Math.max(1, budget - fixed);
+  const showOverflow = !compact && available >= 3;
+  const size = hierarchy ? Math.min(rows.length, rows.length > available && showOverflow ? available - 2 : available, maxRows === void 0 ? SETTINGS_WINDOW : rows.length) : Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason2, busy === true));
+  const start = Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, rows.length - size));
+  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow([styled(fitValue(escapeContent(text4), width), token, void 0, bold)], "settingsCardBg", width) }) });
+  let heading = hierarchy ? breadcrumb.join(" \u203A ") : active === void 0 ? TITLE2 : `${TITLE2} \xB7 ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`;
+  if (displayWidth(escapeContent(heading)) > width && hierarchy) {
+    heading = `\u8BBE\u7F6E \u203A \u2026 \u203A ${breadcrumb[breadcrumb.length - 1] ?? ""}`;
   }
-  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason2, busy === true);
-  const size = Math.min(windowLimit, rows.length);
-  const start = rows.length <= size ? 0 : Math.min(
-    Math.max(0, selectedIndex - Math.floor(size / 2)),
-    rows.length - size
-  );
-  const visible = rows.slice(start, start + size);
-  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintBackgroundRow([styled(escapeContent(text4), token, void 0, bold)], "settingsCardBg", width) }) });
-  let headingText = rows[selectedIndex] === void 0 ? TITLE2 : `${TITLE2} \xB7 ${SETTINGS_GROUP_LABELS[settingsGroup(rows[selectedIndex])]}`;
-  if (onboarding === true) headingText = rows.length > 1 ? "API \u5BC6\u94A5" : ONBOARDING_TITLE;
-  const clampedSelected = rows.length === 0 ? 0 : Math.min(Math.max(0, selectedIndex), rows.length - 1);
-  const activeNs = rows[clampedSelected]?.namespace;
-  let headerRight = "";
-  if (rows.length > 0 && (onboarding !== true || rows.length > 1)) {
-    headerRight = `${String(clampedSelected + 1)}/${String(rows.length)}`;
-    if (activeNs !== void 0 && width >= 40) headerRight = `${activeNs} \xB7 ${headerRight}`;
-  }
-  const headerGap = headerRight !== "" && displayWidth(headingText) + displayWidth(headerRight) + 2 <= width ? width - displayWidth(headingText) - displayWidth(headerRight) : 0;
-  const headerParts = headerGap > 0 ? [
-    styled(escapeContent(headingText), "fg", void 0, true),
-    styled(" ".repeat(headerGap), "settingsCardBg"),
-    styled(escapeContent(headerRight), "fgDim")
-  ] : [styled(escapeContent(headingText), "fg", void 0, true)];
+  if (compact && searching === true) heading = `\u641C\u7D22 /${filter ?? ""}`;
+  if (onboarding === true) heading = rows.length > 1 ? "API \u5BC6\u94A5" : ONBOARDING_TITLE;
+  const counter = rows.length === 0 ? "" : `${!hierarchy && active !== void 0 ? `${active.namespace} \xB7 ` : ""}${String(selected + 1)}/${String(rows.length)}`;
+  if (counter !== "") heading = `${fitValue(escapeContent(heading), Math.max(1, width - displayWidth(counter) - 2))}  ${counter}`;
+  const localizedLabel = (row) => {
+    if (row.label !== void 0 && !(row.namespace === "tui" && row.label === row.field)) return row.label;
+    const resolved = locale ?? "zh-CN";
+    const label = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.namespace === "tui" && row.field in TUI_EXTRA_LABELS ? `${row.field} \xB7 ${TUI_EXTRA_LABELS[row.field][resolved === "en-US" ? "en-US" : "zh-CN"]}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
+    return hierarchy ? label : `${row.namespace} \xB7 ${label}`;
+  };
   return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintBackgroundRow(headerParts, "settingsCardBg", width) }) }),
-    start > 0 ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null,
-    visible.map((row, index2) => {
-      const absolute = start + index2;
-      const selected = absolute === selectedIndex;
-      const resolvedLocale = locale ?? "zh-CN";
-      let localized;
-      if (row.label !== void 0) {
-        localized = row.label;
-      } else if (row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale")) {
-        localized = `${row.field} \xB7 ${tuiCopy(row.field, locale)}`;
-      } else if (row.namespace === "tui" && row.field in TUI_EXTRA_LABELS) {
-        localized = `${row.field} \xB7 ${TUI_EXTRA_LABELS[row.field][resolvedLocale === "en-US" ? "en-US" : "zh-CN"]}`;
-      } else if (row.field === "apiKeyEnv") {
-        localized = `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D`;
-      } else {
-        localized = row.field;
-      }
-      const label = row.label === void 0 ? `${row.namespace} \xB7 ${localized}` : localized;
-      return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { children: paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${row.field}:${String(absolute)}`);
-    }),
-    rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
-    errorReason2 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-      renderLine(
-        errorReason2 === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason2}`,
-        "error"
-      ),
-      errorReason2 === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim")
-    ] }),
-    busy === true ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
-    renderLine(footnote, "fgDim")
+    renderLine(heading, "fg", true),
+    hasSearch ? renderLine(`\u641C\u7D22 /${filter ?? ""}${searching === true ? "\u258F" : ""}`, "accent") : null,
+    start > 0 && (!hierarchy || showOverflow) ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null,
+    rows.slice(start, start + size).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? "\u203A " : ""}${row.value}`, start + index2 === selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index2)}`)),
+    rows.length > start + size && (!hierarchy || showOverflow) ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
+    selectedValue ? renderLine(`\u503C: ${active.value === "" ? "\u2014" : active.value}`, "fg") : null,
+    description === void 0 ? null : renderLine(description, "fgDim"),
+    errorReason2 === void 0 ? null : renderLine(errorReason2 === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason2}`, "error"),
+    errorLines < 2 ? null : renderLine(FAIL_NEXT2, "fgDim"),
+    showBusy ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
+    footer.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: renderLine(line5, "fgDim") }, index2))
   ] });
 }
 
@@ -59529,7 +59508,7 @@ function AgentHubPane(props) {
 // packages/tui/tui-render/src/plan-directory-pane.tsx
 var import_jsx_runtime18 = __toESM(require_jsx_runtime(), 1);
 var TITLE3 = "\u8BA1\u5212";
-var FOOTNOTE3 = "j/k \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED";
+var FOOTNOTE2 = "j/k \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED";
 var SWITCH_NEXT = "\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8 \xB7 \u53EF\u91CD\u8BD5";
 var STATUS_FOOTNOTE = "Esc \u5173\u95ED \xB7 \u53EF\u91CD\u8BD5";
 var ROWS = ["\u5F00\u542F", "\u5173\u95ED"];
@@ -59564,7 +59543,7 @@ function PlanDirectoryPane({
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(OverlayShell, { title: TITLE3, footnote: FOOTNOTE3, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(OverlayShell, { title: TITLE3, footnote: FOOTNOTE2, children: [
     ROWS.map(
       (label, index2) => directoryRow(
         label,
@@ -59583,7 +59562,7 @@ function PlanDirectoryPane({
 var import_react43 = __toESM(require_react(), 1);
 var import_jsx_runtime19 = __toESM(require_jsx_runtime(), 1);
 var TITLE4 = "\u8BA1\u5212\u8BC4\u5BA1";
-var FOOTNOTE4 = "y \u6279\u51C6 \xB7 n \u7EE7\u7EED\u89C4\u5212 \xB7 Esc \u53D6\u6D88";
+var FOOTNOTE3 = "y \u6279\u51C6 \xB7 n \u7EE7\u7EED\u89C4\u5212 \xB7 Esc \u53D6\u6D88";
 var EMPTY_BODY = "\u8BA1\u5212\u6B63\u6587\u4E3A\u7A7A";
 var DELIVERY_NEXT2 = "\u5F53\u524D\u8BA1\u5212\u672A\u6279\u51C6 \xB7 \u53EF\u91CD\u8BD5\u8BE5\u8F6E";
 var PLAN_REVIEW_WINDOW = 12;
@@ -59633,13 +59612,13 @@ ${DELIVERY_NEXT2}` : "", width);
     body,
     /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [y] ", "success", void 0, true), styled("\u6279\u51C6", "fg", void 0, true), styled(" (\u5F00\u59CB\u6267\u884C\u8BA1\u5212)", "fgDim")]) }),
     /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [n] ", "warning", void 0, true), styled("\u7EE7\u7EED\u89C4\u5212", "fg", void 0, true), styled(" (\u8FD4\u56DE\u8C03\u6574\u65B9\u6848)", "fgDim")]) }),
-    line4(width < 70 ? "\u2191\u2193/PgUp/PgDn \xB7 Home/End \xB7 Esc \u53D6\u6D88" : `${FOOTNOTE4} \xB7 \u2191\u2193/PgUp/PgDn \u6D4F\u89C8`, "fgDim")
+    line4(width < 70 ? "\u2191\u2193/PgUp/PgDn \xB7 Home/End \xB7 Esc \u53D6\u6D88" : `${FOOTNOTE3} \xB7 \u2191\u2193/PgUp/PgDn \u6D4F\u89C8`, "fgDim")
   ] });
 }
 
 // packages/tui/tui-render/src/ask-user-pane.tsx
 var import_jsx_runtime20 = __toESM(require_jsx_runtime(), 1);
-var FOOTNOTE5 = "Enter \u4F5C\u7B54 \xB7 Esc \u53D6\u6D88\u63D0\u95EE";
+var FOOTNOTE4 = "Enter \u4F5C\u7B54 \xB7 Esc \u53D6\u6D88\u63D0\u95EE";
 var INVALID_TITLE = "\u2717 \u63D0\u95EE\u65E0\u6548";
 var INVALID_NEXT = "Esc \u53D6\u6D88";
 var EMPTY_ASK_USER_PANE = {
@@ -59719,7 +59698,7 @@ function AskUserPane({
       ]) }, actualIndex);
     }),
     /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE5, "fgDim")]) }),
+      /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE4, "fgDim")]) }),
       /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "\u2191\u2193/jk \u6EDA\u52A8 \xB7 Home/End \u9996\u5C3E" : multiSelect ? "\u2191\u2193 \u79FB\u52A8 \xB7 Space \u591A\u9009 \xB7 c \u81EA\u5B9A\u4E49" : "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 c \u81EA\u5B9A\u4E49", "fgDim")]) }),
       /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "PgUp/PgDn \u7FFB\u9875" : customText === void 0 ? "[i] \u5168\u6587 \xB7 PgUp/PgDn \u7FFB\u9875" : "\u5DF2\u6709\u81EA\u5B9A\u4E49\u56DE\u7B54 \xB7 [i] \u5168\u6587", "fgDim")]) })
     ] })
@@ -60809,7 +60788,7 @@ function TodoPane({ todos, offset, onOffsetChange, locale }) {
   (0, import_react45.useEffect)(() => {
     if (start !== offset) onOffsetChange?.(start);
   }, [start, offset, onOffsetChange]);
-  const summary = english ? `${todos.length} tasks \xB7 ${counts.in_progress} active \xB7 ${counts.pending} pending \xB7 ${counts.completed} done` : `\u5171 ${todos.length} \u9879 \xB7 \u8FDB\u884C\u4E2D ${counts.in_progress} \xB7 \u5F85\u529E ${counts.pending} \xB7 \u5DF2\u5B8C\u6210 ${counts.completed}`;
+  const summary2 = english ? `${todos.length} tasks \xB7 ${counts.in_progress} active \xB7 ${counts.pending} pending \xB7 ${counts.completed} done` : `\u5171 ${todos.length} \u9879 \xB7 \u8FDB\u884C\u4E2D ${counts.in_progress} \xB7 \u5F85\u529E ${counts.pending} \xB7 \u5DF2\u5B8C\u6210 ${counts.completed}`;
   const position2 = lines.length === 0 ? "" : ` ${start + 1}\u2013${Math.min(start + height, lines.length)}/${lines.length}`;
   return /* @__PURE__ */ (0, import_jsx_runtime29.jsxs)(
     OverlayShell,
@@ -60817,7 +60796,7 @@ function TodoPane({ todos, offset, onOffsetChange, locale }) {
       title: english ? "TODO list" : "\u5F85\u529E\u6E05\u5355",
       footnote: `${english ? "\u2191\u2193/jk Scroll \xB7 PgUp/PgDn Page \xB7 Esc Back" : "\u2191\u2193/jk \u6EDA\u52A8 \xB7 PgUp/PgDn \u7FFB\u9875 \xB7 Esc \u8FD4\u56DE"}${position2}`,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([styled(summary, "fgDim")]) }),
+        /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([styled(summary2, "fgDim")]) }),
         todos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { children: english ? "No TODO list in this turn." : "\u5F53\u524D\u56DE\u5408\u6682\u65E0\u5F85\u529E\u6E05\u5355\u3002" }),
         lines.slice(start, start + height).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.text || " ", line5.token)]) }, start + index2))
       ]
@@ -61386,14 +61365,26 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     });
   }
   if (settings.open) {
+    if (settings.searching === true) {
+      const query = settings.filter ?? "";
+      if (keyInfo.escape) return holdComposer(state, { kind: "settings-search", query: "", active: false });
+      if (keyInfo.return) return holdComposer(state, { kind: "settings-search", query, active: false });
+      if (keyInfo.backspace || keyInfo.delete) return holdComposer(state, { kind: "settings-search", query: Array.from(query).slice(0, -1).join(""), active: true });
+      if (!keyInfo.ctrl && !keyInfo.meta && !keyInfo.upArrow && !keyInfo.downArrow && key !== "") return holdComposer(state, { kind: "settings-search", query: query + key, active: true });
+      return { kind: "none" };
+    }
+    if (key === "/" && settings.onboarding !== true) return holdComposer(state, { kind: "settings-search", query: "", active: true });
+    if (keyInfo.leftArrow || keyInfo.backspace) return holdComposer(state, { kind: "settings-escape" });
     if (keyInfo.tab) return holdComposer(state, { kind: "settings-group", delta: keyInfo.shift ? -1 : 1 });
     if (keyInfo.escape) {
       return holdComposer(state, { kind: "settings-escape" });
     }
-    if (keyInfo.return) {
+    if (keyInfo.return || keyInfo.rightArrow || key === "i") {
+      if (key !== "i" && settings.navigable === true) return holdComposer(state, { kind: "settings-edit" });
+      if (settings.editable === false) return { kind: "none" };
       return {
         kind: "dispatch",
-        action: { kind: "settings-edit" },
+        action: { kind: key === "i" ? "settings-edit-json" : "settings-edit" },
         text: settings.editValue ?? "",
         commandQuery: void 0,
         prefixG: false,
@@ -62212,11 +62203,17 @@ function TuiLoop({
   askUserDetailsRef.current = askUserDetails;
   const viewportSequenceRef = (0, import_react47.useRef)(0);
   const [viewportCommand, setViewportCommand] = (0, import_react47.useState)();
+  const viewportCommandRef = (0, import_react47.useRef)(void 0);
+  const onViewportCommandConsumed = (0, import_react47.useCallback)((sequence) => {
+    setViewportCommand((current) => current?.sequence === sequence ? void 0 : current);
+  }, []);
   const [topDividerLabel, setTopDividerLabel] = (0, import_react47.useState)();
-  const issueViewportCommand = (0, import_react47.useCallback)((command) => {
+  const issueViewportCommand = (0, import_react47.useCallback)((command, inputAt = performance.now()) => {
     frameProbe?.beginMeasurement();
     viewportSequenceRef.current += 1;
-    setViewportCommand({ ...command, sequence: viewportSequenceRef.current });
+    const next = { ...command, sequence: viewportSequenceRef.current, inputAt };
+    if (viewportCommandRef.current === void 0) setViewportCommand(next);
+    else viewportCommandRef.current(next);
   }, [frameProbe]);
   const brandRevealStartedRef = (0, import_react47.useRef)(false);
   const brandRevealStoppedRef = (0, import_react47.useRef)(false);
@@ -62505,6 +62502,7 @@ function TuiLoop({
   (0, import_react47.useEffect)(() => clearChord, []);
   (0, import_react47.useEffect)(() => {
     const listener = (delta) => {
+      const inputAt = performance.now();
       frameMetrics?.recordInputEvent();
       syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller));
       syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller));
@@ -62571,7 +62569,7 @@ function TuiLoop({
         );
         return;
       }
-      issueViewportCommand({ kind: "scroll", delta });
+      issueViewportCommand({ kind: "scroll", delta, source: "wheel" }, inputAt);
     };
     setMouseScrollListener(listener);
     setMouseRailListener((fraction) => {
@@ -62856,6 +62854,10 @@ function TuiLoop({
         open: settingsPaneRef.current.open,
         editing: settingsPaneRef.current.editing,
         onboarding: settingsPaneRef.current.onboarding,
+        navigable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.navigable,
+        editable: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editable,
+        searching: settingsPaneRef.current.searching,
+        filter: settingsPaneRef.current.filter,
         editValue: settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.editValue ?? settingsPaneRef.current.rows[settingsPaneRef.current.selectedIndex]?.value
       },
       controller.getSubmitOnEnter(),
@@ -62897,7 +62899,7 @@ function TuiLoop({
     }
     if (effect.kind === "dispatch") {
       const action = effect.action;
-      if (action.kind === "settings-edit" && settingsComposerRef.current === void 0) settingsComposerRef.current = current;
+      if ((action.kind === "settings-edit" || action.kind === "settings-edit-json") && settingsComposerRef.current === void 0) settingsComposerRef.current = current;
       if (isSessionTransitionAction(action) && isSessionTransitionStatus(feedbackRef.current)) {
       } else if (action.kind === "timeline-scroll") {
         const maxOffset2 = Math.max(
@@ -63309,6 +63311,8 @@ function TuiLoop({
     scrollbar,
     brandFrameProbe,
     viewportCommand,
+    viewportCommandRef,
+    onViewportCommandConsumed,
     renderPolicy,
     frameMetrics,
     motionPaused: viewportMotionPaused,
@@ -63381,6 +63385,9 @@ function TuiLoop({
     content3 = (0, import_react47.createElement)(SettingsPane, {
       locale,
       rows: settingsPane.rows,
+      ...settingsPane.breadcrumb === void 0 ? {} : { breadcrumb: settingsPane.breadcrumb },
+      ...settingsPane.filter === void 0 ? {} : { filter: settingsPane.filter },
+      ...settingsPane.searching === void 0 ? {} : { searching: settingsPane.searching },
       selectedIndex: settingsPane.selectedIndex,
       editing: settingsPane.editing,
       maxRows: settingsMaxRows,
@@ -66755,8 +66762,8 @@ function brandNumber(value) {
 
 // packages/llm/llm/src/message.ts
 var CONTEXT_SUMMARY_MAX_CHARS = 120;
-function boundContextSummary(summary) {
-  return summary.length <= CONTEXT_SUMMARY_MAX_CHARS ? summary : `${summary.slice(0, CONTEXT_SUMMARY_MAX_CHARS - 1)}\u2026`;
+function boundContextSummary(summary2) {
+  return summary2.length <= CONTEXT_SUMMARY_MAX_CHARS ? summary2 : `${summary2.slice(0, CONTEXT_SUMMARY_MAX_CHARS - 1)}\u2026`;
 }
 function freezeMessage(message) {
   return deepFreeze(structuredClone(message));
@@ -68025,16 +68032,16 @@ var BlockAssembler = class {
 // packages/llm/llm/src/assistant-stream.ts
 function lastAssistantStreamChunk(stream, type) {
   for (let index2 = stream.length - 1; index2 >= 0; index2 -= 1) {
-    const record2 = stream[index2];
-    if (record2.type === "chunk" && record2.chunk.type === type) return record2.chunk;
+    const record3 = stream[index2];
+    if (record3.type === "chunk" && record3.chunk.type === type) return record3.chunk;
   }
   return void 0;
 }
 function joinAssistantStreamText(stream) {
   const parts = [];
-  for (const record2 of stream) {
-    if (record2.type === "text-chunks") parts.push(record2.texts.join(""));
-    else if (record2.type === "chunk" && record2.chunk.type === "text-delta") parts.push(record2.chunk.text);
+  for (const record3 of stream) {
+    if (record3.type === "text-chunks") parts.push(record3.texts.join(""));
+    else if (record3.type === "chunk" && record3.chunk.type === "text-delta") parts.push(record3.chunk.text);
   }
   return parts.join("");
 }
@@ -68956,7 +68963,7 @@ function latestAssistantCopyTarget(history) {
 function reasoningDurationsFromStream(stream) {
   if (!Array.isArray(stream)) return [];
   const records = stream;
-  const startOf = (record2) => record2.time0 ?? record2.time;
+  const startOf = (record3) => record3.time0 ?? record3.time;
   const durations = [];
   let blockIndex;
   let blockStart = 0;
@@ -68966,20 +68973,20 @@ function reasoningDurationsFromStream(stream) {
     durations.push(Math.max(0, end - blockStart));
     blockIndex = void 0;
   };
-  for (const record2 of records) {
-    const start = startOf(record2);
+  for (const record3 of records) {
+    const start = startOf(record3);
     if (typeof start !== "number") continue;
-    if (record2.type === "reasoning-chunks") {
-      const end = start + (record2.dt ?? []).reduce((sum, gap) => sum + gap, 0);
-      if (blockIndex !== void 0 && record2.index === blockIndex) {
+    if (record3.type === "reasoning-chunks") {
+      const end = start + (record3.dt ?? []).reduce((sum, gap) => sum + gap, 0);
+      if (blockIndex !== void 0 && record3.index === blockIndex) {
         blockEnd = end;
         continue;
       }
       close(start);
-      blockIndex = record2.index ?? -1;
+      blockIndex = record3.index ?? -1;
       blockStart = start;
       blockEnd = end;
-    } else if (record2.type !== "chunk") {
+    } else if (record3.type !== "chunk") {
       close(start);
     }
   }
@@ -69782,15 +69789,15 @@ function userErrorReason(error51) {
 }
 
 // packages/tui/tui/src/workspace-changes.ts
-function workspaceChangesCardFromSummary(seq, summary) {
-  if (summary === void 0 || summary.files.length === 0) return void 0;
+function workspaceChangesCardFromSummary(seq, summary2) {
+  if (summary2 === void 0 || summary2.files.length === 0) return void 0;
   return {
     seq,
-    turn: summary.turn,
-    files: summary.files.map(toFileView),
-    total: summary.total,
-    added: summary.added,
-    deleted: summary.deleted
+    turn: summary2.turn,
+    files: summary2.files.map(toFileView),
+    total: summary2.total,
+    added: summary2.added,
+    deleted: summary2.deleted
   };
 }
 function toFileView(file2) {
@@ -88784,41 +88791,41 @@ function validateSessionHeader(id, input) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("session header is not a plain JSON record");
   }
-  const record2 = input;
-  if (Object.hasOwn(record2, "seedLength")) {
+  const record3 = input;
+  if (Object.hasOwn(record3, "seedLength")) {
     throw new Error('session header has invalid field "seedLength"');
   }
-  if (record2.version !== SESSION_FORMAT_VERSION) {
-    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record2.version)}`);
+  if (record3.version !== SESSION_FORMAT_VERSION) {
+    throw new Error(`session header version must be ${SESSION_FORMAT_VERSION}, got ${String(record3.version)}`);
   }
-  if (record2.id !== id) {
-    throw new Error(`session header id "${String(record2.id)}" does not match session id "${id}"`);
+  if (record3.id !== id) {
+    throw new Error(`session header id "${String(record3.id)}" does not match session id "${id}"`);
   }
-  if (typeof record2.createdAt !== "number" || !Number.isSafeInteger(record2.createdAt) || record2.createdAt < 0) {
+  if (typeof record3.createdAt !== "number" || !Number.isSafeInteger(record3.createdAt) || record3.createdAt < 0) {
     throw new Error("session header createdAt must be a non-negative safe integer");
   }
-  if (record2.cwd !== void 0) {
-    if (typeof record2.cwd !== "string") throw new Error("session header cwd must be a string");
-    if (!isAbsolute4(record2.cwd)) {
-      throw new Error(`session header cwd must be an absolute path, got "${record2.cwd}"`);
+  if (record3.cwd !== void 0) {
+    if (typeof record3.cwd !== "string") throw new Error("session header cwd must be a string");
+    if (!isAbsolute4(record3.cwd)) {
+      throw new Error(`session header cwd must be an absolute path, got "${record3.cwd}"`);
     }
   }
-  if (record2.parentSession !== void 0 && typeof record2.parentSession !== "string") {
+  if (record3.parentSession !== void 0 && typeof record3.parentSession !== "string") {
     throw new Error("session header parentSession must be a string");
   }
-  if (typeof record2.isSeeded !== "boolean") {
+  if (typeof record3.isSeeded !== "boolean") {
     throw new Error("session header isSeeded must be a boolean");
   }
-  if (record2.origin !== void 0 && record2.origin !== "subagent") {
+  if (record3.origin !== void 0 && record3.origin !== "subagent") {
     throw new Error('session header origin must be "subagent"');
   }
-  if (record2.delegationDepth !== void 0 && (typeof record2.delegationDepth !== "number" || !Number.isSafeInteger(record2.delegationDepth) || record2.delegationDepth < 0)) {
+  if (record3.delegationDepth !== void 0 && (typeof record3.delegationDepth !== "number" || !Number.isSafeInteger(record3.delegationDepth) || record3.delegationDepth < 0)) {
     throw new Error("session header delegationDepth must be a non-negative safe integer");
   }
-  if (record2.agentPreset !== void 0 && typeof record2.agentPreset !== "string") {
+  if (record3.agentPreset !== void 0 && typeof record3.agentPreset !== "string") {
     throw new Error("session header agentPreset must be a string");
   }
-  return deepFreeze(record2);
+  return deepFreeze(record3);
 }
 function validateRestoredSessionHeader(id, input) {
   if (input !== null && typeof input === "object" && !Array.isArray(input)) {
@@ -88875,9 +88882,9 @@ function assertSessionEventEnvelope(value, index2) {
 }
 function assertCurrentLlmShape(event, index2) {
   const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
+  const record3 = typeof data === "object" && data !== null ? data : void 0;
   if (event["type"] === "request/header") {
-    const headerRecord = record2?.["header"];
+    const headerRecord = record3?.["header"];
     const config2 = headerRecord["config"];
     if (!hasProviderModel(config2)) throw new Error(`seed request/header at index ${index2} lacks provider/model`);
     const configRecord = config2;
@@ -88886,23 +88893,23 @@ function assertCurrentLlmShape(event, index2) {
       throw new Error(`seed request/header at index ${index2} has an invalid reasoningEffort`);
     }
     assertAdapterDefaults(headerRecord["adapterDefaults"], configRecord, index2);
-    const reason = record2?.["reason"];
+    const reason = record3?.["reason"];
     if (reason !== "initial" && reason !== "resume" && reason !== "change" && reason !== "series") {
       throw new Error(`seed request/header at index ${index2} has an invalid reason`);
     }
-    if (record2?.["startsSeries"] !== void 0 && record2["startsSeries"] !== true) {
+    if (record3?.["startsSeries"] !== void 0 && record3["startsSeries"] !== true) {
       throw new Error(`seed request/header at index ${index2} has an invalid startsSeries marker`);
     }
   }
   const type = event["type"];
   if (type === "assistant/attempt") {
-    assertAssistantSettlementShape(record2, type, index2);
+    assertAssistantSettlementShape(record3, type, index2);
     return;
   }
   if (!isMessageEventType(type)) return;
   assertMessageEventShape(event, `seed ${type} at index ${index2}`);
   if (type === "assistant/message") {
-    assertAssistantSettlementShape(record2, type, index2);
+    assertAssistantSettlementShape(record3, type, index2);
   }
 }
 function assertAssistantSettlementShape(data, type, index2) {
@@ -88937,8 +88944,8 @@ function assertMessageEventShape(event, subject) {
   const type = event["type"];
   if (!isMessageEventType(type)) return;
   const data = event["data"];
-  const record2 = typeof data === "object" && data !== null ? data : void 0;
-  const message = type === "user/message" ? record2 : record2?.["message"];
+  const record3 = typeof data === "object" && data !== null ? data : void 0;
+  const message = type === "user/message" ? record3 : record3?.["message"];
   if (typeof message !== "object" || message === null || typeof message["id"] !== "string" || message["id"] === "") {
     throw new Error(`${subject} lacks an identified message`);
   }
@@ -89269,16 +89276,16 @@ var Session = class _Session {
       throw new Error(`plugin record "${type}" carries non-JSON-serializable data`);
     }
     const entry = this.publicationEntry();
-    const record2 = deepFreeze({
+    const record3 = deepFreeze({
       type,
       seq: SessionSeq(this.log.length),
       time: Date.now(),
       data: dataSnapshot,
       ignorable: true
     });
-    assertPluginRecordEvent(record2);
-    this.commit(record2, entry);
-    return record2.seq;
+    assertPluginRecordEvent(record3);
+    this.commit(record3, entry);
+    return record3.seq;
   }
   /**
    * Read the store attachment for one append, refusing an append that
@@ -89589,13 +89596,13 @@ function settlementSummary(childId, stopReason, continuable) {
   }
 }
 function createSettlementMessage(childId, terminal, continuable = true) {
-  const summary = settlementSummary(childId, terminal.stopReason, continuable);
+  const summary2 = settlementSummary(childId, terminal.stopReason, continuable);
   const closingText = terminal.output.flatMap(
     (block) => block.type === "text" && block.text.length > 0 ? [block] : []
   );
   return createUserMessage({
     content: [
-      { type: "text", text: summary },
+      { type: "text", text: summary2 },
       ...closingText.length === 0 ? [{ type: "text", text: "It left no closing message." }] : [{ type: "text", text: "Its closing message:" }, ...closingText],
       ...terminal.structured !== void 0 ? [{ type: "text", text: `Structured result: ${JSON.stringify(terminal.structured)}` }] : [],
       ...terminal.diagnostic !== void 0 ? [{ type: "text", text: terminal.diagnostic }] : []
@@ -89603,7 +89610,7 @@ function createSettlementMessage(childId, terminal, continuable = true) {
     source: {
       kind: "subagent-settled",
       form: "notice",
-      summary: boundContextSummary(summary),
+      summary: boundContextSummary(summary2),
       senderSessionId: childId
     }
   });
@@ -96365,9 +96372,9 @@ function decodeScheduleRecord(value) {
   if (isRecord4(value) && value["kind"] === "daily") return decodeDailyRecord(value);
   if (isRecord4(value) && value["kind"] === "weekly") return decodeWeeklyRecord(value);
   if (isRecord4(value) && value["kind"] === "cron") return decodeCronRecord(value);
-  const record2 = decodeLegacyScheduleRecord(value);
-  if (record2.title === void 0) throw new ScheduleLogError(REQUIRED_TITLE_MESSAGE);
-  return record2;
+  const record3 = decodeLegacyScheduleRecord(value);
+  if (record3.title === void 0) throw new ScheduleLogError(REQUIRED_TITLE_MESSAGE);
+  return record3;
 }
 function decodeLegacyScheduleRecord(value) {
   if (!isRecord4(value)) throw new ScheduleLogError("schedule record must be an object");
@@ -96429,9 +96436,9 @@ function decodeScheduleChange(value) {
       throw new ScheduleLogError("schedule/change operation must be create, delete, or dispatch");
   }
 }
-function resolveEveryOccurrence(record2, acceptedAt) {
-  const target = Date.parse(record2.scheduledAt);
-  const interval = record2.everySeconds * 1e3;
+function resolveEveryOccurrence(record3, acceptedAt) {
+  const target = Date.parse(record3.scheduledAt);
+  const interval = record3.everySeconds * 1e3;
   if (!Number.isSafeInteger(acceptedAt) || acceptedAt < MIN_FOUR_DIGIT_YEAR_MS || acceptedAt > MAX_FOUR_DIGIT_YEAR_MS) {
     throw new ScheduleLogError("every acceptedAt must be a representable four-digit-year instant");
   }
@@ -96497,28 +96504,28 @@ function acceptedDecision(selector, acceptedAt) {
 function nextDailyTarget(time3, timeZone, now, afterDate) {
   return nextMatchingTarget(time3, timeZone, now, EVERY_DATE, afterDate);
 }
-function resolveDailyOccurrence(record2, acceptedAt) {
+function resolveDailyOccurrence(record3, acceptedAt) {
   const decision = acceptedDecision("daily", acceptedAt);
-  const savedTarget = Date.parse(record2.scheduledAt);
+  const savedTarget = Date.parse(record3.scheduledAt);
   if (decision < savedTarget) throw new ScheduleLogError("daily dispatch cannot precede the active scheduledAt");
-  const time3 = dailyTime(record2.time);
-  const occurrence = latestDueOccurrence(record2.timeZone, EVERY_DATE, time3, decision, savedTarget);
+  const time3 = dailyTime(record3.time);
+  const occurrence = latestDueOccurrence(record3.timeZone, EVERY_DATE, time3, decision, savedTarget);
   const occurrenceAt = new Date(occurrence).toISOString();
-  const nextScheduledAt = nextDailyTarget(time3, record2.timeZone, decision, localDate(occurrence, record2.timeZone));
+  const nextScheduledAt = nextDailyTarget(time3, record3.timeZone, decision, localDate(occurrence, record3.timeZone));
   return Object.freeze(nextScheduledAt === void 0 ? { occurrenceAt } : { occurrenceAt, nextScheduledAt });
 }
 function nextWeeklyTarget(time3, timeZone, weekdays, now, afterDate) {
   return nextMatchingTarget(time3, timeZone, now, weekdaySet(weekdays), afterDate);
 }
-function resolveWeeklyOccurrence(record2, acceptedAt) {
+function resolveWeeklyOccurrence(record3, acceptedAt) {
   const decision = acceptedDecision("weekly", acceptedAt);
-  const savedTarget = Date.parse(record2.scheduledAt);
+  const savedTarget = Date.parse(record3.scheduledAt);
   if (decision < savedTarget) throw new ScheduleLogError("weekly dispatch cannot precede the active scheduledAt");
-  const time3 = weeklyTime(record2.time);
-  const weekdays = normalizeWeekdays(record2.weekdays);
-  const occurrence = latestDueOccurrence(record2.timeZone, weekdaySet(weekdays), time3, decision, savedTarget);
+  const time3 = weeklyTime(record3.time);
+  const weekdays = normalizeWeekdays(record3.weekdays);
+  const occurrence = latestDueOccurrence(record3.timeZone, weekdaySet(weekdays), time3, decision, savedTarget);
   const occurrenceAt = new Date(occurrence).toISOString();
-  const nextScheduledAt = nextWeeklyTarget(time3, record2.timeZone, weekdays, decision, localDate(occurrence, record2.timeZone));
+  const nextScheduledAt = nextWeeklyTarget(time3, record3.timeZone, weekdays, decision, localDate(occurrence, record3.timeZone));
   return Object.freeze(nextScheduledAt === void 0 ? { occurrenceAt } : { occurrenceAt, nextScheduledAt });
 }
 function cronDateMatch(parsed) {
@@ -96602,43 +96609,43 @@ function latestCronOccurrence(parsed, timeZone, decision, savedTarget) {
   }
   return savedTarget;
 }
-function resolveCronOccurrence(record2, acceptedAt) {
+function resolveCronOccurrence(record3, acceptedAt) {
   const decision = acceptedDecision("cron", acceptedAt);
-  const savedTarget = Date.parse(record2.scheduledAt);
+  const savedTarget = Date.parse(record3.scheduledAt);
   if (decision < savedTarget) throw new ScheduleLogError("cron dispatch cannot precede the active scheduledAt");
-  const parsed = parseCronExpression(record2.expression);
-  const occurrence = latestCronOccurrence(parsed, record2.timeZone, decision, savedTarget);
+  const parsed = parseCronExpression(record3.expression);
+  const occurrence = latestCronOccurrence(parsed, record3.timeZone, decision, savedTarget);
   const occurrenceAt = new Date(occurrence).toISOString();
-  const nextScheduledAt = nextCronTarget(parsed, record2.timeZone, decision);
+  const nextScheduledAt = nextCronTarget(parsed, record3.timeZone, decision);
   return Object.freeze(nextScheduledAt === void 0 ? { occurrenceAt } : { occurrenceAt, nextScheduledAt });
 }
-function isRecurringScheduleRecord(record2) {
-  return record2.kind === "every" || record2.kind === "daily" || record2.kind === "weekly" || record2.kind === "cron";
+function isRecurringScheduleRecord(record3) {
+  return record3.kind === "every" || record3.kind === "daily" || record3.kind === "weekly" || record3.kind === "cron";
 }
-function resolveRecurringOccurrence(record2, acceptedAt) {
-  switch (record2.kind) {
+function resolveRecurringOccurrence(record3, acceptedAt) {
+  switch (record3.kind) {
     case "every":
-      return resolveEveryOccurrence(record2, acceptedAt);
+      return resolveEveryOccurrence(record3, acceptedAt);
     case "daily":
-      return resolveDailyOccurrence(record2, acceptedAt);
+      return resolveDailyOccurrence(record3, acceptedAt);
     case "weekly":
-      return resolveWeeklyOccurrence(record2, acceptedAt);
+      return resolveWeeklyOccurrence(record3, acceptedAt);
     case "cron":
-      return resolveCronOccurrence(record2, acceptedAt);
+      return resolveCronOccurrence(record3, acceptedAt);
   }
 }
-function dispatchedRecord(record2, change) {
+function dispatchedRecord(record3, change) {
   const hasAcceptedAt = "acceptedAt" in change;
-  if (record2.kind !== "every") {
+  if (record3.kind !== "every") {
     if (hasAcceptedAt) throw new ScheduleLogError("one-shot dispatch must not contain acceptedAt");
     return void 0;
   }
   if (!hasAcceptedAt) throw new ScheduleLogError("every dispatch must contain acceptedAt");
-  const occurrence = resolveEveryOccurrence(record2, Date.parse(change.acceptedAt));
-  return occurrence.nextScheduledAt === void 0 ? void 0 : Object.freeze({ ...record2, scheduledAt: occurrence.nextScheduledAt });
+  const occurrence = resolveEveryOccurrence(record3, Date.parse(change.acceptedAt));
+  return occurrence.nextScheduledAt === void 0 ? void 0 : Object.freeze({ ...record3, scheduledAt: occurrence.nextScheduledAt });
 }
 function applyScheduleChanges(folded, changes) {
-  const active = new Map(folded.active.map((record2) => [record2.id, record2]));
+  const active = new Map(folded.active.map((record3) => [record3.id, record3]));
   const seen = new Set(folded.seenIds);
   for (const change of changes) {
     switch (change.operation) {
@@ -96655,11 +96662,11 @@ function applyScheduleChanges(folded, changes) {
         }
         break;
       case "dispatch": {
-        const record2 = active.get(change.id);
-        if (record2 === void 0) {
+        const record3 = active.get(change.id);
+        if (record3 === void 0) {
           throw new ScheduleLogError(`schedule dispatch targets inactive id ${JSON.stringify(change.id)}`);
         }
-        const next = dispatchedRecord(record2, change);
+        const next = dispatchedRecord(record3, change);
         if (next === void 0) active.delete(change.id);
         else active.set(change.id, next);
         break;
@@ -97073,20 +97080,20 @@ function parseCronInput(cron) {
   };
 }
 var SCHEDULED_MESSAGE_FRAMING = "This is a scheduled message from the user";
-function renderReminderFraming(record2) {
+function renderReminderFraming(record3) {
   return [
     "[SCHEDULE REMINDER]",
     SCHEDULED_MESSAGE_FRAMING,
-    `schedule_id_json: ${JSON.stringify(record2.id)}`,
-    `occurrence_at: ${record2.scheduledAt}`,
-    `reminder_prompt_json: ${JSON.stringify(record2.prompt)}`
+    `schedule_id_json: ${JSON.stringify(record3.id)}`,
+    `occurrence_at: ${record3.scheduledAt}`,
+    `reminder_prompt_json: ${JSON.stringify(record3.prompt)}`
   ].join("\n");
 }
 function renderRecurringReminderBatchFraming(reminders) {
-  const payload = reminders.map(({ record: record2, occurrenceAt }) => ({
-    schedule_id: record2.id,
+  const payload = reminders.map(({ record: record3, occurrenceAt }) => ({
+    schedule_id: record3.id,
     occurrence_at: occurrenceAt,
-    reminder_prompt: record2.prompt
+    reminder_prompt: record3.prompt
   }));
   return [
     "[SCHEDULE REMINDER BATCH]",
@@ -97107,7 +97114,7 @@ function appendDelivery(task, receipt, bounds) {
   const history = deliveryHistoryOf(task);
   const appended = [...history.records, { ...receipt, prompt: task.record.prompt }];
   const floor = Date.parse(receipt.deliveredAt) - bounds.days * DAY_MS;
-  const retained = appended.filter((record2) => Date.parse(record2.deliveredAt) >= floor).slice(-bounds.records);
+  const retained = appended.filter((record3) => Date.parse(record3.deliveredAt) >= floor).slice(-bounds.records);
   return {
     lastDelivery: receipt,
     deliveryHistory: {
@@ -97119,7 +97126,7 @@ function appendDelivery(task, receipt, bounds) {
 }
 function deliveryHistoryPage(task, request, retention) {
   const history = deliveryHistoryOf(task);
-  const end = request.before === void 0 ? history.records.length : history.records.findIndex((record2) => record2.messageId === request.before);
+  const end = request.before === void 0 ? history.records.length : history.records.findIndex((record3) => record3.messageId === request.before);
   if (end === -1) return { id: request.id, code: "delivery_cursor_not_found" };
   const start = Math.max(0, end - request.limit);
   const records = history.records.slice(start, end).reverse().map(({ prompt, ...receipt }) => ({
@@ -97359,7 +97366,7 @@ var deliveryHistorySchema = external_exports.object({
   records: external_exports.array(deliveryReceiptSchema.extend({ prompt: external_exports.string().optional() }).strict()),
   earlierRecordsUnavailable: external_exports.boolean(),
   earlierRecordsPruned: external_exports.boolean().optional()
-}).strict().refine((history) => new Set(history.records.map((record2) => record2.messageId)).size === history.records.length, {
+}).strict().refine((history) => new Set(history.records.map((record3) => record3.messageId)).size === history.records.length, {
   message: "Delivery history message identities must be unique within a task"
 });
 var scheduleTaskSchema = external_exports.object({
@@ -97416,8 +97423,8 @@ function schedulePrompt(prompt) {
   }
   return prompt.trim();
 }
-function retainedTitle(record2) {
-  return decodeStoredTitle(record2.title);
+function retainedTitle(record3) {
+  return decodeStoredTitle(record3.title);
 }
 function withContent(current, title, prompt) {
   return title === current.title && prompt === current.prompt ? current : Object.freeze({ ...current, title, prompt });
@@ -97477,8 +97484,8 @@ function resolveScheduleUpdate(current, expected, change, now, content3 = {}) {
     const retained = retainedTitle(current);
     const title = content3.title === void 0 ? retained : scheduleTitle(content3.title);
     const prompt = content3.prompt === void 0 ? current.prompt : schedulePrompt(content3.prompt);
-    const record2 = changedRecord(current, title, prompt, change, now);
-    return { id: current.id, updated: record2 !== current, record: record2 };
+    const record3 = changedRecord(current, title, prompt, change, now);
+    return { id: current.id, updated: record3 !== current, record: record3 };
   } catch (error51) {
     if (!(error51 instanceof ScheduleInputError)) throw error51;
     return { code: error51.code, message: error51.message };
@@ -97570,7 +97577,7 @@ var ScheduleService = class extends (_b2 = TypertRemoteService) {
         if (active.length === 0) return rest;
         const own3 = {
           kind: "schedule",
-          items: active.map((record2) => ({ id: record2.id, label: record2.title }))
+          items: active.map((record3) => ({ id: record3.id, label: record3.title }))
         };
         return [own3, ...rest];
       });
@@ -97608,16 +97615,16 @@ var ScheduleService = class extends (_b2 = TypertRemoteService) {
     const title = scheduleTitle(request.title);
     const id = ScheduleId(`schedule-${randomUUID5()}`);
     const now = Date.now();
-    let record2;
+    let record3;
     if (request.at !== void 0) {
-      record2 = createAtScheduleRecord(id, request.prompt, request.at, now, title);
+      record3 = createAtScheduleRecord(id, request.prompt, request.at, now, title);
     } else if (request.after_seconds !== void 0) {
-      record2 = createAfterScheduleRecord(id, request.prompt, request.after_seconds, now, title);
+      record3 = createAfterScheduleRecord(id, request.prompt, request.after_seconds, now, title);
     } else if (request.every_seconds !== void 0) {
-      record2 = createEveryScheduleRecord(id, request.prompt, request.every_seconds, now, title);
-    } else if (request.daily !== void 0) record2 = createDailyScheduleRecord(id, request.prompt, request.daily, now, title);
-    else if (request.weekly !== void 0) record2 = createWeeklyScheduleRecord(id, request.prompt, request.weekly, now, title);
-    else if (request.cron !== void 0) record2 = createCronScheduleRecord(id, request.prompt, request.cron, now, title);
+      record3 = createEveryScheduleRecord(id, request.prompt, request.every_seconds, now, title);
+    } else if (request.daily !== void 0) record3 = createDailyScheduleRecord(id, request.prompt, request.daily, now, title);
+    else if (request.weekly !== void 0) record3 = createWeeklyScheduleRecord(id, request.prompt, request.weekly, now, title);
+    else if (request.cron !== void 0) record3 = createCronScheduleRecord(id, request.prompt, request.cron, now, title);
     else throw new ScheduleInputError("invalid_selector", "Exactly one reminder selector is required.");
     return this.serialize(async () => {
       const refusal = this.reminderTargetRefusal(sessionId);
@@ -97626,13 +97633,13 @@ var ScheduleService = class extends (_b2 = TypertRemoteService) {
       signal?.throwIfAborted();
       await domain3.table("tasks").put(id, {
         sessionId,
-        record: record2,
+        record: record3,
         status: "active",
         deliveryHistory: { records: [], earlierRecordsUnavailable: false }
       });
       this.emitChanged();
       this.runtime?.requestDrive();
-      return record2;
+      return record3;
     });
   }
   async list(request) {
@@ -98791,11 +98798,11 @@ var SessionTitleService = class extends Service {
       if (modelCandidate === null || typeof modelCandidate !== "object") {
         throw new Error("session-title provider result model must contain non-empty provider and model strings");
       }
-      const record2 = modelCandidate;
-      if (typeof record2.provider !== "string" || record2.provider.length === 0 || typeof record2.model !== "string" || record2.model.length === 0) {
+      const record3 = modelCandidate;
+      if (typeof record3.provider !== "string" || record3.provider.length === 0 || typeof record3.model !== "string" || record3.model.length === 0) {
         throw new Error("session-title provider result model must contain non-empty provider and model strings");
       }
-      model = { provider: record2.provider, model: record2.model };
+      model = { provider: record3.provider, model: record3.model };
     }
     return {
       title,
@@ -98995,8 +99002,8 @@ function timeHeaderOf(time3) {
 function proseBlock(text4) {
   return escapeContent(text4).split("\n").map((line5) => line5 === "" ? ">" : `> ${line5}`).join("\n");
 }
-function structuredBlock(record2) {
-  const json2 = JSON.stringify(record2, void 0, 2);
+function structuredBlock(record3) {
+  const json2 = JSON.stringify(record3, void 0, 2);
   const longestRun = Math.max(
     0,
     ...(json2.match(/`+/gu) ?? []).map((run2) => run2.length)
@@ -99015,7 +99022,7 @@ function toolCallBlock(event) {
 }
 function toolResultBlock(event) {
   const result = event.data.message;
-  const record2 = {
+  const record3 = {
     callId: escapeContent(result.toolCallId),
     result: escapeContent(result.content.map((block) => block.type === "text" ? block.text : "").join("")),
     isError: result.isError ?? false,
@@ -99026,7 +99033,7 @@ function toolResultBlock(event) {
       }
     }
   };
-  return structuredBlock(record2);
+  return structuredBlock(record3);
 }
 function renderSessionMarkdown(events) {
   const blocks = [];
@@ -99085,14 +99092,6 @@ async function exportSessionMarkdown(session, dir) {
 }
 
 // packages/tui/tui/src/settings-rows.ts
-var LEADING_NAMESPACES = [
-  "tui",
-  "llm-deepseek",
-  "llm-openai",
-  "llm-anthropic",
-  "llm-pi-ai",
-  "subagent"
-];
 var BRAND_ANIMATION_LABELS = {
   auto: "\u81EA\u52A8",
   on: "\u5F00\u542F",
@@ -99483,121 +99482,6 @@ function parseSettingsFieldValue(namespace, field, current, draft, knownProvider
   }
   return parseSettingValue(current, draft);
 }
-function settingsRowsFromDescribe(descriptors, read, options) {
-  const leadingNames = new Set(LEADING_NAMESPACES);
-  const leading = /* @__PURE__ */ new Map();
-  const rest = [];
-  for (const entry of descriptors) {
-    const value = read(entry.ns);
-    if (!isPlainObject3(value)) continue;
-    const secretHeads = new Set(
-      (entry.secrets ?? []).map((secret) => secret.path[0]).filter((head) => head !== void 0)
-    );
-    const rows = [];
-    for (const [field, fieldValue] of Object.entries(value)) {
-      if (secretHeads.has(field)) continue;
-      if (options?.expandProviders === true && String(entry.ns) === "llm-pi-ai" && field === "providers" && isPlainObject3(fieldValue)) {
-        const providersObj = fieldValue;
-        const providerIds = Object.keys(providersObj);
-        if (providerIds.length === 0) {
-          rows.push({
-            namespace: "llm-pi-ai",
-            field: "providers",
-            value: "Enter\uFF1A\u76EE\u5F55\u540D / \u6A21\u677F\u5E8F\u53F7 1-4 / \u6216\u6309\u8868\u5355\u586B\u5199",
-            label: "providers \xB7 [+ \u6DFB\u52A0 Provider]",
-            editValue: PROVIDER_FORM_TEMPLATE
-          });
-        } else {
-          rows.push({
-            namespace: "llm-pi-ai",
-            field: "providers",
-            value: stringifySettingsFieldValue("llm-pi-ai", "providers", providersObj),
-            label: "providers \xB7 \u63D0\u4F9B\u5546\u5217\u8868 (Enter \u8FFD\u52A0)",
-            editValue: PROVIDER_FORM_TEMPLATE
-          });
-          for (const pId of providerIds) {
-            const profile = isPlainObject3(providersObj[pId]) ? providersObj[pId] : {};
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.api`,
-              value: stringifySettingValue(profile.api ?? "openai-completions"),
-              required: true,
-              label: `providers \xB7 ${pId} \xB7 \u534F\u8BAE (api)`
-            });
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.baseURL`,
-              value: stringifySettingValue(profile.baseURL ?? ""),
-              required: true,
-              label: `providers \xB7 ${pId} \xB7 \u7AEF\u70B9 (baseURL)`
-            });
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.apiKeyEnv`,
-              value: stringifySettingValue(profile.apiKeyEnv ?? ""),
-              required: true,
-              label: `providers \xB7 ${pId} \xB7 \u51ED\u636E\u53D8\u91CF (apiKeyEnv)`
-            });
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.defaultInput`,
-              value: stringifySettingsFieldValue("llm-pi-ai", `providers.${pId}.defaultInput`, profile.defaultInput),
-              required: false,
-              label: `providers \xB7 ${pId} \xB7 \u8F93\u5165\u6A21\u6001 (defaultInput: text/image)`,
-              editValue: Array.isArray(profile.defaultInput) ? profile.defaultInput.join(", ") : "text, image"
-            });
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.displayName`,
-              value: stringifySettingValue(profile.displayName ?? pId),
-              required: false,
-              label: `providers \xB7 ${pId} \xB7 \u522B\u540D (displayName)`
-            });
-            rows.push({
-              namespace: "llm-pi-ai",
-              field: `providers.${pId}.models`,
-              value: formatModelsList(profile.models),
-              required: false,
-              label: `providers \xB7 ${pId} \xB7 \u6A21\u578B (models, \u9017\u53F7\u5206\u9694)`
-            });
-          }
-          rows.push({
-            namespace: "llm-pi-ai",
-            field: "providers",
-            value: "Enter\uFF1A\u76EE\u5F55\u540D / \u6A21\u677F\u5E8F\u53F7 1-4 / \u6216\u6309\u8868\u5355\u586B\u5199",
-            label: "providers \xB7 [+ \u6DFB\u52A0 Provider]",
-            editValue: PROVIDER_FORM_TEMPLATE
-          });
-        }
-        continue;
-      }
-      rows.push({
-        namespace: String(entry.ns),
-        field,
-        value: stringifySettingsFieldValue(String(entry.ns), field, fieldValue),
-        ...(field === "models" || field.endsWith(".models")) && Array.isArray(fieldValue) ? { editValue: stringifySettingValue(fieldValue) } : {}
-      });
-    }
-    const key = String(entry.ns);
-    if (leadingNames.has(key)) {
-      const bucket = leading.get(key) ?? [];
-      bucket.push(...rows);
-      leading.set(key, bucket);
-    } else {
-      rest.push(...rows);
-    }
-  }
-  const ordered = [];
-  for (const name2 of LEADING_NAMESPACES) {
-    const bucket = leading.get(name2);
-    if (bucket !== void 0) ordered.push(...bucket);
-  }
-  rest.sort((left, right) => {
-    const ns = left.namespace.localeCompare(right.namespace);
-    return ns === 0 ? left.field.localeCompare(right.field) : ns;
-  });
-  return [...ordered, ...rest];
-}
 function credentialRowValue(configured) {
   if (configured === void 0) return "Enter \u8BBE\u7F6E\u5BC6\u94A5";
   return configured ? "\u5DF2\u914D\u7F6E" : "\u672A\u914D\u7F6E";
@@ -99618,6 +99502,193 @@ function credentialSettingRows(names, configured) {
   }
   return rows;
 }
+
+// packages/tui/tui/src/settings-navigation.ts
+function record2(value) {
+  return typeof value === "object" && value !== null ? value : {};
+}
+function childSchema(schema, key) {
+  const node2 = record2(schema);
+  return record2(node2.dict)[key] ?? record2(node2.properties)[key] ?? node2.inner ?? node2.items;
+}
+function summary(value) {
+  return Array.isArray(value) ? `${String(value.length)} \u9879` : value !== null && typeof value === "object" ? `${String(Object.keys(value).length)} \u4E2A\u5B57\u6BB5` : stringifySettingValue(value);
+}
+function withUserFields(resolved, user) {
+  if (Array.isArray(user)) return user.map((value, index2) => withUserFields(Array.isArray(resolved) ? resolved[index2] : void 0, value));
+  if (user !== null && typeof user === "object") return Object.fromEntries(
+    [.../* @__PURE__ */ new Set([...Object.keys(record2(resolved)), ...Object.keys(user)])].map((key) => [key, Object.hasOwn(user, key) ? withUserFields(record2(resolved)[key], record2(user)[key]) : record2(resolved)[key]])
+  );
+  return user === void 0 ? resolved : user;
+}
+function settingsTreeFromDescribe(descriptors, credentials) {
+  const nodes = [];
+  const groups = /* @__PURE__ */ new Set();
+  const addGroup = (namespace) => {
+    const group = settingsGroup({ namespace, field: "" });
+    const id = `group:${group}`;
+    if (!groups.has(id)) {
+      groups.add(id);
+      nodes.push({ id, parentId: "", namespace, field: "", label: SETTINGS_GROUP_LABELS[group], value: "", navigable: true, editable: false });
+    }
+    return id;
+  };
+  for (const descriptor of descriptors) {
+    if (descriptor.value === null || typeof descriptor.value !== "object" || Array.isArray(descriptor.value)) continue;
+    const namespace = String(descriptor.ns);
+    const nsId = `ns:${namespace}`;
+    const group = addGroup(namespace);
+    nodes.push({ id: nsId, parentId: group, namespace, field: "", label: namespace, value: summary(descriptor.value), navigable: true, editable: false });
+    const formValue = withUserFields(descriptor.value, descriptor.user);
+    const secrets = (descriptor.secrets ?? []).map((secret) => secret.path.map(String));
+    const walk = (value, path2, parentId, schema) => {
+      if (secrets.some((secret) => secret.every((key2, index2) => path2[index2] === key2))) return;
+      const field = path2.join(".");
+      const key = path2[path2.length - 1] ?? "";
+      const parentValue = atPath(formValue, path2.slice(0, -1));
+      const modelId = record2(value).id;
+      const identity = Array.isArray(parentValue) && typeof modelId === "string" && parentValue.filter((entry) => record2(entry).id === modelId).length === 1 ? `id:${modelId}` : key;
+      const id = `${parentId}:${JSON.stringify(identity)}`;
+      const nested = value !== null && typeof value === "object";
+      const meta3 = record2(record2(schema).meta);
+      const label = Array.isArray(parentValue) ? String(record2(value).id ?? record2(value).name ?? key) : key;
+      nodes.push({
+        id,
+        parentId,
+        namespace,
+        field,
+        sourcePath: path2,
+        label,
+        value: path2.length === 2 && path2[0] === "providers" ? `${String(Array.isArray(record2(value).models) ? record2(value).models.length : 0)} \u6A21\u578B \xB7 ${String(record2(value).api ?? "\u9ED8\u8BA4\u534F\u8BAE")}` : nested ? summary(value) : stringifySettingsFieldValue(namespace, field, value),
+        editValue: stringifySettingValue(value),
+        ...nested && secrets.some((secret) => path2.every((key2, index2) => secret[index2] === key2)) ? { editable: false } : {},
+        ...nested ? { navigable: true } : {},
+        ...typeof meta3.description === "string" ? { description: meta3.description } : {},
+        ...meta3.required === true ? { required: true } : {}
+      });
+      if (nested) {
+        for (const [child, next] of Object.entries(value)) walk(next, [...path2, child], id, childSchema(schema, child));
+        if (namespace === "llm-pi-ai" && field === "providers") {
+          nodes.push({ id: `${id}:add`, parentId: id, namespace, field, sourcePath: path2, label: "+ \u6DFB\u52A0 Provider", value: "\u76EE\u5F55\u540D / \u8868\u5355", editValue: PROVIDER_FORM_TEMPLATE });
+        }
+      }
+    };
+    for (const [key, value] of Object.entries(record2(formValue))) walk(value, [key], nsId, childSchema(descriptor.schema, key));
+  }
+  if (credentials.length > 0) {
+    const group = addGroup("credentials");
+    const parentId = "ns:credentials";
+    nodes.push({ id: parentId, parentId: group, namespace: "credentials", field: "", label: "\u51ED\u636E\u7BA1\u7406", value: `${String(credentials.length)} \u9879`, navigable: true, editable: false });
+    for (const row of credentials) nodes.push({ ...row, editValue: "", id: `${parentId}:${row.field}`, parentId, label: row.field });
+  }
+  return nodes;
+}
+function atPath(value, path2) {
+  let current = value;
+  for (const key of path2) current = record2(current)[key];
+  return current;
+}
+function settingsPathPatch(section, path2, value, user) {
+  const replace2 = (current, remaining, stored, preserve = false) => {
+    const [key, ...rest] = remaining;
+    if (key === void 0) return value;
+    const source = stored !== void 0 ? stored : current;
+    const complete = preserve || Array.isArray(source);
+    const copy = Array.isArray(source) ? [...source] : complete ? { ...record2(source) } : {};
+    Object.defineProperty(copy, key, { value: replace2(record2(current)[key], rest, record2(stored)[key], complete), writable: true, enumerable: true, configurable: true });
+    return copy;
+  };
+  return replace2(section, path2, user);
+}
+var SettingsNavigation = class {
+  constructor(nodes) {
+    this.nodes = nodes;
+  }
+  nodes;
+  selectedIndex = 0;
+  parentId = "";
+  query = "";
+  selections = /* @__PURE__ */ new Map();
+  beforeSearchIndex = 0;
+  get rows() {
+    const query = this.query.toLocaleLowerCase();
+    return query === "" ? this.nodes.filter((node2) => node2.parentId === this.parentId) : this.nodes.filter((node2) => node2.field !== "" && `${node2.namespace} ${node2.field} ${node2.label ?? ""} ${node2.value} ${node2.description ?? ""}`.toLocaleLowerCase().includes(query));
+  }
+  get breadcrumb() {
+    const labels = ["\u8BBE\u7F6E"];
+    let node2 = this.nodes.find((entry) => entry.id === this.parentId);
+    const tail = [];
+    while (node2 !== void 0) {
+      tail.unshift(node2.label ?? node2.field);
+      node2 = this.nodes.find((entry) => entry.id === node2?.parentId);
+    }
+    return [...labels, ...tail];
+  }
+  get filter() {
+    return this.query;
+  }
+  remember() {
+    const id = this.rows[this.selectedIndex]?.id;
+    if (id !== void 0) this.selections.set(this.parentId, id);
+  }
+  restore() {
+    const index2 = this.rows.findIndex((node2) => node2.id === this.selections.get(this.parentId));
+    this.selectedIndex = index2 < 0 ? Math.min(this.selectedIndex, Math.max(0, this.rows.length - 1)) : index2;
+  }
+  replace(nodes) {
+    const selected = this.rows[this.selectedIndex]?.id;
+    this.remember();
+    this.nodes = nodes;
+    if (!nodes.some((node2) => node2.id === this.parentId)) this.parentId = "";
+    const index2 = this.rows.findIndex((node2) => node2.id === selected);
+    if (index2 >= 0) this.selectedIndex = index2;
+    else this.restore();
+  }
+  enter() {
+    const node2 = this.rows[this.selectedIndex];
+    if (node2?.navigable !== true) return false;
+    this.remember();
+    this.parentId = node2.id;
+    this.query = "";
+    this.selectedIndex = 0;
+    this.restore();
+    return true;
+  }
+  back() {
+    if (this.query !== "") {
+      this.search("");
+      return true;
+    }
+    const node2 = this.nodes.find((entry) => entry.id === this.parentId);
+    if (node2 === void 0) return false;
+    this.remember();
+    this.parentId = node2.parentId;
+    this.selectedIndex = 0;
+    this.restore();
+    return true;
+  }
+  search(query) {
+    if (this.query === "") {
+      this.remember();
+      this.beforeSearchIndex = this.selectedIndex;
+    }
+    this.query = query;
+    this.selectedIndex = query === "" ? this.beforeSearchIndex : 0;
+    if (query === "") this.restore();
+  }
+  group(delta) {
+    this.remember();
+    const groups = this.nodes.filter((node2) => node2.parentId === "");
+    const current = this.breadcrumb[1];
+    const index2 = groups.findIndex((node2) => node2.label === current);
+    const next = groups[(index2 + (delta < 0 ? -1 : 1) + groups.length) % groups.length];
+    if (next === void 0) return;
+    this.parentId = next.id;
+    this.query = "";
+    this.selectedIndex = 0;
+    this.restore();
+  }
+};
 
 // packages/tui/tui/src/index.ts
 try {
@@ -99875,18 +99946,6 @@ function fieldOf(section, field) {
     current = current[part];
   }
   return current;
-}
-function createSettingsPatch(field, value) {
-  const parts = field.split(".");
-  const root = {};
-  let current = root;
-  for (let i2 = 0; i2 < parts.length - 1; i2++) {
-    const next = {};
-    current[parts[i2]] = next;
-    current = next;
-  }
-  current[parts[parts.length - 1]] = value;
-  return root;
 }
 function persistenceHasOpen(persistence) {
   return typeof persistence?.open === "function";
@@ -100384,6 +100443,8 @@ var RuntimeController = class _RuntimeController {
   settingsOpen = false;
   settingsRows = [];
   settingsSelectedIndex = 0;
+  settingsNavigation = new SettingsNavigation([]);
+  settingsSearching = false;
   settingsEditing = false;
   settingsOnboarding = false;
   settingsUpdateError;
@@ -100685,8 +100746,8 @@ var RuntimeController = class _RuntimeController {
   cacheWorkspaceChange(seq) {
     const sessionId = this.session?.id;
     const service = this.ctx.get("workspaceChanges");
-    const summary = sessionId === void 0 || service === void 0 ? void 0 : service.summary(sessionId, seq);
-    const card = workspaceChangesCardFromSummary(seq, summary);
+    const summary2 = sessionId === void 0 || service === void 0 ? void 0 : service.summary(sessionId, seq);
+    const card = workspaceChangesCardFromSummary(seq, summary2);
     if (card === void 0) this.workspaceChangeCards.delete(seq);
     else this.workspaceChangeCards.set(seq, card);
   }
@@ -100855,15 +100916,15 @@ var RuntimeController = class _RuntimeController {
         if (service === void 0) throw new Error("\u53D8\u66F4\u8BB0\u5F55\u670D\u52A1\u672A\u7EC4\u5408");
         for (const event of getSessionEvents(session)) {
           if (event.type !== "workspace/changes") continue;
-          const summary = service.summary(session.id, event.seq);
-          if (summary === void 0) {
+          const summary2 = service.summary(session.id, event.seq);
+          if (summary2 === void 0) {
             rows.push({ id: `${event.seq}:missing`, title: `\u56DE\u5408 ${event.data.turn} \xB7 \u53D8\u66F4\u5FEB\u7167\u5DF2\u4E0D\u53EF\u7528` });
             continue;
           }
-          for (const [index2, file2] of summary.files.entries()) {
+          for (const [index2, file2] of summary2.files.entries()) {
             const id = `${event.seq}:${index2}`;
             coordinates.set(id, { seq: event.seq, index: index2 });
-            rows.push({ id, title: `\u56DE\u5408 ${summary.turn} \xB7 ${file2.display}`, hint: file2.binary ? "binary" : file2.oversized ? "oversized" : `+${file2.added} -${file2.deleted}` });
+            rows.push({ id, title: `\u56DE\u5408 ${summary2.turn} \xB7 ${file2.display}`, hint: file2.binary ? "binary" : file2.oversized ? "oversized" : `+${file2.added} -${file2.deleted}` });
           }
         }
         return rows;
@@ -101030,6 +101091,7 @@ var RuntimeController = class _RuntimeController {
         rows: this.settingsRows,
         selectedIndex: this.settingsSelectedIndex,
         editing: this.settingsEditing,
+        ...!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching } : {},
         ...this.settingsOnboarding ? { onboarding: true } : {},
         ...this.settingsBusy ? { busy: true } : {},
         ...this.settingsUpdateError === void 0 ? {} : { updateError: this.settingsUpdateError }
@@ -101584,15 +101646,15 @@ var RuntimeController = class _RuntimeController {
       if (service === void 0) throw new Error("\u5B9A\u65F6\u4EFB\u52A1\u670D\u52A1\u672A\u7EC4\u5408");
       const catalog = await service.catalog();
       if (this.closed || !this.schedulePane.open || seq !== this.scheduleSeq) return;
-      const rows = catalog.map((record2) => ({
-        id: record2.id,
-        sessionId: record2.sessionId,
-        title: record2.title,
-        prompt: record2.prompt,
-        scheduledAt: record2.scheduledAt,
-        active: record2.status === "active",
-        timing: record2.kind === "after" ? "\u5EF6\u65F6\u4E00\u6B21" : record2.kind === "at" ? "\u6307\u5B9A\u65F6\u95F4\u4E00\u6B21" : record2.kind === "every" ? `\u6BCF ${record2.everySeconds} \u79D2` : record2.kind === "daily" ? `\u6BCF\u5929 ${record2.time} \xB7 ${record2.timeZone}` : record2.kind === "weekly" ? `\u6BCF\u5468 ${record2.weekdays.join(",")} ${record2.time} \xB7 ${record2.timeZone}` : `cron ${record2.expression} \xB7 ${record2.timeZone}`,
-        ...record2.lastDelivery === void 0 ? {} : { lastDelivery: record2.lastDelivery.deliveredAt }
+      const rows = catalog.map((record3) => ({
+        id: record3.id,
+        sessionId: record3.sessionId,
+        title: record3.title,
+        prompt: record3.prompt,
+        scheduledAt: record3.scheduledAt,
+        active: record3.status === "active",
+        timing: record3.kind === "after" ? "\u5EF6\u65F6\u4E00\u6B21" : record3.kind === "at" ? "\u6307\u5B9A\u65F6\u95F4\u4E00\u6B21" : record3.kind === "every" ? `\u6BCF ${record3.everySeconds} \u79D2` : record3.kind === "daily" ? `\u6BCF\u5929 ${record3.time} \xB7 ${record3.timeZone}` : record3.kind === "weekly" ? `\u6BCF\u5468 ${record3.weekdays.join(",")} ${record3.time} \xB7 ${record3.timeZone}` : `cron ${record3.expression} \xB7 ${record3.timeZone}`,
+        ...record3.lastDelivery === void 0 ? {} : { lastDelivery: record3.lastDelivery.deliveredAt }
       }));
       const selectedIndex = Math.max(0, rows.findIndex((row) => row.id === selectedId));
       this.schedulePane = {
@@ -103271,28 +103333,58 @@ ${line5}`.slice(-64e3);
           this.setFeedback("\u2713 \u5DF2\u8DF3\u8FC7\u5F15\u5BFC");
           return;
         }
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
+        if (this.settingsNavigation.back()) {
+          this.settingsSearching = false;
+          this.syncSettingsNavigation();
+          return;
+        }
         this.settingsOpen = false;
         this.settingsEditing = false;
         this.settingsBusy = false;
         this.settingsUpdateError = void 0;
         this.emit();
         return;
+      case "settings-search":
+        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
+        this.settingsSearching = action.active;
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
+        this.settingsNavigation.search(action.query);
+        this.syncSettingsNavigation();
+        return;
       case "settings-group":
-        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return;
-        this.settingsSelectedIndex = nextSettingsGroup(this.settingsRows, this.settingsSelectedIndex, action.delta);
-        this.emit();
+        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
+        this.settingsNavigation.group(action.delta);
+        this.syncSettingsNavigation();
         return;
       case "settings-move":
-        if (!this.settingsOpen || this.settingsEditing) return;
+        if (!this.settingsOpen || this.settingsEditing || this.settingsBusy) return;
         if (this.settingsRows.length === 0) return;
         this.settingsSelectedIndex = Math.min(
           this.settingsRows.length - 1,
           Math.max(0, this.settingsSelectedIndex + action.delta)
         );
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
         this.emit();
         return;
       case "settings-edit":
-        if (!this.settingsOpen) return;
+      case "settings-edit-json":
+        if (!this.settingsOpen || this.settingsBusy) return;
+        if (!this.settingsOnboarding) {
+          this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
+          if (action.kind === "settings-edit" && this.settingsNavigation.enter()) {
+            this.settingsSearching = false;
+            this.syncSettingsNavigation();
+            return;
+          }
+          if (this.settingsRows[this.settingsSelectedIndex]?.editable === false) return;
+        }
+        if (this.settingsRows[this.settingsSelectedIndex] === void 0) {
+          this.settingsUpdateError = "\u65E0\u53EF\u7528\u8BBE\u7F6E";
+          this.emit();
+          return;
+        }
         this.settingsEditing = true;
         this.settingsUpdateError = void 0;
         this.emit();
@@ -105075,8 +105167,10 @@ ${row.hint ?? ""}` });
     this.settingsEditing = false;
     this.settingsBusy = false;
     this.settingsUpdateError = void 0;
-    this.settingsRows = this.readSettingsRows();
+    this.settingsNavigation = new SettingsNavigation([]);
     this.settingsSelectedIndex = 0;
+    this.settingsSearching = false;
+    this.settingsRows = this.readSettingsRows();
     this.settingsOnboarding = false;
     this.settingsOpen = true;
     this.emit();
@@ -105091,15 +105185,20 @@ ${row.hint ?? ""}` });
     const settings = this.ctx.get("settings");
     if (settings === void 0) return [];
     const descriptors = settings.describe({ redactSecrets: true });
-    const rows = settingsRowsFromDescribe(
-      descriptors,
-      (ns) => descriptors.find((form) => form.ns === ns)?.value,
-      { expandProviders: true }
-    );
-    return [...rows, ...credentialSettingRows(
+    const credentials = credentialSettingRows(
       this.referencedCredentialNames(),
       (name2) => this.configuredCredentials.get(name2)
-    )];
+    );
+    this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
+    this.settingsNavigation.replace(settingsTreeFromDescribe(descriptors, credentials));
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex;
+    return this.settingsNavigation.rows;
+  }
+  syncSettingsNavigation() {
+    this.settingsRows = this.settingsNavigation.rows;
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex;
+    this.settingsUpdateError = void 0;
+    this.emit();
   }
   /**
    * Credential reference names this configuration asks for: the DeepSeek key
@@ -105186,8 +105285,8 @@ ${row.hint ?? ""}` });
   }
   /**
    * Persist the composer draft as the selected row's field. Onboarding writes
-   * `ctx.credentials.set` and never logs the value. Success closes the overlay
-   * and writes the status-row confirmation; failure stays on the overlay with
+   * `ctx.credentials.set` and never logs the value. Success retains the selected
+   * field and writes the status-row confirmation; failure stays on the overlay with
    * the ✗ pair. Does not write environment variables.
    *
    * A draft the parser marked with {@link AUTO_DISCOVER} defers profile
@@ -105218,10 +105317,13 @@ ${row.hint ?? ""}` });
     }
     let parsed;
     try {
+      const descriptor = settings.describe().find((form) => String(form.ns) === row.namespace);
+      const path2 = row.sourcePath ?? row.field.split(".");
+      const stored = atPath(descriptor?.user, path2);
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
-        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : fieldOf(settings.describe().find((form) => String(form.ns) === row.namespace)?.value, row.field),
+        row.field === "providers" ? this.rawUserProviders(row.namespace) ?? {} : stored === void 0 ? atPath(descriptor?.value, path2) : stored,
         value,
         this.catalogProviderIds(row.namespace)
       );
@@ -105245,14 +105347,14 @@ ${row.hint ?? ""}` });
     }
     this.ownWork((async () => {
       try {
-        await settings.update(row.namespace, createSettingsPatch(row.field, parsed));
+        const descriptor = settings.describe().find((form) => String(form.ns) === row.namespace);
+        await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split("."), parsed, descriptor?.user));
         if (this.closed) return;
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting();
-        this.settingsOpen = false;
         this.settingsEditing = false;
-        this.settingsOnboarding = false;
         this.settingsBusy = false;
         this.settingsUpdateError = void 0;
+        this.settingsRows = this.readSettingsRows();
         this.setFeedback(`\u2713 \u5DF2\u66F4\u65B0 ${row.field}`);
       } catch (error51) {
         if (this.closed) return;
@@ -105267,7 +105369,7 @@ ${row.hint ?? ""}` });
    * closing the settings overlay. Non-toggleable rows open the inline editor.
    */
   toggleSelectedSettingValue() {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return;
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
     const row = this.settingsRows[this.settingsSelectedIndex];
     if (row === void 0) return;
     let nextValue;
@@ -105295,7 +105397,8 @@ ${row.hint ?? ""}` });
     if (settings === void 0) return;
     this.ownWork((async () => {
       try {
-        await settings.update(row.namespace, createSettingsPatch(row.field, nextValue));
+        const descriptor = settings.describe().find((form) => String(form.ns) === row.namespace);
+        await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split("."), nextValue, descriptor?.user));
         if (this.closed) return;
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting();
         this.settingsUpdateError = void 0;
@@ -105400,10 +105503,9 @@ ${row.hint ?? ""}` });
     }
     if (this.isDisposed()) return;
     this.settingsBusy = false;
-    this.settingsOpen = false;
     this.settingsEditing = false;
-    this.settingsOnboarding = false;
     this.settingsUpdateError = void 0;
+    this.settingsRows = this.readSettingsRows();
     this.setFeedback(`\u2713 \u5DF2\u5199\u5165 ${String(discovered.length)} \u4E2A\u6A21\u578B`);
   }
   /** Surface a discovery refusal on the overlay; nothing was written. */
@@ -105568,7 +105670,7 @@ ${row.hint ?? ""}` });
    * Leaves the overlay open.
    */
   exportSettingsDocument() {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return;
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
     const settings = this.ctx.get("settings");
     if (settings === void 0 || typeof settings.prepareDocument !== "function") {
       this.setFeedback("\u65E0\u53EF\u7528\u8BBE\u7F6E\u6587\u4EF6");
@@ -105591,7 +105693,7 @@ ${row.hint ?? ""}` });
    * Reread overlay rows from the live host without closing the overlay.
    */
   reloadSettingsRows() {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return;
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return;
     this.settingsRows = this.readSettingsRows();
     if (this.settingsSelectedIndex >= this.settingsRows.length) {
       this.settingsSelectedIndex = Math.max(0, this.settingsRows.length - 1);

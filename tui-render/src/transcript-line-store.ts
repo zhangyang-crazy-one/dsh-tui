@@ -68,7 +68,7 @@ export interface TranscriptRenderStoreStats {
   readonly stableRowsReused: number
   /** Rows added or replaced through active-tail mutation. */
   readonly tailRowsRerendered: number
-  /** Currently cached settled blocks. */
+  /** Currently resident blocks, including the active tail. */
   readonly cachedBlocks: number
   /** Total physical rows currently cached. */
   readonly cachedRows: number
@@ -234,8 +234,12 @@ interface BlockEntry {
   priorSettled: readonly PhysicalLine[] | null | undefined
   /** Mutable revision while the block owns the active tail. */
   activeRevision: MutableRevisionImpl | null
-  /** Monotonic LRU access counter; lower is colder. */
-  lastAccess: number
+  /** Size of the currently readable snapshot (active or settled). */
+  cachedRows: number
+  cachedBytes: number
+  resident: boolean
+  /** Retained settled size, also used to restore a discarded active tail. */
+  settledBytes: number
 }
 
 interface CounterState {
@@ -276,7 +280,7 @@ class MutableRevisionImpl implements MutableRevision {
     this.buffer.push(...lines)
     this.revision += 1
     this.store.recordTailRerender(lines.length)
-    this.store.touchActiveBlock(this.blockId)
+    this.store.recordActiveLines(this, lines, true)
   }
 
   reset(lines: readonly PhysicalLine[]): void {
@@ -284,7 +288,7 @@ class MutableRevisionImpl implements MutableRevision {
     this.buffer = [...lines]
     this.revision += 1
     this.store.recordTailRerender(lines.length)
-    this.store.touchActiveBlock(this.blockId)
+    this.store.recordActiveLines(this, lines, false)
   }
 
   replace(input: { source: string; lines: readonly PhysicalLine[] }): void {
@@ -293,7 +297,7 @@ class MutableRevisionImpl implements MutableRevision {
     this.buffer = [...input.lines]
     this.revision += 1
     this.store.recordTailRerender(input.lines.length)
-    this.store.touchActiveBlock(this.blockId)
+    this.store.recordActiveLines(this, input.lines, false)
   }
 
   settle(): BlockSnapshot {
@@ -321,8 +325,12 @@ class MutableRevisionImpl implements MutableRevision {
 class TranscriptRenderStoreImpl implements TranscriptRenderStore {
   private readonly config: TranscriptRenderStoreConfig
   private readonly entries = new Map<string, BlockEntry>()
+  /** Insertion order is LRU order; evicted history is never inspected. */
+  private readonly settledEntries = new Set<BlockEntry>()
   private readonly pins = new Set<string>()
-  private accessCounter = 0
+  private cachedBlocks = 0
+  private cachedRows = 0
+  private cachedBytes = 0
   private readonly counters: CounterState = {
     hits: 0,
     evictions: 0,
@@ -354,7 +362,10 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
         settledLines: undefined,
         priorSettled: null,
         activeRevision: null,
-        lastAccess: this.nextAccess(),
+        cachedRows: 0,
+        cachedBytes: 0,
+        resident: false,
+        settledBytes: 0,
       })
       this.enforceBudget()
       return
@@ -368,10 +379,14 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     const sourceChanged = existing.source !== input.source
     existing.source = input.source
     existing.scopeKey = input.scopeKey
-    existing.lastAccess = this.nextAccess()
     if (scopeChanged || sourceChanged) {
       existing.revision += 1
       existing.settledLines = null
+      existing.settledBytes = 0
+      this.settledEntries.delete(existing)
+      this.updateResident(existing, 0, 0, false)
+    } else if (this.settledEntries.delete(existing)) {
+      this.settledEntries.add(existing)
     }
     this.enforceBudget()
   }
@@ -389,7 +404,10 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
         settledLines: undefined,
         priorSettled: null,
         activeRevision: null,
-        lastAccess: this.nextAccess(),
+        cachedRows: 0,
+        cachedBytes: 0,
+        resident: false,
+        settledBytes: 0,
       }
       this.entries.set(input.blockId, entry)
     }
@@ -401,6 +419,8 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     const owned = entry
     const revision = new MutableRevisionImpl(this, owned, input.source, input.scopeKey)
     owned.activeRevision = revision
+    this.settledEntries.delete(owned)
+    this.updateResident(owned, 0, 0, true)
     return revision
   }
 
@@ -408,13 +428,14 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     this.assertBlockId(input.blockId)
     const entry = this.entries.get(input.blockId)
     if (entry === undefined) return undefined
-    entry.lastAccess = this.nextAccess()
     const active = entry.activeRevision
     if (active !== null) {
       this.counters.stableRowsReused += active.lines.length
       return snapshotFromEntry(entry, active.lines)
     }
     if (entry.settledLines !== undefined && entry.settledLines !== null) {
+      this.settledEntries.delete(entry)
+      this.settledEntries.add(entry)
       this.counters.hits += 1
       this.counters.stableRowsReused += entry.settledLines.length
       return snapshotFromEntry(entry, entry.settledLines)
@@ -427,6 +448,9 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     })
     const frozen = Object.freeze([...rebuilt])
     entry.settledLines = frozen
+    entry.settledBytes = lineBytes(frozen)
+    this.settledEntries.add(entry)
+    this.updateResident(entry, frozen.length, entry.settledBytes, true)
     this.counters.rebuilds += 1
     this.counters.stableRowsReused += frozen.length
     this.enforceBudget()
@@ -449,8 +473,11 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
 
   reset(): void {
     this.entries.clear()
+    this.settledEntries.clear()
     this.pins.clear()
-    this.accessCounter = 0
+    this.cachedBlocks = 0
+    this.cachedRows = 0
+    this.cachedBytes = 0
     this.counters.hits = 0
     this.counters.evictions = 0
     this.counters.rebuilds = 0
@@ -481,35 +508,19 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
   }
 
   totalRows(): number {
-    let total = 0
-    for (const entry of this.entries.values()) {
-      total += this.linesFor(entry.blockId).length
-    }
-    return total
+    return this.cachedRows
   }
 
   stats(): TranscriptRenderStoreStats {
-    let cachedBlocks = 0
-    let cachedRows = 0
-    let cachedBytes = 0
-    for (const entry of this.entries.values()) {
-      const lines = this.linesFor(entry.blockId)
-      if (lines.length === 0 && entry.settledLines === undefined && entry.activeRevision === null) {
-        continue
-      }
-      cachedBlocks += 1
-      cachedRows += lines.length
-      for (const line of lines) cachedBytes += physicalLineByteSize(line)
-    }
     return {
       hits: this.counters.hits,
       evictions: this.counters.evictions,
       rebuilds: this.counters.rebuilds,
       stableRowsReused: this.counters.stableRowsReused,
       tailRowsRerendered: this.counters.tailRowsRerendered,
-      cachedBlocks,
-      cachedRows,
-      cachedBytes,
+      cachedBlocks: this.cachedBlocks,
+      cachedRows: this.cachedRows,
+      cachedBytes: this.cachedBytes,
     }
   }
 
@@ -527,8 +538,9 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     entry.activeRevision = null
     entry.scopeKey = scopeKey
     entry.settledLines = frozen
+    entry.settledBytes = entry.cachedBytes
     entry.priorSettled = null
-    entry.lastAccess = this.nextAccess()
+    this.settledEntries.add(entry)
     this.enforceBudget()
     return snapshotFromEntry(entry, frozen)
   }
@@ -542,7 +554,13 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     entry.activeRevision = null
     entry.settledLines = entry.priorSettled ?? null
     entry.priorSettled = null
-    entry.lastAccess = this.nextAccess()
+    if (entry.settledLines !== null) this.settledEntries.add(entry)
+    this.updateResident(
+      entry,
+      entry.settledLines?.length ?? 0,
+      entry.settledBytes,
+      entry.settledLines !== null,
+    )
     this.enforceBudget()
   }
 
@@ -551,10 +569,16 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     this.counters.tailRowsRerendered += rowCount
   }
 
-  /** Internal: called from the revision to refresh LRU access on the owning block. */
-  touchActiveBlock(blockId: string): void {
-    const entry = this.entries.get(blockId)
-    if (entry !== undefined) entry.lastAccess = this.nextAccess()
+  /** Internal: measure only changed rows of the active block. */
+  recordActiveLines(revision: MutableRevisionImpl, lines: readonly PhysicalLine[], append: boolean): void {
+    const entry = this.entries.get(revision.blockId)
+    if (entry === undefined || entry.activeRevision !== revision) return
+    this.updateResident(
+      entry,
+      (append ? entry.cachedRows : 0) + lines.length,
+      (append ? entry.cachedBytes : 0) + lineBytes(lines),
+      true,
+    )
   }
 
   /** Internal: keep source authority current while an active handle lives. */
@@ -567,14 +591,13 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     entry.revision += 1
   }
 
-  private linesFor(blockId: string): readonly PhysicalLine[] {
-    const entry = this.entries.get(blockId)
-    // v8 ignore next -- callers (totalRows, stats) iterate entries.values() so the entry is always
-    // defined; the check stays as a safety net.
-    if (entry === undefined) return EMPTY_LINES
-    if (entry.activeRevision !== null) return entry.activeRevision.lines
-    if (entry.settledLines !== undefined && entry.settledLines !== null) return entry.settledLines
-    return EMPTY_LINES
+  private updateResident(entry: BlockEntry, rows: number, bytes: number, resident: boolean): void {
+    this.cachedRows += rows - entry.cachedRows
+    this.cachedBytes += bytes - entry.cachedBytes
+    this.cachedBlocks += Number(resident) - Number(entry.resident)
+    entry.cachedRows = rows
+    entry.cachedBytes = bytes
+    entry.resident = resident
   }
 
   private assertBlockId(blockId: string): void {
@@ -589,54 +612,26 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     }
   }
 
-  private nextAccess(): number {
-    this.accessCounter += 1
-    return this.accessCounter
-  }
-
   /** Evict unpinned settled blocks until both row and byte budgets fit. */
   private enforceBudget(): void {
-    const totals = this.computeTotals()
-    if (totals.rows <= this.config.maxRows && totals.bytes <= this.config.maxBytes) return
-    const candidates: BlockEntry[] = []
-    for (const entry of this.entries.values()) {
+    if (this.cachedRows <= this.config.maxRows && this.cachedBytes <= this.config.maxBytes) return
+    for (const entry of this.settledEntries) {
+      if (this.cachedRows <= this.config.maxRows && this.cachedBytes <= this.config.maxBytes) break
       if (this.pins.has(entry.blockId)) continue
-      if (entry.activeRevision !== null) continue
-      if (entry.settledLines === null || entry.settledLines === undefined) continue
-      candidates.push(entry)
-    }
-    candidates.sort((a, b) => a.lastAccess - b.lastAccess)
-    for (const entry of candidates) {
-      if (totals.rows <= this.config.maxRows && totals.bytes <= this.config.maxBytes) break
-      const settled = entry.settledLines as readonly PhysicalLine[]
-      const rowCount = settled.length
-      let byteCount = 0
-      for (const line of settled) byteCount += physicalLineByteSize(line)
       entry.settledLines = null
-      entry.lastAccess = 0
+      entry.settledBytes = 0
+      this.settledEntries.delete(entry)
+      this.updateResident(entry, 0, 0, false)
       this.counters.evictions += 1
-      totals.rows -= rowCount
-      totals.bytes -= byteCount
     }
-  }
-
-  private computeTotals(): { rows: number; bytes: number } {
-    let rows = 0
-    let bytes = 0
-    for (const entry of this.entries.values()) {
-      const lines = entry.activeRevision === null
-        ? (entry.settledLines ?? EMPTY_LINES)
-        : entry.activeRevision.lines
-      for (const line of lines) {
-        rows += 1
-        bytes += physicalLineByteSize(line)
-      }
-    }
-    return { rows, bytes }
   }
 }
 
-const EMPTY_LINES: readonly PhysicalLine[] = Object.freeze([])
+function lineBytes(lines: readonly PhysicalLine[]): number {
+  let bytes = 0
+  for (const line of lines) bytes += physicalLineByteSize(line)
+  return bytes
+}
 
 function snapshotFromEntry(
   entry: BlockEntry,

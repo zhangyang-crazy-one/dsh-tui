@@ -1,0 +1,129 @@
+> @crazyhappyone/dsh-tui@0.1.0-alpha.50 pack:check
+> npm pack --dry-run --json
+
+[
+  {
+    "id": "@crazyhappyone/dsh-tui@0.1.0-alpha.50",
+    "name": "@crazyhappyone/dsh-tui",
+    "version": "0.1.0-alpha.50",
+    "size": 1517935,
+    "unpackedSize": 6476319,
+    "shasum": "7a8a74833520f76b1a9fc7961b4da87adb52a36d",
+    "integrity": "sha512-GAVScQGP2LxxciSFrhZ/R9jnRz/0xKOAlsKetJ50Ii1DLexpKK0oXikjg6pUge2HilwGOVdP6pe+Ty+VKLFk7g==",
+    "filename": "crazyhappyone-dsh-tui-0.1.0-alpha.50.tgz",
+    "files": [
+      {
+        "path": "CHANGELOG.md",
+        "size": 9346,
+        "mode": 420
+      },
+      {
+        "path": "LICENSE",
+        "size": 1069,
+        "mode": 420
+      },
+      {
+        "path": "README.i18n.yaml",
+        "size": 294,
+        "mode": 420
+      },
+      {
+        "path": "README.md",
+        "size": 24062,
+        "mode": 420
+      },
+      {
+        "path": "README.zh.md",
+        "size": 22083,
+        "mode": 420
+      },
+      {
+        "path": "assets/screenshots/dsh-tui-hello.png",
+        "size": 201581,
+        "mode": 420
+      },
+      {
+        "path": "assets/screenshots/dsh-tui-settings.png",
+        "size": 62458,
+        "mode": 420
+      },
+      {
+        "path": "bin/dsh-tui.js",
+        "size": 3200,
+        "mode": 493
+      },
+      {
+        "path": "cordis.patch.yml",
+        "size": 6095,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.js",
+        "size": 4456767,
+        "mode": 420
+      },
+      {
+        "path": "dist/schedule.js",
+        "size": 1444312,
+        "mode": 420
+      },
+      {
+        "path": "dist/settings.js",
+        "size": 36122,
+        "mode": 420
+      },
+      {
+        "path": "dist/startup.js",
+        "size": 113150,
+        "mode": 420
+      },
+      {
+        "path": "dist/zen-proxy.js",
+        "size": 38931,
+        "mode": 420
+      },
+      {
+        "path": "package.json",
+        "size": 3832,
+        "mode": 420
+      },
+      {
+        "path": "presets/base-disable.patch.yml",
+        "size": 1194,
+        "mode": 420
+      },
+      {
+        "path": "presets/cordis.patch.yml",
+        "size": 7406,
+        "mode": 420
+      },
+      {
+        "path": "presets/minimal.patch.yml",
+        "size": 3724,
+        "mode": 420
+      },
+      {
+        "path": "presets/ptc.patch.yml",
+        "size": 6985,
+        "mode": 420
+      },
+      {
+        "path": "presets/registry.patch.yml",
+        "size": 496,
+        "mode": 420
+      },
+      {
+        "path": "presets/standard.patch.yml",
+        "size": 6799,
+        "mode": 420
+      },
+      {
+        "path": "src/launcher.js",
+        "size": 26413,
+        "mode": 420
+      }
+    ],
+    "entryCount": 22,
+    "bundled": []
+  }
+]

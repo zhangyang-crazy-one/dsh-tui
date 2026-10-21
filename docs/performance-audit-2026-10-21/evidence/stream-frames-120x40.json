@@ -1,0 +1,99 @@
+{
+  "source": "/tmp/dsh-perf-audit/live-markdown-100-120/final.ansi",
+  "columns": 120,
+  "rows": 40,
+  "frames": 470,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 7,
+  "mismatchExamples": [
+    {
+      "frame": 53,
+      "rows": [
+        {
+          "row": 22,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    正确做法：逐面给出目标位置（12 片 → 12 个映射）。op.collapse 本来就能表达任意逐面等距映射，缺的是映射表。          ·"
+        }
+      ]
+    },
+    {
+      "frame": 104,
+      "rows": [
+        {
+          "row": 7,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                                    ·"
+        },
+        {
+          "row": 22,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    正确做法：逐面给出目标位置（12 片 → 12 个映射）。op.collapse 本来就能表达任意逐面等距映射，缺的是映射表。          ·"
+        }
+      ]
+    },
+    {
+      "frame": 157,
+      "rows": [
+        {
+          "row": 7,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                                    ·"
+        },
+        {
+          "row": 22,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    正确做法：逐面给出目标位置（12 片 → 12 个映射）。op.collapse 本来就能表达任意逐面等距映射，缺的是映射表。          ·"
+        }
+      ]
+    },
+    {
+      "frame": 210,
+      "rows": [
+        {
+          "row": 7,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                                    ·"
+        },
+        {
+          "row": 22,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    正确做法：逐面给出目标位置（12 片 → 12 个映射）。op.collapse 本来就能表达任意逐面等距映射，缺的是映射表。          ·"
+        }
+      ]
+    },
+    {
+      "frame": 265,
+      "rows": [
+        {
+          "row": 7,
+          "col": 3,
+          "width": 1,
+          "text": " ",
+          "actual": "  │ LIVE_REASONING 正在分析逐面变换和目标映射表，随后输出完整结果。                                                    ·"
+        },
+        {
+          "row": 22,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    正确做法：逐面给出目标位置（12 片 → 12 个映射）。op.collapse 本来就能表达任意逐面等距映射，缺的是映射表。          ·"
+        }
+      ]
+    }
+  ]
+}

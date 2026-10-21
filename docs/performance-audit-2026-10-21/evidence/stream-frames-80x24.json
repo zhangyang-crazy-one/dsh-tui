@@ -1,0 +1,106 @@
+{
+  "source": "/tmp/dsh-perf-audit/live-markdown-100-80x24/final.ansi",
+  "columns": 80,
+  "rows": 24,
+  "frames": 503,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 7,
+  "mismatchExamples": [
+    {
+      "frame": 48,
+      "rows": [
+        {
+          "row": 6,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    达任意逐面等距映射，缺的是映射表。                                         ·"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    自动按最近点配对生成 12 个旋转平移。这样我只需要从图上量 12 个目标点。     ·"
+        }
+      ]
+    },
+    {
+      "frame": 102,
+      "rows": [
+        {
+          "row": 6,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    达任意逐面等距映射，缺的是映射表。                                         ·"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    自动按最近点配对生成 12 个旋转平移。这样我只需要从图上量 12 个目标点。     ·"
+        }
+      ]
+    },
+    {
+      "frame": 154,
+      "rows": [
+        {
+          "row": 6,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    达任意逐面等距映射，缺的是映射表。                                         ·"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    自动按最近点配对生成 12 个旋转平移。这样我只需要从图上量 12 个目标点。     ·"
+        }
+      ]
+    },
+    {
+      "frame": 265,
+      "rows": [
+        {
+          "row": 6,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    达任意逐面等距映射，缺的是映射表。                                         ·"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    自动按最近点配对生成 12 个旋转平移。这样我只需要从图上量 12 个目标点。     ·"
+        }
+      ]
+    },
+    {
+      "frame": 370,
+      "rows": [
+        {
+          "row": 6,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    达任意逐面等距映射，缺的是映射表。                                         ·"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "width": 3,
+          "text": "   ",
+          "actual": "    自动按最近点配对生成 12 个旋转平移。这样我只需要从图上量 12 个目标点。     ·"
+        }
+      ]
+    }
+  ]
+}

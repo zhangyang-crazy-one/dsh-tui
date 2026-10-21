@@ -31,6 +31,8 @@ dsh-tui
 
 正在运行的源码链接安装可通过 `/reload` 加载新构建，但会保留进程原先选中的 profile。若从 `tui` 切换到 `deepseek-tui`，需退出后重新启动，或显式指定 profile。恢复的 Goal 需执行 `/goal resume` 才会自动续跑。
 
+源码另包含尚未发布的渲染与设置修复：TTY 聊天内容由单一物理帧绘制，滚轮不再逐行追赶，`/settings` 改为多级浏览。Enter 进入分类、namespace、Provider、model 或字段；←/Esc 返回上一层；`/` 搜索；`i` 编辑对象 JSON；Space 切换支持的值。保存后停留当前位置，继续使用 DSH 官方 settings/credentials 服务。详情见 [Unreleased](CHANGELOG.md#unreleased) 和[性能审计](docs/performance-audit-2026-10-21/analysis.md)。这些源码修复尚未包含在 npm `0.1.0-alpha.50` 中。
+
 ## 目录
 
 - [版本与升级](#010-alpha50-版本)

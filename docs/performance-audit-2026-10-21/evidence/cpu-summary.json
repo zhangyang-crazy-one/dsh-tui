@@ -1,0 +1,455 @@
+{
+  "sampledMs": 7372.618,
+  "intervalStartMs": 4526.457401,
+  "intervalEndMs": 11899.313582,
+  "functions": [
+    {
+      "function": "(idle)",
+      "file": "",
+      "line": 0,
+      "sampledMs": 4519.503,
+      "percent": 61.30119585742812,
+      "percentOfNonIdle": null
+    },
+    {
+      "function": "process.env.NODE_ENV.exports.createElement",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js",
+      "line": 1004,
+      "sampledMs": 443.529,
+      "percent": 6.015895574679171,
+      "percentOfNonIdle": 15.545430170182412
+    },
+    {
+      "function": "(garbage collector)",
+      "file": "",
+      "line": 0,
+      "sampledMs": 169.058,
+      "percent": 2.293052481493006,
+      "percentOfNonIdle": 5.92538330912003
+    },
+    {
+      "function": "tokenize",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js",
+      "line": 125,
+      "sampledMs": 160.587,
+      "percent": 2.1781543543962267,
+      "percentOfNonIdle": 5.628479749326612
+    },
+    {
+      "function": "stringWidth",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js",
+      "line": 150,
+      "sampledMs": 148.892,
+      "percent": 2.019526849214214,
+      "percentOfNonIdle": 5.218576888768941
+    },
+    {
+      "function": "(program)",
+      "file": "",
+      "line": 0,
+      "sampledMs": 116.694,
+      "percent": 1.5828027438828378,
+      "percentOfNonIdle": 4.090055956384512
+    },
+    {
+      "function": "applyFrameSnapshot",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/screen-atlas.ts",
+      "line": 1,
+      "sampledMs": 88.265,
+      "percent": 1.1972002347063146,
+      "percentOfNonIdle": 3.0936362537086652
+    },
+    {
+      "function": "diffAnsiCodes",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/diff.js",
+      "line": 7,
+      "sampledMs": 85.075,
+      "percent": 1.1539320225190022,
+      "percentOfNonIdle": 2.9818286329152515
+    },
+    {
+      "function": "structuredClone",
+      "file": "node:internal/worker/js_transferable",
+      "line": 112,
+      "sampledMs": 82.021,
+      "percent": 1.1125084739233744,
+      "percentOfNonIdle": 2.8747877320051938
+    },
+    {
+      "function": "styledCharsToString",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js",
+      "line": 20,
+      "sampledMs": 78.745,
+      "percent": 1.0680737832883787,
+      "percentOfNonIdle": 2.7599658618737757
+    },
+    {
+      "function": "ReactElement",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js",
+      "line": 200,
+      "sampledMs": 72.383,
+      "percent": 0.9817815055655942,
+      "percentOfNonIdle": 2.536981509683275
+    },
+    {
+      "function": "computeTotals",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/transcript-line-store.ts",
+      "line": 1,
+      "sampledMs": 63.426,
+      "percent": 0.8602914188691181,
+      "percentOfNonIdle": 2.223043936189042
+    },
+    {
+      "function": "displayWidth",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/content.ts",
+      "line": 1,
+      "sampledMs": 55.681,
+      "percent": 0.7552405400632448,
+      "percentOfNonIdle": 1.951586248714124
+    },
+    {
+      "function": "runWithFiberInDEV",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "line": 2500,
+      "sampledMs": 49.949,
+      "percent": 0.6774933951548826,
+      "percentOfNonIdle": 1.75068302539505
+    },
+    {
+      "function": "get",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js",
+      "line": 71,
+      "sampledMs": 36.493,
+      "percent": 0.49498020920112773,
+      "percentOfNonIdle": 1.279058152230106
+    },
+    {
+      "function": "RegExp: ^\\p{RGI_Emoji}$",
+      "file": "",
+      "line": 0,
+      "sampledMs": 32.503,
+      "percent": 0.44086103470978694,
+      "percentOfNonIdle": 1.1392110027110718
+    },
+    {
+      "function": "",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/stream-view.tsx",
+      "line": 1,
+      "sampledMs": 28.091,
+      "percent": 0.38101797760307127,
+      "percentOfNonIdle": 0.9845730017892722
+    },
+    {
+      "function": "",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js",
+      "line": 7,
+      "sampledMs": 27.506,
+      "percent": 0.3730832114182506,
+      "percentOfNonIdle": 0.9640690964086619
+    },
+    {
+      "function": "parseCharacterTokenWithRawSegmentation",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/tokenize-ansi.js",
+      "line": 514,
+      "sampledMs": 26.498,
+      "percent": 0.35941099891517503,
+      "percentOfNonIdle": 0.9287392902143795
+    },
+    {
+      "function": "react_stack_bottom_frame",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "line": 17592,
+      "sampledMs": 26.462,
+      "percent": 0.35892270561149375,
+      "percentOfNonIdle": 0.9274775114217265
+    },
+    {
+      "function": "createTask",
+      "file": "",
+      "line": 0,
+      "sampledMs": 25.302,
+      "percent": 0.34318881027065284,
+      "percentOfNonIdle": 0.8868201947695762
+    },
+    {
+      "function": "addObjectDiffToProperties",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "line": 957,
+      "sampledMs": 24.502,
+      "percent": 0.33233784796662463,
+      "percentOfNonIdle": 0.8587806660439552
+    },
+    {
+      "function": "ansiCodesToString",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js",
+      "line": 51,
+      "sampledMs": 22.312,
+      "percent": 0.30263333865934733,
+      "percentOfNonIdle": 0.782022456157568
+    },
+    {
+      "function": "TuiLoop",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/loop.tsx",
+      "line": 2,
+      "sampledMs": 21.383,
+      "percent": 0.2900326586837946,
+      "percentOfNonIdle": 0.7494615534249406
+    },
+    {
+      "function": "handleWriteReq",
+      "file": "node:internal/stream_base_commons",
+      "line": 46,
+      "sampledMs": 20.385,
+      "percent": 0.27649608320951935,
+      "percentOfNonIdle": 0.7144822413397286
+    },
+    {
+      "function": "logComponentRender",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "line": 1108,
+      "sampledMs": 19.089,
+      "percent": 0.2589175242769936,
+      "percentOfNonIdle": 0.6690582048042225
+    },
+    {
+      "function": "set natives",
+      "file": "",
+      "line": 0,
+      "sampledMs": 18.363,
+      "percent": 0.24907027598608797,
+      "percentOfNonIdle": 0.6436123324857216
+    },
+    {
+      "function": "",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/binaries/yoga-wasm-base64-esm.js",
+      "line": 32,
+      "sampledMs": 18.139,
+      "percent": 0.24603200654096008,
+      "percentOfNonIdle": 0.6357612644425477
+    },
+    {
+      "function": "StreamView",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/stream-view.tsx",
+      "line": 1,
+      "sampledMs": 18.117,
+      "percent": 0.2457336050775993,
+      "percentOfNonIdle": 0.6349901774025931
+    },
+    {
+      "function": "",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js",
+      "line": 196,
+      "sampledMs": 15.994,
+      "percent": 0.2169378638632844,
+      "percentOfNonIdle": 0.5605802780469766
+    },
+    {
+      "function": "renderNodeToOutput",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/render-node-to-output.js",
+      "line": 71,
+      "sampledMs": 14.872,
+      "percent": 0.2017193892318848,
+      "percentOfNonIdle": 0.5212548390092933
+    },
+    {
+      "function": "countWrittenCells",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/frame-fill.ts",
+      "line": 1,
+      "sampledMs": 12.747,
+      "percent": 0.1728965206118098,
+      "percentOfNonIdle": 0.44677484083186264
+    },
+    {
+      "function": "baseVisible",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js",
+      "line": 51,
+      "sampledMs": 12.23,
+      "percent": 0.16588408622283157,
+      "percentOfNonIdle": 0.4286542953929301
+    },
+    {
+      "function": "reconcileChildFibersImpl",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "line": 4417,
+      "sampledMs": 11.704,
+      "percent": 0.158749578507933,
+      "percentOfNonIdle": 0.41021830525583436
+    },
+    {
+      "function": "getStringWidth",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js",
+      "line": 16,
+      "sampledMs": 11.528,
+      "percent": 0.1563623668010468,
+      "percentOfNonIdle": 0.4040496089361977
+    },
+    {
+      "function": "tokenizeAnsi",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/tokenize-ansi.js",
+      "line": 701,
+      "sampledMs": 11.208,
+      "percent": 0.1520219818794355,
+      "percentOfNonIdle": 0.3928337974459493
+    },
+    {
+      "function": "",
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/frame-fill.ts",
+      "line": 1,
+      "sampledMs": 10.633,
+      "percent": 0.1442228527234152,
+      "percentOfNonIdle": 0.3726803861744093
+    },
+    {
+      "function": "createHasContinuationAheadMap",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/index.js",
+      "line": 205,
+      "sampledMs": 10.632,
+      "percent": 0.14420928902053518,
+      "percentOfNonIdle": 0.37264533676350226
+    },
+    {
+      "function": "isZeroWidthCluster",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js",
+      "line": 55,
+      "sampledMs": 10.622,
+      "percent": 0.14407365199173483,
+      "percentOfNonIdle": 0.372294842654432
+    },
+    {
+      "function": "commitUpdate",
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js",
+      "line": 223,
+      "sampledMs": 10.607,
+      "percent": 0.1438701964485343,
+      "percentOfNonIdle": 0.37176910149082654
+    }
+  ],
+  "files": [
+    {
+      "file": "",
+      "sampledMs": 4898.356,
+      "percent": 66.43984538463813
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react.development.js",
+      "sampledMs": 536.066,
+      "percent": 7.271039948088997
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/react-reconciler@0.33.0_react@19.2.8/node_modules/react-reconciler/cjs/react-reconciler.development.js",
+      "sampledMs": 314.209,
+      "percent": 4.2618375182330075
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/string-width@8.2.2/node_modules/string-width/index.js",
+      "sampledMs": 182.276,
+      "percent": 2.472337506161312
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/tokenize.js",
+      "sampledMs": 172.365,
+      "percent": 2.3379076469172824
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/screen-atlas.ts",
+      "sampledMs": 89.321,
+      "percent": 1.2115235049476318
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/diff.js",
+      "sampledMs": 86.136,
+      "percent": 1.1683231112747194
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/styledChars.js",
+      "sampledMs": 85.075,
+      "percent": 1.1539320225190022
+    },
+    {
+      "file": "node:internal/worker/js_transferable",
+      "sampledMs": 82.021,
+      "percent": 1.1125084739233744
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/stream-view.tsx",
+      "sampledMs": 77.088,
+      "percent": 1.0455987276161602
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/output.js",
+      "sampledMs": 70.377,
+      "percent": 0.9545727175882435
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/content.ts",
+      "sampledMs": 67.291,
+      "percent": 0.9127151305004545
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/transcript-line-store.ts",
+      "sampledMs": 65.569,
+      "percent": 0.8893584341410338
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/tokenize-ansi.js",
+      "sampledMs": 58.967,
+      "percent": 0.7998108677270408
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/frame-fill.ts",
+      "sampledMs": 48.907,
+      "percent": 0.6633600167538858
+    },
+    {
+      "file": "wasm://wasm/000460e2",
+      "sampledMs": 47.966,
+      "percent": 0.6505965723437726
+    },
+    {
+      "file": "node:internal/stream_base_commons",
+      "sampledMs": 30.03,
+      "percent": 0.40731799748745967
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/src/loop.tsx",
+      "sampledMs": 28.832,
+      "percent": 0.3910686814371774
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/@alcalzone+ansi-tokenize@0.3.1/node_modules/@alcalzone/ansi-tokenize/build/ansiCodes.js",
+      "sampledMs": 28.681,
+      "percent": 0.3890205623022921
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/yoga-layout@3.2.1/node_modules/yoga-layout/dist/binaries/yoga-wasm-base64-esm.js",
+      "sampledMs": 27.719,
+      "percent": 0.37597228013169814
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/components/Box.js",
+      "sampledMs": 27.506,
+      "percent": 0.3730832114182506
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/reconciler.js",
+      "sampledMs": 25.498,
+      "percent": 0.34584729603513975
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/dsh-tui/tui-render/tests/fixtures/performance-audit.tsx",
+      "sampledMs": 23.279,
+      "percent": 0.31574943934434146
+    },
+    {
+      "file": "node:internal/perf/observe",
+      "sampledMs": 20.269,
+      "percent": 0.27492269367543526
+    },
+    {
+      "file": "file:///home/zhangyangrui/my_programes/deepseek-harness/node_modules/.pnpm/slice-ansi@9.0.1/node_modules/slice-ansi/index.js",
+      "sampledMs": 19.17,
+      "percent": 0.26001618421027645
+    }
+  ],
+  "nonIdleSampledMs": 2853.1150000000007
+}

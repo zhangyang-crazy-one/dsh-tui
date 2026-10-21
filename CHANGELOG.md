@@ -4,12 +4,20 @@
 
 ### Fixed
 
+- Streamed transcript cells now have one physical painter. Ink reserves the slot and paints chrome; sparse incremental frames, pane transitions and resize restore or release that slot without retaining old prose in blank rows.
+- Mouse wheel and touchpad reports land at their target without row-by-row catch-up. Reports received before a React commit retain their combined movement, and scrolling no longer rerenders the parent loop for every report. Scroll latency is measured through the matching stdout callback.
+- Render-store budgets use incremental row/byte totals and resident LRU order instead of repeatedly scanning all historical lines.
+- `/settings` now browses category → namespace → provider/object → model/array → fields. Search, back navigation and successful edits retain location/selection; nested edits preserve unknown user fields through the official settings service. Narrow layouts reserve space for values and actions.
 - [#14](https://github.com/zhangyang-crazy-one/dsh-tui/issues/14): discard transient text from failed `assistant/attempt` streams, keeping live history consistent with durable replay. Successful retries and officially committed interrupted messages remain visible.
 - [#15](https://github.com/zhangyang-crazy-one/dsh-tui/issues/15): restore SSH port-forward instructions when reopening an in-progress DeepSeek login. Automatic browser opening now checks the actual SSH environment; explicit `o` still opens the link.
 - [#16](https://github.com/zhangyang-crazy-one/dsh-tui/issues/16): resolve file-panel relative paths against the current Session directory after `/cd`, with configured-cwd/filesystem fallback. Absolute paths and the previous root on failure retain their behavior.
 
 ### 中文变更说明
 
+- 修复无操作流式输出的重复正文、空白行残影及终端光标定位；聊天内容统一由物理帧绘制，切换面板和调整尺寸时明确清理绘制区域。
+- 修复滚轮/触控板逐行追赶和同批输入只保留最后一次的问题；滚动直接进入视口，延迟统计到对应 stdout 写入回调为止。
+- 历史渲染缓存改用增量行数/字节统计和驻留 LRU，移除预算检查中的反复全量扫描。
+- 设置改为分类、namespace、Provider/对象、model/数组、字段的逐级浏览；支持搜索、返回和保存后停留。继续使用官方配置接口，保留未知字段，窄屏为值和操作预留空间。
 - 修复失败流式片段残留为普通消息，保证实时历史与持久化回放一致；保留成功重试和官方已提交的中断消息。
 - 修复 SSH 登录页关闭重开后丢失转发命令、错误自动打开远端浏览器；显式按 `o` 仍可打开链接。
 - 修复 `/cd` 后文件面板相对路径仍使用启动目录；改用当前会话目录，保留绝对路径及失败时原目录。

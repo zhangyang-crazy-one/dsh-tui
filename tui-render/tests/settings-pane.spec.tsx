@@ -266,7 +266,8 @@ describe('SettingsPane', () => {
 
     vi.mocked(useWindowSize).mockReturnValueOnce({ columns: 10, rows: 24 })
     const zeroBudget = render()
-    expect(zeroBudget).toContain('llm-deepseek · baseURL')
+    expect(zeroBudget).toContain('…')
+    expect(zeroBudget.replace(/\x1b\[[0-9;]*m/gu, '').split('\n').every(line => line.length <= 10)).toBe(true)
     expect(zeroBudget).not.toContain('https://api.deepseek.com')
 
     vi.mocked(useWindowSize).mockReturnValueOnce({ columns: 27, rows: 24 })

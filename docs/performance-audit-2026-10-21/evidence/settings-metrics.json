@@ -1,0 +1,22 @@
+{
+  "providers": 25,
+  "modelsPerProvider": 65,
+  "providerRows": 152,
+  "widths": [
+    {
+      "columns": 40,
+      "zeroValueBudget": 150,
+      "labelOverflows": 150
+    },
+    {
+      "columns": 80,
+      "zeroValueBudget": 25,
+      "labelOverflows": 0
+    },
+    {
+      "columns": 120,
+      "zeroValueBudget": 0,
+      "labelOverflows": 0
+    }
+  ]
+}

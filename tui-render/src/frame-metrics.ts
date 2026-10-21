@@ -65,13 +65,13 @@ export interface FrameMetricsSnapshot {
   stableRowsReused: FrameMetricsCounterSnapshot
   /** Tail rows rerendered because their content changed (counter). */
   tailRowsRerendered: FrameMetricsCounterSnapshot
-  /** Rows mounted into the Ink tree (counter). */
+  /** Physical rows prepared for the viewport plus overscan (legacy counter name). */
   mountedRows: FrameMetricsCounterSnapshot
   /** Cells actually written to stdout (counter). */
   writtenCells: FrameMetricsCounterSnapshot
   /** Render-queue age latency (ring + p95) and depth gauges. */
   renderQueue: RenderQueueSnapshot
-  /** Scroll input-to-paint latency in ms (ring + p95). */
+  /** Input ingress to the matching successful stdout callback, in ms (ring + p95). */
   scrollInputToPaintMs: FrameStatsSnapshot
   /** Cache bytes allocated by the line store (counter). */
   cacheBytes: FrameMetricsCounterSnapshot
@@ -97,7 +97,7 @@ export interface FrameMetricsHandle {
   addStableRowsReused(n: number): void
   /** Add rerendered tail rows to the counter (negative deltas allowed). */
   addTailRowsRerendered(n: number): void
-  /** Add mounted rows to the counter (negative deltas allowed). */
+  /** Add prepared viewport/overscan rows to the legacy counter (negative deltas allowed). */
   addMountedRows(n: number): void
   /** Add written cells to the counter (negative deltas allowed). */
   addWrittenCells(n: number): void
@@ -150,6 +150,61 @@ export function completeDeltaStdoutDrain(
   if (startedAt === undefined) return
   PENDING_DELTA_INGRESS.delete(metrics)
   metrics.recordDeltaIngressToStdoutDrain(Math.max(0, nowMs - startedAt))
+}
+
+/** Constant-space input batch waiting for its latest viewport revision. */
+const PENDING_SCROLL_INPUTS = new WeakMap<FrameMetricsHandle, {
+  pending: { revision: number; startedAt: number } | undefined
+  generation: number
+}>()
+
+/** Mark a scroll at input ingress, before React or viewport scheduling. */
+export function markScrollInput(
+  metrics: FrameMetricsHandle,
+  revision: number,
+  nowMs: number = performance.now(),
+): void {
+  let state = PENDING_SCROLL_INPUTS.get(metrics)
+  if (state === undefined) {
+    state = { pending: undefined, generation: 0 }
+    PENDING_SCROLL_INPUTS.set(metrics, state)
+  }
+  if (state.pending === undefined) state.pending = { revision, startedAt: nowMs }
+  else {
+    metrics.recordCoalescedInput()
+    state.pending.revision = Math.max(state.pending.revision, revision)
+    state.pending.startedAt = Math.min(state.pending.startedAt, nowMs)
+  }
+}
+
+/** Cancel pending and in-flight scroll samples when the viewport unmounts. */
+export function clearScrollInputs(metrics: FrameMetricsHandle): void {
+  const state = PENDING_SCROLL_INPUTS.get(metrics)
+  if (state === undefined) return
+  state.pending = undefined
+  state.generation += 1
+}
+
+/**
+ * Bind a coalesced input batch to the write containing its latest revision.
+ * Older frames cannot consume a newer input. The returned callback records
+ * completion once; teardown cancels callbacks from a previous viewport.
+ */
+export function takeScrollPaintCompletion(
+  metrics: FrameMetricsHandle,
+  revision: number,
+): (() => void) | undefined {
+  const state = PENDING_SCROLL_INPUTS.get(metrics)
+  const pending = state?.pending
+  if (state === undefined || pending === undefined || revision < pending.revision) return undefined
+  state.pending = undefined
+  const { generation } = state
+  let completed = false
+  return () => {
+    if (completed || state.generation !== generation) return
+    completed = true
+    metrics.recordScrollInputToPaint(Math.max(0, performance.now() - pending.startedAt))
+  }
 }
 
 /** Internal mutable counter state, kept private to the module. */

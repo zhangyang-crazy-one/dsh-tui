@@ -1,0 +1,258 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/deepseek-harness
+
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+j/k 滚动                                                                ⠹ 生成中
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                                空闲
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+✓ 已新建会话
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                                空闲
+DeepSeek · deepseek-tui
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                                  agent
+│ >
+────────────────────────────────────────────────────────────────────────────────
+~/my_programes/deepseek-harness · 状态 空闲
+/ 命令 · @ 提及
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+j/k 滚动                                                                ⠼ 生成中
+DeepSeek · deepseek-tui
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                                  agent
+│ >
+────────────────────────────────────────────────────────────────────────────────
+~/my_programes/deepseek-harness · 状态 空闲
+/ 命令 · @ 提及
+ ❯ |thread-safe| packages/tui/tui/tests/session-pane-integration.spec.ts (20 tests | 1 failed) 6267ms
+     × keeps the cold row and selection unchanged after a provider failure and fresh directory reload 1303ms
+DeepSeek · deepseek-tui                          ~/my_programes/deepseek-harness
+────────────────────────────────────────────────────────────────────────────────
+  > first task
+  ────────────────────────────────────────────────────────────────────────────
+
+  ● answer one
+
+  turn 1 · 1 ms
+  ── 已完成 ──
+
+
+
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                            即将退出
+(node:1403872) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node-22 --trace-warnings ...` to show where the warning was created)
+ ❯ |thread-safe| packages/tui/tui-render/tests/stream-view.spec.tsx (77 tests | 1 failed) 19463ms
+     × renders large conversation history with reasoning expanded efficiently without lag 2595ms
+ ❯ |thread-safe| packages/tui/tui-render/tests/loop-input.spec.tsx (43 tests | 1 failed) 47459ms
+     × keeps only the newest controller-owned mention result and aborts on unmount 5253ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/tui/tui/tests/session-pane-integration.spec.ts > session directory controller > keeps the cold row and selection unchanged after a provider failure and fresh directory reload
+AssertionError: expected undefined to be '✗ 重命名失败：simulated \u001b[31mstorage f…' // Object.is equality
+
+- Expected:
+"✗ 重命名失败：simulated storage failure"
+
++ Received:
+undefined
+
+ ❯ packages/tui/tui/tests/session-pane-integration.spec.ts:539:42
+    537|       controller.dispatch({ kind: 'rename-session', title: 'must roll …
+    538|       await vi.waitFor(() => {
+    539|         expect(controller.getFeedback()).toBe(
+       |                                          ^
+    540|           '✗ 重命名失败：simulated \u001B[31mstorage failure',
+    541|         )
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |thread-safe| packages/tui/tui-render/tests/loop-input.spec.tsx > TuiLoop real input path > keeps only the newest controller-owned mention result and aborts on unmount
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ packages/tui/tui-render/tests/loop-input.spec.tsx:657:3
+    655|   })
+    656|
+    657|   it('keeps only the newest controller-owned mention result and aborts…
+       |   ^
+    658|     const deferred: Array<{
+    659|       query: string
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |thread-safe| packages/tui/tui-render/tests/stream-view.spec.tsx > StreamView physical-row virtualization > renders large conversation history with reasoning expanded efficiently without lag
+AssertionError: expected 2542.249893 to be less than 2000
+ ❯ packages/tui/tui-render/tests/stream-view.spec.tsx:2673:21
+    2671|     const hostEnv = (globalThis as { process?: { env?: Record<string, …
+    2672|     const slowHost = hostEnv?.PERF_CI_SLOW === '1'
+    2673|     expect(elapsed).toBeLessThan(slowHost ? 4000 : 2000)
+       |                     ^
+    2674|     expect(output).toContain('用户提问 19')
+    2675|     expect(output).toContain('助手回答 19')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 170 passed (173)
+      Tests  3 failed | 2296 passed (2299)
+   Start at  22:07:02
+   Duration  74.08s (transform 126.17s, setup 33.84s, import 595.91s, tests 223.38s, environment 96ms)

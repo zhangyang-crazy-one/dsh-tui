@@ -320,6 +320,124 @@ function storeWith(overrides: Partial<TranscriptRenderStoreConfig> = {}): {
   return { store, calls }
 }
 
+describe('TranscriptRenderStore incremental accounting', () => {
+  it('measures each settled row once while loading history and changing viewport pins', () => {
+    let textReads = 0
+    const { store } = storeWith({ maxRows: 1000 })
+    for (let index = 0; index < 200; index += 1) {
+      const blockId = `b${String(index)}`
+      const line = plainLine(blockId, 0, 'abc', 0, 3)
+      const observed = Object.freeze({
+        ...line,
+        get text() { textReads += 1; return line.text },
+      })
+      const active = store.acquireActive({ blockId, source: 'abc', scopeKey: '80' })
+      active.append([observed])
+      active.settle()
+    }
+    expect(textReads).toBe(200)
+    for (let index = 0; index < 20; index += 1) {
+      store.setPins({ pinned: [`b${String(index)}`] })
+      store.clearPins()
+      expect(store.totalRows()).toBe(200)
+      expect(store.stats()).toMatchObject({ cachedBlocks: 200, cachedRows: 200, cachedBytes: 1800 })
+    }
+    expect(textReads).toBe(200)
+  })
+
+  it('measures only appended rows, and transfers or restores accounting without rescanning', () => {
+    let textReads = 0
+    const { store } = storeWith({ maxRows: 1000 })
+    const active = store.acquireActive({ blockId: 'b', source: 'abc', scopeKey: '80' })
+    for (let index = 0; index < 100; index += 1) {
+      const line = plainLine('b', index, 'a', index, index + 1)
+      active.append([Object.freeze({
+        ...line,
+        get text() { textReads += 1; return line.text },
+      })])
+      expect(store.stats().cachedRows).toBe(index + 1)
+      store.setPins({ pinned: ['b'] })
+    }
+    active.settle()
+    const replacement = store.acquireActive({ blockId: 'b', source: 'abc', scopeKey: '80' })
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 0, cachedBytes: 0 })
+    replacement.reset([plainLine('b', 0, 'xx', 0, 2)])
+    expect(store.stats()).toMatchObject({ cachedRows: 1, cachedBytes: 6 })
+    replacement.replace({ source: 'yyyy', lines: [plainLine('b', 0, 'yyyy', 0, 4)] })
+    expect(store.stats()).toMatchObject({ cachedRows: 1, cachedBytes: 12 })
+    replacement.discard()
+    expect(store.stats()).toMatchObject({ cachedRows: 100, cachedBytes: 300 })
+    expect(textReads).toBe(100)
+  })
+
+  it('accounts for invalidation, eviction, pinned overflow, rebuilds and reset', () => {
+    const { store } = storeWith({ maxRows: 2, maxBytes: 6 })
+    store.setPins({ pinned: ['a', 'b'] })
+    for (const blockId of ['a', 'b']) {
+      store.upsertSource({ blockId, source: 'aa', scopeKey: '80' })
+      store.readBlock({ blockId })
+    }
+    expect(store.stats()).toMatchObject({ cachedBlocks: 2, cachedRows: 4, cachedBytes: 12 })
+    store.setPins({ pinned: ['b'] })
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 2, cachedBytes: 6, evictions: 1 })
+    store.upsertSource({ blockId: 'b', source: 'x', scopeKey: '120' })
+    expect(store.stats()).toMatchObject({ cachedBlocks: 0, cachedRows: 0, cachedBytes: 0 })
+    store.readBlock({ blockId: 'b' })
+    store.readBlock({ blockId: 'a' })
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 1, cachedBytes: 3, evictions: 2 })
+    const active = store.acquireActive({ blockId: 'fresh', source: 'z', scopeKey: '80' })
+    active.append([plainLine('fresh', 0, 'z', 0, 1)])
+    active.discard()
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 1, cachedBytes: 3 })
+    store.reset()
+    expect(store.totalRows()).toBe(0)
+    expect(store.stats()).toMatchObject({ cachedBlocks: 0, cachedRows: 0, cachedBytes: 0 })
+  })
+
+  it('evicts by latest settled access and enforces the byte budget independently', () => {
+    const { store, calls } = storeWith({ maxRows: 100, maxBytes: 6 })
+    for (const blockId of ['a', 'b']) {
+      store.upsertSource({ blockId, source: 'x', scopeKey: '80' })
+      store.readBlock({ blockId })
+    }
+    const a = store.readBlock({ blockId: 'a' })
+    store.upsertSource({ blockId: 'c', source: 'x', scopeKey: '80' })
+    store.readBlock({ blockId: 'c' })
+    expect(store.stats()).toMatchObject({ cachedBlocks: 2, cachedRows: 2, cachedBytes: 6 })
+    expect(store.readBlock({ blockId: 'a' })?.lines).toBe(a?.lines)
+    expect(calls.map(call => call.blockId)).toEqual(['a', 'b', 'c'])
+    store.readBlock({ blockId: 'b' })
+    expect(calls.map(call => call.blockId)).toEqual(['a', 'b', 'c', 'b'])
+    // An unchanged source upsert is also a cache access.
+    store.upsertSource({ blockId: 'a', source: 'x', scopeKey: '80' })
+    store.readBlock({ blockId: 'c' })
+    expect(store.readBlock({ blockId: 'a' })?.lines).toBe(a?.lines)
+  })
+
+  it('retains empty snapshots as resident blocks across active ownership changes', () => {
+    const { store } = storeWith()
+    const empty = store.acquireActive({ blockId: 'empty', source: '', scopeKey: '80' })
+    empty.settle()
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 0, cachedBytes: 0 })
+    const replacement = store.acquireActive({ blockId: 'empty', source: '', scopeKey: '80' })
+    replacement.append([plainLine('empty', 0, 'x', 0, 1)])
+    replacement.discard()
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 0, cachedBytes: 0 })
+  })
+
+  it('ignores row mutations from an old handle after reset reuses the block id', () => {
+    const { store } = storeWith()
+    const stale = store.acquireActive({ blockId: 'b', source: 'x', scopeKey: '80' })
+    stale.append([plainLine('b', 0, 'x', 0, 1)])
+    store.reset()
+    const current = store.acquireActive({ blockId: 'b', source: 'yy', scopeKey: '80' })
+    current.append([plainLine('b', 0, 'yy', 0, 2)])
+    stale.append([plainLine('b', 1, 'x', 1, 2)])
+    expect(store.stats()).toMatchObject({ cachedBlocks: 1, cachedRows: 1, cachedBytes: 6 })
+    expect(store.totalRows()).toBe(store.readBlock({ blockId: 'b' })?.rowCount)
+  })
+})
+
 describe('createTranscriptRenderStore validation', () => {
   it('rejects non-positive budgets', () => {
     const { rebuild } = recordingRebuild(input => linesFromString(input.blockId, input.source))
@@ -741,7 +859,7 @@ describe('TranscriptRenderStore coverage branches', () => {
     expect(() => revision.settle()).toThrow(/already settled/)
   })
 
-  it('touchActiveBlock is a no-op when the entry has been cleared', () => {
+  it('active row accounting is a no-op when the entry has been cleared', () => {
     const { store } = storeWith()
     const revision = store.acquireActive({ blockId: 'b1', source: 'abc', scopeKey: '80' })
     revision.append([plainLine('b1', 0, 'x', 0, 1)])

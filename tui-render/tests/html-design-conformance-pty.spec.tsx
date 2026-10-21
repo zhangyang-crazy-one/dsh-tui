@@ -1,6 +1,6 @@
 import { createTestProjector as createProjector } from './projector-fixture.ts'
 import type { ProjectorInput } from './projector-fixture.ts'
-/** Real-PTY geometry baselines for the HTML terminal design mapping. */
+/** TTY-adapter geometry baselines for the HTML terminal design mapping. */
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { Box, render, Text } from 'ink'
@@ -127,7 +127,7 @@ async function idleFrame(columns: number, rows: number, tier: 'half-block' | 'pl
       mentionMode: false,
     }),
   }), {
-    stdout,
+    stdout: wrapStdoutForFrameBg(stdout),
     stdin: fakeTtyStdin(),
     exitOnCtrlC: false,
     patchConsole: false,
@@ -280,7 +280,7 @@ describe('HTML terminal design geometry', () => {
     })
     const frame = () => atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
     const instance = render(shell(columns, rows, renderModel(), FOOTER_VIEW), {
-      stdout,
+      stdout: wrapStdoutForFrameBg(stdout),
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -544,7 +544,7 @@ describe('HTML terminal design geometry', () => {
         cacheWriteTokens: 10,
       },
     }), {
-      stdout,
+      stdout: wrapStdoutForFrameBg(stdout),
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,

@@ -1,0 +1,2 @@
+# Raw terminal captures preserve CR and cell-padding bytes.
+*.ansi -diff -whitespace

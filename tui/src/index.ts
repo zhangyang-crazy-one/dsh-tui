@@ -192,7 +192,6 @@ import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
 import {
   applyTheme,
   currentTier,
-  nextSettingsGroup,
   listTuiLocales,
   tuiCopy,
   ToolPresenterCache,
@@ -323,8 +322,8 @@ import {
   customProviderProfileFrom,
   isAutoDiscoverProviderDraft,
   parseSettingsFieldValue,
-  settingsRowsFromDescribe,
 } from './settings-rows.ts'
+import { SettingsNavigation, settingsTreeFromDescribe, settingsPathPatch, atPath } from './settings-navigation.ts'
 import type { AutoDiscoverProviderDraft } from './settings-rows.ts'
 import { credentialEnvName } from './settings-rows.ts'
 
@@ -911,20 +910,6 @@ function fieldOf(section: unknown, field: string): SettingsFieldValue {
   return current as SettingsFieldValue
 }
 
-/** Build a nested object patch from a dot-separated field path (e.g. `providers.sf.api`). */
-function createSettingsPatch(field: string, value: unknown): object {
-  const parts = field.split('.')
-  const root: Record<string, unknown> = {}
-  let current = root
-  for (let i = 0; i < parts.length - 1; i++) {
-    const next: Record<string, unknown> = {}
-    current[parts[i] as string] = next
-    current = next
-  }
-  current[parts[parts.length - 1] as string] = value
-  return root
-}
-
 /** Whether an optional persistence service exposes the open-handle primitive. */
 function persistenceHasOpen(persistence: unknown): boolean {
   // SAFETY: optional service boundary probe; TypeScript cannot see the Cordis-merged service shape
@@ -1296,6 +1281,8 @@ export class RuntimeController implements TuiController {
   private settingsOpen = false
   private settingsRows: SettingsFieldRow[] = []
   private settingsSelectedIndex = 0
+  private settingsNavigation = new SettingsNavigation([])
+  private settingsSearching = false
   private settingsEditing = false
   private settingsOnboarding = false
   private settingsUpdateError: string | undefined
@@ -2167,6 +2154,7 @@ export class RuntimeController implements TuiController {
         rows: this.settingsRows,
         selectedIndex: this.settingsSelectedIndex,
         editing: this.settingsEditing,
+        ...(!this.settingsOnboarding ? { breadcrumb: this.settingsNavigation.breadcrumb, filter: this.settingsNavigation.filter, searching: this.settingsSearching } : {}),
         ...(this.settingsOnboarding ? { onboarding: true } : {}),
         ...(this.settingsBusy ? { busy: true } : {}),
         ...(this.settingsUpdateError === undefined
@@ -4435,28 +4423,54 @@ export class RuntimeController implements TuiController {
           this.setFeedback('✓ 已跳过引导')
           return
         }
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
+        if (this.settingsNavigation.back()) {
+          this.settingsSearching = false
+          this.syncSettingsNavigation()
+          return
+        }
         this.settingsOpen = false
         this.settingsEditing = false
         this.settingsBusy = false
         this.settingsUpdateError = undefined
         this.emit()
         return
+      case 'settings-search':
+        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
+        this.settingsSearching = action.active
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
+        this.settingsNavigation.search(action.query)
+        this.syncSettingsNavigation()
+        return
       case 'settings-group':
-        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
-        this.settingsSelectedIndex = nextSettingsGroup(this.settingsRows, this.settingsSelectedIndex, action.delta)
-        this.emit()
+        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
+        this.settingsNavigation.group(action.delta)
+        this.syncSettingsNavigation()
         return
       case 'settings-move':
-        if (!this.settingsOpen || this.settingsEditing) return
+        if (!this.settingsOpen || this.settingsEditing || this.settingsBusy) return
         if (this.settingsRows.length === 0) return
         this.settingsSelectedIndex = Math.min(
           this.settingsRows.length - 1,
           Math.max(0, this.settingsSelectedIndex + action.delta),
         )
+        this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
         this.emit()
         return
       case 'settings-edit':
-        if (!this.settingsOpen) return
+      case 'settings-edit-json':
+        if (!this.settingsOpen || this.settingsBusy) return
+        if (!this.settingsOnboarding) {
+          this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
+          if (action.kind === 'settings-edit' && this.settingsNavigation.enter()) {
+            this.settingsSearching = false
+            this.syncSettingsNavigation()
+            return
+          }
+          if (this.settingsRows[this.settingsSelectedIndex]?.editable === false) return
+        }
+        if (this.settingsRows[this.settingsSelectedIndex] === undefined) { this.settingsUpdateError = '无可用设置'; this.emit(); return }
         this.settingsEditing = true
         this.settingsUpdateError = undefined
         this.emit()
@@ -6323,8 +6337,10 @@ export class RuntimeController implements TuiController {
     this.settingsEditing = false
     this.settingsBusy = false
     this.settingsUpdateError = undefined
-    this.settingsRows = this.readSettingsRows()
+    this.settingsNavigation = new SettingsNavigation([])
     this.settingsSelectedIndex = 0
+    this.settingsSearching = false
+    this.settingsRows = this.readSettingsRows()
     // This pane is the settings list, not the /key onboarding overlay, so a
     // credential row here stores a secret without leaving the pane.
     this.settingsOnboarding = false
@@ -6343,15 +6359,20 @@ export class RuntimeController implements TuiController {
     if (settings === undefined) return []
     // Rows are the volatile form fields: the only ones dsh 0.2 lets settings write.
     const descriptors = settings.describe({ redactSecrets: true })
-    const rows = settingsRowsFromDescribe(
-      descriptors,
-      ns => descriptors.find(form => form.ns === ns)?.value,
-      { expandProviders: true },
+    const credentials = credentialSettingRows(
+      this.referencedCredentialNames(), name => this.configuredCredentials.get(name),
     )
-    return [...rows, ...credentialSettingRows(
-      this.referencedCredentialNames(),
-      name => this.configuredCredentials.get(name),
-    )]
+    this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
+    this.settingsNavigation.replace(settingsTreeFromDescribe(descriptors, credentials))
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex
+    return this.settingsNavigation.rows
+  }
+
+  private syncSettingsNavigation(): void {
+    this.settingsRows = this.settingsNavigation.rows
+    this.settingsSelectedIndex = this.settingsNavigation.selectedIndex
+    this.settingsUpdateError = undefined
+    this.emit()
   }
 
   /**
@@ -6448,8 +6469,8 @@ export class RuntimeController implements TuiController {
 
   /**
    * Persist the composer draft as the selected row's field. Onboarding writes
-   * `ctx.credentials.set` and never logs the value. Success closes the overlay
-   * and writes the status-row confirmation; failure stays on the overlay with
+   * `ctx.credentials.set` and never logs the value. Success retains the selected
+   * field and writes the status-row confirmation; failure stays on the overlay with
    * the ✗ pair. Does not write environment variables.
    *
    * A draft the parser marked with {@link AUTO_DISCOVER} defers profile
@@ -6481,12 +6502,15 @@ export class RuntimeController implements TuiController {
     }
     let parsed: unknown
     try {
+      const descriptor = settings.describe().find(form => String(form.ns) === row.namespace)
+      const path = row.sourcePath ?? row.field.split('.')
+      const stored = atPath(descriptor?.user, path)
       parsed = parseSettingsFieldValue(
         row.namespace,
         row.field,
         row.field === 'providers'
           ? this.rawUserProviders(row.namespace) ?? {}
-          : fieldOf(settings.describe().find(form => String(form.ns) === row.namespace)?.value, row.field),
+          : stored === undefined ? atPath(descriptor?.value, path) : stored,
         value,
         this.catalogProviderIds(row.namespace),
       )
@@ -6504,14 +6528,14 @@ export class RuntimeController implements TuiController {
     }
     this.ownWork((async () => {
       try {
-        await settings.update(row.namespace, createSettingsPatch(row.field, parsed))
+        const descriptor = settings.describe().find(form => String(form.ns) === row.namespace)
+        await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split('.'), parsed, descriptor?.user))
         if (this.closed) return
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting()
-        this.settingsOpen = false
         this.settingsEditing = false
-        this.settingsOnboarding = false
         this.settingsBusy = false
         this.settingsUpdateError = undefined
+        this.settingsRows = this.readSettingsRows()
         this.setFeedback(`✓ 已更新 ${row.field}`)
       } catch (error: unknown) {
         if (this.closed) return
@@ -6527,7 +6551,7 @@ export class RuntimeController implements TuiController {
    * closing the settings overlay. Non-toggleable rows open the inline editor.
    */
   private toggleSelectedSettingValue(): void {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
     const row = this.settingsRows[this.settingsSelectedIndex]
     if (row === undefined) return
     let nextValue: unknown
@@ -6555,7 +6579,8 @@ export class RuntimeController implements TuiController {
     if (settings === undefined) return
     this.ownWork((async () => {
       try {
-        await settings.update(row.namespace, createSettingsPatch(row.field, nextValue))
+        const descriptor = settings.describe().find(form => String(form.ns) === row.namespace)
+        await settings.update(row.namespace, settingsPathPatch(descriptor?.value, row.sourcePath ?? row.field.split('.'), nextValue, descriptor?.user))
         if (this.closed) return
         if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting()
         this.settingsUpdateError = undefined
@@ -6680,10 +6705,9 @@ export class RuntimeController implements TuiController {
     }
     if (this.isDisposed()) return
     this.settingsBusy = false
-    this.settingsOpen = false
     this.settingsEditing = false
-    this.settingsOnboarding = false
     this.settingsUpdateError = undefined
+    this.settingsRows = this.readSettingsRows()
     this.setFeedback(`✓ 已写入 ${String(discovered.length)} 个模型`)
   }
 
@@ -6887,7 +6911,7 @@ export class RuntimeController implements TuiController {
    * Leaves the overlay open.
    */
   private exportSettingsDocument(): void {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
     const settings = this.ctx.get('settings')
     if (settings === undefined || typeof settings.prepareDocument !== 'function') {
       this.setFeedback('无可用设置文件')
@@ -6911,7 +6935,7 @@ export class RuntimeController implements TuiController {
    * Reread overlay rows from the live host without closing the overlay.
    */
   private reloadSettingsRows(): void {
-    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding || this.settingsBusy) return
     this.settingsRows = this.readSettingsRows()
     if (this.settingsSelectedIndex >= this.settingsRows.length) {
       this.settingsSelectedIndex = Math.max(0, this.settingsRows.length - 1)

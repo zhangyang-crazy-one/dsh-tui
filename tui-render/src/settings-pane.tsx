@@ -17,7 +17,6 @@ const TITLE = '设置'
 /** Exact first-run heading. */
 const ONBOARDING_TITLE = '首次设置'
 /** Exact key footnote while browsing rows. */
-const FOOTNOTE = '↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭'
 /** Exact key footnote while the composer holds the draft value. */
 const EDIT_FOOTNOTE = 'Enter 应用 · Esc 取消'
 /** Exact key footnote while collecting the first API key. */
@@ -51,12 +50,20 @@ export interface SettingsFieldRow {
   label?: string
   /** Composer seed for editing; defaults to {@link value} when omitted. */
   editValue?: string
+  /** Literal source path, preserving dots in keys and array indices. */
+  sourcePath?: readonly string[]
+  navigable?: boolean
+  editable?: boolean
+  description?: string
 }
 
 /** SettingsPane props. */
 export interface SettingsPaneProps {
   /** Presentation-copy locale, Chinese when omitted. */
   locale?: TuiLocale
+  breadcrumb?: readonly string[]
+  filter?: string
+  searching?: boolean
   /** Host fields, in display order. */
   rows: readonly SettingsFieldRow[]
   /** Highlighted row index. */
@@ -77,6 +84,9 @@ export interface SettingsPaneProps {
 export interface SettingsPaneState {
   /** Whether the overlay currently replaces the conversation column. */
   open: boolean
+  breadcrumb?: readonly string[]
+  filter?: string
+  searching?: boolean
   /** Host fields, in display order. */
   rows: readonly SettingsFieldRow[]
   /** Highlighted row index. */
@@ -165,7 +175,10 @@ function fieldRow(
     ? styled('* ', 'error', undefined, true)
     : ''
   const reqWidth = required ? 2 : 0
-  const escapedLabel = escapeContent(label)
+  const rawLabel = escapeContent(label)
+  const labelBudget = displayWidth(rawLabel) + displayWidth(escapeContent(value)) + MARKER_COLS + reqWidth + VALUE_GAP <= columns
+    ? displayWidth(rawLabel) : Math.max(1, Math.floor((columns - MARKER_COLS - reqWidth - VALUE_GAP) * 0.48))
+  const escapedLabel = fitValue(rawLabel, labelBudget)
   const escapedValue = escapeContent(value)
   const labelToken = selected ? 'fg' : 'fgSoft'
   const labelCols = MARKER_COLS + reqWidth + displayWidth(escapedLabel)
@@ -223,114 +236,76 @@ export function computeSettingsWindow(
  * @returns the element tree.
  */
 export function SettingsPane({
-  rows,
-  selectedIndex,
-  editing,
-  onboarding,
-  updateError,
-  busy,
-  locale,
-  maxRows,
+  rows, selectedIndex, editing, onboarding, updateError, busy, locale, maxRows,
+  breadcrumb, filter, searching,
 }: SettingsPaneProps): ReactNode {
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
+  const selected = Math.min(Math.max(0, selectedIndex), Math.max(0, rows.length - 1))
+  const active = rows[selected]
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON : undefined)
-  let footnote = `Tab/Shift+Tab 分组 · ${FOOTNOTE}`
-  if (onboarding === true) {
-    footnote = editing ? ONBOARDING_FOOTNOTE : '↑↓/jk 选择密钥 · Enter 输入 · Esc 关闭'
-  } else if (editing) {
-    footnote = EDIT_FOOTNOTE
-  }
-  const windowLimit = computeSettingsWindow(maxRows, rows.length, errorReason, busy === true)
-  const size = Math.min(windowLimit, rows.length)
-  const start = rows.length <= size
-    ? 0
-    : Math.min(
-      Math.max(0, selectedIndex - Math.floor(size / 2)),
-      rows.length - size,
-    )
-  const visible = rows.slice(start, start + size)
+  const hierarchy = breadcrumb !== undefined
+  const escapeHint = (breadcrumb?.length ?? 0) > 1 ? 'Esc 返回' : 'Esc 关闭'
+  let footer = searching === true ? ['输入搜索 · Enter 确定 · Esc 清除']
+    : onboarding === true
+    ? [editing ? ONBOARDING_FOOTNOTE : '↑↓ 选择密钥 · Enter 输入 · Esc 关闭']
+    : editing ? [EDIT_FOOTNOTE]
+      : !hierarchy ? ['↑↓/jk 选择 · Enter 编辑 · e 导出 · r 重载 · Esc 关闭']
+      : width < 80
+        ? ['↑↓ 选择  Enter 打开  ← 返回', `/ 搜索  i 编辑  Tab 分类  ${escapeHint}`]
+        : ['↑↓/jk 选择 · Enter 进入/编辑 · ← 返回 · / 搜索', `i JSON编辑 · Space 切换 · Tab 分类 · e 导出 · r 重载 · ${escapeHint}`]
+  const budget = maxRows ?? SETTINGS_WINDOW + 10
+  const compact = hierarchy && budget < 8
+  if (compact && footer.length > 1) footer = [`Enter 打开 ←返回 /搜索 ${escapeHint}`]
+  const hasSearch = !compact && (searching === true || (filter !== undefined && filter !== ''))
+  const errorLines = errorReason === undefined ? 0 : errorReason === EMPTY_TABLE_REASON || compact ? 1 : 2
+  const showBusy = busy === true && (!compact || errorReason === undefined && budget >= 5)
+  let room = budget - 1 - footer.length - errorLines - (hasSearch ? 1 : 0) - (showBusy ? 1 : 0) - 1
+  const selectedValue = hierarchy && active !== undefined && room-- > 0
+  const description = hierarchy && room-- > 0 ? active?.description : undefined
+  const fixed = 1 + footer.length + (selectedValue ? 1 : 0) + (description === undefined ? 0 : 1) + errorLines + (hasSearch ? 1 : 0) + (showBusy ? 1 : 0)
+  const available = Math.max(1, budget - fixed)
+  const showOverflow = !compact && available >= 3
+  const size = hierarchy
+    ? Math.min(rows.length, rows.length > available && showOverflow ? available - 2 : available, maxRows === undefined ? SETTINGS_WINDOW : rows.length)
+    : Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason, busy === true))
+  const start = Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, rows.length - size))
   const renderLine = (text: string, token: 'fg' | 'fgDim' | 'error' | 'accent', bold = false) => (
-    <Box width="100%">
-      <Text>
-        {paintBackgroundRow([styled(escapeContent(text), token, undefined, bold)], 'settingsCardBg', width)}
-      </Text>
-    </Box>
+    <Box width="100%" height={1} flexShrink={0}><Text wrap="truncate-end">
+      {paintBackgroundRow([styled(fitValue(escapeContent(text), width), token, undefined, bold)], 'settingsCardBg', width)}
+    </Text></Box>
   )
-  let headingText = rows[selectedIndex] === undefined ? TITLE : `${TITLE} · ${SETTINGS_GROUP_LABELS[settingsGroup(rows[selectedIndex]!)]}`
-  if (onboarding === true) headingText = rows.length > 1 ? 'API 密钥' : ONBOARDING_TITLE
-  const clampedSelected = rows.length === 0
-    ? 0
-    : Math.min(Math.max(0, selectedIndex), rows.length - 1)
-  const activeNs = rows[clampedSelected]?.namespace
-  let headerRight = ''
-  if (rows.length > 0 && (onboarding !== true || rows.length > 1)) {
-    headerRight = `${String(clampedSelected + 1)}/${String(rows.length)}`
-    if (activeNs !== undefined && width >= 40) headerRight = `${activeNs} · ${headerRight}`
+  let heading = hierarchy ? breadcrumb.join(' › ') : active === undefined ? TITLE : `${TITLE} · ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`
+  if (displayWidth(escapeContent(heading)) > width && hierarchy) {
+    heading = `设置 › … › ${breadcrumb[breadcrumb.length - 1] ?? ''}`
   }
-  const headerGap = headerRight !== '' && displayWidth(headingText) + displayWidth(headerRight) + 2 <= width
-    ? width - displayWidth(headingText) - displayWidth(headerRight)
-    : 0
-  const headerParts = headerGap > 0
-    ? [
-      styled(escapeContent(headingText), 'fg', undefined, true),
-      styled(' '.repeat(headerGap), 'settingsCardBg'),
-      styled(escapeContent(headerRight), 'fgDim'),
-    ]
-    : [styled(escapeContent(headingText), 'fg', undefined, true)]
-  return (
-    <Box flexDirection="column" width="100%">
-      <Box width="100%">
-        <Text>
-          {paintBackgroundRow(headerParts, 'settingsCardBg', width)}
-        </Text>
-      </Box>
-      {start > 0 ? renderLine(`↑ 上方还有 ${String(start)} 项 (… 还有 ${String(start)} 项)`, 'fgDim') : null}
-      {visible.map((row, index) => {
-        const absolute = start + index
-        const selected = absolute === selectedIndex
-        const resolvedLocale: TuiLocale = locale ?? 'zh-CN'
-        let localized: string
-        if (row.label !== undefined) {
-          localized = row.label
-        } else if (
-          row.namespace === 'tui'
-          && (row.field === 'reasoning' || row.field === 'scrollbar'
-            || row.field === 'statusDetails' || row.field === 'locale')
-        ) {
-          localized = `${row.field} · ${tuiCopy(row.field, locale)}`
-        } else if (row.namespace === 'tui' && row.field in TUI_EXTRA_LABELS) {
-          localized = `${row.field} · ${TUI_EXTRA_LABELS[row.field]![resolvedLocale === 'en-US' ? 'en-US' : 'zh-CN']}`
-        } else if (row.field === 'apiKeyEnv') {
-          localized = `${row.field} · 环境变量名`
-        } else {
-          localized = row.field
-        }
-        const label = row.label === undefined ? `${row.namespace} · ${localized}` : localized
-        return (
-          <Box key={`${row.namespace}:${row.field}:${String(absolute)}`} width="100%">
-            <Text>
-              {paintBackgroundRow(fieldRow(label, row.value, selected, width, row.required === true), 'settingsCardBg', width)}
-            </Text>
-          </Box>
-        )
-      })}
-      {rows.length > start + size
-        ? renderLine(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim')
-        : null}
-      {errorReason === undefined ? null : (
-        <Box flexDirection="column" width="100%">
-          {renderLine(
-            errorReason === EMPTY_TABLE_REASON
-              ? EMPTY_TABLE_REASON
-              : `✗ 更新失败：${errorReason}`,
-            'error',
-          )}
-          {errorReason === EMPTY_TABLE_REASON ? null : renderLine(FAIL_NEXT, 'fgDim')}
-        </Box>
-      )}
-      {busy === true ? renderLine(DISCOVERY_BUSY, 'fgDim') : null}
-      {renderLine(footnote, 'fgDim')}
-    </Box>
-  )
+  if (compact && searching === true) heading = `搜索 /${filter ?? ''}`
+  if (onboarding === true) heading = rows.length > 1 ? 'API 密钥' : ONBOARDING_TITLE
+  const counter = rows.length === 0 ? '' : `${!hierarchy && active !== undefined ? `${active.namespace} · ` : ''}${String(selected + 1)}/${String(rows.length)}`
+  if (counter !== '') heading = `${fitValue(escapeContent(heading), Math.max(1, width - displayWidth(counter) - 2))}  ${counter}`
+  const localizedLabel = (row: SettingsFieldRow): string => {
+    if (row.label !== undefined && !(row.namespace === 'tui' && row.label === row.field)) return row.label
+    const resolved: TuiLocale = locale ?? 'zh-CN'
+    const label = row.namespace === 'tui' && (row.field === 'reasoning' || row.field === 'scrollbar' || row.field === 'statusDetails' || row.field === 'locale')
+      ? `${row.field} · ${tuiCopy(row.field, locale)}`
+      : row.namespace === 'tui' && row.field in TUI_EXTRA_LABELS
+        ? `${row.field} · ${TUI_EXTRA_LABELS[row.field]![resolved === 'en-US' ? 'en-US' : 'zh-CN']}`
+        : row.field === 'apiKeyEnv' ? `${row.field} · 环境变量名` : row.field
+    return hierarchy ? label : `${row.namespace} · ${label}`
+  }
+  return <Box flexDirection="column" width="100%">
+    {renderLine(heading, 'fg', true)}
+    {hasSearch ? renderLine(`搜索 /${filter ?? ''}${searching === true ? '▏' : ''}`, 'accent') : null}
+    {start > 0 && (!hierarchy || showOverflow) ? renderLine(`↑ 上方还有 ${String(start)} 项 (… 还有 ${String(start)} 项)`, 'fgDim') : null}
+    {rows.slice(start, start + size).map((row, index) => <Box key={`${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index)}`} width="100%" height={1} flexShrink={0}><Text wrap="truncate-end">
+      {paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? '› ' : ''}${row.value}`, start + index === selected, width, row.required === true), 'settingsCardBg', width)}
+    </Text></Box>)}
+    {rows.length > start + size && (!hierarchy || showOverflow) ? renderLine(`… 还有 ${String(rows.length - start - size)} 项`, 'fgDim') : null}
+    {selectedValue ? renderLine(`值: ${active.value === '' ? '—' : active.value}`, 'fg') : null}
+    {description === undefined ? null : renderLine(description, 'fgDim')}
+    {errorReason === undefined ? null : renderLine(errorReason === EMPTY_TABLE_REASON ? EMPTY_TABLE_REASON : `✗ 更新失败：${errorReason}`, 'error')}
+    {errorLines < 2 ? null : renderLine(FAIL_NEXT, 'fgDim')}
+    {showBusy ? renderLine(DISCOVERY_BUSY, 'fgDim') : null}
+    {footer.map((line, index) => <Box key={index} width="100%" height={1} flexShrink={0}>{renderLine(line, 'fgDim')}</Box>)}
+  </Box>
 }

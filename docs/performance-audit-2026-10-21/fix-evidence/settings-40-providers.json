@@ -1,0 +1,143 @@
+{
+  "rowCount": 26,
+  "selected": 0,
+  "breadcrumb": [
+    "设置",
+    "模型与凭据",
+    "llm-pi-ai",
+    "providers"
+  ],
+  "fields": [
+    {
+      "label": "provider-0-long-route-name",
+      "field": "providers.provider-0-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-1-long-route-name",
+      "field": "providers.provider-1-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-2-long-route-name",
+      "field": "providers.provider-2-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-3-long-route-name",
+      "field": "providers.provider-3-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-4-long-route-name",
+      "field": "providers.provider-4-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-5-long-route-name",
+      "field": "providers.provider-5-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-6-long-route-name",
+      "field": "providers.provider-6-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-7-long-route-name",
+      "field": "providers.provider-7-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-8-long-route-name",
+      "field": "providers.provider-8-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-9-long-route-name",
+      "field": "providers.provider-9-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-10-long-route-name",
+      "field": "providers.provider-10-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-11-long-route-name",
+      "field": "providers.provider-11-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-12-long-route-name",
+      "field": "providers.provider-12-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-13-long-route-name",
+      "field": "providers.provider-13-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-14-long-route-name",
+      "field": "providers.provider-14-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-15-long-route-name",
+      "field": "providers.provider-15-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-16-long-route-name",
+      "field": "providers.provider-16-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-17-long-route-name",
+      "field": "providers.provider-17-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-18-long-route-name",
+      "field": "providers.provider-18-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-19-long-route-name",
+      "field": "providers.provider-19-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-20-long-route-name",
+      "field": "providers.provider-20-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-21-long-route-name",
+      "field": "providers.provider-21-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-22-long-route-name",
+      "field": "providers.provider-22-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-23-long-route-name",
+      "field": "providers.provider-23-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "provider-24-long-route-name",
+      "field": "providers.provider-24-long-route-name",
+      "value": "65 模型 · openai-completions"
+    },
+    {
+      "label": "+ 添加 Provider",
+      "field": "providers",
+      "value": "目录名 / 表单"
+    }
+  ],
+  "editing": false
+}

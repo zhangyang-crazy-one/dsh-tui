@@ -5,7 +5,7 @@
  * coordinates and stable block anchors; this module only decides how a
  * `presented` row approaches the latest `target` row on a configurable frame
  * clock. Intermediate input events are not preserved — every new target
- * overwrites any stale intermediate value, so wheel bursts, PageUp/PageDown
+ * overwrites any stale intermediate value, so PageUp/PageDown
  * and direction reversals all share one coherent latest target.
  *
  * Semantics:
@@ -16,8 +16,9 @@
  *  - Rail drag is "latest pointer, no easing" — callers invoke `snapTo`
  *    on every pointer move and never `setTarget`, so the visible position
  *    tracks the pointer without after-release drift.
- *  - Single-line `↑/↓/j/k` and continuous wheel share the same `setTarget`
- *    path; the smooth step (`stepPerFrame`) gives a one-row key one frame.
+ *  - Single-line `↑/↓/j/k` uses `setTarget`; `stepPerFrame` gives a
+ *    one-row key one frame. Wheel/touchpad reports use `snapTo` so their
+ *    complete delta is applied without after-input catch-up.
  *
  * Distance-adaptive catch-up:
  *  - Each new target selects `stepPerFrame` or `maxCatchUpStep` from its

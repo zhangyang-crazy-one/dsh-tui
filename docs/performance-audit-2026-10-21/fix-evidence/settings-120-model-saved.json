@@ -1,0 +1,41 @@
+{
+  "rowCount": 5,
+  "selected": 2,
+  "breadcrumb": [
+    "设置",
+    "模型与凭据",
+    "llm-pi-ai",
+    "providers",
+    "provider-0-long-route-name",
+    "models",
+    "model-0"
+  ],
+  "fields": [
+    {
+      "label": "id",
+      "field": "providers.provider-0-long-route-name.models.0.id",
+      "value": "model-0"
+    },
+    {
+      "label": "name",
+      "field": "providers.provider-0-long-route-name.models.0.name",
+      "value": "Audit Model 0"
+    },
+    {
+      "label": "contextWindow",
+      "field": "providers.provider-0-long-route-name.models.0.contextWindow",
+      "value": "131072"
+    },
+    {
+      "label": "maxTokens",
+      "field": "providers.provider-0-long-route-name.models.0.maxTokens",
+      "value": "8192"
+    },
+    {
+      "label": "extension",
+      "field": "providers.provider-0-long-route-name.models.0.extension",
+      "value": "1 个字段"
+    }
+  ],
+  "editing": false
+}

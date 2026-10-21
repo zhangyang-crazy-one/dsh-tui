@@ -102,12 +102,11 @@ import type { MutableRevision } from './transcript-line-store.ts'
 import { createPhysicalLine } from './physical-line.ts'
 import type { PhysicalLine, PhysicalLineSpan } from './physical-line.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
-import { markDeltaIngress } from './frame-metrics.ts'
+import { clearScrollInputs, markDeltaIngress, markScrollInput } from './frame-metrics.ts'
 import {
   type RenderPolicy,
   renderPolicyDefaults,
 } from './render-policy.ts'
-import { paintLineFromRenderLine } from './painted-line.ts'
 import { createScrollScheduler } from './scroll-scheduler.ts'
 import type { ScrollScheduler } from './scroll-scheduler.ts'
 import { createStreamQueue } from './stream-queue.ts'
@@ -172,6 +171,10 @@ export interface StreamViewProps {
   brandFrameProbe?: FrameProbeHandle | undefined
   /** Latest loop-owned physical-row navigation command. */
   viewportCommand?: TranscriptViewportCommand | undefined
+  /** Ready viewport command consumer; wheel bursts need not render the parent loop. */
+  viewportCommandRef?: { current: ((command: TranscriptViewportCommand) => void) | undefined }
+  /** Release a consumed fallback command so remounting cannot replay it. */
+  onViewportCommandConsumed?: (sequence: number) => void
   /**
    * Resolved render policy; absent falls back to {@link renderPolicyDefaults}.
    * `transcriptOverscan` defines how many extra physical rows around the
@@ -878,6 +881,12 @@ function framePhysicalLine(
   return clonePhysicalLineWithSpans(base, blockId, spans)
 }
 
+/** Source lookup allows a live turn to settle under a new durable id in O(1). */
+const projectorSourceIndexes = new WeakMap<Map<string, MarkdownProjectorState>, {
+  byScope: Map<string, Map<string, MarkdownProjectorState>>
+  previousSource: WeakMap<MarkdownProjectorState, string>
+}>()
+
 /** Get or create the projector state for one (blockId, scopeKey) pair. */
 function projectorStateFor(
   cache: Map<string, MarkdownProjectorState>,
@@ -888,6 +897,16 @@ function projectorStateFor(
 ): MarkdownProjectorState {
   const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)$/u, '')
   const key = `${blockId}|${projectorScope}`
+  let index = projectorSourceIndexes.get(cache)
+  if (index === undefined) {
+    index = { byScope: new Map(), previousSource: new WeakMap() }
+    projectorSourceIndexes.set(cache, index)
+  }
+  let bySource = index.byScope.get(projectorScope)
+  if (bySource === undefined) {
+    bySource = new Map()
+    index.byScope.set(projectorScope, bySource)
+  }
   let state = cache.get(key)
   if (state === undefined) {
     for (const alias of aliases) {
@@ -895,35 +914,22 @@ function projectorStateFor(
       if (state !== undefined) break
     }
   }
-  if (state === undefined && source !== undefined) {
-    for (const candidate of cache.values()) {
-      const candidateScope = candidate.scopeKey.replace(/\|(streaming|settled)$/u, '')
-      if (candidateScope === projectorScope && candidate.lastSource === source) {
-        state = candidate
-        break
-      }
-    }
+  if (state === undefined && source !== undefined && scope.renderMode === 'settled') {
+    const candidate = bySource.get(source)
+    if (candidate?.lastSource === source) state = candidate
   }
   if (state === undefined) {
     state = createMarkdownProjectorState(blockId, scope)
   }
   cache.set(key, state)
+  if (source !== undefined) {
+    const previous = index.previousSource.get(state)
+    if (previous !== undefined && previous !== source && bySource.get(previous) === state) bySource.delete(previous)
+    bySource.set(source, state)
+    index.previousSource.set(state, source)
+  }
   return state
 }
-
-/**
- * Per-row painted children for blocks that exceed the small-block
- * threshold (e.g. a 10,000-line streaming Markdown or a 500-row table).
- * Renders exactly `[sliceStart, sliceEnd)` lines from the precomputed
- * {@link MarkdownRenderLine} array so the Ink subtree only contains the
- * rows the user can see plus the bounded overscan.
- *
- * Marketing comparison: the legacy per-block subtree mounted every row
- * of an active Markdown even when Ink was only painting ~30 of them,
- * so a 10,000-line reply cost 10,000 React children per frame. The
- * slice path caps mounted children at `sliceEnd - sliceStart` regardless
- * of the block's total row count.
- */
 
 /** One prose run inside a block's flat row list. */
 interface BlockTextRange {
@@ -997,25 +1003,6 @@ const GAP_LINE: MarkdownRenderLine = Object.freeze({
   rawTail: false,
 })
 
-/** Lead affix for one absolute row: marker on prose-run starts, continuation
- *  indent inside prose runs, nothing on bare rows (reasoning folds, tool
- *  cards, digest rows carry their own content). */
-function slicedLead(
-  prefix: { first: string; rest: string },
-  textRanges: readonly BlockTextRange[],
-  index: number,
-): string {
-  for (const range of textRanges) {
-    if (index === range.start) {
-      return prefix.first
-    }
-    if (index > range.start && index < range.end) {
-      return prefix.rest
-    }
-  }
-  return ''
-}
-
 /** Plain marker/indent counterpart used by the shared frame snapshot. */
 function snapshotLead(
   textRanges: readonly BlockTextRange[],
@@ -1064,99 +1051,6 @@ function intersectingLayoutIndexes(
   }
   return indexes
 }
-
-const paintedRenderLineCache = new WeakMap<MarkdownRenderLine, Map<string, string>>()
-
-/** Reuse terminal bytes for immutable projected rows across viewport shifts. */
-function cachedPaintedRenderLine(
-  line: MarkdownRenderLine,
-  cacheKey: string,
-  hyperlinks: boolean,
-): string {
-  let variants = paintedRenderLineCache.get(line)
-  if (variants === undefined) {
-    variants = new Map<string, string>()
-    paintedRenderLineCache.set(line, variants)
-  }
-  const cached = variants.get(cacheKey)
-  if (cached !== undefined) return cached
-  const painted = paintLineFromRenderLine(line, hyperlinks)
-  variants.set(cacheKey, painted)
-  return painted
-}
-
-/**
- * Per-row painted children for blocks that exceed the small-block
- * threshold (e.g. a 10,000-line streaming Markdown or a 500-row table).
- * Renders exactly `[sliceStart, sliceEnd)` lines from the precomputed
- * {@link MarkdownRenderLine} array so the Ink subtree only contains the
- * rows the user can see plus the bounded overscan. The caller compensates
- * the unmounted rows above and below the slice with spacer boxes so the
- * painted geometry still matches the viewport reducer's row math.
- *
- * The slice path caps mounted children at `sliceEnd - sliceStart` regardless
- * of the block's total row count.
- */
-interface SlicedLinesBlockProps {
-  readonly lines: RowSource<MarkdownRenderLine>
-  readonly sliceStart: number
-  readonly sliceEnd: number
-  readonly prefix: { first: string; rest: string }
-  /** Prose runs inside `lines`; an empty list keeps self-contained rows bare. */
-  readonly textRanges: readonly BlockTextRange[]
-  /** Absolute row carrying the tail run; defaults to the last line. */
-  readonly tailRow?: number | undefined
-  readonly tail?: string | undefined
-}
-
-function areSlicedLinesBlockPropsEqual(
-  prev: SlicedLinesBlockProps,
-  next: SlicedLinesBlockProps,
-): boolean {
-  return prev.lines === next.lines
-    && prev.sliceStart === next.sliceStart
-    && prev.sliceEnd === next.sliceEnd
-    && prev.textRanges === next.textRanges
-    && prev.tailRow === next.tailRow
-    && prev.tail === next.tail
-    && prev.prefix.first === next.prefix.first
-    && prev.prefix.rest === next.prefix.rest
-}
-
-const SlicedLinesBlock = memo(function SlicedLinesBlock(props: SlicedLinesBlockProps): ReactNode {
-  const { lines, sliceStart, sliceEnd, prefix, textRanges, tailRow, tail } = props
-  const end = Math.min(lines.length, Math.max(0, sliceEnd))
-  const start = Math.max(0, Math.min(end, sliceStart))
-  const effectiveTailRow = tailRow ?? lines.length - 1
-  const out: ReactNode[] = []
-  const hyperlinks = hyperlinksEnabled()
-  const paintCacheKey = `${currentAppearance()}:${currentTier()}:${hyperlinks ? 'links' : 'plain'}`
-  for (let index = start; index < end; index += 1) {
-    const line = lines.at(index)
-    if (line === undefined) {
-      continue
-    }
-    const painted = cachedPaintedRenderLine(line, paintCacheKey, hyperlinks)
-    const lead = slicedLead(prefix, textRanges, index)
-    const trailing = index === effectiveTailRow ? tail : undefined
-    out.push(
-      <Text key={index} wrap="truncate">
-        {lead}
-        {painted}
-        {trailing}
-      </Text>,
-    )
-  }
-  if (out.length === 0) {
-    return null
-  }
-  return (
-    <Box flexDirection="column" width="100%">
-      {out}
-    </Box>
-  )
-}, areSlicedLinesBlockPropsEqual)
-
 
 /**
  * Project a single block row entry into terminal lines, capturing stored
@@ -1301,8 +1195,8 @@ function makeToolCardBlockEntry(
 
 /**
  * Render the measured transcript inside one fixed physical-row viewport.
- * Stable block refs feed the viewport reducer after each Ink layout; navigation
- * moves only the absolutely positioned transcript inside the clipped slot.
+ * Ink measures the reserved slot and paints chrome. On a TTY only the physical
+ * frame painter writes transcript cells; non-TTY output retains the JSX text.
  * Short transcripts pin to the top of that slot so a live tool grows downward
  * instead of shoving the last user prompt into the title bar; overflow still
  * follows the live edge. Reasoning stays hidden and tool cards remain compact
@@ -1319,6 +1213,8 @@ export function StreamView({
   scrollbar = true,
   brandFrameProbe,
   viewportCommand,
+  viewportCommandRef,
+  onViewportCommandConsumed,
   renderPolicy,
   frameMetrics,
   motionPaused = false,
@@ -1345,7 +1241,6 @@ export function StreamView({
   const contentWidth = conversationWidth(columns)
   const contentLeft = conversationLeft(columns, contentWidth)
   const viewportRef = useRef<DOMElement | null>(null)
-  const blockRefs = useRef(new Map<string, DOMElement>())
   const layoutCache = useRef(new TranscriptLayoutCache())
   /** Per-scope projector/scanner pair the markdown entries delegate to. */
   const projectorStates = useRef(new Map<string, MarkdownProjectorState>())
@@ -1396,7 +1291,6 @@ export function StreamView({
   const scrollScheduler = useRef<ScrollScheduler | undefined>(undefined)
   const presentationQueue = useRef<StreamQueue<ProjectedEntryRows> | undefined>(undefined)
   const frameArbiter = useRef<FrameArbiter<ProjectedEntryRows> | undefined>(undefined)
-  const pendingScrollInputAt = useRef<number | undefined>(undefined)
   const lastDispatchedOffset = useRef(viewport.offsetFromBottom)
   useLayoutEffect(() => {
     const scroll = createScrollScheduler({
@@ -1439,12 +1333,6 @@ export function StreamView({
           offsetFromBottom: snapshot.scroll.presented,
         })
       }
-      if (pendingScrollInputAt.current !== undefined && frameMetrics !== undefined) {
-        frameMetrics.recordScrollInputToPaint(
-          Math.max(0, performance.now() - pendingScrollInputAt.current),
-        )
-        pendingScrollInputAt.current = undefined
-      }
       if (frameMetrics !== undefined) {
         const queue = stream.getStats(snapshot.nowMs)
         frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs)
@@ -1454,6 +1342,7 @@ export function StreamView({
     presentationQueue.current = stream
     frameArbiter.current = arbiter
     return () => {
+      if (frameMetrics !== undefined) clearScrollInputs(frameMetrics)
       unsubscribe()
       arbiter.dispose()
       if (scrollScheduler.current === scroll) scrollScheduler.current = undefined
@@ -1863,6 +1752,8 @@ export function StreamView({
         projectorCache,
         partId,
         assistantBlockRowsScope,
+        [],
+        part.text,
       ), status === 'generating').lines)
       ranges.push({ start, end: rows.length })
     }
@@ -2261,20 +2152,6 @@ export function StreamView({
       : renderEntries.map((_entry, index) => index),
     [overscanBottom, overscanTop, physicalViewport, renderEntries, virtualLayouts],
   )
-  const firstVisibleIndex = visibleIndexes[0]
-  const lastVisibleIndex = visibleIndexes.at(-1)
-  const leadingRows = firstVisibleIndex === undefined
-    ? 0
-    : (virtualLayouts[firstVisibleIndex]?.top ?? 0)
-  const lastVisibleLayout = lastVisibleIndex === undefined
-    ? undefined
-    : virtualLayouts[lastVisibleIndex]
-  const trailingRows = lastVisibleLayout === undefined
-    ? 0
-    : Math.max(
-      0,
-      virtualContentRows - lastVisibleLayout.top - lastVisibleLayout.rows,
-    )
   const visibleEntryPairs = useMemo(
     () => visibleIndexes.flatMap((index) => {
       const entry = renderEntries[index]
@@ -2325,13 +2202,17 @@ export function StreamView({
   effectiveViewportRowsRef.current = effectiveViewportRows
 
   const executeViewportCommand = useCallback((command: TranscriptViewportCommand): void => {
-    if (command.sequence === lastCommandSequence.current) return
+    if (command.sequence <= lastCommandSequence.current) {
+      onViewportCommandConsumed?.(command.sequence)
+      return
+    }
     const vp = viewportStateRef.current
     if (command.kind !== 'reset' && (vp.viewportRows === 0 || vp.contentRows === 0)) return
-    lastCommandSequence.current = command.sequence
     const scheduler = scrollScheduler.current
     const arbiter = frameArbiter.current
     if (scheduler === undefined || arbiter === undefined) return
+    lastCommandSequence.current = command.sequence
+    onViewportCommandConsumed?.(command.sequence)
     const effectiveContentRows = Math.max(vp.contentRows, virtualContentRowsRef.current)
     const maximum = Math.max(0, effectiveContentRows - effectiveViewportRowsRef.current)
     const clamp = (value: number): number => Math.max(0, Math.min(maximum, value))
@@ -2342,11 +2223,14 @@ export function StreamView({
       scheduler.setTarget(clamp((reversing ? presented : target) + delta))
       scheduler.tick()
     }
-    if (pendingScrollInputAt.current !== undefined) frameMetrics?.recordCoalescedInput()
-    pendingScrollInputAt.current ??= performance.now()
     switch (command.kind) {
       case 'scroll':
-        advance(command.delta)
+        if (command.source === 'wheel') {
+          const presented = scheduler.getPresented()
+          const target = scheduler.getTarget()
+          const reversing = command.delta * (target - presented) < 0
+          scheduler.snapTo(clamp((reversing ? presented : target) + command.delta))
+        } else advance(command.delta)
         break
       case 'page':
         advance(command.delta * Math.max(1, vp.viewportRows - 1))
@@ -2362,22 +2246,29 @@ export function StreamView({
       case 'reset':
         scheduler.snapTo(0)
         lastDispatchedOffset.current = 0
-        pendingScrollInputAt.current = undefined
         dispatchViewport({ kind: 'reset' })
         return
     }
     const presentedOffset = scheduler.getPresented()
+    if (frameMetrics !== undefined && presentedOffset !== lastDispatchedOffset.current) {
+      markScrollInput(frameMetrics, command.sequence, command.inputAt)
+    }
     lastDispatchedOffset.current = presentedOffset
     dispatchViewport({
       kind: 'offset',
       offsetFromBottom: presentedOffset,
     })
     arbiter.requestScroll()
-  }, [frameMetrics])
+  }, [frameMetrics, onViewportCommandConsumed])
+
+  useLayoutEffect(() => {
+    if (viewportCommandRef === undefined || viewport.viewportRows === 0 || viewport.contentRows === 0) return
+    viewportCommandRef.current = executeViewportCommand
+    return () => { viewportCommandRef.current = undefined }
+  }, [executeViewportCommand, viewportCommandRef, viewport.viewportRows, viewport.contentRows])
 
   useLayoutEffect(() => {
     if (viewportCommand === undefined) return
-    if (viewportCommand.sequence === lastCommandSequence.current) return
     executeViewportCommand(viewportCommand)
   }, [
     viewportCommand,
@@ -2555,6 +2446,7 @@ export function StreamView({
       }
     }
     return Object.freeze({
+      scrollRevision: lastCommandSequence.current,
       revision: [
         contentRevision,
         String(viewport.offsetFromBottom),
@@ -2622,13 +2514,8 @@ export function StreamView({
   useLayoutEffect(() => {
     if (publishTranscript) writePublishedFrameSnapshot(stdout)
   }, [
-    columns,
-    rows,
     publishTranscript,
-    viewport.offsetFromBottom,
-    rail?.rows,
-    rail?.thumbRows,
-    rail?.thumbStart,
+    visibleFrame,
     stdout,
   ])
   // Ink can paint a replacement pane before passive effect cleanup runs.
@@ -2921,109 +2808,23 @@ export function StreamView({
             frameProbe={brandFrameProbe}
           />
         )
-        : (
+        : physicalViewport ? null : (
           <Box
             flexDirection="column"
-            position={physicalViewport ? 'absolute' : 'relative'}
-            top={physicalViewport && virtualContentRows <= effectiveViewportRows ? 0 : undefined}
-            bottom={physicalViewport && virtualContentRows > effectiveViewportRows ? -effectiveOffset : undefined}
-            left={physicalViewport ? contentLeft : undefined}
-            marginLeft={physicalViewport ? undefined : contentLeft}
+            marginLeft={contentLeft}
             width={contentWidth}
             flexShrink={0}
           >
-            {leadingRows > 0 ? <Box height={leadingRows} flexShrink={0} /> : null}
             {visibleEntryPairs.map(({ entry, index: layoutIndex }) => {
               const blockId = entry.id
-              const entryLines = entry.lines
-              const layout = virtualLayouts[layoutIndex]
-              let window: { start: number; end: number } | undefined
-              if (physicalViewport) {
-                window = sliceWindow(
-                  entryLines.length,
-                  layout?.top ?? 0,
-                  overscanTop,
-                  overscanBottom,
-                )
-              }
               if (entry.kind === 'active') {
-                if (window !== undefined) {
-                  const ranges = activeEntryRows.textRanges.get(blockId) ?? EMPTY_TEXT_RANGES
-                  return (
-                    <Box
-                      key={blockId}
-                      ref={(element) => {
-                        if (element === null) blockRefs.current.delete(blockId)
-                        else blockRefs.current.set(blockId, element)
-                      }}
-                      flexDirection="column"
-                      width="100%"
-                      flexShrink={0}
-                    >
-                      {window.start > 0 ? <Box height={window.start} flexShrink={0} /> : null}
-                      <SlicedLinesBlock
-                        lines={entryLines}
-                        sliceStart={window.start}
-                        sliceEnd={window.end}
-                        prefix={{ first: activeMarker(), rest: restIndent() }}
-                        textRanges={ranges}
-                      />
-                      {window.end < entryLines.length
-                        ? <Box height={entryLines.length - window.end} flexShrink={0} />
-                        : null}
-                    </Box>
-                  )
-                }
                 return (
-                  <Box
-                    key={blockId}
-                    ref={(element) => {
-                      if (element === null) blockRefs.current.delete(blockId)
-                      else blockRefs.current.set(blockId, element)
-                    }}
-                    flexDirection="column"
-                    width="100%"
-                    flexShrink={0}
-                  >
+                  <Box key={blockId} flexDirection="column" width="100%" flexShrink={0}>
                     {renderActiveTurn(entry.turn)}
                   </Box>
                 )
               }
               const row = entry.row
-              if (window !== undefined) {
-                const assistant = row.kind === 'message' && row.message.kind === 'assistant'
-                const ranges = assistant
-                  ? activeEntryRows.textRanges.get(blockId) ?? EMPTY_TEXT_RANGES
-                  : EMPTY_TEXT_RANGES
-                return (
-                  <Box
-                    key={blockId}
-                    ref={(element) => {
-                      if (element === null) blockRefs.current.delete(blockId)
-                      else blockRefs.current.set(blockId, element)
-                    }}
-                    flexDirection="column"
-                    width="100%"
-                    paddingBottom={entry.gapRows}
-                    flexShrink={0}
-                  >
-                    {window.start > 0 ? <Box height={window.start} flexShrink={0} /> : null}
-                    <SlicedLinesBlock
-                      lines={entryLines}
-                      sliceStart={window.start}
-                      sliceEnd={window.end}
-                      prefix={{
-                        first: kindMarker('● ', 'accentText'),
-                        rest: restIndent(),
-                      }}
-                      textRanges={ranges}
-                    />
-                    {window.end < entryLines.length
-                      ? <Box height={entryLines.length - window.end} flexShrink={0} />
-                      : null}
-                  </Box>
-                )
-              }
               let rowNode: ReactNode
               if (row.kind === 'compaction') {
                 rowNode = renderCompaction(row.divider)
@@ -3047,10 +2848,6 @@ export function StreamView({
               return (
                 <Box
                   key={blockId}
-                  ref={(element) => {
-                    if (element === null) blockRefs.current.delete(blockId)
-                    else blockRefs.current.set(blockId, element)
-                  }}
                   flexDirection="column"
                   width="100%"
                   paddingBottom={isUserWithGap ? 1 : entry.gapRows}
@@ -3060,10 +2857,9 @@ export function StreamView({
                 </Box>
               )
             })}
-            {trailingRows > 0 ? <Box height={trailingRows} flexShrink={0} /> : null}
           </Box>
         )}
-      {viewport.follow ? null : (
+      {physicalViewport || viewport.follow ? null : (
         <Box position="absolute" right={2} bottom={0}>
           <Text>{styled(
             viewport.unseenRows > 0

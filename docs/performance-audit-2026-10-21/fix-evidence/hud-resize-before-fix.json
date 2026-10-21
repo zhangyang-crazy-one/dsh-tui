@@ -1,0 +1,32 @@
+{
+  "source": "/tmp/dsh-perf-fix/final-overlap-500-120x40/final.ansi",
+  "columns": 120,
+  "rows": 40,
+  "frames": 686,
+  "suppressedGeometryFrames": 0,
+  "badFrames": 2,
+  "examples": [
+    {
+      "frame": 59,
+      "composerRow": 37,
+      "leaks": [
+        {
+          "row": 35,
+          "line": "  ● LIVE_2_31 中文与 加粗 mixed data，表格输出及已提交文本不得穿入输入区。                                             █"
+        }
+      ]
+    },
+    {
+      "frame": 183,
+      "composerRow": 37,
+      "leaks": [
+        {
+          "row": 35,
+          "line": "    LIVE_4_95 中文与 加粗 mixed data，表格输出及已提交文本不得穿入输入区。                                             █"
+        }
+      ]
+    }
+  ],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

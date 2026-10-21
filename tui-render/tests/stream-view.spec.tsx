@@ -56,7 +56,7 @@ async function timedActiveFrame(input: {
       }),
     }),
     {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -377,7 +377,53 @@ describe('StreamView', () => {
     }
   })
 
-  it('paints each wheel animation row within the overscan window and reaches the exact target', async () => {
+  it('leaves TTY transcript text to the physical painter instead of painting it again through Ink', async () => {
+    const stdout = ttyStdout(24)
+    const chunks: string[] = []
+    stdout.on('data', (chunk: string) => { chunks.push(String(chunk)) })
+    const shell = createElement(AppShell, {
+      title: 'SINGLE_PAINTER', badge: '',
+      children: streamElement([{ id: 1, kind: 'user', timestamp: 0, text: 'OVERLAY_OWNS_THIS_TEXT' }]),
+      status: createElement(Text, null, 'STATUS'), input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell, { stdout, stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    try {
+      await instance.waitUntilRenderFlush()
+      expect(visibleFrameSnapshot()?.rows.some(row => row.line.text.includes('OVERLAY_OWNS_THIS_TEXT'))).toBe(true)
+      // Physical overlays save/restore the cursor; raw Ink chunks must contain chrome only.
+      expect(chunks.filter(chunk => !chunk.includes('\x1b7')).join('')).not.toContain('OVERLAY_OWNS_THIS_TEXT')
+    } finally { instance.unmount() }
+  })
+
+  it('lands a wheel report at its target without animation and reverses without trailing motion', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const stdout = ttyStdout(24)
+    const history: ViewModel['history'] = [{ id: 1, kind: 'user', timestamp: 0,
+      text: Array.from({ length: 80 }, (_, index) => `WHEEL_ROW_${String(index).padStart(3, '0')}`).join('\n') }]
+    const shell = (command?: TranscriptViewportCommand) => createElement(AppShell, {
+      title: 'WHEEL', badge: '', children: streamElement(history, command),
+      status: createElement(Text, null, 'STATUS'), input: createElement(Text, null, '> INPUT'),
+    })
+    const instance = render(shell(), { stdout: frameTtyStdout(stdout), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: true })
+    const firstRow = () => Number(/WHEEL_ROW_(\d+)/u.exec(visibleFrameSnapshot()?.rows[0]?.line.text ?? '')?.[1])
+    try {
+      await instance.waitUntilRenderFlush()
+      const initial = firstRow()
+      instance.rerender(shell({ sequence: 1, kind: 'scroll', delta: 9, source: 'wheel' }))
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBe(initial - 9)
+      instance.rerender(shell({ sequence: 2, kind: 'scroll', delta: -3, source: 'wheel' }))
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBe(initial - 6)
+      await vi.advanceTimersByTimeAsync(200)
+      await instance.waitUntilRenderFlush()
+      expect(firstRow()).toBe(initial - 6)
+    } finally { instance.unmount(); vi.useRealTimers() }
+  })
+
+  it('paints each keyboard animation row within the overscan window and reaches the exact target', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     const stdout = ttyStdout(24)
     const atlas = new ScreenAtlas(80, 24)
@@ -538,7 +584,7 @@ describe('StreamView', () => {
       input: createElement(Text, null, '> ANCHOR_INPUT'),
     })
     const instance = render(shell(initial), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -609,7 +655,7 @@ describe('StreamView', () => {
     })
     const command = { sequence: 1, kind: 'position', fraction: 0.5 } as const
     const instance = render(shell(activeModel), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -708,7 +754,7 @@ describe('StreamView', () => {
       input: createElement(Text, null, '> RESIZE_INPUT'),
     })
     const instance = render(shell(), {
-      stdout,
+      stdout: frameTtyStdout(stdout),
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -1090,9 +1136,9 @@ describe('StreamView', () => {
   })
 
   it('packs a short transcript under the title divider so live tools grow downward', async () => {
-    const chunks: string[] = []
+    const atlas = new ScreenAtlas(80, 24)
     const stdout = ttyStdout(24)
-    stdout.on('data', (chunk: string) => chunks.push(chunk))
+    stdout.on('data', (chunk: string) => { atlas.feed(chunk) })
     const instance = render(
       createElement(AppShell, {
         title: 'deepseek-tui',
@@ -1108,7 +1154,7 @@ describe('StreamView', () => {
         input: createElement(Text, null, '> COMPOSER'),
       }),
       {
-        stdout,
+        stdout: frameTtyStdout(stdout),
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -1117,7 +1163,7 @@ describe('StreamView', () => {
     )
     try {
       await instance.waitUntilRenderFlush()
-      const lines = stripAnsi(chunks.join('')).split(/\r?\n/)
+      const lines = ttyFrame(atlas, 80, 24).split('\n')
       const titleAt = lines.findIndex(line => line.includes('deepseek-tui'))
       const msgAt = lines.findIndex(line => line.includes('PIN_MSG'))
       const statusAt = lines.findIndex(line => line.includes('STATUS_ROW'))
@@ -1189,7 +1235,7 @@ describe('StreamView', () => {
         brandAnimation: true,
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -1229,7 +1275,7 @@ describe('StreamView', () => {
         input: createElement(Text, null, '> COMPOSER'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -1690,7 +1736,7 @@ describe('StreamView', () => {
         input: createElement(Text, null, '> COMPOSER'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2010,6 +2056,23 @@ describe('StreamView', () => {
 })
 
 describe('StreamView physical-row virtualization', () => {
+  it('does not scan previous Markdown projector states when loading distinct history', () => {
+    const create = blockRows.createMarkdownProjectorState
+    let scopeReads = 0
+    const spy = vi.spyOn(blockRows, 'createMarkdownProjectorState').mockImplementation((...args) => {
+      const state = create(...args)
+      const scope = state.scopeKey
+      Object.defineProperty(state, 'scopeKey', { get: () => { scopeReads++; return scope } })
+      return state
+    })
+    try {
+      renderToString(createElement(StreamView, { model: model({ history: Array.from({ length: 150 }, (_, id) => ({
+        id, kind: 'assistant' as const, timestamp: id, text: `Unique Markdown message ${id}`,
+      })) }) }))
+      // Allow per-message projection work, but not a triangular history scan.
+      expect(scopeReads).toBeLessThan(150 * 20)
+    } finally { spy.mockRestore() }
+  })
   it('keeps the tool-summary expansion hint on a narrow terminal', async () => {
     const columns = 30
     const rows = 24
@@ -2034,7 +2097,7 @@ describe('StreamView physical-row virtualization', () => {
       status: createElement(Text, null, 'NARROW_TOOL_STATUS'),
       input: createElement(Text, null, '> NARROW_TOOL_INPUT'),
     }), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -2081,7 +2144,7 @@ describe('StreamView physical-row virtualization', () => {
         input: createElement(Text, null, '> TOOL_GAP_INPUT'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2126,7 +2189,7 @@ describe('StreamView physical-row virtualization', () => {
         input: createElement(Text, null, '> PREFIX_WIDTH_INPUT'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2171,7 +2234,7 @@ describe('StreamView physical-row virtualization', () => {
         input: createElement(Text, null, '> CURSOR_WIDTH_INPUT'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2228,7 +2291,7 @@ describe('StreamView physical-row virtualization', () => {
         input: createElement(Text, null, '> INPUT'),
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2280,7 +2343,7 @@ describe('StreamView physical-row virtualization', () => {
       input: createElement(Text, null, '> ACTIVE_SLICE_INPUT'),
     })
     const instance = render(shell(), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -2348,7 +2411,7 @@ describe('StreamView physical-row virtualization', () => {
       input: createElement(Text, null, '> INPUT'),
     })
     const instance = render(shell(), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,
@@ -2396,7 +2459,7 @@ describe('StreamView physical-row virtualization', () => {
         frameMetrics: metrics,
       }),
       {
-        stdout,
+        stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
@@ -2506,7 +2569,7 @@ describe('StreamView physical-row virtualization', () => {
       frameMetrics: metrics,
     })
     const instance = render(element('snapshot one'), {
-      stdout,
+      stdout: stdout.isTTY ? frameTtyStdout(stdout) : stdout,
       stdin: fakeTtyStdin(),
       exitOnCtrlC: false,
       patchConsole: false,

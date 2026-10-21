@@ -1,0 +1,24 @@
+TUI performance audit offline 25 settin…
+────────────────────────────────────────
+设置 › … › models  1/65
+› model-0                     › 5 个字段
+  model-1                     › 5 个字段
+  model-2                     › 5 个字段
+  model-3                     › 5 个字段
+  model-4                     › 5 个字段
+  model-5                     › 5 个字段
+  model-6                     › 5 个字段
+  model-7                     › 5 个字段
+  model-8                     › 5 个字段
+  model-9                     › 5 个字段
+  model-10                    › 5 个字段
+  model-11                    › 5 个字段
+  model-12                    › 5 个字段
+… 还有 52 项
+值: 5 个字段
+↑↓ 选择  Enter 打开  ← 返回
+/ 搜索  i 编辑  Tab 分类  Esc 返回
+
+────────────────────────────────────────
+/offline-fixture · 状态 空闲
+offline 25 settings · / 命令 · @ 提及
