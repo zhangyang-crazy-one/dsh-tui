@@ -9,11 +9,13 @@ import type { FrozenMessage } from '../src/projection.ts'
 const NOW = 1_700_000_000_000
 
 function renderTimeline(
-  history: readonly FrozenMessage[],
+  history: readonly Omit<FrozenMessage, 'id'>[],
   now = NOW,
   offset = 0,
 ): string {
-  return renderToString(createElement(TimelineView, { history, now, offset }))
+  return renderToString(createElement(TimelineView, {
+    history: history.map((message, id) => ({ ...message, id })), now, offset,
+  }))
 }
 
 describe('TimelineView', () => {

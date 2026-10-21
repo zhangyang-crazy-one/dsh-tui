@@ -105,6 +105,20 @@ describe('goal footer', () => {
     await ctx.fiber.dispose()
   })
 
+  it('invalidates the footer on activation changes without a durable session event', async () => {
+    const { ctx, controller, liveAgent } = await bench()
+    let view = GOAL_VIEW
+    ctx.provide('goals', { get: () => view } as never)
+    expect(controller.getGoalFooter()).toBe(view)
+    view = { ...view, activation: 'disarmed' }
+    ctx.emit('goal/activation-changed', { sessionId: liveAgent.id, goal: { id: view.id, revision: view.revision, activation: view.activation } })
+    expect(controller.getGoalFooter()).toBe(view)
+    const stable = controller.getGoalFooter()
+    ctx.emit('goal/activation-changed', { sessionId: 'foreign-session' as typeof liveAgent.id })
+    expect(controller.getGoalFooter()).toBe(stable)
+    await ctx.fiber.dispose()
+  })
+
   it('returns undefined when no goal is current', async () => {
     const { ctx, controller } = await bench()
     ctx.provide('goals', { get: () => undefined } as never)

@@ -1,3 +1,4 @@
+import { PASSIVE_CONTROLLER } from './helpers.ts'
 /**
  * PlanDirectoryPane chrome: 开启/关闭 rows, current marker, switch failure,
  * unreadable status, and CSI escaping. Composes OverlayShell.
@@ -86,9 +87,7 @@ function stubController(
     getSettingsPane: () => EMPTY_SETTINGS_PANE,
     getAgentHubPane: () => EMPTY_OVERLAY_PANE,
     getPlanDirectoryPane: () => directory,
-    getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-    getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-    getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+    ...PASSIVE_CONTROLLER,
     getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
     getComposerHud: () => undefined,
     getToolPresenters: () => undefined,

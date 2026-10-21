@@ -1,3 +1,10 @@
+import { TerminalSubagentControls } from './subagent-controls.ts'
+import { inspectBrowser, marketBrowser } from './capability-browsers.ts'
+import { TerminalPresets } from './presets.ts'
+import { shortcutBindings, shortcutCatalog, EMPTY_SHORTCUTS, type ShortcutOverrides } from '@deepseek-ai/dsh-tui-render'
+import { TerminalBrowser, type BrowserOptions } from './browser.ts'
+import { trajectoryRows, attachmentRows, eventJson } from './session-browser.ts'
+import { WorkspaceObserver } from './workspace-observer.ts'
 /**
  * Mounts the interactive terminal surface over the base harness services. The
  * runtime owns the bound Agent, Session event admission, session transitions,
@@ -40,7 +47,8 @@ import { constants, readFileSync } from 'node:fs'
 import type { Stats } from 'node:fs'
 import { access, lstat, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, resolve } from 'node:path'
+import { basename, dirname, extname, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { installModelSelection } from '@deepseek-ai/dsh-agent'
@@ -51,12 +59,16 @@ import type {
   ModelSelectionRef,
 } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-default-model'
+import type {} from './schedule.ts'
+import { ScheduleId } from '@deepseek-ai/dsh-schedule'
+import { EMPTY_SCHEDULE_PANE, type SchedulePaneState } from '@deepseek-ai/dsh-tui-render'
 // The named import carries the Context merge for ctx.commands; the service
 // itself is composed by the base patch.
 import type { CommandDescriptor } from '@deepseek-ai/dsh-commands'
 // Type-only imports carry the Context merges for ctx.fs and ctx.skills; both
 // services are composed by the base patch.
 import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-working-directory'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-skill'
@@ -179,6 +191,9 @@ import type {} from '@deepseek-ai/dsh-workspace-changes/types'
 import type { SessionSearchHit } from '@deepseek-ai/dsh-session-query'
 import {
   applyTheme,
+  currentTier,
+  nextSettingsGroup,
+  listTuiLocales,
   tuiCopy,
   ToolPresenterCache,
   EMPTY_TOOL_DETAILS_PANE,
@@ -191,6 +206,8 @@ import {
   createFrameMetrics,
   createFrameProbe,
   createProjector,
+  escapeContent,
+  truncateDisplay,
   renderPolicyDefaults,
   toolPolicyDefaults,
   frameStatsSnapshot,
@@ -275,6 +292,7 @@ import type {
   TodoHudItem,
   ToolPresenterLookup,
   TuiController,
+  TuiRenderOptions,
   LoopMode,
   ViewModel,
   WorkflowHudMember,
@@ -386,6 +404,10 @@ export const inject = ['agentDefaultModel', 'agents', 'sessions']
 
 /** Plugin config: the optional task seed resolved from this app's provider service. */
 export interface Config {
+  /** Deadline for the platform image clipboard reader. */
+  clipboardTimeoutMs?: number
+  /** Maximum complete file bytes admitted to an explicit-delivery text preview. */
+  workspacePreviewMaxBytes?: number
   /** The optional initial prompt text; an empty seed boots the loop idle. */
   task: string
   /** Session id to resume, if given on the command line. */
@@ -399,6 +421,8 @@ export interface Config {
 }
 
 export const Config: z<Config> = z.object({
+  clipboardTimeoutMs: z.number().min(1).step(1).default(5000),
+  workspacePreviewMaxBytes: z.number().min(1).step(1).default(1048576),
   task: z.string().required(),
   resume: z.string(),
   cwd: z.string(),
@@ -532,6 +556,7 @@ export const internals: {
   /** `process.argv` snapshot for `/reload` argv rebuilding. */
   processArgv: readonly string[]
   /** Clipboard-image reader spawn; tests inject a deterministic stub. */
+  clipboardPlatform: NodeJS.Platform
   /** Browser opener for the account authorization link; tests capture the URL. */
   openUrl: (href: string) => void
   /** Environment used to detect a remote (SSH) terminal for the sign-in callback hint. */
@@ -539,7 +564,7 @@ export const internals: {
   clipboardSpawn: (
     command: string,
     args: readonly string[],
-    options: { stdio: ['ignore', 'pipe', 'pipe'] },
+    options: { stdio: ['ignore', 'pipe', 'pipe']; signal?: AbortSignal; timeout?: number },
   ) => import('node:child_process').ChildProcessByStdio<
     null,
     import('node:stream').Readable,
@@ -567,6 +592,7 @@ export const internals: {
   editorTtyPath: '/dev/tty',
   processArgv: process.argv,
   clipboardSpawn: (command, args, options) => spawn(command, [...args], options),
+  clipboardPlatform: process.platform,
   openUrl: (href) => { openUrl(href) },
   accountEnvironment: process.env,
 }
@@ -760,6 +786,13 @@ interface QueuedAskUser {
   settled: boolean
   /** Highlighted option index for the first question. */
   selectedIndex: number
+  questionIndex: number
+  answers: AskUserQuestionAnswer['answers']
+  selectedIndices: Set<number>
+  customAnswer: string | undefined
+  customDraft: string
+  customCaretIndex: number
+  editingCustom: boolean
   /** Abort listener to remove on settle. */
   onAbort: () => void
 }
@@ -904,6 +937,16 @@ function persistenceHasBorrowSession(persistence: unknown): boolean {
   return typeof (persistence as { borrowSession?: unknown } | undefined)?.borrowSession === 'function'
 }
 
+/** Bounded public progress for a descendant; never owns its Agent handle. */
+interface ChildProgress {
+  owner: SessionId
+  running: boolean
+  task: string
+  summary: string
+  execution: string
+  runId?: string
+}
+
 /** Hub table row for one `child` listing entry; diagnostics are omitted. */
 function hubRowOf(entry: SubagentListEntry): AgentHubRow | undefined {
   if (entry.kind !== 'child') return undefined
@@ -912,6 +955,8 @@ function hubRowOf(entry: SubagentListEntry): AgentHubRow | undefined {
     id: entry.id,
     label,
     activity: entry.activity,
+    mode: entry.mode,
+    ...('parentId' in entry && typeof entry.parentId === 'string' ? { parentSessionId: SessionId(entry.parentId) } : {}),
     hasChildren: entry.hasChildren,
   }
 }
@@ -971,8 +1016,9 @@ function joinTextBlocks(content: readonly ContentBlock[], separator: string): st
   return result
 }
 
-/** Resolve the clipboard helper argv (wl-paste on Wayland, xclip on X11); undefined when neither surface is set. */
+/** Resolve binary clipboard stdout: pngpaste on macOS, wl-paste on Wayland, xclip on X11. */
 function clipboardHelperCommand(): string[] | undefined {
+  if (internals.clipboardPlatform === 'darwin') return ['pngpaste', '-']
   if (process.env.WAYLAND_DISPLAY !== undefined && process.env.WAYLAND_DISPLAY !== '') {
     return ['wl-paste', '--type', 'image/png']
   }
@@ -1038,9 +1084,18 @@ export const SEARCH_DEBOUNCE_MS = 120
  * `/settings` opens the settings overlay.
  */
 const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
+  { name: 'preset', description: 'View or select the Session composition before its first turn', input: { hint: '[ID]' } },
+  { name: 'market', description: 'Browse configured plugin market indexes', input: { hint: '[QUERY]' } },
+  { name: 'inspect', description: 'Inspect live Host Cordis services, events, configs and tools' },
+  { name: 'keys', description: '完整快捷键目录与当前重绑定' },
+  { name: 'bind', description: '重绑定输入区快捷键', input: { hint: '<ACTION> <Ctrl+X|default>' } },
+  { name: 'unbind', description: '停用输入区快捷键', input: { hint: '<ACTION>' } },
+  { name: 'focus', description: 'Toggle quiet transcript focus view' },
+  { name: 'agents', description: 'View subagent tasks and live output' },
   { name: 'cd', description: 'Show or change the session working directory', input: { hint: '[PATH]' } },
   { name: 'export', description: 'Export this session to a Markdown file' },
   { name: 'files', description: 'Browse and preview workspace files' },
+  { name: 'deliveries', description: 'Browse, preview and open explicitly delivered files' },
   { name: 'help', description: 'Show command help and key bindings' },
   { name: 'key', description: 'Set or update API key', input: { hint: '[KEY_NAME] <SECRET>' } },
   { name: 'login', description: 'Sign in to a DeepSeek account (API key when sign-in is unavailable)', input: { hint: '[KEY_NAME] <SECRET>' } },
@@ -1050,6 +1105,11 @@ const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
   { name: 'reload', description: 'Relaunch this process and resume the session' },
   { name: 'resume', description: 'Switch or resume a session' },
   { name: 'settings', description: 'Edit settings, catalogs, and General' },
+  { name: 'todos', description: 'Expand the complete current TODO list' },
+  { name: 'timeline', description: 'Inspect Session events, tools, timing, tokens and JSON' },
+  { name: 'attachments', description: 'Browse image/file attachments in this Session' },
+  { name: 'review', description: 'Review per-turn changed files and exact diffs' },
+  { name: 'schedules', description: 'View reminders, delivery history, and cancel tasks' },
 ]
 
 /**
@@ -1057,6 +1117,9 @@ const LOCAL_COMMANDS: readonly CommandDescriptor[] = [
  * carry upstream English text. A command missing here keeps its own text.
  */
 const ZH_COMMAND_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  schedules: '查看定时提醒、交付记录与取消任务',
+  deliveries: '查看、预览并打开显式交付文件',
+  agents: '查看子代理任务与实时进度',
   cd: '查看或切换会话工作目录',
   compact: '压缩较早的对话历史',
   export: '导出当前会话为 Markdown 文件',
@@ -1074,6 +1137,7 @@ const ZH_COMMAND_DESCRIPTIONS: Readonly<Record<string, string>> = {
   reload: '重启进程并恢复当前会话',
   resume: '切换或恢复会话',
   settings: '编辑设置、模型目录与通用选项',
+  todos: '展开完整待办清单（含已完成）',
 }
 
 /**
@@ -1097,10 +1161,13 @@ export class RuntimeController implements TuiController {
    * @returns the current name-sorted command items.
    */
   get commands(): readonly CommandItem[] {
-    return this.commandDirectory().map(command => ({
-      name: command.name,
-      description: command.description,
-    }))
+    const keyDescription = this.getLocale() === 'en-US' ? 'Set this provider’s API key' : '设置此提供方的 API 密钥'
+    return this.commandDirectory().flatMap(command => {
+      const item = { name: command.name, description: command.description }
+      return command.name === 'key'
+        ? [item, ...this.apiKeyTargets().map(name => ({ name: `key ${name}`, description: keyDescription }))]
+        : [item]
+    })
   }
 
   /** The live agent the registry lists and executes commands against. */
@@ -1201,6 +1268,9 @@ export class RuntimeController implements TuiController {
   private searchStatus: SearchStatus = 'idle'
   /** Read-only timeline view (Ctrl+T). */
   private timelineOpen = false
+  private readonly subagentControls: TerminalSubagentControls
+  private readonly presets: TerminalPresets
+  private readonly browser = new TerminalBrowser(() => this.emit())
   /** Model-selection panel state, driven by the llm provider catalog. */
   private modelOpen = false
   private modelFilter = ''
@@ -1237,10 +1307,17 @@ export class RuntimeController implements TuiController {
   private agentHubOpen = false
   private agentHubRows: AgentHubRow[] = []
   private agentHubSelectedIndex = 0
+  private readonly agentHubParents: { rows: AgentHubRow[]; selectedIndex: number }[] = []
   private agentHubView: 'table' | 'transcript' = 'table'
   private agentHubError: string | undefined
   private agentHubTranscript: string | undefined
   private agentHubScrollOffset = 0
+  private readonly childProgress = new Map<SessionId, ChildProgress>()
+  private childUiTimer: ReturnType<typeof setTimeout> | undefined
+  private inspectedChild: Session | undefined
+  private childTranscriptBase = ''
+  private childTranscriptPartial = ''
+  private agentHubCatalogDirty = false
   /** Monotonic listing/inspect id: only the newest Hub request may land. */
   private agentHubSeq = 0
   /** Cancellation owner for the newest Hub list, fold, expansion, or inspect. */
@@ -1251,7 +1328,13 @@ export class RuntimeController implements TuiController {
   private planDirectoryCurrentActive = false
   private planDirectorySwitchError: string | undefined
   private planDirectoryStatusError: string | undefined
+  private readonly workspaceObserver = new WorkspaceObserver<FsTarget>(() => { this.ownWork(this.refreshWorkspace(), 'workspace refresh') }, reason => {
+    if (!this.closed && this.workspaceOpen) { this.workspaceWatchError = reason;this.emit() }
+  })
+  private workspaceWatchError: string | undefined
+  private workspaceRefresh: Promise<void> | undefined
   private workspaceOpen = false
+  private workspaceDeliveries = false
   /** Workspace tree root; undefined until the first resolve lands. */
   private workspaceRoot: FsTarget | undefined
   /** Loaded directory children by target key (lazy tree). */
@@ -1284,6 +1367,10 @@ export class RuntimeController implements TuiController {
   /** Stale guard for in-flight feedback reads/writes; bumped on open/close. */
   private feedbackSeq = 0
   private workflowOverlayOpen = false
+  private todoPaneOpen = false
+  private schedulePane: SchedulePaneState = EMPTY_SCHEDULE_PANE
+  private scheduleSeq = 0
+  private disposeScheduleEvents: () => void = () => {}
   /** Live `tui` section reader installed by {@link installSettingsSection}. */
   /** Last recorded turn ending, consumed by the idle-time notification summary. */
   private lastTurnEnd:
@@ -1360,6 +1447,7 @@ export class RuntimeController implements TuiController {
   private pluginsBundles: BundleInfo[] = []
   private pluginsEntries: PluginInfo[] = []
   private pluginsInventorySeq = 0
+  private pluginsRegistry: string | undefined
   private pluginsInspection: PluginSpecInspection | undefined
   private pluginsAttempt: { id: PluginInstallRequestId; done?: Promise<void> | undefined } | undefined
   private pluginsLastAttemptId: PluginInstallRequestId | undefined
@@ -1387,14 +1475,23 @@ export class RuntimeController implements TuiController {
       settle: (result: ExternalEditorSettlement) => void,
     ) => boolean = () => false,
   ) {
+    this.presets = new TerminalPresets(ctx)
+    this.subagentControls = new TerminalSubagentControls(ctx, () => { this.agentHubPaneSnapshot = undefined;if (this.agentHubOpen) this.emit() })
+    this.disposeScheduleEvents = ctx.on('schedule/changed', () => {
+      if (!this.closed && this.schedulePane.open) this.ownWork(this.refreshSchedules(), 'schedule catalog changed')
+    })
     // The exact Session object is the admission authority. This check must run
     // before any projector, interaction, flush, title/status, or render mutation.
     this.disposeSessionEvents = ctx.on('session/event', (session, event: SessionEvent) => {
-      if (session !== this.liveHandle?.agent.session) return
+      if (session !== this.liveHandle?.agent.session) {
+        if (this.isObservedChild(session)) this.observeChildEvent(session, event)
+        return
+      }
       this.projector.push(event)
       if (event.type === 'workspace/changes') this.cacheWorkspaceChange(event.seq)
       if (this.agentHubOpen && (event.type === 'subagent/catalog' || event.type === 'subagent/descriptor')) {
-        this.ownWork(this.refreshAgentHub(), 'agent hub list')
+        if (this.agentHubView === 'transcript') this.agentHubCatalogDirty = true
+        else this.ownWork(this.refreshAgentHub(), 'agent hub list')
       }
       if (event.type === 'turn/start') {
         this.reduce({ kind: 'turn-started' }, undefined, undefined)
@@ -1424,6 +1521,25 @@ export class RuntimeController implements TuiController {
       this.emit()
     })
     const inboxDisposers = [
+      ctx.on('goal/activation-changed', ({ sessionId }) => {
+        if (sessionId === this.agent?.id) this.emit()
+      }),
+      ctx.on('subagent/start', info => {
+        const child = ctx.sessions.get(info.id)
+        if (child === undefined || !this.isObservedChild(child)) return
+        const progress = this.childProgressFor(child)
+        progress.runId = info.runId
+        progress.running = true
+        progress.execution = '运行中'
+        this.queueChildUpdate()
+      }),
+      ctx.on('subagent/end', info => {
+        const progress = this.childProgress.get(info.id)
+        if (progress === undefined || progress.runId !== info.runId) return
+        progress.running = false
+        progress.execution = info.stopReason === 'completed' ? '已完成' : `已结束：${String(info.stopReason)}`
+        this.queueChildUpdate()
+      }),
       ctx.on('agent/inbox/inserted', ({ agent, message }) => {
         if (agent !== this.agent) return
         this.markSteerState(message.id, 'inserted')
@@ -1445,7 +1561,20 @@ export class RuntimeController implements TuiController {
       // Session format v3 persists no per-chunk events; live text and
       // reasoning arrive only on this transient channel.
       ctx.on('agent/assistant-stream', ({ agent, frame }) => {
-        if (agent !== this.liveHandle?.agent) return
+        if (agent !== this.liveHandle?.agent) {
+          if (!this.isObservedChild(agent.session)) return
+          const progress = this.childProgressFor(agent.session)
+          if (frame.type === 'chunk' && frame.chunk.type === 'text-delta') {
+            progress.summary = (progress.summary + frame.chunk.text).slice(-160)
+            if (this.agentHubOpen && this.agentHubView === 'transcript' && this.inspectedChild === agent.session) {
+              this.childTranscriptPartial = (this.childTranscriptPartial + frame.chunk.text).slice(-64_000)
+            }
+          } else if (this.inspectedChild === agent.session) {
+            if (frame.type === 'start' || frame.type === 'end') this.childTranscriptPartial = ''
+          }
+          this.queueChildUpdate()
+          return
+        }
         this.projector.pushStreamFrame(frame)
         this.emit()
       }),
@@ -1555,8 +1684,16 @@ export class RuntimeController implements TuiController {
   /** Perform the one quiescent controller teardown. */
   private async disposeOwnedResources(): Promise<void> {
     this.closed = true
+    this.browser.close()
+    this.workspaceObserver.close()
+    this.disposeScheduleEvents()
+    this.scheduleSeq += 1
+    if (this.childUiTimer !== undefined) clearTimeout(this.childUiTimer)
+    this.childUiTimer = undefined
+    this.childProgress.clear()
     this.disposeSessionEvents()
     this.disposeAgentInboxEvents()
+    this.subagentControls.close()
     this.disposeApprovalRequest()
     this.disposeUserQuestions()
     this.disposeUserQuestions = () => {}
@@ -1600,6 +1737,7 @@ export class RuntimeController implements TuiController {
       this.ctx.logger.warn(`agent cancellation during TUI unload failed: ${errorReason(error)}`)
     }
 
+    await this.workspaceObserver.settled()
     const transition = this.transitionInFlight
     if (transition !== undefined) {
       try {
@@ -1792,6 +1930,85 @@ export class RuntimeController implements TuiController {
     return this.modelPaneSnapshot
   }
 
+  getBrowserPane(): ReturnType<TerminalBrowser['get']> { return this.browser.get() }
+
+  private openBrowser(options: BrowserOptions): void {
+    if (this.blockingHead() !== undefined) return
+    this.closeOtherPanels()
+    this.browser.open(options)
+  }
+
+  private openTrajectory(): void {
+    const session = this.session
+    if (session === undefined || this.blockingHead() !== undefined) return
+    this.openBrowser({ id: 'trajectory', title: '事件轨迹 · Enter 原始 JSON',
+      load: async () => trajectoryRows(getSessionEvents(session)),
+      detail: async row => {
+        const event = getSessionEvents(session).find(event => String(event.seq) === row.id)
+        if (event === undefined) throw new Error('事件已不可用')
+        return eventJson(event)
+      },
+    })
+    this.timelineOpen = true
+  }
+
+  private openAttachments(): void {
+    const session = this.session
+    if (session === undefined) return
+    const rowFor = (id: string) => {
+      const row = attachmentRows(getSessionEvents(session)).find(row => row.id === id)
+      if (row === undefined) throw new Error('附件已不可用')
+      return row
+    }
+    this.openBrowser({ id: 'attachments', title: '会话附件 · 图片以元数据呈现',
+      load: async () => attachmentRows(getSessionEvents(session)),
+      detail: async row => JSON.stringify(rowFor(row.id), null, 2),
+      actions: [{ key: 'o', label: '系统打开', run: async (item, signal) => {
+        const row = rowFor(item.id)
+        const store = this.ctx.get('attachments')
+        if (store === undefined) throw new Error('附件存储服务未组合')
+        const path = row.kind === 'image' ? store.imageHostPath(row.ref) : store.fileHostPath(row.ref)
+        if (path === undefined) throw new Error('当前附件提供方不提供本地文件路径')
+        await access(path)
+        signal.throwIfAborted()
+        internals.openUrl(pathToFileURL(path).href)
+      } }],
+    })
+  }
+
+  private openChangesReview(): void {
+    const session = this.session
+    if (session === undefined) return
+    const coordinates = new Map<string, { seq: number; index: number }>()
+    this.openBrowser({ id: 'review', title: '逐文件变更 Review',
+      load: async () => {
+        coordinates.clear()
+        const rows = []
+        const service = this.ctx.get('workspaceChanges')
+        if (service === undefined) throw new Error('变更记录服务未组合')
+        for (const event of getSessionEvents(session)) {
+          if (event.type !== 'workspace/changes') continue
+          const summary = service.summary(session.id, event.seq)
+          if (summary === undefined) { rows.push({ id: `${event.seq}:missing`, title: `回合 ${event.data.turn} · 变更快照已不可用` });continue }
+          for (const [index, file] of summary.files.entries()) {
+            const id = `${event.seq}:${index}`
+            coordinates.set(id, { seq: event.seq, index })
+            rows.push({ id, title: `回合 ${summary.turn} · ${file.display}`, hint: file.binary ? 'binary' : file.oversized ? 'oversized' : `+${file.added} -${file.deleted}` })
+          }
+        }
+        return rows
+      },
+      detail: async (row, signal) => {
+        const selected = coordinates.get(row.id)
+        if (selected === undefined) throw new Error(SESSION_CHANGES_DISPOSED_COPY)
+        const diff = await this.ctx.get('workspaceChanges')?.diff(session.id, selected.seq, selected.index, signal)
+        const lines = formatWorkspaceChangeDiffPreview(diff)
+        if (lines === undefined) throw new Error(SESSION_CHANGES_DISPOSED_COPY)
+        return lines.join('\n')
+      },
+    })
+  }
+
   /**
    * Return the current help-panel state: the rendered `/help` sheet lines.
    * @returns the help lines and the open flag.
@@ -1975,7 +2192,7 @@ export class RuntimeController implements TuiController {
       && cached.rows === this.agentHubRows
       && cached.selectedIndex === this.agentHubSelectedIndex
       && cached.view === this.agentHubView
-      && cached.error === this.agentHubError
+      && cached.error === (this.agentHubError ?? this.subagentControls.get().error)
       && cached.transcript === this.agentHubTranscript
       && cached.scrollOffset === this.agentHubScrollOffset
       && cached.liveContinuable === liveContinuable
@@ -1985,6 +2202,7 @@ export class RuntimeController implements TuiController {
       return cached
     }
     this.agentHubPaneSnapshot = {
+      ...this.subagentControls.get(),
       open: true,
       rows: this.agentHubRows,
       selectedIndex: this.agentHubSelectedIndex,
@@ -2034,9 +2252,13 @@ export class RuntimeController implements TuiController {
     if (this.workspacePaneSnapshot === undefined) {
       const fs = this.ctx.get('fs')
       this.workspacePaneSnapshot = {
+        ...(this.workspaceDeliveries ? { mode: 'deliveries' as const } : {}),
         open: true,
         root: this.workspaceRoot?.displayPath ?? '',
-        nodes: this.computeWorkspaceRows().map(row => ({
+        nodes: this.workspaceDeliveries ? (this.projector.snapshot().deliveries ?? []).map(file => ({
+          path: file.path, name: file.path, depth: 0, kind: 'file' as const, expanded: false,
+          ...(file.description === undefined ? {} : { description: file.description }),
+        })) : this.computeWorkspaceRows().map(row => ({
           path: row.target.displayPath,
           name: row.name,
           depth: row.depth,
@@ -2045,8 +2267,9 @@ export class RuntimeController implements TuiController {
         })),
         selectedIndex: this.workspaceSelectedIndex,
         editing: this.workspaceEditing,
-        error: fs === undefined ? '文件系统未组合' : undefined,
+        error: fs === undefined && !this.workspaceDeliveries ? '文件系统未组合' : undefined,
         resolveError: this.workspaceResolveError,
+        watchError: this.workspaceWatchError,
         preview: this.workspacePreview,
       }
     }
@@ -2105,11 +2328,59 @@ export class RuntimeController implements TuiController {
     this.emit()
   }
 
+  private workspaceDirectories(): FsTarget[] {
+    return this.workspaceRoot === undefined ? [] : [this.workspaceRoot, ...this.computeWorkspaceRows()
+      .filter(row => row.kind === 'directory' && row.expanded).map(row => row.target)]
+  }
+
+  private observeWorkspace(): void {
+    const fs = this.ctx.get('fs')
+    this.workspaceWatchError = undefined
+    if (fs === undefined || !this.workspaceOpen || this.workspaceDeliveries) { this.workspaceObserver.close();return }
+    if (typeof fs.watch !== 'function') { this.workspaceWatchError = '自动刷新不可用 · r 手动刷新';return }
+    this.workspaceObserver.observe(this.workspaceDirectories(), (target, changed, signal) => fs.watch(target, changed, signal))
+  }
+
+  private refreshWorkspace(): Promise<void> {
+    if (this.workspaceRefresh !== undefined) return this.workspaceRefresh
+    const run = (async () => {
+      if (!this.workspaceOpen || this.workspaceDeliveries || this.closed) return
+      const fs = this.ctx.get('fs')
+      if (fs === undefined) return
+      const seq = this.workspaceSeq
+      if (this.workspaceRoot === undefined) { await this.loadWorkspaceRoot(seq);return }
+      const selected = this.computeWorkspaceRows()[this.workspaceSelectedIndex]?.target.targetKey
+      try {
+        const targets = this.workspaceDirectories()
+        const results = await Promise.allSettled(targets.map(target => fs.listDir(target)))
+        if (this.closed || !this.workspaceOpen || seq !== this.workspaceSeq) return
+        const rootResult = results[0]
+        if (rootResult?.status === 'rejected') throw rootResult.reason
+        for (const [index, result] of results.entries()) {
+          const key = String(targets[index]!.targetKey)
+          if (result.status === 'fulfilled') this.workspaceChildren.set(key, result.value)
+          else { this.workspaceExpanded.delete(key);this.workspaceChildren.delete(key) }
+        }
+        const rows = this.computeWorkspaceRows()
+        this.workspaceSelectedIndex = Math.max(0, rows.findIndex(row => row.target.targetKey === selected))
+        this.workspaceResolveError = undefined
+        this.observeWorkspace()
+      } catch (error: unknown) {
+        if (this.closed || !this.workspaceOpen || seq !== this.workspaceSeq) return
+        this.workspaceResolveError = `刷新失败：${errorReason(error)} · r 重试`
+      }
+      this.emit()
+    })()
+    this.workspaceRefresh = run
+    return run.finally(() => { if (this.workspaceRefresh === run) this.workspaceRefresh = undefined })
+  }
+
   /** Expand (loading on first open) or collapse the selected directory. */
   private async toggleWorkspaceDirectory(target: FsTarget): Promise<void> {
     const key = String(target.targetKey)
     if (this.workspaceExpanded.has(key)) {
       this.workspaceExpanded.delete(key)
+      this.observeWorkspace()
       this.emit()
       return
     }
@@ -2128,6 +2399,7 @@ export class RuntimeController implements TuiController {
       }
     }
     this.workspaceExpanded.add(key)
+    this.observeWorkspace()
     this.emit()
   }
 
@@ -2155,6 +2427,7 @@ export class RuntimeController implements TuiController {
     this.workspaceExpanded.clear()
     this.workspaceSelectedIndex = 0
     this.workspaceResolveError = undefined
+    this.observeWorkspace()
   }
 
   /** Load a workspace file into the inline previewer. */
@@ -2169,7 +2442,7 @@ export class RuntimeController implements TuiController {
       const change = lookupWorkspaceChange(
         this.workspaceChangeCards,
         row.target.displayPath,
-      ) ?? lookupWorkspaceChange(this.workspaceChangeCards, row.name)
+      )
       if (change !== undefined) {
         const sessionId = this.session?.id
         const service = this.ctx.get('workspaceChanges')
@@ -2213,6 +2486,45 @@ export class RuntimeController implements TuiController {
     } catch (error: unknown) {
       if (seq !== this.workspaceSeq || !this.workspaceOpen) return
       this.setFeedback(`✗ 无法预览文件：${errorReason(error)}`)
+    }
+  }
+
+  /** Resolve a Session-declared file only when the user previews or opens it. */
+  private async openDelivery(system: boolean): Promise<void> {
+    const file = this.projector.snapshot().deliveries?.[this.workspaceSelectedIndex]
+    const fs = this.ctx.get('fs')
+    if (file === undefined || fs === undefined) {
+      this.setFeedback('✗ 无法访问交付文件：文件系统未组合或尚未选择文件')
+      return
+    }
+    const seq = ++this.workspaceSeq
+    const session = this.session
+    const current = (): boolean => !this.closed && this.workspaceOpen && this.workspaceDeliveries
+      && seq === this.workspaceSeq && session === this.session
+      && this.projector.snapshot().deliveries?.[this.workspaceSelectedIndex]?.path === file.path
+    try {
+      const target = await fs.resolve(file.path, { signal: this.lifecycleAbort.signal })
+      const info = await fs.stat(target, this.lifecycleAbort.signal)
+      if (!current()) return
+      if (info?.type !== 'file') throw new Error('文件已删除或不再是普通文件')
+      if (system) {
+        internals.openUrl(pathToFileURL(fs.processPath(target)).href)
+        this.setFeedback('✓ 已请求系统应用打开文件')
+        return
+      }
+      let lines = [file.path, file.description ?? '', '此文件使用系统应用查看 · 按 o 打开']
+      if (/^\.(?:md|txt|csv|ts|tsx|js|jsx|mjs|cjs|json|yaml|yml|toml|xml|html|css|py|rs|c|cpp|h|go|java|sh|sql|log)$/u.test(extname(file.path).toLowerCase())) {
+        const bytes = await fs.readBytes(target, this.lifecycleAbort.signal, this.config.workspacePreviewMaxBytes ?? 1048576)
+        if (!current()) return
+        const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+        if (text.includes('\0')) throw new Error('文件不是可预览的 UTF-8 文本，请按 o 用系统应用打开')
+        lines = text.split(/\r?\n/u)
+      }
+      this.workspacePreview = { path: file.path, name: basename(file.path), lines, scrollOffset: 0 }
+      this.workspacePreviewLayout = undefined
+      this.emit()
+    } catch (error: unknown) {
+      if (current()) this.setFeedback(`✗ 无法访问交付文件：${errorReason(error)} · 可按 o 用系统应用打开`)
     }
   }
 
@@ -2326,7 +2638,7 @@ export class RuntimeController implements TuiController {
               members: [...run.members.values()].sort((a, b) => a.seq - b.seq),
             },
         error:
-          this.ctx.get('workflowEngine') === undefined
+          (this.agent === undefined ? this.ctx.get('workflowEngine') : this.presets.serviceFor(this.agent, 'workflowEngine')) === undefined
             ? '工作流状态不可用：未组合'
             : undefined,
         offset: this.workflowOverlayOffset,
@@ -2365,12 +2677,19 @@ export class RuntimeController implements TuiController {
     const agent = this.agent
     if (agent === undefined) return undefined
     const jobs = this.ctx.get('jobs')
-    if (jobs === undefined) return undefined
-    return jobs.list(agent.session.id).filter(job => job.status === 'running' || job.status === 'stopping').map(job => ({
+    const rows: JobHudItem[] = jobs?.list(agent.session.id).filter(job => job.status === 'running' || job.status === 'stopping').map(job => ({
       id: String(job.id),
       status: job.status,
       label: job.label,
-    }))
+    })) ?? []
+    for (const [id, progress] of this.childProgress) {
+      if (!progress.running || progress.owner !== agent.session.id) continue
+      rows.push({
+        id: `子代理:${id}`, displayName: '子代理', status: 'running',
+        label: `Ctrl+B 查看 · ${truncateDisplay(escapeContent(progress.task), 24)} · ${truncateDisplay(escapeContent(progress.summary || '等待输出'), 20)}`,
+      })
+    }
+    return jobs === undefined && rows.length === 0 ? undefined : rows
   }
 
   /** Rebuild the workflow HUD snapshot from the latest live-run state. */
@@ -2440,6 +2759,65 @@ export class RuntimeController implements TuiController {
       this.adaptiveInfoFooterSnapshot = this.buildAdaptiveInfoFooter() ?? null
     }
     return this.adaptiveInfoFooterSnapshot ?? undefined
+  }
+
+  /** Whether the read-only full TODO list is visible. */
+  getTodoPaneOpen(): boolean {
+    return this.todoPaneOpen
+  }
+
+  getSchedulePane(): SchedulePaneState { return this.schedulePane }
+
+  private async refreshSchedules(): Promise<void> {
+    const seq = ++this.scheduleSeq
+    const selectedId = this.schedulePane.rows[this.schedulePane.selectedIndex]?.id
+    const service = this.ctx.get('schedule')
+    this.schedulePane = { ...this.schedulePane, loading: true, error: undefined }
+    this.emit()
+    try {
+      if (service === undefined) throw new Error('定时任务服务未组合')
+      const catalog = await service.catalog()
+      if (this.closed || !this.schedulePane.open || seq !== this.scheduleSeq) return
+      const rows = catalog.map(record => ({
+        id: record.id, sessionId: record.sessionId, title: record.title, prompt: record.prompt,
+        scheduledAt: record.scheduledAt, active: record.status === 'active',
+        timing: record.kind === 'after' ? '延时一次' : record.kind === 'at' ? '指定时间一次'
+          : record.kind === 'every' ? `每 ${record.everySeconds} 秒`
+            : record.kind === 'daily' ? `每天 ${record.time} · ${record.timeZone}`
+              : record.kind === 'weekly' ? `每周 ${record.weekdays.join(',')} ${record.time} · ${record.timeZone}`
+                : `cron ${record.expression} · ${record.timeZone}`,
+        ...(record.lastDelivery === undefined ? {} : { lastDelivery: record.lastDelivery.deliveredAt }),
+      }))
+      const selectedIndex = Math.max(0, rows.findIndex(row => row.id === selectedId))
+      this.schedulePane = { ...this.schedulePane, rows, selectedIndex, loading: false,
+        confirmDelete: this.schedulePane.confirmDelete && rows[selectedIndex]?.id === selectedId,
+      }
+    } catch (error: unknown) {
+      if (this.closed || !this.schedulePane.open || seq !== this.scheduleSeq) return
+      this.schedulePane = { ...this.schedulePane, loading: false, error: errorReason(error) }
+    }
+    this.emit()
+  }
+
+  private async deleteSelectedSchedule(): Promise<void> {
+    const row = this.schedulePane.rows[this.schedulePane.selectedIndex]
+    const service = this.ctx.get('schedule')
+    if (row === undefined || service === undefined) return
+    this.schedulePane = { ...this.schedulePane, busy: true, confirmDelete: false }
+    this.emit()
+    try {
+      const result = await service.delete({ id: ScheduleId(row.id), sessionId: SessionId(row.sessionId) }, this.lifecycleAbort.signal)
+      if (!result.deleted) throw new Error('任务已不存在，请刷新')
+      if (!this.closed && this.schedulePane.open) {
+        this.schedulePane = { ...this.schedulePane, busy: false, details: false, offset: 0 }
+        await this.refreshSchedules()
+      }
+    } catch (error: unknown) {
+      if (!this.closed && this.schedulePane.open) {
+        this.schedulePane = { ...this.schedulePane, busy: false, error: errorReason(error) }
+        this.emit()
+      }
+    }
   }
 
   /**
@@ -2567,10 +2945,38 @@ export class RuntimeController implements TuiController {
     return this.ctx.get('tuiSettings')?.get()
   }
 
+  getKeybindings(): ShortcutOverrides {
+    const bindings = this.tuiSettings()?.keybindings ?? EMPTY_SHORTCUTS
+    try { shortcutBindings(bindings);return bindings } catch { return EMPTY_SHORTCUTS }
+  }
+
+  private setKeybinding(command: string): void {
+    const [verb, action, rawChord, ...extra] = command.trim().split(/\s+/u)
+    const defaults = shortcutBindings(EMPTY_SHORTCUTS)
+    const chord = verb === 'unbind' ? 'none' : rawChord === 'default' ? defaults.get(action ?? '') : rawChord
+    if (action === undefined || chord === undefined || extra.length > 0 || (verb === 'unbind' && rawChord !== undefined)) {
+      this.setFeedback('用法：/bind ACTION Ctrl+X|default · /unbind ACTION · /keys 查看动作');return
+    }
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) { this.setFeedback('无可用设置服务');return }
+    const next = { ...this.getKeybindings(), [action]: chord === 'none' ? chord : chord.replace(/^ctrl\+/iu, 'Ctrl+').replace(/[a-z]$/u, value => value.toUpperCase()) }
+    try { shortcutBindings(next) } catch (error: unknown) { this.setFeedback(errorReason(error));return }
+    this.ownWork((async () => {
+      try { await settings.update(TUI_SETTINGS_NS, { keybindings: next });this.setFeedback(`快捷键已更新：${action} ${next[action]}`) }
+      catch (error: unknown) { this.setFeedback(`快捷键未更新：${errorReason(error)}`) }
+    })(), 'keybinding update')
+  }
+
+  /** Preserve saved appearance when mounting or returning from an external editor. */
+  getRenderTheme(): Pick<TuiRenderOptions, 'appearance' | 'colorTier'> {
+    const settings = this.tuiSettings()
+    return { appearance: settings?.theme ?? 'dark', ...(settings?.colorTier === undefined ? {} : { colorTier: settings.colorTier }) }
+  }
+
   /** Apply a saved color-tier override over the mount-time detected tier. */
   private applyColorTierSetting(): void {
-    const tier = this.tuiSettings()?.colorTier
-    if (tier !== undefined) applyTheme(tier)
+    const settings = this.tuiSettings()
+    applyTheme(process.env['INK_SCREEN_READER'] === 'true' ? 'none' : settings?.colorTier ?? currentTier(), settings?.theme ?? 'dark')
   }
 
   /**
@@ -2587,6 +2993,7 @@ export class RuntimeController implements TuiController {
    * @returns `auto` when no explicit value is configured.
    */
   getBrandAnimation(): 'auto' | 'on' | 'off' {
+    if (process.env['INK_SCREEN_READER'] === 'true') return 'off'
     const section = this.tuiSettings()
     return section?.brandAnimation ?? 'auto'
   }
@@ -2870,7 +3277,7 @@ export class RuntimeController implements TuiController {
     const account = this.ctx.get('deepseekAccount')
     if (account === undefined) return
     const webServer = this.ctx.get('webServer')
-    if (webServer === undefined || webServer.protocol !== 'http:') {
+    if (webServer === undefined || webServer.protocol !== 'http:' || webServer.port === undefined) {
       this.updateAccount({ error: tuiCopy('accountCallbackUnavailable', this.getLocale()) })
       return
     }
@@ -3029,6 +3436,7 @@ export class RuntimeController implements TuiController {
       case 'unaddressable': key = 'pluginsUnaddressable'; break
       case 'unknown-plugin': key = 'pluginsUnknownPlugin'; break
       case 'invalid-spec': key = 'pluginsInvalidSpec'; break
+      case 'already-installed': key = 'pluginsAlreadyInstalled'; break
       case 'ambiguous-install': key = 'pluginsAmbiguousInstall'; break
       case 'not-bundle': key = 'pluginsNotBundle'; break
       case 'not-removable': key = 'pluginsNotRemovable'; break
@@ -3039,9 +3447,9 @@ export class RuntimeController implements TuiController {
       case 'operation-error': key = 'pluginsOperationError'; break
       default: return assertNever(error.code, 'pluginsError')
     }
-    // The running DSH version rejects these packages' peer ranges.
+    // The running DSH version rejects these packages' dsh requirements.
     const incompatible = (error.incompatible ?? [])
-      .map(plugin => `${plugin.name}@${plugin.version} (${Object.entries(plugin.peers).map(([peer, range]) => `${peer} ${range}`).join(', ')})`)
+      .map(plugin => `${plugin.name}@${plugin.version} (${Object.entries(plugin.requirements).map(([peer, range]) => `${peer} ${range}`).join(', ')})`)
       .join('; ')
     const detail = [error.diagnostic, incompatible].filter(part => part !== undefined && part !== '').join(' · ')
     return tuiCopy(key, this.getLocale()) + (detail === '' ? '' : `: ${detail}`)
@@ -3122,7 +3530,7 @@ export class RuntimeController implements TuiController {
     this.pluginsInspection = undefined
     this.updatePlugins({ inspecting: true, inspection: [], error: undefined })
     try {
-      const result = await manager.inspect(spec, {}, this.lifecycleAbort.signal)
+      const result = await manager.inspect(spec, this.pluginsRegistry === undefined ? {} : { registry: this.pluginsRegistry }, this.lifecycleAbort.signal)
       if (this.closed) return
       this.pluginsInspection = result
       if (result.status === 'refused') {
@@ -3150,14 +3558,15 @@ export class RuntimeController implements TuiController {
     const run = async (): Promise<void> => {
       try {
         // Reinspect retries, including build approval, before any package-manager invocation.
-        const inspected = await manager.inspect(spec, {}, this.lifecycleAbort.signal)
+        const inspected = await manager.inspect(spec, this.pluginsRegistry === undefined ? {} : { registry: this.pluginsRegistry }, this.lifecycleAbort.signal)
         if (this.closed) return
         if (inspected.status === 'refused') {
           this.pluginsInspection = inspected
           this.updatePlugins({ mode: 'input', inspection: [this.pluginsInspectProblem(inspected.problem), inspected.reason] })
           return
         }
-        this.pluginsResult(await manager.installBundle(spec, { requestId: attempt.id,
+                this.pluginsResult(await manager.installBundle(spec, { requestId: attempt.id,
+                  ...(this.pluginsRegistry === undefined ? {} : { registry: this.pluginsRegistry }),
           ...(approvedBuilds === undefined ? {} : { approvedBuilds }) }))
       } catch (error) { this.updatePlugins({ error: errorReason(error), retry: true }) }
       finally {
@@ -3206,6 +3615,7 @@ export class RuntimeController implements TuiController {
     if (input.kind === 'text') {
       if (state.mode !== 'input') return
       this.pluginsInspection = undefined
+      this.pluginsRegistry = undefined
       this.updatePlugins({ spec: input.value, inspection: [] })
       return
     }
@@ -3265,6 +3675,7 @@ export class RuntimeController implements TuiController {
       if (catalog !== undefined) {
         // An on-demand catalog entry has no files to select; installing its exact target is the switch-on action.
         this.pluginsInspection = undefined
+          this.pluginsRegistry = undefined
         this.updatePlugins({ mode: 'input', spec: catalog.spec, inspection: [], result: [], error: undefined, pendingBuilds: [], retry: false })
         this.ownWork(this.inspectPlugins(), 'plugins catalog inspection')
       } else if (bundle) this.ownWork(this.mutatePlugins(() => manager.setBundleEnabled(bundle.name, !bundle.enabled)), 'plugins bundle toggle')
@@ -3300,6 +3711,7 @@ export class RuntimeController implements TuiController {
     this.toolDetailCursors = [{ line: 0, offset: 0 }]
     this.toolPresenterCache?.clear()
     this.listOpen = false
+    this.browser.close()
     this.searchOpen = false
     this.timelineOpen = false
     this.modelOpen = false
@@ -3317,11 +3729,15 @@ export class RuntimeController implements TuiController {
     this.planDirectoryOpen = false
     this.planDirectorySwitchError = undefined
     this.planDirectoryStatusError = undefined
+    this.workspaceObserver.close()
     this.workspaceOpen = false
     this.workspacePreview = undefined
     this.workspacePreviewLayout = undefined
     this.feedbackOpen = false
     this.workflowOverlayOpen = false
+    this.todoPaneOpen = false
+    this.schedulePane = { ...this.schedulePane, open: false, confirmDelete: false }
+    this.scheduleSeq += 1
     this.confirmDelete = false
     this.deleteUnavailable = false
     this.resetSearchState()
@@ -3335,7 +3751,7 @@ export class RuntimeController implements TuiController {
    * @param flag - the overlay boolean to toggle.
    */
   private toggleOverlay(
-    flag: 'agentHubOpen' | 'workspaceOpen' | 'feedbackOpen' | 'workflowOverlayOpen',
+    flag: 'agentHubOpen' | 'workspaceOpen' | 'feedbackOpen' | 'workflowOverlayOpen' | 'todoPaneOpen',
   ): void {
     if (
       this.getApprovalPane().open
@@ -3352,10 +3768,88 @@ export class RuntimeController implements TuiController {
     this.emit()
   }
 
+  /** Admit only current resident descendants, never a same-id stale object. */
+  private isObservedChild(session: Session): boolean {
+    if (this.session === undefined || this.ctx.sessions.get(session.id) !== session) return false
+    if (this.agentHubRows.some(row => row.id === session.id)) return true
+    const visited = new Set<SessionId>()
+    let cursor: Session | undefined = session
+    while (cursor !== undefined && !visited.has(cursor.id)) {
+      visited.add(cursor.id)
+      if (cursor.header.origin !== 'subagent' || cursor.header.parentSession === undefined) return false
+      if (cursor.header.parentSession === this.session.id) return true
+      cursor = this.ctx.sessions.get(cursor.header.parentSession)
+    }
+    return false
+  }
+
+  private childProgressFor(session: Session): ChildProgress {
+    let progress = this.childProgress.get(session.id)
+    if (progress === undefined || progress.owner !== this.session?.id) {
+      const owner = this.session?.id ?? session.id
+      // Retain active work and at most 128 recent entries. Durable child logs
+      // remain available through the catalog after a progress entry ages out.
+      for (const [id, cached] of this.childProgress) {
+        if (cached.owner !== owner || (!cached.running && this.childProgress.size >= 128)) this.childProgress.delete(id)
+      }
+      const prompt = getSessionEvents(session).findLast(isHumanUserMessage)
+      progress = {
+        owner: this.session?.id ?? session.id, running: false,
+        task: prompt === undefined ? String(session.id) : joinTextBlocks(prompt.data.content, '').replace(/\s+/gu, ' ').slice(0, 240),
+        summary: '', execution: '等待中',
+      }
+      this.childProgress.set(session.id, progress)
+    }
+    return progress
+  }
+
+  /** Observe child events separately from the main projector and interaction reducer. */
+  private observeChildEvent(session: Session, event: SessionEvent): void {
+    const progress = this.childProgressFor(session)
+    if (isHumanUserMessage(event)) progress.task = joinTextBlocks(event.data.content, '').replace(/\s+/gu, ' ').slice(0, 240)
+    if (event.type === 'turn/start') { progress.running = true; progress.execution = '运行中' }
+    if (event.type === 'turn/end') { progress.running = false; progress.execution = event.data.reason.kind === 'completed' ? '已完成' : '已停止' }
+    if (event.type === 'tool/call') progress.summary = `调用 ${event.data.name}`
+    if (event.type === 'tool/result') progress.summary = '工具已返回'
+    if (event.type === 'assistant/message') progress.summary = joinTextBlocks(event.data.message.content, '').replace(/\s+/gu, ' ').slice(-160)
+    if (this.inspectedChild === session && this.agentHubOpen && this.agentHubView === 'transcript') {
+      const line = hubTranscriptOf([event])
+      if (line !== '') this.childTranscriptBase = `${this.childTranscriptBase}\n${line}`.slice(-64_000)
+      if (event.type === 'assistant/message') this.childTranscriptPartial = ''
+    }
+    this.queueChildUpdate()
+  }
+
+  /** Coalesce all child streams into at most twenty UI updates per second. */
+  private queueChildUpdate(): void {
+    if (this.closed || this.childUiTimer !== undefined) return
+    this.childUiTimer = setTimeout(() => {
+      this.childUiTimer = undefined
+      if (this.closed) return
+      this.agentHubRows = this.agentHubRows.map(row => {
+        const progress = this.childProgress.get(row.id)
+        return progress !== undefined && progress.owner === this.session?.id
+          ? { ...row, task: progress.task, summary: progress.summary, execution: progress.execution }
+          : row
+      })
+      if (this.agentHubOpen && this.agentHubView === 'transcript' && this.inspectedChild !== undefined) {
+        this.agentHubTranscript = this.childTranscriptBase + (this.childTranscriptPartial === '' ? '' : `\n● ${this.childTranscriptPartial}`)
+      }
+      this.emit()
+    }, 50)
+    this.childUiTimer.unref()
+  }
+
   /** Drop Hub transients; the caller owns `agentHubOpen` and emit(). */
   private resetAgentHub(): void {
+    this.subagentControls.close()
     this.agentHubAbort?.abort()
     this.agentHubAbort = undefined
+    this.inspectedChild = undefined
+    this.childTranscriptBase = ''
+    this.childTranscriptPartial = ''
+    this.agentHubCatalogDirty = false
+    this.agentHubParents.length = 0
     this.agentHubRows = []
     this.agentHubSelectedIndex = 0
     this.agentHubView = 'table'
@@ -3387,13 +3881,8 @@ export class RuntimeController implements TuiController {
    */
   private async refreshAgentHub(): Promise<void> {
     const { seq, signal } = this.beginAgentHubRequest()
-    this.agentHubView = 'table'
-    this.agentHubTranscript = undefined
+    const selectedId = this.agentHubRows[this.agentHubSelectedIndex]?.id
     this.agentHubError = undefined
-    this.agentHubRows = []
-    this.agentHubSelectedIndex = 0
-    this.agentHubPaneSnapshot = undefined
-    this.emit()
     const subagents = this.ctx.get('subagents')
     if (subagents === undefined || this.session === undefined) return
     try {
@@ -3401,9 +3890,9 @@ export class RuntimeController implements TuiController {
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
       this.agentHubRows = rows
+      this.agentHubSelectedIndex = Math.max(0, rows.findIndex(row => row.id === selectedId))
       this.agentHubError = undefined
       this.agentHubPaneSnapshot = undefined
-      this.agentHubError = undefined
       this.emit()
     } catch (error: unknown) {
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
@@ -3426,6 +3915,7 @@ export class RuntimeController implements TuiController {
       const entries = (await subagents.listDescendants(SessionId(childId), signal)).filter(entry => entry.depth === 1)
       const rows = await this.enrichAgentHubRows(entries, signal)
       if (!this.agentHubOpen || seq !== this.agentHubSeq) return
+      this.agentHubParents.push({ rows: this.agentHubRows, selectedIndex: this.agentHubSelectedIndex })
       this.agentHubRows = rows
       this.agentHubSelectedIndex = 0
       this.agentHubError = undefined
@@ -3453,7 +3943,9 @@ export class RuntimeController implements TuiController {
     const now = Date.now()
     const rows = entries.flatMap((entry) => {
       const row = hubRowOf(entry)
-      return row === undefined ? [] : [row]
+      if (row === undefined) return []
+      const progress = this.childProgress.get(row.id)
+      return [progress === undefined ? row : { ...row, task: progress.task, summary: progress.summary, execution: progress.execution }]
     })
     const persistence = this.ctx.get('sessionPersistence')
     const cache = this.ctx.get('sessionProjectionCache')
@@ -3546,9 +4038,19 @@ export class RuntimeController implements TuiController {
     this.agentHubView = 'transcript'
     this.agentHubTranscript = undefined
     this.agentHubError = undefined
-    this.agentHubScrollOffset = 0
+    this.agentHubScrollOffset = Number.MAX_SAFE_INTEGER
     this.agentHubPaneSnapshot = undefined
     this.emit()
+    this.inspectedChild = undefined
+    this.childTranscriptPartial = ''
+    const live = this.ctx.sessions.get(SessionId(childId))
+    if (live !== undefined) {
+      this.inspectedChild = live
+      this.childTranscriptBase = hubTranscriptOf(getSessionEvents(live)).slice(-64_000)
+      this.agentHubTranscript = this.childTranscriptBase
+      this.emit()
+      return
+    }
     const persistence = this.ctx.get('sessionPersistence')
     if (persistence === undefined) {
       this.agentHubError = '无法读取子会话：会话持久化未组合'
@@ -3723,14 +4225,15 @@ export class RuntimeController implements TuiController {
         this.scheduleSearch(action.query)
         return
       case 'toggle-timeline':
-        this.timelineOpen = !this.timelineOpen
-        if (this.timelineOpen) {
-          // Mutual exclusion: opening timeline closes the other panes.
-          this.closeOtherPanels()
-          this.timelineOpen = true
-        }
-        this.emit()
+        if (this.browser.get().id === 'trajectory') { this.browser.close();this.timelineOpen = false;this.emit() }
+        else this.openTrajectory()
         return
+      case 'browser-move': this.browser.move(action.delta);return
+      case 'browser-offset': this.browser.offset(action.offset);return
+      case 'browser-enter': this.browser.enter();return
+      case 'browser-back': if (this.browser.get().detail === undefined) this.timelineOpen = false;this.browser.back();return
+      case 'browser-refresh': this.browser.refresh();return
+      case 'browser-action': this.browser.action(action.key);return
       case 'model-pane':
         if (this.modelOpen) {
           this.modelOpen = false
@@ -3819,6 +4322,49 @@ export class RuntimeController implements TuiController {
       case 'ask-user-submit':
         this.submitAskUserHead()
         return
+      case 'ask-user-toggle': {
+        const head = this.askUserHead()
+        const question = head?.request.questions[head.questionIndex]
+        if (head === undefined || question?.multiSelect !== true || head.editingCustom) return
+        if (head.selectedIndices.has(head.selectedIndex)) head.selectedIndices.delete(head.selectedIndex)
+        else head.selectedIndices.add(head.selectedIndex)
+        this.emit()
+        return
+      }
+      case 'ask-user-custom': {
+        const head = this.askUserHead()
+        if (head === undefined || planReviewOf(head.request.questions) !== undefined) return
+        head.editingCustom = true
+        head.customDraft = head.customAnswer ?? ''
+        head.customCaretIndex = head.customDraft.length
+        this.emit()
+        return
+      }
+      case 'ask-user-custom-edit': {
+        const head = this.askUserHead()
+        if (head?.editingCustom !== true) return
+        head.customDraft = action.text
+        head.customCaretIndex = Math.min(action.text.length, Math.max(0, action.caretIndex))
+        this.emit()
+        return
+      }
+      case 'ask-user-custom-save': {
+        const head = this.askUserHead()
+        if (head?.editingCustom !== true || head.customDraft.trim() === '') return
+        head.customAnswer = head.customDraft
+        head.editingCustom = false
+        const question = head.request.questions[head.questionIndex]!
+        if (question.multiSelect && (question.options?.length ?? 0) > 0) this.emit()
+        else this.advanceAskUser(head, { id: question.id, selected: [], custom: head.customAnswer })
+        return
+      }
+      case 'ask-user-custom-cancel': {
+        const head = this.askUserHead()
+        if (head?.editingCustom !== true) return
+        if (askUserOptionCount(head) === 0) this.cancelAskUserHead()
+        else { head.editingCustom = false;head.customDraft = head.customAnswer ?? '';this.emit() }
+        return
+      }
       case 'ask-user-cancel':
         this.cancelAskUserHead()
         return
@@ -3885,6 +4431,11 @@ export class RuntimeController implements TuiController {
         this.settingsUpdateError = undefined
         this.emit()
         return
+      case 'settings-group':
+        if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
+        this.settingsSelectedIndex = nextSettingsGroup(this.settingsRows, this.settingsSelectedIndex, action.delta)
+        this.emit()
+        return
       case 'settings-move':
         if (!this.settingsOpen || this.settingsEditing) return
         if (this.settingsRows.length === 0) return
@@ -3918,6 +4469,9 @@ export class RuntimeController implements TuiController {
       case 'settings-apply':
         this.applySettingsValue(action.value)
         return
+      case 'settings-toggle':
+        this.toggleSelectedSettingValue()
+        return
       case 'settings-export':
         this.exportSettingsDocument()
         return
@@ -3932,17 +4486,34 @@ export class RuntimeController implements TuiController {
         return
       case 'agent-hub-escape':
         if (!this.agentHubOpen) return
+        this.subagentControls.close()
         if (this.agentHubView === 'transcript') {
           this.agentHubAbort?.abort()
           this.agentHubAbort = undefined
           this.agentHubSeq += 1
           this.agentHubView = 'table'
+          this.inspectedChild = undefined
+          if (this.agentHubCatalogDirty) {
+            this.agentHubCatalogDirty = false
+            this.ownWork(this.refreshAgentHub(), 'agent hub list')
+          }
           this.agentHubTranscript = undefined
           this.agentHubError = undefined
           this.agentHubScrollOffset = 0
           this.agentHubPaneSnapshot = undefined
           this.emit()
           return
+        }
+        {
+          const parent = this.agentHubParents.pop()
+          if (parent !== undefined) {
+            this.agentHubRows = parent.rows
+            this.agentHubSelectedIndex = parent.selectedIndex
+            this.agentHubError = undefined
+            this.queueChildUpdate()
+            this.emit()
+            return
+          }
         }
         this.agentHubOpen = false
         this.resetAgentHub()
@@ -3951,12 +4522,13 @@ export class RuntimeController implements TuiController {
       case 'agent-hub-move':
         if (!this.agentHubOpen) return
         if (this.agentHubView === 'transcript') {
-          this.agentHubScrollOffset = Math.max(0, this.agentHubScrollOffset + action.delta)
+          this.agentHubScrollOffset = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, this.agentHubScrollOffset + action.delta))
           this.agentHubPaneSnapshot = undefined
           this.emit()
           return
         }
         if (this.agentHubRows.length === 0) return
+        this.subagentControls.close()
         this.agentHubSelectedIndex = Math.min(
           this.agentHubRows.length - 1,
           Math.max(0, this.agentHubSelectedIndex + action.delta),
@@ -3964,19 +4536,38 @@ export class RuntimeController implements TuiController {
         this.agentHubPaneSnapshot = undefined
         this.emit()
         return
+      case 'agent-hub-control': {
+        if (!this.agentHubOpen || this.blockingHead() !== undefined) return
+        const row = this.agentHubRows[this.agentHubSelectedIndex]
+        if (action.input === 'cancel') { this.subagentControls.close();return }
+        if (action.input === 'edit') { this.subagentControls.edit(action.text ?? '', action.caretIndex ?? 0);return }
+        if (row === undefined) return
+        if (action.input === 'stop') this.subagentControls.stop(row)
+        else if (action.input === 'compose') this.subagentControls.compose(row)
+        else if (action.input === 'split') {
+          if (this.subagentControls.get().prompt !== undefined) return
+          this.subagentControls.toggleSplit()
+          if (this.subagentControls.get().split && this.agentHubView === 'table') this.ownWork(this.inspectAgentHub(row.id), 'agent hub split')
+        }
+        else this.ownWork(this.subagentControls.submit(row, action.input === 'steer' ? 'steer' : 'queue'), 'child human prompt')
+        return
+      }
       case 'agent-hub-enter':
+      case 'agent-hub-expand':
         if (!this.agentHubOpen || this.agentHubView !== 'table') return
         {
           const row = this.agentHubRows[this.agentHubSelectedIndex]
           if (row === undefined) return
-          if (row.hasChildren) {
-            this.ownWork(this.expandAgentHub(row.id), 'agent hub expand')
+          if (action.kind === 'agent-hub-expand') {
+            if (row.hasChildren) this.ownWork(this.expandAgentHub(row.id), 'agent hub expand')
             return
           }
           this.ownWork(this.inspectAgentHub(row.id), 'agent hub inspect')
         }
         return
       case 'workspace-pane': {
+        this.workspaceObserver.close()
+        this.workspaceDeliveries = false
         const opening = !this.workspaceOpen
         this.workspacePreview = undefined
         this.workspacePreviewLayout = undefined
@@ -4000,6 +4591,7 @@ export class RuntimeController implements TuiController {
           return
         }
         this.workspaceOpen = false
+        this.workspaceObserver.close()
         this.workspaceSeq += 1
         this.emit()
         return
@@ -4014,6 +4606,9 @@ export class RuntimeController implements TuiController {
         this.emit()
         return
       }
+      case 'workspace-refresh':
+        if (this.workspaceOpen && !this.workspaceDeliveries && !this.workspaceEditing) this.ownWork(this.refreshWorkspace(), 'workspace refresh')
+        return
       case 'workspace-move': {
         if (!this.workspaceOpen || this.workspaceEditing) return
         if (this.workspacePreview !== undefined) {
@@ -4026,7 +4621,7 @@ export class RuntimeController implements TuiController {
           this.emit()
           return
         }
-        const rowCount = this.computeWorkspaceRows().length
+        const rowCount = this.workspaceDeliveries ? (this.projector.snapshot().deliveries?.length ?? 0) : this.computeWorkspaceRows().length
         this.workspaceSelectedIndex = Math.min(
           Math.max(0, rowCount - 1),
           Math.max(0, this.workspaceSelectedIndex + action.delta * (action.unit === 'page' ? 20 : 1)),
@@ -4037,6 +4632,10 @@ export class RuntimeController implements TuiController {
       case 'workspace-enter': {
         if (!this.workspaceOpen || this.workspaceEditing) return
         if (this.workspacePreview !== undefined) return
+        if (this.workspaceDeliveries) {
+          this.ownWork(this.openDelivery(false), 'delivery preview')
+          return
+        }
         const row = this.computeWorkspaceRows()[this.workspaceSelectedIndex]
         if (row === undefined) return
         if (row.kind === 'directory') {
@@ -4048,9 +4647,15 @@ export class RuntimeController implements TuiController {
         }
         return
       }
+      case 'workspace-open-system':
+        if (this.workspaceOpen && this.workspaceDeliveries && !this.workspaceEditing) {
+          this.ownWork(this.openDelivery(true), 'delivery system open')
+        }
+        return
       case 'workspace-insert': {
         if (!this.workspaceOpen) return
         this.workspaceOpen = false
+        this.workspaceObserver.close()
         this.workspacePreview = undefined
         this.workspacePreviewLayout = undefined
         this.workspaceEditing = false
@@ -4060,7 +4665,7 @@ export class RuntimeController implements TuiController {
         return
       }
       case 'workspace-edit':
-        if (!this.workspaceOpen) return
+        if (!this.workspaceOpen || this.workspaceDeliveries) return
         this.workspaceEditing = true
         this.workspaceResolveError = undefined
         this.emit()
@@ -4126,6 +4731,68 @@ export class RuntimeController implements TuiController {
         if (!this.feedbackOpen) return
         this.feedbackEditing = false
         this.emit()
+        return
+      case 'todo-pane':
+        this.toggleOverlay('todoPaneOpen')
+        return
+      case 'schedule-pane':
+        if (this.blockingHead() !== undefined) return
+        if (this.schedulePane.open) this.schedulePane = { ...this.schedulePane, open: false }
+        else {
+          this.closeOtherPanels()
+          this.schedulePane = { ...EMPTY_SCHEDULE_PANE, open: true }
+          this.ownWork(this.refreshSchedules(), 'schedule catalog')
+        }
+        this.emit()
+        return
+      case 'schedule-refresh':
+        if (this.schedulePane.open && !this.schedulePane.busy) this.ownWork(this.refreshSchedules(), 'schedule catalog')
+        return
+      case 'schedule-move': {
+        if (!this.schedulePane.open || this.schedulePane.busy || this.schedulePane.confirmDelete) return
+        const pane = this.schedulePane
+        this.schedulePane = pane.details
+          ? { ...pane, offset: Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, pane.offset + action.delta)) }
+          : { ...pane, selectedIndex: Math.max(0, Math.min(pane.rows.length - 1, pane.selectedIndex + action.delta)) }
+        this.emit()
+        return
+      }
+      case 'schedule-offset':
+        if (this.schedulePane.open && this.schedulePane.details && this.schedulePane.offset !== action.offset) {
+          this.schedulePane = { ...this.schedulePane, offset: action.offset }
+          this.emit()
+        }
+        return
+      case 'schedule-enter': {
+        if (!this.schedulePane.open || this.schedulePane.busy || this.schedulePane.confirmDelete) return
+        const row = this.schedulePane.rows[this.schedulePane.selectedIndex]
+        if (row === undefined) return
+        if (this.schedulePane.details) {
+          this.schedulePane = { ...this.schedulePane, open: false }
+          this.dispatch({ kind: 'select-session', id: SessionId(row.sessionId) })
+        }
+        else this.schedulePane = { ...this.schedulePane, details: true, offset: 0 }
+        this.emit()
+        return
+      }
+      case 'schedule-escape':
+        if (this.schedulePane.busy) return
+        this.schedulePane = this.schedulePane.confirmDelete ? { ...this.schedulePane, confirmDelete: false }
+          : this.schedulePane.details ? { ...this.schedulePane, details: false, offset: 0 }
+            : { ...this.schedulePane, open: false }
+        this.scheduleSeq += 1
+        this.emit()
+        return
+      case 'schedule-delete':
+        if (this.schedulePane.open && !this.schedulePane.busy && this.schedulePane.rows[this.schedulePane.selectedIndex] !== undefined) {
+          this.schedulePane = { ...this.schedulePane, confirmDelete: true }
+          this.emit()
+        }
+        return
+      case 'schedule-confirm':
+        if (!this.schedulePane.open || !this.schedulePane.confirmDelete || this.schedulePane.busy) return
+        if (action.confirmed) this.ownWork(this.deleteSelectedSchedule(), 'schedule delete')
+        else { this.schedulePane = { ...this.schedulePane, confirmDelete: false };this.emit() }
         return
       case 'workflow-overlay':
         this.toggleOverlay('workflowOverlayOpen')
@@ -4489,8 +5156,8 @@ export class RuntimeController implements TuiController {
   }
 
   /**
-   * Read one clipboard image through the platform helper (wl-paste on
-   * Wayland, xclip elsewhere on X11); every failure maps to one locked
+   * Read one clipboard image through pngpaste on macOS, wl-paste on
+   * Wayland, or xclip on X11; every failure maps to one locked
    * refusal reason and nothing is stored until send-time admission.
    * @returns the admitted image token or a user-visible refusal reason.
    */
@@ -4499,7 +5166,17 @@ export class RuntimeController implements TuiController {
     if (helper === undefined) return { ok: false, reason: '剪贴板助手缺失' }
     const [command] = helper
     if (command === undefined) return { ok: false, reason: '剪贴板助手缺失' }
-    const child = internals.clipboardSpawn(command, helper.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] })
+    const missingHelper = internals.clipboardPlatform === 'darwin'
+      ? '剪贴板助手缺失：请安装 pngpaste（brew install pngpaste）' : '剪贴板助手缺失'
+    let child: ReturnType<typeof internals.clipboardSpawn>
+    try {
+      child = internals.clipboardSpawn(command, helper.slice(1), {
+        stdio: ['ignore', 'pipe', 'pipe'], signal: this.lifecycleAbort.signal,
+        timeout: this.config.clipboardTimeoutMs ?? 5000,
+      })
+    } catch {
+      return { ok: false, reason: '剪贴板读取失败' }
+    }
     const chunks: Buffer[] = []
     let received = 0
     const store = this.attachmentStore()
@@ -4516,9 +5193,10 @@ export class RuntimeController implements TuiController {
         resolve(code)
       })
     })
+    if (this.lifecycleAbort.signal.aborted) return { ok: false, reason: '剪贴板读取已取消' }
     if (closed instanceof Error) {
       return closed.code === 'ENOENT'
-        ? { ok: false, reason: '剪贴板助手缺失' }
+        ? { ok: false, reason: missingHelper }
         : { ok: false, reason: '剪贴板读取失败' }
     }
     if (closed !== 0) return { ok: false, reason: '剪贴板读取失败' }
@@ -4530,6 +5208,7 @@ export class RuntimeController implements TuiController {
     } catch (error) {
       return { ok: false, reason: errorReason(error) }
     }
+    if (this.lifecycleAbort.signal.aborted) return { ok: false, reason: '剪贴板读取已取消' }
     const id = this.nextImageToken++
     this.pendingImages.set(id, { data, mediaType: 'image/png' })
     return { ok: true, token: this.tokenText(id) }
@@ -4722,6 +5401,11 @@ export class RuntimeController implements TuiController {
       undefined,
       undefined,
     )
+  }
+
+  copySelection(text: string): void {
+    internals.copyText(text.slice(0, OSC52_MAX_CHARS), chunk => { this.io.stdout.write(chunk) })
+    this.setFeedback('已复制输入选区')
   }
 
   /** Copy the latest assistant row or its final fenced code body. */
@@ -4934,7 +5618,7 @@ export class RuntimeController implements TuiController {
         } else {
           this.sessionList = [liveRow, ...this.sessionList]
         }
-        this.selectedIndex = 0
+        this.selectedIndex = idx >= 0 ? idx : 0
       }
       this.setTransition(IDLE_TRANSITION)
       if (startup) {
@@ -4963,13 +5647,22 @@ export class RuntimeController implements TuiController {
         'tui-runtime: core services are unavailable before the tree mounts',
       )
     }
+    const scheduledSessions = this.ctx.get('tuiScheduleSessions')
+    if (request.intent === 'switch' && scheduledSessions !== undefined) {
+      const acquired = await scheduledSessions.acquire(request.id)
+      const selection = acquired.modelSelectionRef.current ?? defaultModel.currentSelection()
+      return { ...acquired, badge: `${selection.provider} · ${selection.model}` }
+    }
     const selection = defaultModel.currentSelection()
     const ref: ModelSelectionRef = {
       current: selection,
       assembled: undefined,
     }
-    const setup = (agentCtx: Context): void => {
+    const preset = request.intent === 'create' ? await this.presets.setup() : undefined
+    const setup = async (agentCtx: Context, agent: Agent): Promise<void> => {
       installModelSelection(agentCtx, ref)
+      if (preset !== undefined) await preset.setup(agentCtx, agent)
+      else await this.presets.restore(agentCtx, agent)
     }
     const agentOptions = {
       provider: selection.provider,
@@ -4978,7 +5671,7 @@ export class RuntimeController implements TuiController {
     const handle = request.intent === 'create'
       ? await agents.create({
         sessionId: SessionId(`session-${randomUUID()}`),
-        meta: { cwd: this.config.cwd ?? process.cwd() },
+        meta: { cwd: this.config.cwd ?? process.cwd(), ...(preset?.agentPreset === undefined ? {} : { agentPreset: preset.agentPreset }) },
         agentOptions,
         setup,
         signal: this.lifecycleAbort.signal,
@@ -5259,6 +5952,67 @@ export class RuntimeController implements TuiController {
    * @param query - the text after `/`, passed verbatim to the registry.
    */
   private runCommand(query: string): void {
+    if (query.trim() === 'schedules') {
+      if (!this.schedulePane.open) this.dispatch({ kind: 'schedule-pane' })
+      return
+    }
+    if (query.trim() === 'deliveries') {
+      if (this.blockingHead() !== undefined) return
+      this.closeOtherPanels()
+      this.workspaceDeliveries = true
+      this.workspaceOpen = true
+      this.workspaceEditing = false
+      this.workspacePreview = undefined
+      this.workspacePreviewLayout = undefined
+      this.workspaceResolveError = undefined
+      this.workspaceSelectedIndex = 0
+      this.workspaceSeq += 1
+      this.emit()
+      return
+    }
+    if (query.trim() === 'todos') {
+      if (!this.todoPaneOpen) this.dispatch({ kind: 'todo-pane' })
+      return
+    }
+    if (query === 'inspect' || query.startsWith('inspect ')) {
+      if (this.agent === undefined) return
+      try { this.openBrowser(inspectBrowser(this.ctx, this.agent, query.slice(7).trim())) } catch (error: unknown) { this.setFeedback(errorReason(error)) }
+      return
+    }
+    if (query === 'market' || query.startsWith('market ')) {
+      this.openBrowser(marketBrowser(this.ctx, query.slice(6).trim(), (spec, registry) => {
+        this.closeOtherPanels();this.pluginsRegistry = registry
+        this.updatePlugins({ open: true, mode: 'input', spec, inspection: [], error: undefined })
+        this.ownWork(this.inspectPlugins(), 'market install preview')
+      }, options => { this.openBrowser(options) }));return
+    }
+    if (query === 'preset' || query.startsWith('preset ')) {
+      const id = query.slice('preset'.length).trim()
+      const agent = this.agent
+      if (agent === undefined) return
+      if (id !== '') {
+        this.ownWork(this.presets.select(agent, id).then(selected => { this.setFeedback(`会话 preset：${selected}`) }, (error: unknown) => { this.setFeedback(`preset 未切换：${errorReason(error)}`) }), 'preset select')
+      } else {
+        this.openBrowser({ id: 'presets', title: `会话 preset · ${this.presets.current(agent.session) ?? '未选择'} · 首轮后锁定`,
+          load: async () => (await this.presets.list()).map(row => ({ id: row.id, title: row.name ?? row.id, hint: row.broken === undefined ? `${row.description ?? ''}${row.isDefault ? ' · 默认' : ''}` : `不可用：${row.broken}` })),
+          detail: async row => (await this.presets.read(row.id)).content,
+          actions: [{ key: 's', label: '选择（仅空白会话）', run: async (row, signal) => { signal.throwIfAborted();await this.presets.select(agent, row.id);return `已选择 ${row.id}` } }],
+        })
+      }
+      return
+    }
+    if (query === 'keys') {
+      this.openBrowser({ id: 'keys', title: '快捷键目录 · 重绑定仅影响输入区', load: async () => shortcutCatalog(this.getKeybindings()), detail: async row => `${row.title}\n${row.hint ?? ''}` });return
+    }
+    if (/^(?:bind|unbind)(?:\s|$)/u.test(query)) { this.setKeybinding(query);return }
+    if (query === 'focus') { this.mode = this.mode === 'focus' ? 'agent' : 'focus';this.setFeedback(`模式：${this.mode}`);return }
+    if (query === 'timeline' || query === 'trajectory') { this.openTrajectory();return }
+    if (query === 'attachments') { this.openAttachments();return }
+    if (query === 'review' || query === 'changes') { this.openChangesReview();return }
+    if (query.trim() === 'agents') {
+      if (!this.agentHubOpen) this.dispatch({ kind: 'agent-hub' })
+      return
+    }
     if (query.trim() === 'plugins') {
       if (!this.pluginsPane.open) this.dispatch({ kind: 'plugins-pane' })
       return
@@ -5503,7 +6257,7 @@ export class RuntimeController implements TuiController {
   private readPlanStatus(): { active: boolean } | { error: string } {
     try {
       const agent = this.agent
-      const planMode = this.ctx.get('planMode')
+      const planMode = this.agent === undefined ? this.ctx.get('planMode') : this.presets.serviceFor(this.agent, 'planMode')
       if (agent !== undefined && planMode !== undefined) {
         return { active: planMode.get(agent).active }
       }
@@ -5621,6 +6375,11 @@ export class RuntimeController implements TuiController {
     return ordered
   }
 
+  /** Public reference names only; completion never resolves stored secrets. */
+  private apiKeyTargets(): string[] {
+    return [...new Set([ONBOARDING_KEY, ...this.referencedCredentialNames()])]
+  }
+
   /**
    * Refresh the configured-state cache the credential rows read. The probe runs
    * off the key path, so a slow credential store never blocks a pane.
@@ -5726,6 +6485,9 @@ export class RuntimeController implements TuiController {
       this.emit()
       return
     }
+    if (row.namespace === TUI_SETTINGS_NS && row.field === 'keybindings') {
+      try { shortcutBindings(parsed as Record<string, string>) } catch (error: unknown) { this.settingsUpdateError = errorReason(error);this.emit();return }
+    }
     if (isAutoDiscoverProviderDraft(parsed)) {
       this.applyAutoDiscoverProvider(row.namespace, row.field, parsed)
       return
@@ -5748,6 +6510,54 @@ export class RuntimeController implements TuiController {
         this.emit()
       }
     })(), 'settings update')
+  }
+
+  /**
+   * Toggle a boolean or enumerable settings row in place on Space without
+   * closing the settings overlay. Non-toggleable rows open the inline editor.
+   */
+  private toggleSelectedSettingValue(): void {
+    if (!this.settingsOpen || this.settingsEditing || this.settingsOnboarding) return
+    const row = this.settingsRows[this.settingsSelectedIndex]
+    if (row === undefined) return
+    let nextValue: unknown
+    if (row.value === 'true') {
+      nextValue = false
+    } else if (row.value === 'false') {
+      nextValue = true
+    } else if (row.namespace === TUI_SETTINGS_NS && row.field === 'brandAnimation') {
+      if (row.value === '自动' || row.value === 'auto') nextValue = 'on'
+      else if (row.value === '开启' || row.value === 'on') nextValue = 'off'
+      else nextValue = 'auto'
+    } else if (row.namespace === TUI_SETTINGS_NS && row.field === 'locale') {
+      const locales = listTuiLocales()
+      nextValue = locales[(locales.indexOf(row.value) + 1) % locales.length]
+    } else if (row.namespace === TUI_SETTINGS_NS && row.field === 'theme') {
+      nextValue = row.value === 'light' ? 'dark' : 'light'
+    } else if (row.namespace === TUI_SETTINGS_NS && row.field === 'colorTier') {
+      const tiers = ['truecolor', '256', '16', 'none'] as const
+      const idx = tiers.indexOf(row.value as (typeof tiers)[number])
+      nextValue = tiers[(idx + 1) % tiers.length]
+    } else {
+      return
+    }
+    const settings = this.ctx.get('settings')
+    if (settings === undefined) return
+    this.ownWork((async () => {
+      try {
+        await settings.update(row.namespace, createSettingsPatch(row.field, nextValue))
+        if (this.closed) return
+        if (row.namespace === TUI_SETTINGS_NS) this.applyColorTierSetting()
+        this.settingsUpdateError = undefined
+        this.settingsRows = this.readSettingsRows()
+        this.setFeedback(`✓ 已更新 ${row.field}`)
+      } catch (error: unknown) {
+        if (this.closed) return
+        this.settingsUpdateError = errorReason(error)
+        this.settingsRows = this.readSettingsRows()
+        this.emit()
+      }
+    })(), 'settings toggle')
   }
 
   /**
@@ -6106,16 +6916,16 @@ export class RuntimeController implements TuiController {
    * Open the API-key configuration overlay directly from /key or /login.
    * @param targetField - credential reference name (defaults to DEEPSEEK_API_KEY).
    */
-  private openApiKeyPane(targetField: string = ONBOARDING_KEY): void {
+  private openApiKeyPane(targetField?: string): void {
     this.closeOtherPanels()
+    const targets = targetField === undefined ? this.apiKeyTargets() : [targetField]
+    const singleTarget = targets[0] ?? ONBOARDING_KEY
     this.settingsOnboarding = true
-    this.settingsEditing = true
+    this.settingsEditing = targets.length === 1
     this.settingsUpdateError = undefined
-    this.settingsRows = [{
-      namespace: 'credentials',
-      field: targetField,
-      value: '',
-    }]
+    this.settingsRows = targets.length === 1
+      ? [{ namespace: 'credentials', field: singleTarget, value: '' }]
+      : credentialSettingRows(targets, () => undefined).map(row => ({ ...row, editValue: '' }))
     this.settingsSelectedIndex = 0
     this.settingsOpen = true
     this.emit()
@@ -6137,7 +6947,7 @@ export class RuntimeController implements TuiController {
     try {
       const info = await credentials.describe(credentialRef(ONBOARDING_KEY))
       // Disposal may land while credential state is loading.
-      if (this.lifecycleAbort.signal.aborted || info.configured) return
+      if (this.closed || this.lifecycleAbort.signal.aborted || info.configured) return
       if (
         this.getApprovalPane().open
         || this.getAskUserPane().open
@@ -6178,7 +6988,7 @@ export class RuntimeController implements TuiController {
       '键位: Ctrl+C 停止/退出 · Ctrl+O 显示/隐藏思考 · Ctrl+N 新会话 · Ctrl+K 搜索 · Ctrl+T 时间线',
       'Ctrl+E 工具卡 · y/n 审批 · /permission · /settings · e/r 导出重载',
       '编辑: Shift+Enter 换行 · Ctrl+U 删至行首 · Ctrl+W 删前一词 · ↑↓ 历史',
-      'g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流 · g p 插件',
+      'Ctrl+B /agents 子代理（保留草稿） · g a 子代理 · g t 工作区 · g f 反馈 · g w 工作流 · g p 插件',
       '↑↓/jk 滚动 · g s 会话列表 · Tab 补全 · Esc 关闭 · / 命令 · @ 提及',
       '滚轮滚动 · 点击打开链接 · 拖选复制',
       '/files 工作区 · /plan 计划 · /goal 目标 · /compact 压缩',
@@ -6916,6 +7726,7 @@ export class RuntimeController implements TuiController {
     if (head?.kind !== 'approval') return EMPTY_APPROVAL_PANE
     return {
       open: true,
+      requestId: head.entry.seq,
       toolName: head.entry.request.toolName,
       reason: head.entry.request.reason ?? '',
       arguments: this.argumentsFor(head.entry.request.callId),
@@ -6972,6 +7783,10 @@ export class RuntimeController implements TuiController {
         seq: ++this.slotSeq,
         settled: false,
         selectedIndex: 0,
+        questionIndex: 0,
+        answers: [], selectedIndices: new Set(), customAnswer: undefined,
+        customDraft: '', customCaretIndex: 0,
+        editingCustom: (request.questions[0]?.options?.length ?? 0) === 0,
         onAbort: () => {
           this.finishAskUser(entry, { error: askAborted() })
         },
@@ -7004,14 +7819,23 @@ export class RuntimeController implements TuiController {
     )
   }
 
-  /** Submit the highlighted original label for the first question. */
+  /** Submit the current question's original labels and optional custom answer. */
   private submitAskUserHead(): void {
     const head = this.askUserHead()
     if (head === undefined) return
+    if (head.editingCustom) return
     if (planReviewOf(head.request.questions) !== undefined) return
     // UserQuestionService rejects an empty batch before the listener runs.
-    const question = (head.request.questions as [AskUserQuestionItem])[0]
+    const question = head.request.questions[head.questionIndex]!
     const options = question.options ?? []
+    if (question.multiSelect === true) {
+      const selected = options.filter((_, index) => head.selectedIndices.has(index)).map(option => option.label)
+      if (selected.length === 0 && head.customAnswer === undefined) return
+      this.advanceAskUser(head, { id: question.id, selected,
+        ...(head.customAnswer === undefined ? {} : { custom: head.customAnswer }),
+      })
+      return
+    }
     const selected = options[head.selectedIndex]
     if (selected === undefined) return
     this.answerAskUserHead(head, selected.label)
@@ -7044,10 +7868,24 @@ export class RuntimeController implements TuiController {
    * @param label - host option.label, never chrome copy.
    */
   private answerAskUserHead(head: QueuedAskUser, label: string): void {
-    const question = (head.request.questions as [AskUserQuestionItem])[0]
-    this.finishAskUser(head, {
-      answer: { answers: [{ id: question.id, selected: [label] }] },
-    })
+    if (head.settled) return
+    const question = head.request.questions[head.questionIndex]!
+    this.advanceAskUser(head, { id: question.id, selected: [label] })
+  }
+
+  private advanceAskUser(head: QueuedAskUser, answer: AskUserQuestionAnswer['answers'][number]): void {
+    if (head.settled) return
+    head.answers.push(answer)
+    head.questionIndex += 1
+    const next = head.request.questions[head.questionIndex]
+    if (next === undefined) { this.finishAskUser(head, { answer: { answers: head.answers } });return }
+    head.selectedIndex = 0
+    head.selectedIndices.clear()
+    head.customAnswer = undefined
+    head.customDraft = ''
+    head.customCaretIndex = 0
+    head.editingCustom = (next.options?.length ?? 0) === 0
+    this.emit()
   }
 
   /** Esc on the occupied ask-user slot: reject ASK_ABORTED. */
@@ -7094,12 +7932,21 @@ export class RuntimeController implements TuiController {
     if (head === undefined) return EMPTY_ASK_USER_PANE
     if (planReviewOf(head.request.questions) !== undefined) return EMPTY_ASK_USER_PANE
     // UserQuestionService rejects an empty batch before the listener runs.
-    const question = (head.request.questions as [AskUserQuestionItem])[0]
+    const question = head.request.questions[head.questionIndex]!
     return {
       open: true,
+      requestId: head.seq,
       header: question.header ?? question.question,
       options: (question.options ?? []).map(option => option.label),
       selectedIndex: head.selectedIndex,
+      ...(question.multiSelect === true ? { multiSelect: true, selectedIndices: [...head.selectedIndices] } : {}),
+      ...(head.request.questions.length > 1 ? { questionNumber: head.questionIndex + 1, questionCount: head.request.questions.length } : {}),
+      ...(head.editingCustom ? { editingCustom: true, customText: head.customDraft, customCaretIndex: head.customCaretIndex }
+        : head.customAnswer === undefined ? {} : { customText: head.customAnswer }),
+      ...(question.detail === undefined && (question.header === undefined || question.header === question.question)
+        ? {} : { detail: [question.header === undefined ? '' : question.question, question.detail ?? ''].filter(Boolean).join('\n\n') }),
+      ...(question.options?.some(option => option.description !== undefined)
+        ? { optionDescriptions: question.options.map(option => option.description ?? '') } : {}),
     }
   }
 
@@ -7114,6 +7961,7 @@ export class RuntimeController implements TuiController {
     if (review === undefined) return EMPTY_PLAN_REVIEW_PANE
     return {
       open: true,
+      requestId: head.seq,
       plan: review.plan,
       ...(this.planReviewDeliveryError === undefined
         ? {}
@@ -7410,7 +8258,7 @@ function askAborted(): UserQuestionError {
  * @returns the label count used for digit bounds and j/k enablement.
  */
 function askUserOptionCount(entry: QueuedAskUser): number {
-  return entry.request.questions[0]?.options?.length ?? 0
+  return entry.request.questions[entry.questionIndex]?.options?.length ?? 0
 }
 
 /**
@@ -7580,6 +8428,7 @@ async function run(
     controller as RuntimeController,
     {
       title: BRAND_APP_TITLE,
+      ...controller?.getRenderTheme(),
       stdout: process.stdout,
       stdin: internals.stdin,
       ...(frameProbe === undefined ? {} : { frameProbe }),
@@ -7897,3 +8746,5 @@ export function apply(ctx: Context, config: Config): void {
     }
   }, 'tuiRuntime.run')
 }
+
+export { registerTuiLocale, listTuiLocales } from '@deepseek-ai/dsh-tui-render'

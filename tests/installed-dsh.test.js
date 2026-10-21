@@ -31,8 +31,8 @@ else if (args[0] !== 'plugin') process.exitCode = 7
     assert.equal(result.status, 7, result.stderr)
     assert.deepEqual(readFileSync(callsFile, 'utf8').trim().split('\n').map(line => JSON.parse(line)), [
       ['--version'],
-      ['plugin', '--profile', 'tui', 'add', fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/u, '')],
-      ['--profile', 'tui', '--resume', 'session-1'],
+      ['plugin', '--profile', 'deepseek-tui', 'add', fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/u, '')],
+      ['--profile', 'deepseek-tui', '--resume', 'session-1'],
     ])
   } finally {
     rmSync(root, { recursive: true, force: true })

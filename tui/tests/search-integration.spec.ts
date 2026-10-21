@@ -26,7 +26,7 @@ import type {
   SessionEvent,
   UserMessage,
 } from '@deepseek-ai/dsh-session'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SessionQuerySqlite from '@deepseek-ai/dsh-session-query-sqlite'
 import SessionTitleService from '@deepseek-ai/dsh-session-title'
 import {

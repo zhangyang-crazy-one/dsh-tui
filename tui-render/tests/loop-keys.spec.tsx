@@ -640,7 +640,7 @@ describe('mapKeyEvent (Ink contract)', () => {
 
   it('cancels command mode on the escape flag', () => {
     const effect = mapKeyEvent(
-      { text: '/comp', commandQuery: 'comp', prefixG: false, renaming: false },
+      { ...EMPTY, text: '/comp', commandQuery: 'comp' },
       '',
       keyInfo({ escape: true }),
       COMMANDS,
@@ -652,7 +652,7 @@ describe('mapKeyEvent (Ink contract)', () => {
 
   it('executes the highlighted prefix match on Enter inside command mode', () => {
     const effect = mapKeyEvent(
-      { text: '/comp', commandQuery: 'comp', prefixG: false, renaming: false },
+      { ...EMPTY, text: '/comp', commandQuery: 'comp' },
       '\r',
       keyInfo({ return: true }),
       COMMANDS,
@@ -671,7 +671,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       { name: 'settings', description: 'Edit provider settings (baseURL)' },
     ]
     const effect = mapKeyEvent(
-      { text: '/s', commandQuery: 's', prefixG: false, renaming: false },
+      { ...EMPTY, text: '/s', commandQuery: 's' },
       '\r',
       keyInfo({ return: true }),
       directory,
@@ -685,7 +685,7 @@ describe('mapKeyEvent (Ink contract)', () => {
 
   it('executes the controlled row for empty / and preserves an unknown prefix', () => {
     const empty = mapKeyEvent(
-      { text: '/', commandQuery: undefined, prefixG: false, renaming: false },
+      { ...EMPTY, text: '/', commandQuery: undefined },
       '\r',
       keyInfo({ return: true }),
       COMMANDS,
@@ -696,7 +696,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       expect(empty.action).toEqual({ kind: 'command', query: 'compact' })
     }
     const unknown = mapKeyEvent(
-      { text: '/zzz', commandQuery: undefined, prefixG: false, renaming: false },
+      { ...EMPTY, text: '/zzz', commandQuery: undefined },
       '\r',
       keyInfo({ return: true }),
       COMMANDS,
@@ -714,6 +714,7 @@ describe('mapKeyEvent (Ink contract)', () => {
     ]
     const effect = mapKeyEvent(
       {
+        ...EMPTY,
         text: '/permission workspace-write',
         commandQuery: 'permission workspace-write',
         prefixG: false,
@@ -735,7 +736,7 @@ describe('mapKeyEvent (Ink contract)', () => {
 
   it('completes the first match on Tab inside command mode', () => {
     const effect = mapKeyEvent(
-      { text: '/comp', commandQuery: 'comp', prefixG: false, renaming: false },
+      { ...EMPTY, text: '/comp', commandQuery: 'comp' },
       '\t',
       keyInfo({ tab: true }),
       COMMANDS,
@@ -902,7 +903,7 @@ describe('mapKeyEvent (Ink contract)', () => {
     const typed = mapKeyEvent(EMPTY, 'h', keyInfo(), COMMANDS, CHAT_PANE, CHAT_SEARCH)
     if (typed.kind === 'dispatch') expect(typed.text).toBe('h')
     const inCommand = mapKeyEvent(
-      { text: '/c', commandQuery: 'c', prefixG: false, renaming: false },
+      { ...EMPTY, text: '/c', commandQuery: 'c' },
       'o',
       keyInfo(),
       COMMANDS,
@@ -1822,25 +1823,13 @@ describe('mapKeyEvent (Ink contract)', () => {
   })
 
   it('takes the FIFO head only on empty-composer Up and toggles compaction on Ctrl+K', () => {
+    const paneArgs = [
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+      true, {}, undefined, { headText: 'oldest draft' },
+    ] as const
     const args = [
-      EMPTY,
-      '',
-      keyInfo({ upArrow: true }),
-      COMMANDS,
-      CHAT_PANE,
-      CHAT_SEARCH,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      true,
-      {},
-      undefined,
-      { headText: 'oldest draft' },
-      { available: false },
+      EMPTY, '', keyInfo({ upArrow: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH,
+      ...paneArgs, { available: false },
     ] as const
     expect(mapKeyEvent(...args)).toMatchObject({
       kind: 'dispatch',
@@ -1855,7 +1844,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       COMMANDS,
       CHAT_PANE,
       CHAT_SEARCH,
-      ...args.slice(6),
+      ...paneArgs, { available: false },
     )).toEqual({ kind: 'none' })
     expect(mapKeyEvent(
       EMPTY,
@@ -1864,7 +1853,7 @@ describe('mapKeyEvent (Ink contract)', () => {
       COMMANDS,
       CHAT_PANE,
       CHAT_SEARCH,
-      ...args.slice(6, 17),
+      ...paneArgs,
       { available: true },
     )).toMatchObject({ action: { kind: 'toggle-compaction-divider' } })
   })
@@ -3352,4 +3341,35 @@ describe('overlay occupancy (K2/K2′/K20)', () => {
       kind: 'plan-directory-apply',
     })
   })
+})
+
+it('navigates the /key picker before capturing a secret draft', () => {
+  const map = (info: Record<string, boolean>, editing = false) => mapKeyEvent(
+    EMPTY, '', keyInfo(info), COMMANDS, CHAT_PANE, CHAT_SEARCH,
+    undefined, undefined, undefined, undefined, undefined, undefined,
+    { open: true, onboarding: true, editing, editValue: '' },
+  )
+  expect(map({ downArrow: true })).toMatchObject({ action: { kind: 'settings-move', delta: 1 } })
+  expect(map({ return: true })).toMatchObject({ action: { kind: 'settings-edit' }, text: '' })
+  expect(map({ return: true }, true)).toMatchObject({ action: { kind: 'settings-apply', value: '' } })
+})
+
+it('opens child tasks with Ctrl+B while preserving a nonempty draft and respects modal focus', () => {
+  const draft = { ...EMPTY, text: '保留的草稿', caretIndex: 2 }
+  expect(mapKeyEvent(draft, 'b', keyInfo({ ctrl: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH))
+    .toMatchObject({ action: { kind: 'agent-hub' }, text: draft.text, caretIndex: 2 })
+  const blocked = mapKeyEvent(draft, 'b', keyInfo({ ctrl: true }), COMMANDS, CHAT_PANE, CHAT_SEARCH,
+    undefined, undefined, undefined, { open: true })
+  expect(blocked).toEqual({ kind: 'none' })
+})
+
+it('uses separate inspect and descendant navigation keys in the child task browser', () => {
+  const map = (info: Record<string, boolean>) => mapKeyEvent(
+    EMPTY, '', keyInfo(info), COMMANDS, CHAT_PANE, CHAT_SEARCH,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, true,
+    { agentHub: { open: true } },
+  )
+  expect(map({ return: true })).toMatchObject({ action: { kind: 'agent-hub-enter' } })
+  expect(map({ rightArrow: true })).toMatchObject({ action: { kind: 'agent-hub-expand' } })
+  expect(map({ leftArrow: true })).toMatchObject({ action: { kind: 'agent-hub-escape' } })
 })

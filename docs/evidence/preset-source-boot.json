@@ -1,0 +1,281 @@
+{
+  "status": "PASS",
+  "mode": "source-cli-profile-only",
+  "dsh": "0.2.1-rc.2",
+  "patchFiles": [
+    "./cordis.patch.yml",
+    "./presets/base-disable.patch.yml",
+    "./presets/registry.patch.yml",
+    "./presets/standard.patch.yml",
+    "./presets/ptc.patch.yml",
+    "./presets/minimal.patch.yml",
+    "./presets/cordis.patch.yml"
+  ],
+  "disabledSurfaceRows": [
+    "tui-runtime",
+    "tui-startup",
+    "webserver",
+    "zen-proxy",
+    "hmr",
+    "session-telemetry-otel"
+  ],
+  "profileBundleLinks": 1,
+  "entries": 591,
+  "linkedRoots": [
+    {
+      "name": "@crazyhappyone/dsh-tui",
+      "realPath": "/home/zhangyangrui/my_programes/dsh-tui"
+    }
+  ],
+  "resolved": [
+    {
+      "name": "@deepseek-ai/dsh-persona",
+      "packageDir": "/home/zhangyangrui/my_programes/deepseek-harness/apps/cli/node_modules/@deepseek-ai/dsh-persona",
+      "version": "0.2.1-rc.2",
+      "declarer": "/home/zhangyangrui/my_programes/deepseek-harness/apps/cli/package.json",
+      "scope": "installation"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-preset-registry",
+      "packageDir": "/home/zhangyangrui/my_programes/deepseek-harness/packages/subagent/tool-subagent/node_modules/@deepseek-ai/dsh-agent-preset-registry",
+      "version": "0.2.1-rc.2",
+      "declarer": "/home/zhangyangrui/my_programes/deepseek-harness/packages/subagent/tool-subagent/package.json",
+      "scope": "installation"
+    },
+    {
+      "name": "@deepseek-ai/dsh-plugin-market",
+      "packageDir": "/home/zhangyangrui/my_programes/deepseek-harness/packages/bundle/web-app/node_modules/@deepseek-ai/dsh-plugin-market",
+      "version": "0.2.1-rc.2",
+      "declarer": "/home/zhangyangrui/my_programes/deepseek-harness/packages/bundle/web-app/package.json",
+      "scope": "installation"
+    }
+  ],
+  "globalTools": [
+    "working_directory"
+  ],
+  "networkRequests": 0,
+  "roster": [
+    {
+      "preset": "standard",
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "present",
+        "read",
+        "read_image",
+        "schedule_create",
+        "schedule_delete",
+        "schedule_list",
+        "schedule_update",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "working_directory",
+        "write"
+      ],
+      "modelTools": [
+        "ask_user_question",
+        "bash",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "present",
+        "read",
+        "read_image",
+        "schedule_create",
+        "schedule_delete",
+        "schedule_list",
+        "schedule_update",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "working_directory",
+        "write"
+      ],
+      "commands": {
+        "goal": true,
+        "compact": true
+      },
+      "logEvents": 3,
+      "modelRequests": 0
+    },
+    {
+      "preset": "ptc",
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "present",
+        "read",
+        "read_image",
+        "run_code",
+        "schedule_create",
+        "schedule_delete",
+        "schedule_list",
+        "schedule_update",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "working_directory",
+        "write"
+      ],
+      "modelTools": [
+        "run_code"
+      ],
+      "commands": {
+        "goal": true,
+        "compact": true
+      },
+      "logEvents": 3,
+      "modelRequests": 0
+    },
+    {
+      "preset": "minimal",
+      "tools": [
+        "bash",
+        "read_image",
+        "working_directory"
+      ],
+      "modelTools": [
+        "bash",
+        "read_image",
+        "working_directory"
+      ],
+      "commands": {
+        "goal": false,
+        "compact": true
+      },
+      "logEvents": 3,
+      "modelRequests": 0
+    },
+    {
+      "preset": "cordis",
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "cordis_inspect_list",
+        "cordis_inspect_query",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "plugin_manager",
+        "plugin_market",
+        "present",
+        "read",
+        "read_image",
+        "schedule_create",
+        "schedule_delete",
+        "schedule_list",
+        "schedule_update",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "working_directory",
+        "write"
+      ],
+      "modelTools": [
+        "ask_user_question",
+        "bash",
+        "cordis_inspect_list",
+        "cordis_inspect_query",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "plugin_manager",
+        "plugin_market",
+        "present",
+        "read",
+        "read_image",
+        "schedule_create",
+        "schedule_delete",
+        "schedule_list",
+        "schedule_update",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "working_directory",
+        "write"
+      ],
+      "commands": {
+        "goal": true,
+        "compact": true
+      },
+      "logEvents": 3,
+      "modelRequests": 0
+    }
+  ]
+}

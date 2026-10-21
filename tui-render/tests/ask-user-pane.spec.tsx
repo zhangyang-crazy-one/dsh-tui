@@ -1,3 +1,4 @@
+import { PASSIVE_CONTROLLER } from './helpers.ts'
 /**
  * AskUserPane copy: numbered labels, focus prefix, zero-option error, CSI
  * escaping, and TuiLoop composer occupancy.
@@ -89,7 +90,8 @@ describe('AskUserPane', () => {
     expect(out).toContain('3 取消发布')
     expect(out).toContain('› ')
     expect(out).toContain('\x1b[38;2;77;107;254m')
-    expect(out).toContain('↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问')
+    expect(out).toContain('Enter 作答 · Esc 取消提问')
+    expect(out).toContain('↑↓/jk 移动 · 1-9 选择')
     expect(out).not.toContain('OK')
     expect(out).not.toContain('Cancel')
     expect(out).not.toContain('Submit')
@@ -98,7 +100,8 @@ describe('AskUserPane', () => {
   it('keeps numbered rows past nine with the same footnote', () => {
     const options = Array.from({ length: 10 }, (_, index) => `opt-${index + 1}`)
     const out = render({ options, selectedIndex: 0 })
-    expect(out).toContain('↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问')
+    expect(out).toContain('Enter 作答 · Esc 取消提问')
+    expect(out).toContain('↑↓/jk 移动 · 1-9 选择')
     expect(out).toContain('10 opt-10')
   })
 
@@ -142,9 +145,7 @@ describe('TuiLoop ask-user slot', () => {
       getSettingsPane: () => EMPTY_SETTINGS_PANE,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      ...PASSIVE_CONTROLLER,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,
@@ -161,7 +162,8 @@ describe('TuiLoop ask-user slot', () => {
     )
     expect(out).toContain('选择发布策略')
     expect(out).toContain('1 仅 patch')
-    expect(out).toContain('↑↓/jk 移动 · 1-9 选择 · Enter 作答 · Esc 取消提问')
+    expect(out).toContain('Enter 作答 · Esc 取消提问')
+    expect(out).toContain('↑↓/jk 移动 · 1-9 选择')
     expect(out).toContain('有什么可以帮忙的')
     expect(out).not.toContain('\x1b[38;2;77;107;254m> ')
     expect(EMPTY_ASK_USER_PANE.open).toBe(false)
@@ -184,9 +186,7 @@ describe('TuiLoop ask-user slot', () => {
       getSettingsPane: () => EMPTY_SETTINGS_PANE,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      ...PASSIVE_CONTROLLER,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getSubmitOnEnter: () => true,

@@ -1,3 +1,4 @@
+import { syntaxLines, type SyntaxKind } from './syntax-tokens.ts'
 /**
  * Styled mdast → {@link MarkdownRenderLine} renderer.
  *
@@ -340,7 +341,9 @@ function renderCode(
   width: number,
   rowOffset: number,
   sourceStart: number,
+  language: string,
 ): MarkdownRenderLine[] {
+  const lexicalRows = syntaxLines(escapeContent(value), language)
   const lines = value.split('\n')
   const out: MarkdownRenderLine[] = []
   let row = rowOffset
@@ -364,14 +367,19 @@ function renderCode(
       row += 1
       continue
     }
+    let partOffset = 0
     for (const [partIndex, part] of wrapped.entries()) {
       const buffer = makeBuffer()
       const gutter = partIndex === 0 ? gutterPrefix : continuationGutter
       appendSegment(buffer, { text: gutter, token: 'fgDim', bold: false })
-      const tokens = tokenizeCodeLine(part)
-      for (const tk of tokens) {
-        appendSegment(buffer, { text: tk.text, token: tk.token, bold: tk.bold })
+      let tokenOffset = 0
+      for (const token of lexicalRows[index] ?? []) {
+        const start = Math.max(0, partOffset - tokenOffset)
+        const end = Math.min(token.text.length, partOffset + part.length - tokenOffset)
+        if (end > start) appendSegment(buffer, { text: token.text.slice(start, end), token: CODE_STYLE[token.kind], bold: token.kind === 'keyword' })
+        tokenOffset += token.text.length
       }
+      partOffset += part.length
       const codeLine = freezeLine(
         buffer,
         row,
@@ -388,66 +396,7 @@ function renderCode(
   return out
 }
 
-/** One token in a code line. */
-interface CodeToken {
-  readonly text: string
-  readonly token: MarkdownStyleToken
-  readonly bold: boolean
-}
-
-/** Keyword set used for code-line tokenization (kept in sync with
- * `markdown.tsx`'s `tokenizeLine`). */
-const CODE_KEYWORDS = new Set([
-  'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while',
-  'import', 'export', 'from', 'async', 'await', 'class', 'interface', 'type',
-  'new', 'throw', 'try', 'catch', 'finally', 'switch', 'case', 'break',
-  'continue', 'default', 'true', 'false', 'null', 'undefined', 'this',
-])
-
-/** Tokenize a single code line (assumed already escaped). */
-function tokenizeCodeLine(source: string): CodeToken[] {
-  const out: CodeToken[] = []
-  if (source === '') return out
-  const trimmed = source.trimStart()
-  if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('--')) {
-    return [{ text: source, token: 'codeComment', bold: false }]
-  }
-  let i = 0
-  let plain = source.slice(0, source.length - trimmed.length)
-  const flushPlain = (): void => {
-    if (plain !== '') {
-      out.push({ text: plain, token: 'fg', bold: false })
-      plain = ''
-    }
-  }
-  while (i < trimmed.length) {
-    const ch = trimmed.charAt(i)
-    if (ch === "'" || ch === '"' || ch === '`') {
-      const end = trimmed.indexOf(ch, i + 1)
-      const stop = end === -1 ? trimmed.length : end + 1
-      flushPlain()
-      out.push({ text: trimmed.slice(i, stop), token: 'codeString', bold: false })
-      i = stop
-      continue
-    }
-    if (ch === '/' && trimmed.charAt(i + 1) === '/') {
-      flushPlain()
-      out.push({ text: trimmed.slice(i), token: 'codeComment', bold: false })
-      return out
-    }
-    const wordMatch = /^([A-Za-z_$][A-Za-z0-9_$]*)/.exec(trimmed.slice(i))
-    if (wordMatch !== null && CODE_KEYWORDS.has(wordMatch[0])) {
-      flushPlain()
-      out.push({ text: wordMatch[0], token: 'codeKeyword', bold: false })
-      i += wordMatch[0].length
-      continue
-    }
-    plain += ch
-    i += 1
-  }
-  flushPlain()
-  return out
-}
+const CODE_STYLE: Readonly<Record<SyntaxKind, MarkdownStyleToken>> = { plain: 'fg', keyword: 'codeKeyword', string: 'codeString', comment: 'codeComment' }
 
 /** Render a GFM table using box-drawing rules and fg/accent body cells. */
 function renderTable(
@@ -812,7 +761,7 @@ export function createStyledMarkdownBlockRenderer(
         case 'list':
           return renderList(node, width, 0, sourceStart, hyperlinks)
         case 'code':
-          return renderCode(node.value, width, 0, sourceStart)
+          return renderCode(node.value, width, 0, sourceStart, node.lang ?? '')
         case 'table':
           return renderTable(node, width, 0, sourceStart)
         default:

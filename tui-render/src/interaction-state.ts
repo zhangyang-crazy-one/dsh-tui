@@ -33,6 +33,10 @@ export function reduceInteraction(
   state: InteractionState,
   event: InteractionEvent,
 ): { state: InteractionState; effect: InteractionEffect } {
+  // A backend goal, schedule, or queued prompt starts a turn without a composer send.
+  if (event.kind === 'turn-started') {
+    return { state: 'generating', effect: { kind: 'none' } }
+  }
   switch (state) {
     case 'idle':
     case 'stopped': {

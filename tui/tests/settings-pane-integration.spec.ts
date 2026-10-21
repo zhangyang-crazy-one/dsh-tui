@@ -15,6 +15,7 @@ import type {
 import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { RuntimeController } from '../src/index.ts'
@@ -834,4 +835,89 @@ describe('SettingsPane intercept', () => {
     })
     await ctx.fiber.dispose()
   })
+
+  it('toggles boolean and enumerable settings in place on settings-toggle without closing the overlay', async () => {
+    const { ctx, controller, update } = await bench()
+    const tuiStored = {
+      reasoning: false,
+      brandAnimation: 'auto',
+      locale: 'zh-CN',
+      colorTier: 'truecolor',
+    }
+    const settings = ctx.get('settings') as never as {
+      describe: () => { ns: unknown; value?: unknown }[]
+      get: (ns: unknown) => unknown
+    }
+    settings.describe = () => [{ ns: 'tui', value: tuiStored }]
+    settings.get = (ns: unknown) => ns === 'tui' ? tuiStored : undefined
+    update.mockImplementation(async (_ns: unknown, patch: Record<string, unknown>) => {
+      Object.assign(tuiStored, patch)
+    })
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    expect(controller.getSettingsPane().open).toBe(true)
+    controller.dispatch({ kind: 'settings-toggle' })
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('tui', { reasoning: true })
+    })
+    expect(controller.getSettingsPane().open).toBe(true)
+    expect(controller.getSettingsPane().rows[0]?.value).toBe('true')
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    controller.dispatch({ kind: 'settings-toggle' })
+    await vi.waitFor(() => {
+      expect(update).toHaveBeenCalledWith('tui', { brandAnimation: 'on' })
+    })
+    expect(controller.getSettingsPane().open).toBe(true)
+    expect(controller.getSettingsPane().rows[1]?.value).toBe('开启')
+    await ctx.fiber.dispose()
+  })
+})
+
+it('suggests current provider credential names without duplicates or literal secrets, including newly added providers', async () => {
+  const providers: Record<string, { apiKeyEnv: string }> = {
+    goat: { apiKeyEnv: 'GOAT_API_KEY' },
+    shared: { apiKeyEnv: 'GOAT_API_KEY' },
+    invalid: { apiKeyEnv: 'sk-not-a-reference' },
+  }
+  const { ctx, controller, setCredential } = await bench({ credentials: { configured: true }, piAi: { providers } })
+  try {
+    const names = () => controller.commands.filter(item => item.name.startsWith('key ')).map(item => item.name)
+    expect(names()).toEqual(['key DEEPSEEK_API_KEY', 'key GOAT_API_KEY'])
+    providers['other'] = { apiKeyEnv: 'OTHER_API_KEY' }
+    expect(names()).toContain('key OTHER_API_KEY')
+    expect(setCredential).not.toHaveBeenCalled()
+  } finally { await ctx.fiber.dispose() }
+})
+
+it('lets /key select a configured provider reference before entering its secret', async () => {
+  const { ctx, controller, setCredential } = await bench({
+    credentials: { configured: true },
+    piAi: { providers: { goat: { apiKeyEnv: 'GOAT_API_KEY' } } },
+  })
+  try {
+    controller.dispatch({ kind: 'command', query: 'key' })
+    expect(controller.getSettingsPane()).toMatchObject({ onboarding: true, editing: false, selectedIndex: 0 })
+    expect(controller.getSettingsPane().rows.map(row => row.field)).toEqual(['DEEPSEEK_API_KEY', 'GOAT_API_KEY'])
+    expect(controller.getSettingsPane().rows.every(row => row.editValue === '')).toBe(true)
+    controller.dispatch({ kind: 'settings-move', delta: 1 })
+    controller.dispatch({ kind: 'settings-edit' })
+    expect(controller.getSettingsPane()).toMatchObject({ selectedIndex: 1, editing: true })
+    controller.dispatch({ kind: 'settings-apply', value: 'synthetic-provider-key' })
+    await vi.waitFor(() => expect(setCredential).toHaveBeenCalledWith(credentialRef('GOAT_API_KEY'), 'synthetic-provider-key'))
+  } finally { await ctx.fiber.dispose() }
+})
+
+it('validates and persists composer keybinding edits without dropping other overrides', async () => {
+  const { ctx, controller, update } = await bench()
+  const live = { keybindings: {} as Record<string, string> }
+  ctx.tuiSettings.get = () => live
+  update.mockImplementation(async (_ns: unknown, patch: object) => { Object.assign(live, patch) })
+  try {
+    controller.dispatch({ kind: 'command', query: 'bind toggle-reasoning Ctrl+R' })
+    await vi.waitFor(() => expect(live.keybindings['toggle-reasoning']).toBe('Ctrl+R'))
+    controller.dispatch({ kind: 'command', query: 'bind copy-message Ctrl+R' })
+    expect(update).toHaveBeenCalledTimes(1)
+    controller.dispatch({ kind: 'command', query: 'unbind copy-message' })
+    await vi.waitFor(() => expect(live.keybindings['copy-message']).toBe('none'))
+    expect(controller.getKeybindings()).toEqual({ 'toggle-reasoning': 'Ctrl+R', 'copy-message': 'none' })
+  } finally { await controller.dispose();await ctx.fiber.dispose() }
 })

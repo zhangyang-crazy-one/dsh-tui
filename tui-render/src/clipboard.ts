@@ -79,6 +79,9 @@ export function copyText(
     child.on('error', () => {
       // Helper missing: OSC 52 already went out.
     })
+    child.stdin?.on('error', () => {
+      // Helper closed its input pipe: OSC 52 already went out.
+    })
     child.stdin?.end(text)
   } catch {
     // spawn threw synchronously: OSC 52 already went out.

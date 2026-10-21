@@ -19,7 +19,8 @@ import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { FsTargetKey } from '@deepseek-ai/dsh-fs'
 import type { FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
-import { RuntimeController } from '../src/index.ts'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import { RuntimeController, internals } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 
 /** A fake fs target: the key doubles as the lookup handle. */
@@ -520,4 +521,107 @@ describe('workspace overlay', () => {
     })
     await ctx.fiber.dispose()
   })
+})
+
+
+describe('explicit delivery browsing', () => {
+  it('does not open a stale file after the selected delivery changes during resolution', async () => {
+    const gate = Promise.withResolvers<FsTarget>()
+    const { ctx, controller } = await bench()
+    const stat = vi.fn(async () => ({ type: 'file', size: 8 }))
+    const read = vi.fn(async () => new TextEncoder().encode('old file'))
+    ctx.provide('fs', { resolve: () => gate.promise, stat, readBytes: read } as never)
+    try {
+      controller.session?.append('deliverables/presented', { turn: 1, callId: ToolCallId('late-delivery'), files: [
+        { path: '/ws/old.md' }, { path: '/ws/current.md' },
+      ] })
+      controller.dispatch({ kind: 'command', query: 'deliveries' })
+      controller.dispatch({ kind: 'workspace-enter' })
+      controller.dispatch({ kind: 'workspace-move', delta: 1 })
+      gate.resolve(target('/ws/old.md'))
+      await vi.waitFor(() => expect(stat).toHaveBeenCalledOnce())
+      expect(read).not.toHaveBeenCalled()
+      expect(controller.getWorkspacePane().preview).toBeUndefined()
+      expect(controller.getWorkspacePane().selectedIndex).toBe(1)
+    } finally { await controller.dispose();await ctx.fiber.dispose() }
+  })
+
+  it('lists only the current Session declarations, previews text, and opens the selected file', async () => {
+    const { ctx, controller } = await bench()
+    const open = vi.spyOn(internals, 'openUrl').mockImplementation(() => {})
+    const read = vi.fn(async () => new TextEncoder().encode('# Delivered report\nComplete text'))
+    ctx.provide('fs', {
+      resolve: async (path: string) => target(path),
+      stat: async () => ({ type: 'file', size: 32 }),
+      readBytes: read,
+      processPath: (file: FsTarget) => file.displayPath,
+    } as never)
+    try {
+      controller.session?.append('deliverables/presented', { turn: 1, callId: ToolCallId('delivery'), files: [
+        { path: '/ws/报告.md', description: 'Final report' }, { path: '/ws/slides.pptx', description: 'Slides' },
+      ] })
+      controller.dispatch({ kind: 'command', query: 'deliveries' })
+      expect(controller.getWorkspacePane().mode).toBe('deliveries')
+      await vi.waitFor(() => expect(controller.getWorkspacePane().nodes.map(row => row.path)).toEqual(['/ws/报告.md', '/ws/slides.pptx']))
+      controller.dispatch({ kind: 'workspace-enter' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().preview?.lines).toContain('Complete text'))
+      expect(read).toHaveBeenCalledWith(target('/ws/报告.md'), expect.any(AbortSignal), 1048576)
+      controller.dispatch({ kind: 'workspace-escape' })
+      controller.dispatch({ kind: 'workspace-move', delta: 1 })
+      controller.dispatch({ kind: 'workspace-enter' })
+      await vi.waitFor(() => expect(controller.getWorkspacePane().preview?.path).toBe('/ws/slides.pptx'))
+      expect(read).toHaveBeenCalledTimes(1)
+      controller.dispatch({ kind: 'workspace-open-system' })
+      await vi.waitFor(() => expect(open).toHaveBeenCalledWith('file:///ws/slides.pptx'))
+      controller.dispatch({ kind: 'new-session' })
+      await vi.waitFor(() => expect(controller.getModel().deliveries).toBeUndefined())
+      controller.dispatch({ kind: 'command', query: 'deliveries' })
+      expect(controller.getWorkspacePane().nodes).toEqual([])
+    } finally { open.mockRestore();await controller.dispose();await ctx.fiber.dispose() }
+  })
+})
+
+it('opens event JSON and exact file coordinates in the new review browser', async () => {
+  const calls: unknown[] = []
+  const { ctx, controller } = await bench(ctx => {
+    ctx.provide('workspaceChanges', {
+      summary: () => ({ turn: 1, cwd: '/ws', files: [
+        { path: 'a/index.ts', display: 'a/index.ts', added: 1, deleted: 0 },
+        { path: 'b/index.ts', display: 'b/index.ts', added: 2, deleted: 1 },
+      ], total: 2, added: 3, deleted: 1 }),
+      diff: async (...args: unknown[]) => { calls.push(args);return { kind: 'text', path: 'b/index.ts', display: 'b/index.ts', before: true, after: true,
+        coarse: false, hunks: [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: ['-old-b', '+new-b'] }] } },
+    } as never)
+  })
+  try {
+    const event = controller.session!.append('workspace/changes', { turn: 1 })
+    controller.dispatch({ kind: 'command', query: 'timeline' })
+    await vi.waitFor(() => expect(controller.getBrowserPane().busy).toBe(false))
+    expect(controller.getBrowserPane().rows.some(row => row.title.includes('workspace/changes'))).toBe(true)
+    controller.dispatch({ kind: 'command', query: 'review' })
+    await vi.waitFor(() => expect(controller.getBrowserPane().rows).toHaveLength(2))
+    controller.dispatch({ kind: 'browser-move', delta: 1 })
+    controller.dispatch({ kind: 'browser-enter' })
+    await vi.waitFor(() => expect(controller.getBrowserPane().detail).toContain('+new-b'))
+    expect(calls[0]).toEqual([controller.session!.id, event.seq, 1, expect.any(AbortSignal)])
+  } finally { await controller.dispose();await ctx.fiber.dispose() }
+})
+
+it('manually refreshes a changed file tree and preserves the selected path', async () => {
+  const tree = new Map([['/ws', [entry('/ws/a', 'file'), entry('/ws/b', 'file')]]])
+  const { ctx, controller } = await bench(ctx => { provideFs(ctx, { tree, resolved: [] }) })
+  try {
+    controller.dispatch({ kind: 'workspace-pane' })
+    await vi.waitFor(() => expect(controller.getWorkspacePane().nodes).toHaveLength(2))
+    controller.dispatch({ kind: 'workspace-move', delta: 1 })
+    tree.set('/ws', [entry('/ws/added', 'file'), entry('/ws/a', 'file'), entry('/ws/b', 'file')])
+    controller.dispatch({ kind: 'workspace-refresh' })
+    await vi.waitFor(() => expect(controller.getWorkspacePane().nodes).toHaveLength(3))
+    const pane = controller.getWorkspacePane()
+    expect(pane.nodes[pane.selectedIndex]?.path).toBe('/ws/b')
+    tree.delete('/ws')
+    controller.dispatch({ kind: 'workspace-refresh' })
+    await vi.waitFor(() => expect(controller.getWorkspacePane().resolveError).toContain('刷新失败'))
+    expect(controller.getWorkspacePane().nodes).toHaveLength(3)
+  } finally { await controller.dispose();await ctx.fiber.dispose() }
 })

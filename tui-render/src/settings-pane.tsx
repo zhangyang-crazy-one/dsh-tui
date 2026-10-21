@@ -1,3 +1,4 @@
+import { settingsGroup, SETTINGS_GROUP_LABELS } from './settings-groups.ts'
 /**
  * SettingsPane: the overlay for host settings fields. Presentational only —
  * keys route through {@link mapKeyEvent} in the loop owner, and the runtime
@@ -123,6 +124,33 @@ function fitValue(value: string, maxCols: number): string {
  * @param columns - terminal width.
  * @returns paint parts for {@link paintRow}.
  */
+const TUI_EXTRA_LABELS: Readonly<Record<string, { readonly 'zh-CN': string; readonly 'en-US': string }>> = {
+  theme: { 'zh-CN': '明暗主题', 'en-US': 'Appearance' },
+  brandAnimation: { 'zh-CN': '品牌动画', 'en-US': 'Brand animation' },
+  submitOnEnter: { 'zh-CN': '回车发送', 'en-US': 'Enter to send' },
+  colorTier: { 'zh-CN': '色彩档位', 'en-US': 'Color tier' },
+}
+
+function valueTokenFor(
+  value: string,
+  selected: boolean,
+): 'fg' | 'fgDim' | 'success' | 'warning' | 'accentText' {
+  if (value === '已配置' || value === 'true' || value === '开启') {
+    return 'success'
+  }
+  if (value === '未配置') {
+    return 'warning'
+  }
+  if (
+    value.startsWith('Enter：')
+    || value.startsWith('按 Enter')
+    || value === 'Enter 设置密钥'
+  ) {
+    return 'accentText'
+  }
+  return selected ? 'fg' : 'fgDim'
+}
+
 function fieldRow(
   label: string,
   value: string,
@@ -147,12 +175,13 @@ function fieldRow(
     VALUE_GAP,
     columns - labelCols - displayWidth(fittedValue),
   )
+  const valToken = valueTokenFor(value, selected)
   return [
     marker,
     ...(required ? [reqMark] : []),
-    styled(escapedLabel, labelToken),
+    styled(escapedLabel, labelToken, undefined, selected),
     styled(' '.repeat(gap), 'settingsCardBg'),
-    ...(fittedValue === '' ? [] : [styled(fittedValue, selected ? 'fg' : 'fgDim')]),
+    ...(fittedValue === '' ? [] : [styled(fittedValue, valToken, undefined, selected)]),
   ]
 }
 
@@ -206,9 +235,9 @@ export function SettingsPane({
   const { columns } = useWindowSize()
   const width = columns > 0 ? columns : 80
   const errorReason = updateError ?? (rows.length === 0 ? EMPTY_TABLE_REASON : undefined)
-  let footnote = FOOTNOTE
+  let footnote = `Tab/Shift+Tab 分组 · ${FOOTNOTE}`
   if (onboarding === true) {
-    footnote = ONBOARDING_FOOTNOTE
+    footnote = editing ? ONBOARDING_FOOTNOTE : '↑↓/jk 选择密钥 · Enter 输入 · Esc 关闭'
   } else if (editing) {
     footnote = EDIT_FOOTNOTE
   }
@@ -228,13 +257,39 @@ export function SettingsPane({
       </Text>
     </Box>
   )
+  let headingText = rows[selectedIndex] === undefined ? TITLE : `${TITLE} · ${SETTINGS_GROUP_LABELS[settingsGroup(rows[selectedIndex]!)]}`
+  if (onboarding === true) headingText = rows.length > 1 ? 'API 密钥' : ONBOARDING_TITLE
+  const clampedSelected = rows.length === 0
+    ? 0
+    : Math.min(Math.max(0, selectedIndex), rows.length - 1)
+  const activeNs = rows[clampedSelected]?.namespace
+  let headerRight = ''
+  if (rows.length > 0 && (onboarding !== true || rows.length > 1)) {
+    headerRight = `${String(clampedSelected + 1)}/${String(rows.length)}`
+    if (activeNs !== undefined && width >= 40) headerRight = `${activeNs} · ${headerRight}`
+  }
+  const headerGap = headerRight !== '' && displayWidth(headingText) + displayWidth(headerRight) + 2 <= width
+    ? width - displayWidth(headingText) - displayWidth(headerRight)
+    : 0
+  const headerParts = headerGap > 0
+    ? [
+      styled(escapeContent(headingText), 'fg', undefined, true),
+      styled(' '.repeat(headerGap), 'settingsCardBg'),
+      styled(escapeContent(headerRight), 'fgDim'),
+    ]
+    : [styled(escapeContent(headingText), 'fg', undefined, true)]
   return (
     <Box flexDirection="column" width="100%">
-      {renderLine(onboarding === true ? ONBOARDING_TITLE : TITLE, 'fg', true)}
-      {start > 0 ? renderLine(`… 还有 ${String(start)} 项`, 'fgDim') : null}
+      <Box width="100%">
+        <Text>
+          {paintBackgroundRow(headerParts, 'settingsCardBg', width)}
+        </Text>
+      </Box>
+      {start > 0 ? renderLine(`↑ 上方还有 ${String(start)} 项 (… 还有 ${String(start)} 项)`, 'fgDim') : null}
       {visible.map((row, index) => {
         const absolute = start + index
         const selected = absolute === selectedIndex
+        const resolvedLocale: TuiLocale = locale ?? 'zh-CN'
         let localized: string
         if (row.label !== undefined) {
           localized = row.label
@@ -244,6 +299,8 @@ export function SettingsPane({
             || row.field === 'statusDetails' || row.field === 'locale')
         ) {
           localized = `${row.field} · ${tuiCopy(row.field, locale)}`
+        } else if (row.namespace === 'tui' && row.field in TUI_EXTRA_LABELS) {
+          localized = `${row.field} · ${TUI_EXTRA_LABELS[row.field]![resolvedLocale === 'en-US' ? 'en-US' : 'zh-CN']}`
         } else if (row.field === 'apiKeyEnv') {
           localized = `${row.field} · 环境变量名`
         } else {

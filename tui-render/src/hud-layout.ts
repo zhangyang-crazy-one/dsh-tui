@@ -97,8 +97,9 @@ export function layoutHud(input: HudLayoutInput): readonly HudRow[] {
   if (planCount + jobs.length === 0) return []
   const row = (key: string, text: string, token: StyleToken = 'fgDim'): HudRow => ({ key, text: fitHudRow(text, input.columns), token })
   const planCountText = `${todos.length} ${tuiCopy('hudTodo', locale)}${workflow === undefined ? '' : ` · 1 ${tuiCopy('hudWorkflow', locale)}`}`
+  const todoHint = todos.length > 0 ? ' · /todos' : ''
   if (input.rows === 1) {
-    return [row('summary', `─ ${tuiCopy('hudPlan', locale)} ${planCountText} | ${tuiCopy('hudJobs', locale)} ${jobs.length}`, 'accentText')]
+    return [row('summary', `─ ${tuiCopy('hudPlan', locale)} ${planCountText}${todoHint} | ${tuiCopy('hudJobs', locale)} ${jobs.length}`, 'accentText')]
   }
   let remaining = input.rows - Number(planCount > 0) - Number(jobs.length > 0)
   const selectedTodos: TodoHudItem[] = []
@@ -122,8 +123,8 @@ export function layoutHud(input: HudLayoutInput): readonly HudRow[] {
     const hiddenTodos = todos.length - selectedTodos.length
     const hiddenWorkflow = Number(workflow !== undefined && !showWorkflow)
     const hidden = hiddenTodos + hiddenWorkflow
-    const overflow = hidden === 0 ? '' : ` · +${hidden} ${tuiCopy('hudMore', locale)} (${hiddenTodos}/${hiddenWorkflow})`
-    result.push(row('plan-title', `─ ${tuiCopy('hudPlan', locale)} ${planCountText}${overflow}`, 'accentText'))
+    const overflow = hidden === 0 ? '' : ` · +${hidden} ${tuiCopy('hudMore', locale)}`
+    result.push(row('plan-title', `─ ${tuiCopy('hudPlan', locale)} ${planCountText}${todoHint}${overflow}`, 'accentText'))
     selectedTodos.forEach((todo, index) => {
       const active = todo.status === 'in_progress'
       result.push(row(`todo-${index}`, `${active ? '▸' : '·'} ${tuiCopy(active ? 'hudProgress' : 'hudTodo', locale)} ${todo.content}`, active ? 'accent' : 'fgDim'))
@@ -134,7 +135,7 @@ export function layoutHud(input: HudLayoutInput): readonly HudRow[] {
     const hidden = jobs.length - selectedJobs.length
     result.push(row('jobs-title', `─ ${tuiCopy('hudJobs', locale)} ${jobs.length}${hidden === 0 ? '' : ` · +${hidden} ${tuiCopy('hudMore', locale)}`}`, 'accentText'))
     for (const job of selectedJobs) {
-      result.push(row(`job-${job.id}`, `${job.id} · ${tuiCopy(job.status === 'running' ? 'hudRunning' : 'hudStopping', locale)} · ${job.label}`, 'accentText'))
+      result.push(row(`job-${job.id}`, `${job.displayName ?? job.id} · ${tuiCopy(job.status === 'running' ? 'hudRunning' : 'hudStopping', locale)} · ${job.label}`, 'accentText'))
     }
   }
   return result

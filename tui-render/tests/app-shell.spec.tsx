@@ -24,8 +24,7 @@ function shell(title: string, badge = 'provider · model'): string {
   return renderToString(
     createElement(
       AppShell,
-      { title, badge },
-      createElement(Text, null, 'body'),
+      { title, badge, children: createElement(Text, null, 'body') },
     ),
   )
 }
@@ -33,12 +32,10 @@ function shell(title: string, badge = 'provider · model'): string {
 function centeredShell(content: string): string {
   return renderToString(createElement(
     AppShell,
-    { title: 't', badge: 'p' },
-    createElement(
-      Box,
-      { width: 20, alignSelf: 'center' },
-      createElement(Text, null, content),
-    ),
+    {
+      title: 't', badge: 'p',
+      children: createElement(Box, { width: 20, alignSelf: 'center' }, createElement(Text, null, content)),
+    },
   ))
 }
 
@@ -206,8 +203,8 @@ describe('AppShell', () => {
           badge: 'badge',
           input: createElement(Text, null, 'INPUT_BAR'),
           status: createElement(Text, null, 'STATUS_BAR'),
+          children: createElement(Text, null, 'body'),
         },
-        createElement(Text, null, 'body'),
       ),
     )
     const lines = stripAnsi(out).split('\n')
@@ -225,8 +222,8 @@ describe('AppShell', () => {
           title: 'title',
           badge: 'badge',
           input: createElement(Text, null, 'INPUT_BAR'),
+          children: createElement(Text, null, 'body'),
         },
-        createElement(Text, null, 'body'),
       ),
     )
     const lines = stripAnsi(out).split('\n')

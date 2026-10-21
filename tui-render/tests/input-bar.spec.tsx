@@ -9,6 +9,7 @@ import { createElement } from 'react'
 import { EMPTY_INPUT, handleInput, InputBar } from '../src/input-bar.tsx'
 import { setFrameCaret, transformFrameChunk } from '../src/frame-fill.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { installTheme } from '../src/theme.ts'
 
 function ttyStdout(isTTY: boolean) {
   const stream = fakeTtyStdout() as ReturnType<typeof fakeTtyStdout> & {
@@ -199,6 +200,59 @@ describe('InputBar caret publish', () => {
 })
 
 describe('InputBar prompt', () => {
+  it('highlights selected graphemes across lines while preserving the visible text', () => {
+    const out = renderToString(createElement(InputBar, {
+      text: '中e\u0301\n🧑‍💻한', caretIndex: 10, selectionAnchor: 1,
+      commandMode: false, mentionMode: false,
+    }))
+    expect(out).toContain('\x1b[7m')
+    const plain = out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
+    expect(plain).toContain('中e\u0301')
+    expect(plain).toContain('🧑‍💻한')
+  })
+
+  it('maps a secret selection to bullets without leaking the source or adding ANSI at none', () => {
+    const text = '/key OPENAI_API_KEY 中e\u0301🧑‍💻'
+    try {
+      installTheme({ NO_COLOR: '1' })
+      const out = renderToString(createElement(InputBar, {
+        text, caretIndex: text.length, selectionAnchor: text.indexOf('中'),
+        commandMode: false, mentionMode: false,
+      }))
+      expect(out).toContain('/key OPENAI_API_KEY •••')
+      expect(out).not.toContain('中')
+      expect(out).not.toContain('🧑')
+      expect(out).not.toContain('\x1b[')
+    } finally { installTheme({ COLORTERM: 'truecolor' }) }
+  })
+
+  it('highlights mapped secret bullets and clips an active selection at the horizontal window', async () => {
+    const secret = '中e\u0301🧑‍💻'
+    const masked = renderToString(createElement(InputBar, {
+      text: secret, secret: true, caretIndex: secret.length, selectionAnchor: 1,
+      commandMode: false, mentionMode: false,
+    }))
+    expect(masked).not.toContain(secret)
+    expect(masked).toMatch(/\x1b\[7m(?:\x1b\[[0-9;]*m)*••/u)
+    const text = 'abcdef中🧑‍💻한'
+    const stdout = ttyStdout(true)
+    stdout.columns = 12
+    const chunks: string[] = []
+    stdout.on('data', (chunk: string) => chunks.push(chunk))
+    const instance = render(createElement(InputBar, {
+      text, caretIndex: text.length, selectionAnchor: 2,
+      commandMode: false, mentionMode: false,
+    }), { stdout, stdin: fakeTtyStdin(), exitOnCtrlC: false, patchConsole: false, interactive: true })
+    try {
+      await instance.waitUntilRenderFlush()
+      const narrow = chunks.join('')
+      const plain = narrow.replace(/\x1b\[[0-9;:?]*[A-Za-z]/g, '')
+      expect(plain).toContain('‹中🧑‍💻한')
+      expect(plain).not.toContain('abcdef')
+      expect(narrow).toContain('\x1b[7m')
+    } finally { instance.unmount(); setFrameCaret(undefined) }
+  })
+
   it('paints the composer prompt in the readable accent', () => {
     const out = renderToString(
       createElement(InputBar, {

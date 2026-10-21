@@ -71,6 +71,8 @@ import { ToolRowCache, truncateMiddleDisplay } from './tool-rows.ts'
 import { toolPolicyDefaults } from './render-policy.ts'
 import { getBrailleSpinnerFrame, type TuiLocale } from './ui-copy.ts'
 import type { BackgroundToken } from './theme.ts'
+import { deliveryLines } from './delivery-lines.ts'
+import type { PresentedFile } from '@deepseek-ai/dsh-tool-present/types'
 
 /**
  * Identity of the visible-row-projection entry. Stable across re-renders so
@@ -110,6 +112,8 @@ export type BlockRowsKind =
 
 /** Per-kind metadata; fields outside the active kind are ignored. */
 export interface BlockRowsMeta {
+  /** Explicit file deliveries recorded in this turn. */
+  readonly turnTailDeliveries?: readonly PresentedFile[]
   /** Whether the complete reasoning block is visible. */
   readonly reasoningExpanded?: boolean
   /** Reasoning duration stamp (the `1.2s`/`48.8s` label). */
@@ -858,6 +862,12 @@ function projectTurnTailEntry(
   scope: BlockRowsScope,
 ): BlockRowsProjection {
   const lines: MarkdownRenderLine[] = []
+  for (const delivery of deliveryLines(entry.meta?.turnTailDeliveries ?? [], scope.width)) {
+    const line = lineForText(delivery.text, 'fg', false, lines.length)
+    lines.push(delivery.href === undefined ? line : {
+      ...line, spans: line.spans.map(span => ({ ...span, href: delivery.href })),
+    })
+  }
   const changeLines = entry.meta?.turnTailWorkspaceChanges === undefined
     ? undefined
     : formatWorkspaceChangesCard(entry.meta.turnTailWorkspaceChanges)

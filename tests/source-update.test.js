@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -109,11 +109,22 @@ test('launch preserves the shell-visible child signal outcome', {
     const runtime = join(root, 'runtime')
     const fakePnpm = join(root, 'fake-pnpm')
     git(root, ['init', runtime])
+    writeFileSync(join(runtime, 'package.json'), '{"version":"0.2.1-rc.2"}')
+    const contracts = join(runtime, 'packages/api/remote-access/lib')
+    mkdirSync(contracts, { recursive: true })
+    writeFileSync(join(contracts, 'typert.host.js'), 'export {}\n')
+    const profile = join(root, 'profiles/deepseek-tui')
+    mkdirSync(profile, { recursive: true })
+    writeFileSync(join(profile, 'package.json'), JSON.stringify({
+      dependencies: { '@crazyhappyone/dsh-tui': `link:${repositoryRoot}` },
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@crazyhappyone/dsh-tui'] } },
+    }))
     writeFileSync(fakePnpm, '#!/usr/bin/env node\nprocess.kill(process.pid, "SIGTERM")\n')
     chmodSync(fakePnpm, 0o755)
     const launched = command(process.execPath, [launcher], {
       env: {
         ...process.env,
+        DSH_HOME: root,
         DSH_TUI_RUNTIME_DIR: runtime,
         DSH_TUI_PNPM: fakePnpm,
       },

@@ -427,6 +427,7 @@ describe('tier-mapped code and inline tokens', () => {
     }), { columns: 80 }))
     expect(frames[0]).toBe(frames[1])
     const output = frames[0]
+    if (output === undefined) throw new Error('Expected rendered markdown frame')
     expect(output.replace(/\x1b\[[0-9;]*m/g, '')).toContain('普通 重点 强调 code link (https://example.com)')
     if (tier === 'none') {
       expect(output).not.toContain('\x1b')

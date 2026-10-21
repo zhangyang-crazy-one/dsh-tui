@@ -1,5 +1,5 @@
 /**
- * Cell atlas of the last painted frame: characters and active OSC 8 URLs at
+ * Cell atlas of transcript content and fallback terminal output at
  * 1-based SGR coordinates. Mouse click looks up a URL; drag-select copies
  * reading-order text. Ink does not own a grid, so this parser consumes the
  * bytes actually written to stdout after frame-fill, including absolute CUP
@@ -15,7 +15,7 @@ import { paintBackgroundRow, paintRow, styled } from './theme.ts'
 
 /** One terminal cell. Empty `ch` marks the trailing half of a wide glyph. */
 export interface ScreenCell {
-  /** Visible grapheme, or '' for a wide-glyph continuation. */
+  /** Copyable grapheme, or '' for a wide-glyph continuation. */
   ch: string
   /** Active OSC 8 href, if any. */
   url: string | undefined
@@ -83,6 +83,7 @@ export class ScreenAtlas {
   private leftover = ''
   private snapshotRanges: { row: number; col: number; width: number }[] = []
   private snapshotRows = new Map<number, FrameSnapshotRow>()
+  private snapshotActive = false
   private snapshotRail: VisibleFrameSnapshot['geometry']['rail']
   private snapshotGeometry: FrameGeometry | undefined
 
@@ -144,6 +145,7 @@ export class ScreenAtlas {
     this.savedCursorRow = Math.min(this.savedCursorRow, this.height - 1)
     this.wrapPending = false
     this.snapshotRows.clear()
+    this.snapshotActive = false
     this.snapshotRail = undefined
   }
 
@@ -153,6 +155,7 @@ export class ScreenAtlas {
    */
   feed(chunk: string): void {
     this.snapshotRows.clear()
+    this.snapshotActive = false
     this.snapshotRail = undefined
     const text = this.leftover + chunk
     this.leftover = ''
@@ -255,7 +258,7 @@ export class ScreenAtlas {
     const unchanged = new Set<number>()
     if (sameRailArea) for (const row of snapshot.rows) {
       const previous = this.snapshotRows.get(row.row)
-      if (previous?.line === row.line && previous.col === row.col) unchanged.add(row.row)
+      if (previous !== undefined && (previous.contentLine ?? previous.line) === (row.contentLine ?? row.line) && previous.col === row.col) unchanged.add(row.row)
     }
     if (!sameRailArea && previousRail !== undefined) {
       for (let index = 0; index < previousRail.rows; index += 1) {
@@ -284,6 +287,7 @@ export class ScreenAtlas {
     this.snapshotRows.clear()
     this.snapshotRail = snapshot.geometry.rail
     this.snapshotGeometry = snapshot.geometry
+    this.snapshotActive = true
     const saved = {
       col: this.cursorCol,
       row: this.cursorRow,
@@ -292,11 +296,12 @@ export class ScreenAtlas {
     }
     for (const row of snapshot.rows) {
       this.snapshotRows.set(row.row, row)
+      const content = row.contentLine ?? row.line
       if (!unchanged.has(row.row)) {
         this.cursorCol = Math.max(0, row.col - 1)
         this.cursorRow = Math.max(0, row.row - 1)
         this.wrapPending = false
-        for (const span of row.line.spans) {
+        for (const span of content.spans) {
           this.activeUrl = span.href
           for (const part of GRAPHEME.segment(span.text)) this.writeGrapheme(part.segment)
         }
@@ -304,7 +309,7 @@ export class ScreenAtlas {
       this.snapshotRanges.push({
         row: row.row,
         col: row.col,
-        width: row.line.displayWidth,
+        width: Math.max(row.line.displayWidth, content.displayWidth),
       })
     }
     const rail = snapshot.geometry.rail
@@ -341,7 +346,16 @@ export class ScreenAtlas {
    * @returns the href, or undefined.
    */
   urlAt(col: number, row: number): string | undefined {
-    return this.cellAt(col, row)?.url
+    const painted = this.snapshotRows.get(row)
+    if (painted?.contentLine === undefined) return this.cellAt(col, row)?.url
+    let offset = col - painted.col
+    if (offset < 0) return undefined
+    for (const span of painted.line.spans) {
+      const width = displayWidth(span.text)
+      if (offset < width) return span.href
+      offset -= width
+    }
+    return undefined
   }
 
   /**
@@ -422,6 +436,16 @@ export class ScreenAtlas {
     to: number,
     onRun: (runCol: number, runText: string) => void,
   ): void {
+    const snapshotRow = this.snapshotRows.get(row)
+    if (snapshotRow !== undefined) {
+      const content = snapshotRow.contentLine ?? snapshotRow.line
+      from = Math.max(from, snapshotRow.col)
+      to = Math.min(to, snapshotRow.col + content.displayWidth - 1)
+    } else if (this.snapshotActive && this.snapshotGeometry !== undefined
+      && row >= this.snapshotGeometry.transcriptTop
+      && row < this.snapshotGeometry.transcriptTop + this.snapshotGeometry.transcriptRows) {
+      return
+    }
     let run = ''
     let runCol = 0
     const flush = (): void => {
@@ -581,15 +605,17 @@ export class ScreenAtlas {
       this.cursorCol = Math.min(this.cursorCol, this.width - 1)
       return
     }
-    if (final === 'A') {
+    if (final === 'A' || final === 'F') {
       this.cursorRow = Math.max(0, this.cursorRow - Math.max(1, first || 1))
+      if (final === 'F') this.cursorCol = 0
       return
     }
-    if (final === 'B') {
+    if (final === 'B' || final === 'E') {
       this.cursorRow = Math.min(
         this.height - 1,
         this.cursorRow + Math.max(1, first || 1),
       )
+      if (final === 'E') this.cursorCol = 0
       return
     }
     if (final === 'C') {
@@ -659,18 +685,15 @@ function readCsi(
   text: string,
   start: number,
 ): { params: number[]; final: string; end: number } | undefined {
-  let index = start + 2
-  while (index < text.length) {
+  for (let index = start + 2; index < text.length; index += 1) {
     const code = text.charCodeAt(index)
     if (code >= 0x40 && code <= 0x7e) {
       const body = text.slice(start + 2, index)
       const numeric = body.replace(/[^\d;]/g, '')
-      const params = numeric === ''
-        ? []
-        : numeric.split(';').map(part => (part === '' ? 0 : Number(part)))
+      let params: number[] = []
+      if (numeric !== '') params = numeric.split(';').map(part => (part === '' ? 0 : Number(part)))
       return { params, final: text[index] as string, end: index + 1 }
     }
-    index += 1
   }
   return undefined
 }

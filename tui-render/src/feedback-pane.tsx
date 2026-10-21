@@ -86,19 +86,35 @@ export function FeedbackPane({
           : '备注过长'
   const rows: ReactNode[] = (
     [
-      { key: 'positive', label: '赞' },
-      { key: 'negative', label: '踩' },
+      { key: 'positive', shortcut: '[l] ', label: '赞', token: 'success' as const },
+      { key: 'negative', shortcut: '[d] ', label: '踩', token: 'warning' as const },
     ] as const
-  ).map(row => (
-    <Text key={row.key}>
-      {paintRow([
-        styled(
-          escapeContent(`${row.label}${state.rating === row.key ? ' · 当前' : ''}`),
-          state.rating === row.key ? 'fg' : 'fgDim',
-        ),
-      ])}
-    </Text>
-  ))
+  ).map((row) => {
+    const isCurrent = state.rating === row.key
+    return (
+      <Text key={row.key} wrap="truncate">
+        {paintRow([
+          styled(escapeContent(`  ${row.shortcut}`), isCurrent ? row.token : 'fgDim', undefined, isCurrent),
+          styled(
+            escapeContent(`${row.label}${isCurrent ? ' · 当前' : ''}`),
+            isCurrent ? 'fg' : 'fgSoft',
+            undefined,
+            isCurrent,
+          ),
+        ])}
+      </Text>
+    )
+  })
+  if (state.note !== undefined && state.note.trim() !== '') {
+    rows.push(
+      <Text key="note" wrap="truncate">
+        {paintRow([
+          styled('  备注: ', 'fgDim'),
+          styled(escapeContent(state.note), 'fgSoft'),
+        ])}
+      </Text>,
+    )
+  }
   return (
     <OverlayShell
       title="反馈"

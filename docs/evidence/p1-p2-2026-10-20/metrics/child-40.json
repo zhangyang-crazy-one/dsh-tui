@@ -1,0 +1,171 @@
+{
+  "scene": "child",
+  "columns": 40,
+  "rows": 16,
+  "phases": [
+    {
+      "name": "initial",
+      "state": {
+        "commits": 26,
+        "snapshots": 1,
+        "actions": [],
+        "copied": "",
+        "sent": "",
+        "childSent": "",
+        "childDelivery": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "childPrompt": "CHILD_DRAFT",
+        "hubView": "table",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "typed",
+      "state": {
+        "commits": 37,
+        "snapshots": 2,
+        "actions": [
+          "agent-hub-control"
+        ],
+        "copied": "",
+        "sent": "",
+        "childSent": "",
+        "childDelivery": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "childPrompt": "CHILD_DRAFT中文",
+        "hubView": "table",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "steer",
+      "state": {
+        "commits": 50,
+        "snapshots": 3,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control"
+        ],
+        "copied": "",
+        "sent": "",
+        "childSent": "CHILD_DRAFT中文",
+        "childDelivery": "steer",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubNotice": "已接收续聊请求",
+        "hubView": "table",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "stop",
+      "state": {
+        "commits": 60,
+        "snapshots": 4,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control",
+          "agent-hub-control"
+        ],
+        "copied": "",
+        "sent": "",
+        "childSent": "CHILD_DRAFT中文",
+        "childDelivery": "steer",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubNotice": "已请求停止，等待事件",
+        "hubView": "table",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "back",
+      "state": {
+        "commits": 74,
+        "snapshots": 5,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control",
+          "agent-hub-control",
+          "agent-hub-escape"
+        ],
+        "copied": "",
+        "sent": "",
+        "childSent": "CHILD_DRAFT中文",
+        "childDelivery": "steer",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubNotice": "已请求停止，等待事件",
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    }
+  ]
+}

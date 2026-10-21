@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
-import { stripTerminalControls } from './helpers.ts'
+import { PASSIVE_CONTROLLER, stripTerminalControls } from './helpers.ts'
 import { ApprovalPane } from '../src/approval-pane.tsx'
 import { applyTheme } from '../src/theme.ts'
 import { TuiLoop } from '../src/loop.tsx'
@@ -82,12 +82,12 @@ describe('ApprovalPane', () => {
     expect(out).toContain('拒绝')
     expect(out).toContain('[Y]')
     expect(out).toContain('[n]')
-    expect(out).toContain('[a]')
+    expect(out).toContain('(执行一次)')
     expect(out).toContain('[i]')
     const plain = stripTerminalControls(out)
     expect(plain).toContain('[Y] 允许')
     expect(plain).toContain('[n] 拒绝')
-    expect(plain).toContain('[a] 本会话总是')
+    expect(plain).not.toContain('本会话总是')
     expect(plain).toContain('[i] 详情')
     expect(out).not.toContain('OK')
     expect(out).not.toContain('Submit')
@@ -104,7 +104,7 @@ describe('ApprovalPane', () => {
     const out = render({ detailsOpen: true })
     expect(out).toContain('escalate sandbox to workspace-write: push')
     expect(out).toContain('git push')
-    expect(out).not.toContain('{"command":"git push"}')
+    expect(out).toContain('command:')
   })
 
   it('falls back to the escaped raw arguments when JSON parse fails', () => {
@@ -115,23 +115,23 @@ describe('ApprovalPane', () => {
     expect(out).toContain('not-json')
   })
 
-  it('omits an extra arguments line when JSON has no string command', () => {
+  it('retains every JSON field when arguments have no string command', () => {
     const object = render({
       detailsOpen: true,
       arguments: '{"path":"README.md"}',
     })
-    expect(object).not.toContain('README.md')
+    expect(object).toContain('README.md')
     expect(object).toContain('escalate sandbox to workspace-write: push')
     const numeric = render({
       detailsOpen: true,
       arguments: '{"command":1}',
     })
-    expect(numeric).not.toContain('"command":1')
+    expect(numeric).toContain('"command": 1')
     const jsonNull = render({
       detailsOpen: true,
       arguments: 'null',
     })
-    expect(jsonNull).not.toContain('null')
+    expect(jsonNull).toContain('null')
     expect(jsonNull).toContain('escalate sandbox to workspace-write: push')
   })
 
@@ -140,7 +140,8 @@ describe('ApprovalPane', () => {
       detailsOpen: true,
       deliveryError: 'timeout',
     })
-    expect(out).toContain('✗ 审批未能送达：timeout')
+    expect(out).toContain('✗ 审批未能送达')
+    expect(out).toContain('timeout')
     expect(out).toContain('当前工具未执行 · 可重试该轮')
     expect(out).not.toContain('escalate sandbox')
     expect(out).not.toContain('git push')
@@ -183,9 +184,7 @@ describe('TuiLoop approval slot', () => {
       getSettingsPane: () => EMPTY_SETTINGS_PANE,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      ...PASSIVE_CONTROLLER,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,
@@ -204,8 +203,18 @@ describe('TuiLoop approval slot', () => {
     const plain = stripTerminalControls(out)
     expect(plain).toContain('[Y] 允许')
     expect(plain).toContain('[n] 拒绝')
-    expect(plain).toContain('[a] 本会话总是')
+    expect(plain).not.toContain('本会话总是')
     expect(out).toContain('有什么可以帮忙的')
-    expect(out).toContain('› 输入消息')
+    expect(out).not.toContain('› 输入消息')
   })
+})
+
+it('shows a readable multiline command once and retains its other parameters', () => {
+  const plain = stripTerminalControls(render({ detailsOpen: true, reason: '',
+    arguments: JSON.stringify({ command: 'printf fixture\nprintf next', cwd: '/fixture/workspace', timeout: 3000 }),
+  }))
+  expect(plain).toContain('command:\nprintf fixture\nprintf next')
+  expect(plain).toContain('"cwd": "/fixture/workspace"')
+  expect(plain).toContain('"timeout": 3000')
+  expect([...plain.matchAll(/printf fixture/g)]).toHaveLength(2) // heading preview + complete command
 })

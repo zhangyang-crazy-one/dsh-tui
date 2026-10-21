@@ -1,3 +1,4 @@
+import { PASSIVE_CONTROLLER } from './helpers.ts'
 /**
  * PermissionPane copy: three host rows, current marker, danger confirm, empty
  * table, switch failure, and CSI escaping.
@@ -151,9 +152,7 @@ describe('TuiLoop permission overlay', () => {
       getSettingsPane: () => EMPTY_SETTINGS_PANE,
       getAgentHubPane: () => EMPTY_OVERLAY_PANE,
       getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-      getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-      getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-      getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+      ...PASSIVE_CONTROLLER,
       getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
       getComposerHud: () => undefined,
       getToolPresenters: () => undefined,

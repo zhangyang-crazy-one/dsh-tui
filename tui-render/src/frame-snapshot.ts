@@ -31,6 +31,8 @@ export interface FrameSnapshotRow {
   readonly row: number
   readonly col: number
   readonly line: PhysicalLine
+  /** Complete copyable content when paint includes chrome over the text. */
+  readonly contentLine?: PhysicalLine
   readonly identity: string
 }
 
@@ -112,6 +114,7 @@ export function createFrameSnapshotRow(input: {
   row: number
   col: number
   line: PhysicalLine
+  contentLine?: PhysicalLine
 }): FrameSnapshotRow {
   return Object.freeze({
     ...input,

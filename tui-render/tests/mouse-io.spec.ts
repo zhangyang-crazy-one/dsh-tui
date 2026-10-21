@@ -457,3 +457,98 @@ describe('attachMouseIo', () => {
     expect(copiedText).toContain('line8')
   })
 })
+
+describe('selection redraw budgets', () => {
+  const begin = '\x1b[?2026h'
+  const end = '\x1b[?2026l'
+
+  it('does not repaint duplicate pointer coordinates', () => {
+    const session = new MouseSession({ columns: 20, rows: 10 })
+    session.feedStdout('\x1b[3;1Hcopy this text')
+    session.handle({ kind: 'press', button: 'left', col: 1, row: 3 })
+    expect(session.handle({ kind: 'drag', button: 'left', col: 6, row: 3 })).not.toBe('')
+    for (let index = 0; index < 100; index += 1) {
+      expect(session.handle({ kind: 'drag', button: 'left', col: 6, row: 3 })).toBe('')
+    }
+    session.dispose()
+  })
+
+  it('restores and paints selection in one synchronized transaction with the caret last', () => {
+    const session = new MouseSession({ columns: 20, rows: 10 })
+    setFrameCaret({ row: 9, col: 4 })
+    session.feedStdout('\x1b[3;1Hcopy this text')
+    session.handle({ kind: 'press', button: 'left', col: 1, row: 3 })
+    session.handle({ kind: 'drag', button: 'left', col: 6, row: 3 })
+    const output = session.handle({ kind: 'drag', button: 'left', col: 8, row: 3 })
+    expect(output.startsWith(begin)).toBe(true)
+    expect(output.endsWith(`\x1b[9;4H\x1b[?25h${end}`)).toBe(true)
+    expect(output.indexOf('\x1b[7m')).toBeLessThan(output.indexOf(end))
+    session.dispose()
+  })
+
+  it('paints a selection once before the existing frame ends, without ending an outer transaction', () => {
+    const session = new MouseSession({ columns: 20, rows: 10 })
+    session.feedStdout('\x1b[3;1Hcopy this text')
+    session.handle({ kind: 'press', button: 'left', col: 1, row: 3 })
+    session.handle({ kind: 'drag', button: 'left', col: 6, row: 3 })
+    expect(session.feedStdout(begin)).toBe(begin)
+    expect(session.feedStdout('\x1b[3;1Hcopy this text')).toBe('\x1b[3;1Hcopy this text')
+    const during = session.handle({ kind: 'drag', button: 'left', col: 7, row: 3 })
+    expect(during).not.toContain(begin)
+    expect(during).not.toContain(end)
+    const output = session.feedStdout(end)
+    expect(output.endsWith(end)).toBe(true)
+    expect(output.indexOf('\x1b[7m')).toBeLessThan(output.indexOf(end))
+    session.dispose()
+  })
+
+  it('only repaints the changed row of a multi-row selection', () => {
+    const session = new MouseSession({ columns: 20, rows: 10 })
+    session.feedStdout('\x1b[3;1Hthird row\x1b[4;1Hfourth row\x1b[5;1Hfifth row\x1b[6;1Hsixth row')
+    session.handle({ kind: 'press', button: 'left', col: 1, row: 3 })
+    session.handle({ kind: 'drag', button: 'left', col: 2, row: 6 })
+    const output = session.handle({ kind: 'drag', button: 'left', col: 3, row: 6 })
+    expect(output).not.toContain('\x1b[3;')
+    expect(output).not.toContain('\x1b[4;')
+    expect(output).not.toContain('\x1b[5;')
+    expect(output).toContain('\x1b[6;')
+    expect(Buffer.byteLength(output)).toBeLessThan(120)
+    session.dispose()
+  })
+})
+
+it('copies every boundary row and the original partial anchor after upward edge scrolling', () => {
+  vi.useFakeTimers()
+  const copy = vi.fn()
+  let top = 20
+  let session: MouseSession
+  const paint = () => session.feedStdout(Array.from({ length: 6 }, (_, row) => `\x1b[${row + 1};1H\x1b[2Kline${top + row}`).join(''))
+  session = new MouseSession({ columns: 20, rows: 6, copyText: copy, onScroll: delta => { top -= delta; paint() } })
+  try {
+    paint()
+    session.handle({ kind: 'press', button: 'left', col: 3, row: 4 })
+    session.handle({ kind: 'drag', button: 'left', col: 1, row: 1 })
+    vi.advanceTimersByTime(240)
+    session.handle({ kind: 'release', button: 'left', col: 1, row: 1 })
+    const complete = Array.from({ length: 23 - top }, (_, index) => `line${top + index}`)
+    expect(copy).toHaveBeenCalledWith([...complete, 'lin'].join('\n'))
+  } finally { session.dispose(); vi.useRealTimers() }
+})
+
+it('retains all rows when the mouse wheel moves several lines during a selection', () => {
+  const copy = vi.fn()
+  let top = 20
+  let session: MouseSession
+  const paint = () => session.feedStdout(Array.from({ length: 6 }, (_, row) => `\x1b[${row + 1};1H\x1b[2Kline${top + row}`).join(''))
+  session = new MouseSession({ columns: 20, rows: 6, copyText: copy, onScroll: delta => { top -= delta; paint() } })
+  try {
+    paint()
+    session.handle({ kind: 'press', button: 'left', col: 3, row: 4 })
+    session.handle({ kind: 'drag', button: 'left', col: 1, row: 3 })
+    session.handle({ kind: 'wheel', button: 'none', col: 1, row: 3, delta: 3 })
+    session.handle({ kind: 'wheel', button: 'none', col: 1, row: 3, delta: 3 })
+    session.handle({ kind: 'release', button: 'left', col: 1, row: 3 })
+    const first = top + 2
+    expect(copy).toHaveBeenCalledWith([...Array.from({ length: 23 - first }, (_, index) => `line${first + index}`), 'lin'].join('\n'))
+  } finally { session.dispose() }
+})

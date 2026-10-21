@@ -1,7 +1,7 @@
 /** Locale-owned copy for terminal presentation settings and their entry points. */
 
 /** Supported terminal presentation-copy locales. */
-export type TuiLocale = 'zh-CN' | 'en-US'
+export type TuiLocale = 'zh-CN' | 'en-US' | (string & {})
 
 const zh = {
   hudPlan: '任务计划',
@@ -344,7 +344,22 @@ const en: Readonly<Record<TuiCopyKey, string>> = {
   thinking: 'Thinking…',
 }
 
-const dictionaries: Readonly<Record<TuiLocale, Readonly<Record<TuiCopyKey, string>>>> = { 'zh-CN': zh, 'en-US': en }
+const dictionaries = new Map<string, Readonly<Record<TuiCopyKey, string>>>([['zh-CN', zh], ['en-US', en]])
+
+/** Register a language pack without changing rendering or model/session data. */
+export function registerTuiLocale(locale: string, messages: Partial<Record<TuiCopyKey, string>>, fallback: TuiLocale = 'zh-CN'): () => void {
+  if (Intl.getCanonicalLocales(locale)[0] !== locale || dictionaries.has(locale)) throw new Error(`Invalid or duplicate locale: ${locale}`)
+  const base = dictionaries.get(fallback)
+  if (base === undefined) throw new Error(`Unknown fallback locale: ${fallback}`)
+  for (const [key, value] of Object.entries(messages)) {
+    if (!(key in zh) || typeof value !== 'string') throw new Error(`Invalid translation: ${key}`)
+  }
+  const dictionary = Object.freeze({ ...base, ...messages })
+  dictionaries.set(locale, dictionary)
+  return () => { if (dictionaries.get(locale) === dictionary) dictionaries.delete(locale) }
+}
+
+export function listTuiLocales(): readonly string[] { return [...dictionaries.keys()] }
 
 /**
  * Resolve terminal UI copy from the selected dictionary.
@@ -353,7 +368,7 @@ const dictionaries: Readonly<Record<TuiLocale, Readonly<Record<TuiCopyKey, strin
  * @returns the dictionary text, without terminal styling.
  */
 export function tuiCopy(key: TuiCopyKey, locale: TuiLocale = 'zh-CN'): string {
-  return dictionaries[locale][key]
+  return (dictionaries.get(locale) ?? zh)[key]
 }
 
 /**

@@ -149,7 +149,7 @@ function defaultBackgroundPrints(output: string): string[] {
   while (index < output.length) {
     if (output[index] === '\x1b' && output[index + 1] === '[') {
       let end = index + 2
-      while (end < output.length && !/[A-Za-z]/u.test(output[end])) end += 1
+      while (end < output.length && !/[A-Za-z]/u.test(output.charAt(end))) end += 1
       if (output[end] === 'm') {
         const values = output.slice(index + 2, end).split(';').map(Number)
         if (values[0] === 0 || Number.isNaN(values[0])) background = false
@@ -170,7 +170,7 @@ function defaultBackgroundPrints(output: string): string[] {
     }
     const code = output.charCodeAt(index)
     if (code >= 0x20 && code !== 0x7f && !background) {
-      violations.push(output[index])
+      violations.push(output.charAt(index))
     }
     index += 1
   }

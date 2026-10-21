@@ -90,20 +90,38 @@ export function AccountPane({ state, locale = 'zh-CN', maxCols }: {
   if (!state.open) return null
   const copy = (key: Parameters<typeof tuiCopy>[0]) => tuiCopy(key, locale)
   const width = Math.max(1, maxCols)
-  const lines: { text: string; token: 'fg' | 'fgDim' | 'accent' | 'error'; wrap?: boolean }[] = []
+  const lines: { text: string; token: 'fg' | 'fgSoft' | 'fgDim' | 'accent' | 'accentText' | 'success' | 'warning' | 'error'; bold?: boolean; wrap?: boolean }[] = []
   const active = accountAttemptActive(state.phase)
   let hint: string
   if (!state.available) {
     lines.push({ text: copy('accountUnavailable'), token: 'fgDim' })
     hint = [copy('accountApiKeyHint'), copy('accountCloseHint')].join(' · ')
   } else if (state.confirmSignOut) {
-    lines.push({ text: copy('accountSignOutConfirm'), token: 'fg' })
+    lines.push({ text: copy('accountSignOutConfirm'), token: 'warning', bold: true })
     hint = copy('accountConfirmHint')
   } else {
-    const statusKey = state.status === 'credential-stored' ? 'accountSignedIn' : state.status === 'signed-out' ? 'accountSignedOut' : 'accountLoading'
-    lines.push({ text: copy(statusKey), token: state.status === 'credential-stored' ? 'accent' : 'fg' })
-    if (state.profile !== undefined) lines.push({ text: state.profile, token: 'fg' })
-    if (state.balance !== undefined) lines.push({ text: `${copy('accountBalance')}: ${state.balance}`, token: 'fg' })
+    let statusKey: 'accountSignedIn' | 'accountSignedOut' | 'accountLoading' = 'accountLoading'
+    let statusDot = '◌'
+    let statusToken: 'success' | 'fgDim' = 'fgDim'
+    if (state.status === 'credential-stored') {
+      statusKey = 'accountSignedIn'
+      statusDot = '●'
+      statusToken = 'success'
+    } else if (state.status === 'signed-out') {
+      statusKey = 'accountSignedOut'
+      statusDot = '○'
+    }
+    lines.push({
+      text: `${statusDot} ${copy(statusKey)}`,
+      token: statusToken,
+      bold: state.status === 'credential-stored',
+    })
+    if (state.profile !== undefined) {
+      lines.push({ text: `  ${state.profile}`, token: 'fg', bold: true })
+    }
+    if (state.balance !== undefined) {
+      lines.push({ text: `  ${copy('accountBalance')}: ${state.balance}`, token: 'accentText' })
+    }
     if (state.phase !== undefined && !(state.phase === 'succeeded' && state.status === 'credential-stored')) {
       const phaseKey = ({
         'initializing': 'accountPhaseInitializing', 'waiting-browser': 'accountPhaseWaiting', 'exchanging': 'accountPhaseExchanging',
@@ -114,28 +132,34 @@ export function AccountPane({ state, locale = 'zh-CN', maxCols }: {
         'no-response': 'accountErrorNoResponse', 'network': 'accountErrorNetwork', 'protocol': 'accountErrorProtocol',
         'expired': 'accountErrorExpired', 'storage': 'accountErrorStorage',
       } as const)[state.errorCode])}`
-      lines.push({ text: copy(phaseKey) + reason, token: state.phase === 'failed' || state.phase === 'expired' ? 'error' : 'fgDim' })
+      const isErr = state.phase === 'failed' || state.phase === 'expired'
+      lines.push({ text: `  ${copy(phaseKey)}${reason}`, token: isErr ? 'error' : 'fgDim' })
     }
-    if (state.phase === 'succeeded' && state.status === 'credential-stored') lines.push({ text: copy('accountModelHint'), token: 'fgDim' })
+    if (state.phase === 'succeeded' && state.status === 'credential-stored') {
+      lines.push({ text: `  ${copy('accountModelHint')}`, token: 'fgDim' })
+    }
     if (state.phase === 'waiting-browser' && state.authorizeUrl !== undefined) {
-      lines.push({ text: copy('accountOpenLink'), token: 'fg' })
+      lines.push({ text: `  ${copy('accountOpenLink')}`, token: 'fgSoft' })
       for (const row of chunk(state.authorizeUrl, width)) lines.push({ text: row, token: 'accent', wrap: true })
       if (state.forward !== undefined) {
-        lines.push({ text: `${copy('accountForward')}:`, token: 'fgDim' })
+        lines.push({ text: `  ${copy('accountForward')}:`, token: 'fgDim' })
         for (const row of chunk(state.forward, width)) lines.push({ text: row, token: 'fg', wrap: true })
       }
     }
-    hint = (active
-      ? [state.phase === 'waiting-browser' ? copy('accountOpenHint') : undefined, copy('accountCancelHint'), copy('accountCloseHint')]
-      : state.status === 'credential-stored'
-        ? [copy('accountSignOutHint'), copy('accountCloseHint')]
-        : [copy('accountSignInHint'), copy('accountApiKeyHint'), copy('accountCloseHint')]
-    ).filter((value): value is string => value !== undefined).join(' · ')
+    if (active) {
+      hint = [state.phase === 'waiting-browser' ? copy('accountOpenHint') : undefined, copy('accountCancelHint'), copy('accountCloseHint')]
+        .filter((value): value is string => value !== undefined)
+        .join(' · ')
+    } else if (state.status === 'credential-stored') {
+      hint = [copy('accountSignOutHint'), copy('accountCloseHint')].join(' · ')
+    } else {
+      hint = [copy('accountSignInHint'), copy('accountApiKeyHint'), copy('accountCloseHint')].join(' · ')
+    }
     if (state.busy) hint = copy('accountBusyHint')
   }
   return <OverlayShell title={copy('accountTitle')} footnote={truncateDisplay(escapeContent(hint), width)} error={state.error}>
     {lines.map((line, index) => <Text key={index} wrap="truncate">
-      {paintRow([styled(line.wrap === true ? escapeContent(line.text) : truncateDisplay(escapeContent(line.text), width), line.token)])}
+      {paintRow([styled(line.wrap === true ? escapeContent(line.text) : truncateDisplay(escapeContent(line.text), width), line.token, undefined, line.bold === true)])}
     </Text>)}
   </OverlayShell>
 }

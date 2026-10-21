@@ -1,0 +1,2357 @@
+[
+  {
+    "scene": "schedules",
+    "columns": 40,
+    "rows": 16,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 8,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 22,
+          "snapshots": 2,
+          "actions": [
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "details",
+        "state": {
+          "commits": 40,
+          "snapshots": 3,
+          "actions": [
+            "schedule-move",
+            "schedule-enter"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 59,
+          "snapshots": 4,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 201
+        }
+      },
+      {
+        "name": "read-up",
+        "state": {
+          "commits": 77,
+          "snapshots": 5,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 200
+        }
+      },
+      {
+        "name": "cancel-prompt",
+        "state": {
+          "commits": 93,
+          "snapshots": 6,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 200
+        }
+      },
+      {
+        "name": "keep",
+        "state": {
+          "commits": 107,
+          "snapshots": 7,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 200
+        }
+      },
+      {
+        "name": "list",
+        "state": {
+          "commits": 123,
+          "snapshots": 8,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 7,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 138,
+          "snapshots": 9,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 7,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "schedules",
+    "columns": 80,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 4,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 24,
+          "snapshots": 2,
+          "actions": [
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "details",
+        "state": {
+          "commits": 44,
+          "snapshots": 3,
+          "actions": [
+            "schedule-move",
+            "schedule-enter"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 65,
+          "snapshots": 4,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 93
+        }
+      },
+      {
+        "name": "read-up",
+        "state": {
+          "commits": 83,
+          "snapshots": 5,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 92
+        }
+      },
+      {
+        "name": "cancel-prompt",
+        "state": {
+          "commits": 101,
+          "snapshots": 6,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 92
+        }
+      },
+      {
+        "name": "keep",
+        "state": {
+          "commits": 117,
+          "snapshots": 7,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 92
+        }
+      },
+      {
+        "name": "list",
+        "state": {
+          "commits": 135,
+          "snapshots": 8,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 15,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 151,
+          "snapshots": 9,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 15,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "schedules",
+    "columns": 120,
+    "rows": 40,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 6,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 30,
+          "snapshots": 2,
+          "actions": [
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "details",
+        "state": {
+          "commits": 52,
+          "snapshots": 3,
+          "actions": [
+            "schedule-move",
+            "schedule-enter"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 79,
+          "snapshots": 4,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 77
+        }
+      },
+      {
+        "name": "read-up",
+        "state": {
+          "commits": 97,
+          "snapshots": 5,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 76
+        }
+      },
+      {
+        "name": "cancel-prompt",
+        "state": {
+          "commits": 119,
+          "snapshots": 6,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 76
+        }
+      },
+      {
+        "name": "keep",
+        "state": {
+          "commits": 135,
+          "snapshots": 7,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 76
+        }
+      },
+      {
+        "name": "list",
+        "state": {
+          "commits": 153,
+          "snapshots": 8,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": true,
+          "scheduleSelection": 31,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 168,
+          "snapshots": 9,
+          "actions": [
+            "schedule-move",
+            "schedule-enter",
+            "schedule-move",
+            "schedule-offset",
+            "schedule-move",
+            "schedule-delete",
+            "schedule-confirm",
+            "schedule-escape",
+            "schedule-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 31,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "secret",
+    "columns": 40,
+    "rows": 16,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 36,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editing",
+        "state": {
+          "commits": 47,
+          "snapshots": 2,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 60,
+          "snapshots": 3,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "caret",
+        "state": {
+          "commits": 70,
+          "snapshots": 4,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "delete",
+        "state": {
+          "commits": 83,
+          "snapshots": 5,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "chooser-again",
+        "state": {
+          "commits": 96,
+          "snapshots": 6,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 106,
+          "snapshots": 7,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "secret",
+    "columns": 80,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 38,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editing",
+        "state": {
+          "commits": 49,
+          "snapshots": 2,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 62,
+          "snapshots": 3,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "caret",
+        "state": {
+          "commits": 72,
+          "snapshots": 4,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "delete",
+        "state": {
+          "commits": 85,
+          "snapshots": 5,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "chooser-again",
+        "state": {
+          "commits": 97,
+          "snapshots": 6,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 109,
+          "snapshots": 7,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "secret",
+    "columns": 120,
+    "rows": 40,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 38,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editing",
+        "state": {
+          "commits": 49,
+          "snapshots": 2,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 62,
+          "snapshots": 3,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "caret",
+        "state": {
+          "commits": 74,
+          "snapshots": 4,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "delete",
+        "state": {
+          "commits": 87,
+          "snapshots": 5,
+          "actions": [
+            "settings-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": true,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "chooser-again",
+        "state": {
+          "commits": 102,
+          "snapshots": 6,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 114,
+          "snapshots": 7,
+          "actions": [
+            "settings-edit",
+            "settings-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "question-custom",
+    "columns": 40,
+    "rows": 16,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 35,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected",
+        "state": {
+          "commits": 49,
+          "snapshots": 2,
+          "actions": [
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "next",
+        "state": {
+          "commits": 63,
+          "snapshots": 3,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected-second",
+        "state": {
+          "commits": 79,
+          "snapshots": 4,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0,
+            1
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "custom",
+        "state": {
+          "commits": 93,
+          "snapshots": 5,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 109,
+          "snapshots": 6,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "text-full",
+        "state": {
+          "commits": 126,
+          "snapshots": 7,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 141,
+          "snapshots": 8,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editor-again",
+        "state": {
+          "commits": 159,
+          "snapshots": 9,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "save",
+        "state": {
+          "commits": 177,
+          "snapshots": 10,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 194,
+          "snapshots": 11,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save",
+            "ask-user-submit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "question-custom",
+    "columns": 80,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 37,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected",
+        "state": {
+          "commits": 55,
+          "snapshots": 2,
+          "actions": [
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "next",
+        "state": {
+          "commits": 69,
+          "snapshots": 3,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected-second",
+        "state": {
+          "commits": 93,
+          "snapshots": 4,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0,
+            1
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "custom",
+        "state": {
+          "commits": 111,
+          "snapshots": 5,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 129,
+          "snapshots": 6,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "text-full",
+        "state": {
+          "commits": 150,
+          "snapshots": 7,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 167,
+          "snapshots": 8,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editor-again",
+        "state": {
+          "commits": 185,
+          "snapshots": 9,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "save",
+        "state": {
+          "commits": 203,
+          "snapshots": 10,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 222,
+          "snapshots": 11,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save",
+            "ask-user-submit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  },
+  {
+    "scene": "question-custom",
+    "columns": 120,
+    "rows": 40,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 37,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected",
+        "state": {
+          "commits": 55,
+          "snapshots": 2,
+          "actions": [
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "next",
+        "state": {
+          "commits": 71,
+          "snapshots": 3,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "selected-second",
+        "state": {
+          "commits": 91,
+          "snapshots": 4,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionSelections": [
+            0,
+            1
+          ],
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "custom",
+        "state": {
+          "commits": 111,
+          "snapshots": 5,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "typed",
+        "state": {
+          "commits": 131,
+          "snapshots": 6,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "text-full",
+        "state": {
+          "commits": 150,
+          "snapshots": 7,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "end",
+        "state": {
+          "commits": 169,
+          "snapshots": 8,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "editor-again",
+        "state": {
+          "commits": 189,
+          "snapshots": 9,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": true,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "save",
+        "state": {
+          "commits": 211,
+          "snapshots": 10,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": true,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 232,
+          "snapshots": 11,
+          "actions": [
+            "ask-user-toggle",
+            "ask-user-move",
+            "ask-user-toggle",
+            "ask-user-custom",
+            "ask-user-custom-edit",
+            "ask-user-custom-save",
+            "ask-user-submit"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "questionCustom": "自定义回答i",
+          "questionSelections": [
+            0,
+            1
+          ],
+          "questionEditing": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 0,
+          "workspacePreview": false,
+          "schedulesOpen": false,
+          "scheduleSelection": 0,
+          "scheduleOffset": 0
+        }
+      }
+    ]
+  }
+]

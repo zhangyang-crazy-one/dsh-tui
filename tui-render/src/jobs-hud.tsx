@@ -10,6 +10,8 @@ import type { TuiLocale } from './ui-copy.ts'
 export interface JobHudItem {
   /** Registry-issued id (`<kind>-N`). */
   readonly id: string
+  /** Optional compact name; the full id remains the stable row identity. */
+  readonly displayName?: string
   /** Host lifecycle key: running / stopping / completed / killed / failed. */
   readonly status: string
   /** Producer-supplied one-line label (untrusted). */

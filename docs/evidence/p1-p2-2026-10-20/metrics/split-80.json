@@ -1,0 +1,161 @@
+{
+  "scene": "split",
+  "columns": 80,
+  "rows": 24,
+  "phases": [
+    {
+      "name": "initial",
+      "state": {
+        "commits": 36,
+        "snapshots": 1,
+        "actions": [],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubSplit": true,
+        "hubView": "transcript",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "single",
+      "state": {
+        "commits": 48,
+        "snapshots": 2,
+        "actions": [
+          "agent-hub-control"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubSplit": false,
+        "hubView": "transcript",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "split-again",
+      "state": {
+        "commits": 58,
+        "snapshots": 3,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubSplit": true,
+        "hubView": "transcript",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "back",
+      "state": {
+        "commits": 70,
+        "snapshots": 4,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control",
+          "agent-hub-escape"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubSplit": false,
+        "hubView": "table",
+        "hubOpen": true,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "back-root",
+      "state": {
+        "commits": 81,
+        "snapshots": 5,
+        "actions": [
+          "agent-hub-control",
+          "agent-hub-control",
+          "agent-hub-escape",
+          "agent-hub-escape"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubSplit": false,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    }
+  ]
+}

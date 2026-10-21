@@ -19,7 +19,7 @@ import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
 import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
 import type { SettingsPaneState } from '../src/settings-pane.tsx'
-import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { PASSIVE_CONTROLLER, fakeTtyStdin, fakeTtyStdout, disposeRenderer } from './helpers.ts'
 
 const IDLE_MODEL: ViewModel = {
   history: [],
@@ -69,9 +69,7 @@ function controller(partial: Partial<TuiController> & { dispatch: TuiController[
     getSettingsPane: () => EMPTY_SETTINGS_PANE,
     getAgentHubPane: () => EMPTY_OVERLAY_PANE,
     getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-    getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-    getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-    getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+    ...PASSIVE_CONTROLLER,
     getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
     getComposerHud: () => undefined,
     getToolPresenters: () => undefined,
@@ -95,6 +93,7 @@ async function mount(ctrl: TuiController) {
     stdin: fakeTtyStdin(),
     exitOnCtrlC: false,
     patchConsole: false,
+    interactive: true,
   })
   await instance.waitUntilRenderFlush()
   return instance
@@ -109,7 +108,7 @@ describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
       await instance.waitUntilRenderFlush()
       expect(dispatch).not.toHaveBeenCalled()
     } finally {
-      instance.unmount()
+      await disposeRenderer(instance)
     }
   })
 
@@ -129,21 +128,19 @@ describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
       await instance.waitUntilRenderFlush()
       expect(dispatch).toHaveBeenCalledWith({ kind: 'settings-move', delta: -1 })
     } finally {
-      instance.unmount()
+      await disposeRenderer(instance)
     }
     dispatch.mockClear()
-    const editing = await mount(controller({
-      dispatch,
-      getSettingsPane: () => ({ ...settings, editing: true }),
-    }))
+    const editingState = { ...settings, editing: true }
+    const editing = await mount(controller({ dispatch, getSettingsPane: () => editingState }))
     try {
       notifyMouseScroll(1)
       await editing.waitUntilRenderFlush()
       expect(dispatch).not.toHaveBeenCalled()
     } finally {
-      editing.unmount()
+      await disposeRenderer(editing)
     }
-    const onboardingState: SettingsPaneState = { ...settings, onboarding: true }
+    const onboardingState: SettingsPaneState = { ...settings, onboarding: true, editing: true }
     const onboarding = await mount(controller({
       dispatch,
       getSettingsPane: () => onboardingState,
@@ -153,8 +150,15 @@ describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
       await onboarding.waitUntilRenderFlush()
       expect(dispatch).not.toHaveBeenCalled()
     } finally {
-      onboarding.unmount()
+      await disposeRenderer(onboarding)
     }
+    const pickerState = { ...settings, onboarding: true, editing: false }
+    const picker = await mount(controller({ dispatch, getSettingsPane: () => pickerState }))
+    try {
+      notifyMouseScroll(1)
+      await picker.waitUntilRenderFlush()
+      expect(dispatch).toHaveBeenCalledWith({ kind: 'settings-move', delta: -1 })
+    } finally { await disposeRenderer(picker) }
   })
 
   it('scrolls help and timeline locally without a controller action', async () => {
@@ -169,7 +173,7 @@ describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
       await help.waitUntilRenderFlush()
       expect(dispatch).not.toHaveBeenCalled()
     } finally {
-      help.unmount()
+      await disposeRenderer(help)
     }
     const timelineModel: ViewModel = {
       ...IDLE_MODEL,
@@ -190,7 +194,7 @@ describe('TuiLoop mouse scroll', { timeout: 30_000 }, () => {
       await timeline.waitUntilRenderFlush()
       expect(dispatch).not.toHaveBeenCalled()
     } finally {
-      timeline.unmount()
+      await disposeRenderer(timeline)
     }
   })
 })

@@ -479,4 +479,58 @@ describe('TuiLoop settings overlay', () => {
     expect(out).toContain('providers · siliconflow · 端点 (baseURL)')
     expect(out).toContain('providers · siliconflow · 别名 (displayName)')
   })
+
+  it('forwards busy state from TuiLoop to SettingsPane and localizes extra tui fields', () => {
+    const busySettings = {
+      open: true,
+      rows: [
+        { namespace: 'tui', field: 'brandAnimation', value: '自动' },
+        { namespace: 'tui', field: 'submitOnEnter', value: 'true' },
+        { namespace: 'tui', field: 'colorTier', value: 'truecolor' },
+      ],
+      selectedIndex: 0,
+      editing: false,
+      busy: true,
+    }
+    const controller: TuiController = {
+      getModel: () => IDLE_MODEL,
+      getInteraction: () => 'idle',
+      getBadge: () => 'provider',
+      getTitle: () => '会话',
+      getSessionPane: () => CLOSED_SESSION,
+      getSearchPane: () => CLOSED_SEARCH,
+      getTimelineOpen: () => false,
+      getModelPane: () => CLOSED_MODEL,
+      getHelpPane: () => CLOSED_HELP,
+      getApprovalPane: () => EMPTY_APPROVAL_PANE,
+      getAskUserPane: () => EMPTY_ASK_USER_PANE,
+      getPermissionPane: () => EMPTY_PERMISSION_PANE,
+      getSettingsPane: () => busySettings,
+      getAgentHubPane: () => EMPTY_OVERLAY_PANE,
+      getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
+      getWorkspacePane: () => EMPTY_WORKSPACE_PANE,
+      getFeedbackPane: () => EMPTY_FEEDBACK_PANE,
+      getWorkflowOverlay: () => EMPTY_WORKFLOW_OVERLAY,
+      getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
+      getComposerHud: () => undefined,
+      getToolPresenters: () => undefined,
+      getSubmitOnEnter: () => true,
+      getFeedback: () => undefined,
+      noteUserActivity: () => {},
+      note: () => {},
+      intakeClipboardImage: async () => ({ ok: false as const, reason: 'stub' }),
+      intakeImagePath: async () => ({ ok: false as const, reason: 'stub' }),
+      subscribe: () => () => {},
+      dispatch: () => {},
+      commands: [],
+      getCwd: () => '/workspace',
+      listMentions: async () => [],
+    }
+    const out = renderToString(createElement(TuiLoop, { title: 't', controller }))
+    expect(out).toContain('正在获取模型列表…')
+    expect(out).toContain('brandAnimation · 品牌动画')
+    expect(out).toContain('submitOnEnter · 回车发送')
+    expect(out).toContain('colorTier · 色彩档位')
+    expect(out).toContain('tui · 1/3')
+  })
 })

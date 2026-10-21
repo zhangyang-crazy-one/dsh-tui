@@ -1,0 +1,596 @@
+[
+  {
+    "scene": "deliveries",
+    "columns": 40,
+    "rows": 16,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 34,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 0,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 46,
+          "snapshots": 2,
+          "actions": [
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "preview",
+        "state": {
+          "commits": 58,
+          "snapshots": 3,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "preview-page",
+        "state": {
+          "commits": 72,
+          "snapshots": 4,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "open-system",
+        "state": {
+          "commits": 86,
+          "snapshots": 5,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "list-again",
+        "state": {
+          "commits": 102,
+          "snapshots": 6,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "no-path-edit",
+        "state": {
+          "commits": 114,
+          "snapshots": 7,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 128,
+          "snapshots": 8,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      }
+    ]
+  },
+  {
+    "scene": "deliveries",
+    "columns": 80,
+    "rows": 24,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 34,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 0,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 46,
+          "snapshots": 2,
+          "actions": [
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "preview",
+        "state": {
+          "commits": 58,
+          "snapshots": 3,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "preview-page",
+        "state": {
+          "commits": 76,
+          "snapshots": 4,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "open-system",
+        "state": {
+          "commits": 88,
+          "snapshots": 5,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "list-again",
+        "state": {
+          "commits": 104,
+          "snapshots": 6,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "no-path-edit",
+        "state": {
+          "commits": 116,
+          "snapshots": 7,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 130,
+          "snapshots": 8,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      }
+    ]
+  },
+  {
+    "scene": "deliveries",
+    "columns": 120,
+    "rows": 40,
+    "phases": [
+      {
+        "name": "initial",
+        "state": {
+          "commits": 34,
+          "snapshots": 1,
+          "actions": [],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 0,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "page",
+        "state": {
+          "commits": 48,
+          "snapshots": 2,
+          "actions": [
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "preview",
+        "state": {
+          "commits": 60,
+          "snapshots": 3,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "preview-page",
+        "state": {
+          "commits": 84,
+          "snapshots": 4,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "open-system",
+        "state": {
+          "commits": 100,
+          "snapshots": 5,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": true
+        }
+      },
+      {
+        "name": "list-again",
+        "state": {
+          "commits": 116,
+          "snapshots": 6,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "no-path-edit",
+        "state": {
+          "commits": 130,
+          "snapshots": 7,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": true,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      },
+      {
+        "name": "back",
+        "state": {
+          "commits": 147,
+          "snapshots": 8,
+          "actions": [
+            "workspace-move",
+            "workspace-enter",
+            "workspace-preview-layout",
+            "workspace-move",
+            "workspace-open-system",
+            "workspace-escape",
+            "workspace-escape"
+          ],
+          "todoOpen": false,
+          "hubView": "table",
+          "hubOpen": false,
+          "settingsOpen": false,
+          "selectedSetting": 0,
+          "approvalOpen": false,
+          "questionOpen": false,
+          "planOpen": false,
+          "workspaceOpen": false,
+          "workspaceSelection": 20,
+          "workspacePreview": false
+        }
+      }
+    ]
+  }
+]

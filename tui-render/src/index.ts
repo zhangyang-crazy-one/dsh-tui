@@ -22,7 +22,8 @@ import type { ViewModel } from './projection.ts'
 import { FrameProbe } from './frame-stats.ts'
 import type { FrameProbeHandle } from './frame-stats.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
-import { currentTier, installTheme } from './theme.ts'
+import type { ColorTier } from './terminal-capabilities.ts'
+import { applyTheme, currentTier, installTheme, type ThemeAppearance } from './theme.ts'
 import { wrapStdoutForFrameBg } from './frame-fill.ts'
 import { attachMouseIo } from './mouse-io.ts'
 import { detectHyperlinks, setHyperlinks } from './hyperlink.ts'
@@ -126,6 +127,8 @@ export {
   getSwimmingFishFrame,
   SWIMMING_FISH_FRAMES,
   tuiCopy,
+  registerTuiLocale,
+  listTuiLocales,
 } from './ui-copy.ts'
 export type { TuiLocale } from './ui-copy.ts'
 export type {
@@ -184,6 +187,9 @@ export type {
   PlanReviewPaneProps,
   PlanReviewPaneState,
 } from './plan-review-pane.tsx'
+export { settingsGroup, nextSettingsGroup, SETTINGS_GROUP_LABELS } from './settings-groups.ts'
+export { BrowserPane, EMPTY_BROWSER_PANE } from './browser-pane.tsx'
+export type { BrowserRow, BrowserPaneState } from './browser-pane.tsx'
 export { TimelineView, TIMELINE_WINDOW } from './timeline-view.tsx'
 export type { TimelineViewProps } from './timeline-view.tsx'
 export {
@@ -255,6 +261,8 @@ export type {
   AdaptiveTokenUsage,
 } from './adaptive-info-footer.ts'
 export { TodoHud } from './todo-hud.tsx'
+export { TodoPane } from './todo-pane.tsx'
+export type { TodoPaneProps } from './todo-pane.tsx'
 export type { TodoHudItem } from './todo-hud.tsx'
 export { JobsHud } from './jobs-hud.tsx'
 export type { JobHudItem } from './jobs-hud.tsx'
@@ -264,6 +272,8 @@ export { WorkflowOverlay, EMPTY_WORKFLOW_OVERLAY, WORKFLOW_OVERLAY_WINDOW } from
 export type { WorkflowOverlayState } from './workflow-overlay.tsx'
 export { WorkspacePane, EMPTY_WORKSPACE_PANE } from './workspace-pane.tsx'
 export type { WorkspaceFilePreview, WorkspaceNode, WorkspacePaneState } from './workspace-pane.tsx'
+export { SchedulePane, EMPTY_SCHEDULE_PANE } from './schedule-pane.tsx'
+export type { SchedulePaneState, SchedulePaneRow } from './schedule-pane.tsx'
 export { FeedbackPane, EMPTY_FEEDBACK_PANE } from './feedback-pane.tsx'
 export type { FeedbackPaneState, FeedbackWriteError } from './feedback-pane.tsx'
 export { QueueChip, queueChipText } from './queue-chip.tsx'
@@ -355,6 +365,9 @@ export type {
 export interface TuiRenderOptions {
   /** Output stream; defaults to process.stdout. */
   stdout?: NodeJS.WriteStream
+  /** Explicit saved theme overrides; environment detection remains the fallback. */
+  appearance?: ThemeAppearance
+  colorTier?: ColorTier
   /** Input stream for key events; defaults to process.stdin. Tests inject a TTY-shaped fake. */
   stdin?: NodeJS.ReadStream
   /** Whether Ink intercepts Ctrl+C to exit (Phase 2 keeps it off: the signal table owns Ctrl+C). */
@@ -388,15 +401,18 @@ export function mountTuiRender(
 ): () => void {
   const env = options.env ?? process.env
   const policy = options.renderPolicy ?? renderPolicyDefaults()
+  const screenReader = env['INK_SCREEN_READER'] === 'true'
   installTheme(env)
-  setHyperlinks(detectHyperlinks(env))
+  applyTheme(screenReader ? 'none' : options.colorTier ?? currentTier(), options.appearance ?? 'dark')
+  setHyperlinks(!screenReader && detectHyperlinks(env))
   const wrapped =
     options.frameProbe === undefined
       ? node
       : createElement(FrameProbe, { probe: options.frameProbe }, node)
   // Mouse I/O wraps stdin/stdout before Ink sees them: SGR reports never
   // reach the key parser, and the cell atlas tracks post-frame-fill bytes.
-  const mouse = attachMouseIo({
+  const plainIo = { stdin: options.stdin ?? process.stdin, stdout: options.stdout ?? process.stdout, dispose: () => {} }
+  const mouse = screenReader ? plainIo : attachMouseIo({
     stdin: options.stdin ?? process.stdin,
     stdout: options.stdout ?? process.stdout,
     ...(options.renderPolicy === undefined
@@ -407,12 +423,13 @@ export function mountTuiRender(
   let instance: ReturnType<typeof render>
   try {
     instance = render(wrapped, {
-      alternateScreen: true,
-      incrementalRendering: false,
+      alternateScreen: !screenReader,
+      incrementalRendering: !screenReader,
+      isScreenReaderEnabled: screenReader,
       patchConsole: false,
       exitOnCtrlC: options.exitOnCtrlC ?? false,
       maxFps: 1000 / Math.min(policy.scroll.frameIntervalMs, policy.stream.frameIntervalMs),
-      stdout: wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
+      stdout: screenReader ? mouse.stdout : wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
       stdin: mouse.stdin,
     })
   } catch (error) {
@@ -533,3 +550,6 @@ export function mountTuiLoop(
     },
   )
 }
+
+export { shortcutBindings, remapShortcut, shortcutCatalog, EMPTY_SHORTCUTS } from './shortcut-bindings.ts'
+export type { ShortcutOverrides } from './shortcut-bindings.ts'

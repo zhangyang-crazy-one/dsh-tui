@@ -2,8 +2,8 @@
 # The dsh-tui bundle layer: a terminal surface over @deepseek-ai/dsh-base.
 # It mounts no Host, HTTP server, Web runtime, or browser plugin. An ordinary
 # provider plugin parses --resume/--cwd and the task positional; the terminal
-# driver then creates an Agent through the core registry. The agent plane
-# stays process-wide because the TUI is single-session.
+# driver then creates an Agent through the core registry. The UI displays one
+# Session; scheduled reminders can activate other Sessions in the same process.
 #
 # Install it as a bundle so user settings (written to the profile layer)
 # apply after this layer:
@@ -29,7 +29,7 @@
 - id: tools
   config:
     # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
-    mode: !!js process.env.DSH_TOOLS_MODE
+    mode: native
 
 # Full-text session search stays disabled until the first Ctrl+K search (the
 # base row's `openAt: never`). The TUI has no browser-latency concern, so the
@@ -49,6 +49,27 @@
     timeoutMs: 60000
 
 - insert:
+    # Official task storage/runtime over the terminal's shared cold-Session
+    # activation owner. No browser Session API or upload transport is mounted.
+    - id: schedule
+      name: '@crazyhappyone/dsh-tui/schedule'
+
+    - id: tool-schedule
+      name: '@deepseek-ai/dsh-tool-schedule'
+
+    # Durable current-time context uses the process time zone and refreshes
+    # at most once per ten minutes, matching the official provider defaults.
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+      config:
+        refreshIntervalMs: 600000
+
+    # Explicit file deliveries stay in the owning Session log.
+    - id: tool-present
+      name: '@deepseek-ai/dsh-tool-present'
+      config:
+        maxFiles: 8
+
     # Per-round token/duration stats for the terminal status line.
     - id: session-stats
       name: "@deepseek-ai/dsh-session-stats"
@@ -139,3 +160,8 @@
           cache:
             maxRows: 4096
             maxBytes: 4194304
+
+# Terminal marketplace catalog uses the Host service; installs retain plugin-manager approval.
+- insert:
+    - id: plugin-market
+      name: "@deepseek-ai/dsh-plugin-market"

@@ -331,6 +331,26 @@ describe('interactive loop', () => {
     await test.ctx.fiber.dispose()
   })
 
+  it('tracks a backend-started goal round and cancels it instead of arming exit', async () => {
+    const test = await bench({ afterPrompt: () => {} }, { task: '' })
+    const controller = await test.controller
+    await vi.waitFor(() => expect(test.ctx.agents.list()).toHaveLength(1))
+    const agent = test.ctx.agents.list()[0]
+    if (agent === undefined) throw new Error('expected live agent')
+    expect(controller.getModel().status).toBe('idle')
+    agent.session.append('turn/start', { turn: 1 })
+    expect(controller.getModel().status).toBe('generating')
+    controller.dispatch({ kind: 'sigint' })
+    expect(test.cancel).toHaveBeenCalledOnce()
+    agent.session.append('turn/end', { turn: 1, reason: { kind: 'aborted', reason: { kind: 'user' } } })
+    expect(controller.getModel().status).toBe('stopped')
+    agent.session.append('turn/start', { turn: 2 })
+    expect(controller.getModel().status).toBe('generating')
+    agent.session.append('turn/end', { turn: 2, reason: { kind: 'completed' } })
+    expect(controller.getModel().status).toBe('idle')
+    await test.ctx.fiber.dispose()
+  })
+
   it('runs overlapping controller requests through one create transition', async () => {
     const createGate = Promise.withResolvers<undefined>()
     const test = await bench(

@@ -30,6 +30,7 @@ import type { ModelPaneState } from '../src/model-pane.tsx'
 import type { HelpPaneState } from '../src/help-pane.tsx'
 import { EMPTY_APPROVAL_PANE } from '../src/approval-pane.tsx'
 import { EMPTY_ASK_USER_PANE } from '../src/ask-user-pane.tsx'
+import type { AskUserPaneState } from '../src/ask-user-pane.tsx'
 import { EMPTY_PERMISSION_PANE } from '../src/permission-pane.tsx'
 import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
@@ -41,7 +42,8 @@ import type { WorkspacePaneState } from '../src/workspace-pane.tsx'
 import { EMPTY_FEEDBACK_PANE } from '../src/feedback-pane.tsx'
 import type { FeedbackPaneState } from '../src/feedback-pane.tsx'
 import { applyTheme } from '../src/theme.ts'
-import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { disposeRenderer, fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import type { TodoHudItem } from '../src/todo-hud.tsx'
 import type { FakeTtyStdin } from './helpers.ts'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
@@ -412,7 +414,7 @@ describe('TuiLoop real input path', () => {
       open: true,
       plan: Array.from({ length: 40 }, (_, index) => `line-${String(index)}`).join('\n'),
     } as const
-    const emptyPlanPane = { open: true, plan: undefined } as const
+    const emptyPlanPane = { open: true } as const
     const controllers: TuiController[] = [
       {
         ...stubController(vi.fn(), owners),
@@ -1146,4 +1148,124 @@ describe('TuiLoop real input path', () => {
       instance.unmount()
     }
   })
+})
+
+it('pages the TODO browser during generation and restores the exact composer draft', async () => {
+  let open = false
+  const owners: (string | null)[] = []
+  const dispatch = vi.fn((action: unknown) => {
+    const input = action as { kind: string; query?: string }
+    if (input.kind === 'command' && input.query === 'todos') open = true
+    if (input.kind === 'todo-pane') open = !open
+  })
+  const model: ViewModel = { ...IDLE_MODEL, status: 'generating' }
+  const ctrl = stubController(dispatch, owners, EMPTY_SEARCH, 'test', undefined, () => model)
+  const todos = Array.from({ length: 100 }, (_, index): TodoHudItem => ({
+    content: `Visible task ${index}`, status: index === 0 ? 'completed' : 'pending',
+  }))
+  ctrl.getTodoHud = () => todos
+  ctrl.getTodoPaneOpen = () => open
+  const { instance, stdin, stdout } = mount(ctrl, true)
+  let output = ''
+  stdout.on('data', chunk => { output += String(chunk) })
+  try {
+    await instance.waitUntilRenderFlush()
+    await press(stdin, 'Draft survives')
+    ctrl.dispatch({ kind: 'command', query: 'todos' })
+    await instance.waitUntilRenderFlush()
+    expect(output).toContain('待办清单')
+    expect(output).toContain('Visible task 0')
+    output = ''
+    await press(stdin, '\x1b[6~')
+    await vi.waitFor(() => expect(output).toContain('Visible task 14'))
+    expect(ctrl.getModel()).toBe(model)
+    expect(dispatch.mock.calls.some(([action]) => (action as { kind: string }).kind === 'send')).toBe(false)
+    await press(stdin, '\x1b')
+    await vi.waitFor(() => expect(open).toBe(false))
+    await press(stdin, '!')
+    await press(stdin, '\r')
+    expect(dispatch).toHaveBeenCalledWith({ kind: 'send', text: 'Draft survives!' })
+    expect(owners.every(owner => owner === null)).toBe(true)
+  } finally { await disposeRenderer(instance) }
+})
+
+it('pastes raw multiline answers only into the active question editor and preserves the chat draft', async () => {
+  let question: AskUserPaneState = { ...EMPTY_ASK_USER_PANE, open: true, header: '补充说明',
+    editingCustom: true, customText: '前后', customCaretIndex: 1 }
+  const listeners = new Set<() => void>()
+  const dispatch = vi.fn((action: unknown) => {
+    const input = action as { kind: string; text?: string; caretIndex?: number }
+    if (input.kind === 'ask-user-custom-edit') question = { ...question, customText: input.text ?? '', customCaretIndex: input.caretIndex ?? 0 }
+    if (input.kind === 'ask-user-custom-save') question = { ...question, open: false }
+    for (const listener of listeners) listener()
+  })
+  const ctrl = stubController(dispatch, [])
+  ctrl.getComposerDraft = () => 'Original draft'
+  ctrl.getAskUserPane = () => question
+  ctrl.subscribe = listener => { listeners.add(listener);return () => { listeners.delete(listener) } }
+  const { instance, stdin } = mount(ctrl, true)
+  try {
+    await instance.waitUntilRenderFlush()
+    await press(stdin, '\x1b[200~中文\n/tmp/answer.png\x1b[201~')
+    expect(question.customText).toBe('前中文\n/tmp/answer.png后')
+    expect(question.customCaretIndex).toBe('前中文\n/tmp/answer.png'.length)
+    await press(stdin, '\t')
+    dispatch.mockClear()
+    await press(stdin, '\x1b[200~ignored in reader\x1b[201~')
+    expect(dispatch).not.toHaveBeenCalled()
+    await press(stdin, '\t')
+    await press(stdin, '\r')
+    expect(dispatch).toHaveBeenCalledWith({ kind: 'ask-user-custom-save' })
+    await press(stdin, '!')
+    await press(stdin, '\r')
+    expect(dispatch).toHaveBeenCalledWith({ kind: 'send', text: 'Original draft!' })
+    expect(renderPhaseErrors()).toEqual([])
+  } finally { await disposeRenderer(instance) }
+})
+
+it.each(['cancel', 'save', 'failed-save'])('preserves the chat draft around credential editing: %s', async outcome => {
+  const listeners = new Set<() => void>()
+  const notify = () => { for (const listener of listeners) listener() }
+  let settings: ReturnType<TuiController['getSettingsPane']> = { ...EMPTY_SETTINGS_PANE, open: true, onboarding: true,
+    rows: [{ namespace: 'credentials', field: 'FIXTURE_API_KEY', value: '未设置', editValue: '' }] }
+  const owners: (string | null)[] = []
+  const dispatch = vi.fn((action: unknown) => {
+    const input = action as { kind: string; value?: string }
+    if (input.kind === 'settings-edit') settings = { ...settings, editing: true }
+    if (input.kind === 'settings-escape') settings = { ...settings, open: false, editing: false }
+    if (input.kind === 'settings-apply') {
+      queueMicrotask(() => {
+        settings = outcome === 'failed-save' ? { ...settings, updateError: 'fixture failure' } : { ...settings, editing: false }
+        notify()
+      })
+    }
+    notify()
+  })
+  const ctrl = stubController(dispatch, owners)
+  ctrl.getComposerDraft = () => 'Original draft'
+  ctrl.getSettingsPane = () => settings
+  ctrl.subscribe = listener => { listeners.add(listener); return () => { listeners.delete(listener) } }
+  const { instance, stdin, stdout } = mount(ctrl, true)
+  let output = ''
+  stdout.on('data', chunk => { output += String(chunk) })
+  try {
+    await instance.waitUntilRenderFlush()
+    await press(stdin, '\r')
+    await vi.waitFor(() => expect(settings.editing).toBe(true))
+    await press(stdin, 'fixture-secret')
+    await vi.waitFor(() => expect(output).toContain('••••'))
+    expect(output).not.toContain('fixture-secret')
+    if (outcome !== 'cancel') {
+      await press(stdin, '\r')
+      await vi.waitFor(() => expect(dispatch).toHaveBeenCalledWith({ kind: 'settings-apply', value: 'fixture-secret' }))
+      await vi.waitFor(() => expect(settings.editing).toBe(outcome === 'failed-save'))
+    }
+    output = ''
+    await press(stdin, '\x1b')
+    await vi.waitFor(() => expect(output).toContain('Original draft'))
+    await press(stdin, '!')
+    await press(stdin, '\r')
+    await vi.waitFor(() => expect(dispatch).toHaveBeenCalledWith({ kind: 'send', text: 'Original draft!' }))
+    expect(renderPhaseErrors()).toEqual([])
+  } finally { await disposeRenderer(instance) }
 })

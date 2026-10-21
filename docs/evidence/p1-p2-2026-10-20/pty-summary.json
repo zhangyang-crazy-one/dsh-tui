@@ -1,0 +1,132 @@
+{
+  "cases": 18,
+  "frames": 81,
+  "records": [
+    {
+      "scene": "browser",
+      "columns": 120,
+      "rows": 40,
+      "frames": 6,
+      "metrics": "metrics/browser-120.json"
+    },
+    {
+      "scene": "browser",
+      "columns": 40,
+      "rows": 16,
+      "frames": 6,
+      "metrics": "metrics/browser-40.json"
+    },
+    {
+      "scene": "browser",
+      "columns": 80,
+      "rows": 24,
+      "frames": 6,
+      "metrics": "metrics/browser-80.json"
+    },
+    {
+      "scene": "child",
+      "columns": 120,
+      "rows": 40,
+      "frames": 5,
+      "metrics": "metrics/child-120.json"
+    },
+    {
+      "scene": "child",
+      "columns": 40,
+      "rows": 16,
+      "frames": 5,
+      "metrics": "metrics/child-40.json"
+    },
+    {
+      "scene": "child",
+      "columns": 80,
+      "rows": 24,
+      "frames": 5,
+      "metrics": "metrics/child-80.json"
+    },
+    {
+      "scene": "help",
+      "columns": 120,
+      "rows": 40,
+      "frames": 4,
+      "metrics": "metrics/help-120.json"
+    },
+    {
+      "scene": "help",
+      "columns": 40,
+      "rows": 16,
+      "frames": 4,
+      "metrics": "metrics/help-40.json"
+    },
+    {
+      "scene": "help",
+      "columns": 80,
+      "rows": 24,
+      "frames": 4,
+      "metrics": "metrics/help-80.json"
+    },
+    {
+      "scene": "light",
+      "columns": 120,
+      "rows": 40,
+      "frames": 2,
+      "metrics": "metrics/light-120.json"
+    },
+    {
+      "scene": "light",
+      "columns": 40,
+      "rows": 16,
+      "frames": 2,
+      "metrics": "metrics/light-40.json"
+    },
+    {
+      "scene": "light",
+      "columns": 80,
+      "rows": 24,
+      "frames": 2,
+      "metrics": "metrics/light-80.json"
+    },
+    {
+      "scene": "selection",
+      "columns": 120,
+      "rows": 40,
+      "frames": 5,
+      "metrics": "metrics/selection-120.json"
+    },
+    {
+      "scene": "selection",
+      "columns": 40,
+      "rows": 16,
+      "frames": 5,
+      "metrics": "metrics/selection-40.json"
+    },
+    {
+      "scene": "selection",
+      "columns": 80,
+      "rows": 24,
+      "frames": 5,
+      "metrics": "metrics/selection-80.json"
+    },
+    {
+      "scene": "split",
+      "columns": 120,
+      "rows": 40,
+      "frames": 5,
+      "metrics": "metrics/split-120.json"
+    },
+    {
+      "scene": "split",
+      "columns": 40,
+      "rows": 16,
+      "frames": 5,
+      "metrics": "metrics/split-40.json"
+    },
+    {
+      "scene": "split",
+      "columns": 80,
+      "rows": 24,
+      "frames": 5,
+      "metrics": "metrics/split-80.json"
+    }
+  ]
+}

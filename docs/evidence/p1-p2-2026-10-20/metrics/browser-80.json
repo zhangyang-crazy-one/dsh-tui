@@ -1,0 +1,192 @@
+{
+  "scene": "browser",
+  "columns": 80,
+  "rows": 24,
+  "phases": [
+    {
+      "name": "initial",
+      "state": {
+        "commits": 38,
+        "snapshots": 1,
+        "actions": [],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": true,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "selected",
+      "state": {
+        "commits": 48,
+        "snapshots": 2,
+        "actions": [
+          "browser-move"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 15,
+        "browserOpen": true,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "source",
+      "state": {
+        "commits": 62,
+        "snapshots": 3,
+        "actions": [
+          "browser-move",
+          "browser-enter"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 15,
+        "browserOpen": true,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "end",
+      "state": {
+        "commits": 73,
+        "snapshots": 4,
+        "actions": [
+          "browser-move",
+          "browser-enter",
+          "browser-move",
+          "browser-offset"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 15,
+        "browserOpen": true,
+        "browserOffset": 87,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "list",
+      "state": {
+        "commits": 85,
+        "snapshots": 5,
+        "actions": [
+          "browser-move",
+          "browser-enter",
+          "browser-move",
+          "browser-offset",
+          "browser-back"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 15,
+        "browserOpen": true,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "back",
+      "state": {
+        "commits": 99,
+        "snapshots": 6,
+        "actions": [
+          "browser-move",
+          "browser-enter",
+          "browser-move",
+          "browser-offset",
+          "browser-back",
+          "browser-back"
+        ],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    }
+  ]
+}

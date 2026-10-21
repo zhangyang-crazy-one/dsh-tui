@@ -26,6 +26,7 @@ import type {
   StreamChunk,
 } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
+import * as PiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
 import { RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
@@ -146,6 +147,27 @@ function liveRef(controller: RuntimeController): ModelSelectionRef | undefined {
 }
 
 describe('model panel', () => {
+  it('shows every configured Magpie protocol route from the official LLM service', async () => {
+    const { ctx, controller } = await bench()
+    const routes = { magpie: 57, 'magpie-responses': 7, 'magpie-anthropic': 1 }
+    try {
+      await ctx.plugin(PiAi, { providers: Object.fromEntries(Object.entries(routes).map(([provider, count]) => [provider, {
+        baseURL: 'http://127.0.0.1:3425/v1',
+        api: provider === 'magpie-responses' ? 'openai-responses' : provider === 'magpie-anthropic' ? 'anthropic-messages' : 'openai-completions',
+        models: Array.from({ length: count }, (_, i) => ({ id: `${provider}/model-${i}` })),
+      }])) })
+      await controller.start()
+      controller.dispatch({ kind: 'command', query: 'model' })
+      await vi.waitFor(() => expect(controller.getModelPane().status).toBe('idle'))
+      const actual = controller.getModelPane().rows.map(row => [row.provider, row.model])
+      const authoritative = (await Promise.all(ctx.llm.listProviders().map(async provider =>
+        (await ctx.llm.listModels(provider.id)).map(model => [provider.id, model.id]),
+      ))).flat()
+      expect(actual).toHaveLength(65)
+      expect(actual).toEqual(authoritative)
+    } finally { await controller.dispose();await ctx.fiber.dispose() }
+  })
+
   it('opens from /model, loads the catalog, and marks the current row', async () => {
     const { ctx, controller } = await bench([
       ['test-provider', new CatalogAdapter([

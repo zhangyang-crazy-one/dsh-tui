@@ -1,3 +1,4 @@
+import { syntaxTokens } from './syntax-tokens.ts'
 /**
  * Markdown rendering for the terminal: GFM markdown parses through the
  * mdast pipeline, then a styled renderer (in {@link ./markdown-render.ts})
@@ -32,7 +33,7 @@ import { Fragment, useRef } from 'react'
 import type { RootContent } from 'mdast'
 import { displayWidth, escapeContent } from './content.ts'
 import { hyperlinksEnabled } from './hyperlink.ts'
-import { styled, type StyleToken } from './theme.ts'
+import { currentAppearance, styled, type StyleToken } from './theme.ts'
 import { markdownParseInternals, parseMarkdownSource } from './markdown-parse.ts'
 import { paintLineFromRenderLine } from './painted-line.ts'
 import {
@@ -52,42 +53,6 @@ interface Token {
   kind: TokenKind
   text: string
 }
-
-/** Language keyword set the tokenizer recognizes (subset, extend as needed). */
-const KEYWORDS = new Set([
-  'const',
-  'let',
-  'var',
-  'function',
-  'return',
-  'if',
-  'else',
-  'for',
-  'while',
-  'import',
-  'export',
-  'from',
-  'async',
-  'await',
-  'class',
-  'interface',
-  'type',
-  'new',
-  'throw',
-  'try',
-  'catch',
-  'finally',
-  'switch',
-  'case',
-  'break',
-  'continue',
-  'default',
-  'true',
-  'false',
-  'null',
-  'undefined',
-  'this',
-])
 
 /** Hard entry limit shared by the parsed-Markdown and token caches. */
 const MARKDOWN_CACHE_LIMIT = 2000
@@ -126,59 +91,6 @@ function lruSet<Value>(
 }
 
 /**
- * Tokenize one source line into keyword/string/comment/plain spans.
- * @param source - one line of code.
- * @returns the spans, in order.
- */
-function tokenizeLine(source: string): Token[] {
-  const tokens: Token[] = []
-  let plain = ''
-  const flush = (): void => {
-    if (plain !== '') {
-      tokens.push({ kind: 'plain', text: plain })
-      plain = ''
-    }
-  }
-  const trimmed = source.trimStart()
-  const indent = source.slice(0, source.length - trimmed.length)
-  if (
-    trimmed.startsWith('//') ||
-    trimmed.startsWith('#') ||
-    trimmed.startsWith('--')
-  ) {
-    return [{ kind: 'comment', text: source }]
-  }
-  let i = 0
-  while (i < trimmed.length) {
-    const char = trimmed.charAt(i)
-    if (char === "'" || char === '"' || char === '`') {
-      const end = trimmed.indexOf(char, i + 1)
-      const stop = end === -1 ? trimmed.length : end + 1
-      flush()
-      tokens.push({ kind: 'string', text: indent + trimmed.slice(i, stop) })
-      i = stop
-      continue
-    }
-    if (char === '/' && trimmed.charAt(i + 1) === '/') {
-      flush()
-      tokens.push({ kind: 'comment', text: indent + trimmed.slice(i) })
-      return tokens
-    }
-    const word = trimmed.slice(i).match(/^[A-Za-z_$][A-Za-z0-9_$]*/)?.[0]
-    if (word !== undefined && KEYWORDS.has(word)) {
-      flush()
-      tokens.push({ kind: 'keyword', text: word })
-      i += word.length
-      continue
-    }
-    plain += char
-    i += 1
-  }
-  flush()
-  return tokens
-}
-
-/**
  * Tokenize full source into cached spans (P12 cache keyed by content).
  * @param source - the code block text.
  * @param lang - fence language hint.
@@ -192,7 +104,7 @@ export function tokenize(source: string, lang: string): Token[] {
     return cached
   }
   tokenMisses += 1
-  const tokens = source.split('\n').flatMap(line => tokenizeLine(line))
+  const tokens = syntaxTokens(source, lang)
   lruSet(tokenCache, key, tokens, () => {
     tokenEvictions += 1
   })
@@ -427,22 +339,29 @@ function computeScopeKey(width: number, theme: string, fold: string, renderMode:
  * @param settled - true only for immutable history sources eligible for mdast caching.
  * @returns the element tree.
  */
-export function MarkdownBlock({
-  source,
-  maxCols,
-  prefix,
-  tail,
-  settled = false,
-}: {
+export function MarkdownBlock(props: MarkdownBlockProps): ReactNode {
+  if (props.maxCols === undefined) return <ResponsiveMarkdownBlock {...props} />
+  return <MarkdownContent {...props} maxCols={props.maxCols} />
+}
+
+interface MarkdownBlockProps {
   source: string
   maxCols?: number
   prefix?: MarkdownRowPrefix
   tail?: string | undefined
   settled?: boolean | undefined
-}): ReactNode {
+}
+
+function ResponsiveMarkdownBlock(props: MarkdownBlockProps): ReactNode {
   const { columns } = useWindowSize()
+  return <MarkdownContent {...props} maxCols={columns} />
+}
+
+function MarkdownContent({
+  source, maxCols, prefix, tail, settled = false,
+}: MarkdownBlockProps & { maxCols: number }): ReactNode {
   const stateRef = useRef<RendererState | null>(null)
-  const width = Math.max(1, maxCols ?? columns)
+  const width = Math.max(1, maxCols)
   const prefixWidth = Math.max(
     displayWidth(prefix?.first ?? ''),
     displayWidth(prefix?.rest ?? ''),
@@ -470,7 +389,7 @@ export function MarkdownBlock({
     }
   }
   const state = stateRef.current
-  const scopeKey = computeScopeKey(bodyWidth, 'truecolor', 'expanded', settled ? 'settled' : 'streaming')
+  const scopeKey = computeScopeKey(bodyWidth, currentAppearance(), 'expanded', settled ? 'settled' : 'streaming')
   if (state.scopeKey !== scopeKey) {
     state.projector = createMarkdownProjector(buildRenderer(bodyWidth, false), { cacheLimit: MARKDOWN_CACHE_LIMIT })
     state.renderer = buildRenderer(bodyWidth, false)

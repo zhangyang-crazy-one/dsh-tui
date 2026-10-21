@@ -936,13 +936,15 @@ var DEFAULT_NOTIFY_QUIET_INPUT_SECONDS = 10;
 
 // packages/tui/tui/src/user-settings.ts
 var TuiUserSettings = src_default.object({
+  keybindings: src_default.dict(src_default.string()).default({}),
+  theme: src_default.union(["dark", "light"]).default("dark"),
   colorTier: src_default.union(["truecolor", "256", "16", "none"]),
   submitOnEnter: src_default.boolean().default(true),
   notify: src_default.union(["off", "attention", "every-turn"]).default("attention"),
   notifyQuietInputSeconds: src_default.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
   brandAnimation: src_default.union(["auto", "on", "off"]).default("auto"),
   scrollbar: src_default.boolean().default(true),
-  locale: src_default.union(["zh-CN", "en-US"]).default("zh-CN"),
+  locale: src_default.string().default("zh-CN"),
   reasoning: src_default.boolean().default(false),
   statusDetails: src_default.boolean().default(false)
 });

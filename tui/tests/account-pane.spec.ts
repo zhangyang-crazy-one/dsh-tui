@@ -48,7 +48,7 @@ function accountService() {
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup() })
 
-async function bench(options: { account?: boolean; webServer?: boolean; remote?: boolean } = {}) {
+async function bench(options: { account?: boolean; webServer?: boolean; webServerPort?: number | undefined; remote?: boolean } = {}) {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(AgentRegistry)
@@ -69,7 +69,8 @@ async function bench(options: { account?: boolean; webServer?: boolean; remote?:
   const account = accountService()
   if (options.account !== false) ctx.provide('deepseekAccount', account as unknown as Context['deepseekAccount'])
   if (options.webServer !== false) {
-    ctx.provide('webServer', { host: '127.0.0.1', port: 43123, protocol: 'http:' } as unknown as Context['webServer'])
+    const port = 'webServerPort' in options ? options.webServerPort : 43123
+    ctx.provide('webServer', { host: '127.0.0.1', port, protocol: 'http:' } as unknown as Context['webServer'])
   }
   const opened: string[] = []
   const saved = { openUrl: internals.openUrl, accountEnvironment: internals.accountEnvironment }
@@ -140,6 +141,15 @@ describe('DeepSeek account page', () => {
     b.input('cancel')
     await vi.waitFor(() => expect(b.controller.getAccountPane().phase).toBe('cancelled'))
     expect(b.account.cancelSignIn).toHaveBeenCalledWith(attemptId)
+  })
+
+  it('reports a callback server without a bound port as unavailable', async () => {
+    const b = await bench({ webServerPort: undefined })
+    b.controller.dispatch({ kind: 'command', query: 'login' })
+    await vi.waitFor(() => expect(b.controller.getAccountPane().status).toBe('signed-out'))
+    b.input('sign-in')
+    await vi.waitFor(() => expect(b.controller.getAccountPane().error).toBe('登录回调服务未启动（缺少 webserver 行）'))
+    expect(b.account.startSignIn).not.toHaveBeenCalled()
   })
 
   it('signs out only after confirmation from /logout and stops watching on close', async () => {

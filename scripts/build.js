@@ -14,7 +14,12 @@ import { COMPATIBLE_DSH_VERSION } from '../src/launcher.js'
 
 const packageRoot = resolve(import.meta.dirname, '..')
 const dshRoot = resolve(process.env.DSH_SOURCE ?? resolve(packageRoot, '../deepseek-harness'))
-const dshVersion = JSON.parse(readFileSync(join(dshRoot, 'package.json'), 'utf8')).version
+let dshVersion
+try {
+  dshVersion = JSON.parse(readFileSync(join(dshRoot, 'package.json'), 'utf8')).version
+} catch (cause) {
+  throw new Error(`Cannot read dsh checkout manifest at ${dshRoot}`, { cause })
+}
 if (dshVersion !== COMPATIBLE_DSH_VERSION) {
   throw new Error(`dsh checkout ${dshRoot} is ${dshVersion}; check out dsh-v${COMPATIBLE_DSH_VERSION} first`)
 }
@@ -26,13 +31,24 @@ for (const name of ['tui', 'tui-render']) {
   mkdirSync(target, { recursive: true })
   // Replace only mirrored entries; the package's pnpm links stay in place.
   for (const entry of ['src', 'tests', 'package.json', 'tsconfig.json']) {
-    const from = join(packageRoot, name, entry)
+    const from = join(packageRoot, name, entry === 'tsconfig.json' ? 'tsconfig.workspace.json' : entry)
     rmSync(join(target, entry), { recursive: true, force: true })
     if (existsSync(from)) cpSync(from, join(target, entry), { recursive: true })
+  }
+  // This is a source workspace mount, not an installed renderer release.
+  // Resolve its package entry to the mirrored source for both esbuild and
+  // Vitest; an existing lib/index.js in the checkout may belong to an older UI.
+  if (name === 'tui-render') {
+    const manifestPath = join(target, 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    manifest.main = './src/index.ts'
+    manifest.exports['.'].default = './src/index.ts'
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
   }
 }
 
 // Package tests read the bundle patch beside the plugin packages.
+cpSync(join(packageRoot, 'presets'), join(dshRoot, 'packages/tui/presets'), { recursive: true })
 cpSync(join(packageRoot, 'cordis.patch.yml'), join(dshRoot, 'packages/tui/cordis.patch.yml'))
 
 /** Newest esbuild in the checkout's pnpm store. */
@@ -56,6 +72,7 @@ const targets = [
   { entry: join(dshRoot, 'packages/tui/tui/src/index.ts'), out: 'index.js', extra: [`--alias:react-devtools-core=${devtoolsStub}`] },
   { entry: join(dshRoot, 'packages/tui/tui/src/startup.ts'), out: 'startup.js' },
   { entry: join(dshRoot, 'packages/tui/tui/src/user-settings.ts'), out: 'settings.js' },
+  { entry: join(dshRoot, 'packages/tui/tui/src/schedule.ts'), out: 'schedule.js' },
   // Outside the workspace: borrow the checkout's source path aliases.
   { entry: join(packageRoot, 'plugins/zen-proxy/index.js'), out: 'zen-proxy.js', extra: [`--tsconfig=${join(dshRoot, 'tsconfig.base.json')}`] },
 ]

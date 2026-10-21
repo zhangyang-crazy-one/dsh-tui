@@ -71,38 +71,63 @@ export function PluginsPane({ state, locale = 'zh-CN', maxCols, maxRows }: {
   const copy = (key: Parameters<typeof tuiCopy>[0]) => tuiCopy(key, locale)
   const width = Math.max(1, maxCols)
   const clean = (text: string) => truncateDisplay(escapeContent(text).replace(/\n/g, '\\n').replace(/\t/g, '\\t'), width)
-  const lines: { text: string; selected?: boolean }[] = []
+  type LineEntry = {
+    text: string
+    selected?: boolean
+    token?: 'fg' | 'fgSoft' | 'fgDim' | 'accent' | 'accentText' | 'warning' | 'error'
+    bold?: boolean
+  }
+  const lines: LineEntry[] = []
   const selected = state.rows[state.selectedIndex]
-  let hint = !state.available ? copy('pluginsCloseHint') : [copy('pluginsBrowseHint'),
-    ...(selected?.toggle ? [copy('pluginsToggleHint')] : []),
-    copy('pluginsInstallHint'), ...(selected?.removable ? [copy('pluginsRemoveHint')] : []), copy('pluginsCloseHint')].join(' · ')
-  if (!state.available) lines.push({ text: copy('pluginsUnavailable') })
+  let hint: string
+  if (!state.available) {
+    hint = copy('pluginsCloseHint')
+  } else {
+    hint = [
+      copy('pluginsBrowseHint'),
+      ...(selected?.toggle ? [copy('pluginsToggleHint')] : []),
+      copy('pluginsInstallHint'),
+      ...(selected?.removable ? [copy('pluginsRemoveHint')] : []),
+      copy('pluginsCloseHint'),
+    ].join(' · ')
+  }
+  if (!state.available) lines.push({ text: copy('pluginsUnavailable'), token: 'fgDim' })
   else if (state.mode === 'remove' || state.mode === 'builds') {
     lines.push(...(state.mode === 'remove' ? ['pluginsRemoveConfirm'] as const
-      : ['pluginsBuildHeading', 'pluginsBuildPersist', 'pluginsBuildHost'] as const).map(key => ({ text: copy(key) })))
-    lines.push(...state.confirmNames.map(text => ({ text })))
+      : ['pluginsBuildHeading', 'pluginsBuildPersist', 'pluginsBuildHost'] as const).map(key => ({ text: copy(key), token: 'warning' as const, bold: true })))
+    lines.push(...state.confirmNames.map(text => ({ text: `  ${text}`, token: 'fg' as const })))
     hint = copy('pluginsConfirmHint')
   } else if (state.mode === 'input') {
-    lines.push({ text: `> ${state.spec}▏` }, ...state.inspection.map(text => ({ text })))
+    lines.push({ text: `> ${state.spec}▏`, token: 'accent', bold: true }, ...state.inspection.map(text => ({ text, token: 'fgDim' as const })))
     hint = copy('pluginsInputHint')
   } else if (state.mode === 'preview') {
-    lines.push({ text: state.spec }, ...state.inspection.map(text => ({ text })))
+    lines.push({ text: state.spec, token: 'accentText', bold: true }, ...state.inspection.map(text => ({ text, token: 'fgSoft' as const })))
     hint = copy('pluginsPreviewHint')
   } else {
-    if (state.loading) lines.push({ text: copy('pluginsLoading') })
-    if (!state.loading && state.rows.length === 0) lines.push({ text: copy('pluginsEmpty') })
+    if (state.loading) lines.push({ text: copy('pluginsLoading'), token: 'fgDim' })
+    if (!state.loading && state.rows.length === 0) lines.push({ text: copy('pluginsEmpty'), token: 'fgDim' })
     for (const group of ['official', 'supplied', 'owned'] as const) {
       const rows = state.rows.map((row, index) => ({ row, index })).filter(({ row }) => row.group === group)
       if (group === 'official' && rows.length === 0) continue
-      lines.push({ text: copy(group === 'official' ? 'pluginsOfficialGroup' : group === 'supplied' ? 'pluginsSupplied' : 'pluginsOwned') })
+      let groupKey: 'pluginsOfficialGroup' | 'pluginsSupplied' | 'pluginsOwned' = 'pluginsOwned'
+      if (group === 'official') groupKey = 'pluginsOfficialGroup'
+      else if (group === 'supplied') groupKey = 'pluginsSupplied'
+      lines.push({ text: copy(groupKey), token: 'accentText', bold: true })
       for (const { row, index } of rows) {
-        const selected = index === state.selectedIndex
-        lines.push({ text: `${selected ? '›' : ' '} ${row.label}`, selected })
-        if (selected) lines.push(...row.details.map(text => ({ text: `  ${text}` })))
+        const isSelected = index === state.selectedIndex
+        lines.push({
+          text: `${isSelected ? '›' : ' '} ${row.label}`,
+          selected: isSelected,
+          token: isSelected ? 'accent' : 'fgSoft',
+          bold: isSelected,
+        })
+        if (isSelected) {
+          lines.push(...row.details.map(text => ({ text: `    ${text}`, token: 'fgDim' as const })))
+        }
       }
     }
   }
-  if (state.inspecting) lines.unshift({ text: copy('pluginsInspecting') })
+  if (state.inspecting) lines.unshift({ text: copy('pluginsInspecting'), token: 'accentText' })
   if (state.busy) hint = copy('pluginsBusyHint')
   else if (state.pendingBuilds.length && state.mode === 'inventory') hint = copy('pluginsApprovalHint')
   else if (state.retry && state.mode === 'inventory') hint = copy('pluginsRetryHint')
@@ -116,12 +141,25 @@ export function PluginsPane({ state, locale = 'zh-CN', maxCols, maxRows }: {
   const statusRows = state.mode === 'remove' || state.mode === 'builds' ? [] : status.slice(0, Math.min(status.length, Math.floor(budget / 2)))
   const bodyBudget = budget - statusRows.length
   const selectedLine = lines.findIndex(line => line.selected)
-  const start = state.mode === 'remove' || state.mode === 'builds' ? state.detailOffset
-    : selectedLine < bodyBudget ? 0 : Math.max(0, selectedLine - 1)
-  const visible = [...lines.slice(start, start + bodyBudget), ...statusRows.map(text => ({ text }))]
+  let start = 0
+  if (state.mode === 'remove' || state.mode === 'builds') {
+    start = state.detailOffset
+  } else if (selectedLine >= bodyBudget) {
+    start = Math.max(0, selectedLine - 1)
+  }
+  const statusEntries: LineEntry[] = statusRows.map((text) => {
+    let token: LineEntry['token'] = 'accentText'
+    if (state.error !== undefined && text === state.error) {
+      token = 'error'
+    } else if (state.restartRequired) {
+      token = 'warning'
+    }
+    return { text, token }
+  })
+  const visible = [...lines.slice(start, start + bodyBudget), ...statusEntries]
   return <OverlayShell title={clean(copy('pluginsTitle'))} body={clean(copy('pluginsScope'))} footnote={clean(hint)}>
     {visible.map((line, index) => <Text key={index} wrap="truncate">
-      {paintRow([styled(clean(line.text), 'selected' in line && line.selected ? 'accent' : 'fg')])}
+      {paintRow([styled(clean(line.text), line.token ?? (line.selected ? 'accent' : 'fg'), undefined, line.bold === true)])}
     </Text>)}
   </OverlayShell>
 }

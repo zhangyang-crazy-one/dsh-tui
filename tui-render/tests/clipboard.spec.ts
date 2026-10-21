@@ -69,7 +69,7 @@ describe('copyText', () => {
 
   it('writes OSC 52 and pipes to a helper', () => {
     const write = vi.fn()
-    const stdin = { end: vi.fn() }
+    const stdin = Object.assign(new EventEmitter(), { end: vi.fn() })
     const child = Object.assign(new EventEmitter(), { stdin })
     const spawnFn = vi.fn(() => child)
     copyText('sel', write, asSpawn(spawnFn), { command: 'pbcopy', args: [] })
@@ -77,6 +77,16 @@ describe('copyText', () => {
     expect(spawnFn).toHaveBeenCalled()
     expect(stdin.end).toHaveBeenCalledWith('sel')
     child.emit('error', new Error('missing'))
+  })
+
+  it('keeps OSC 52 working when the helper closes its input pipe', () => {
+    const write = vi.fn()
+    const stdin = Object.assign(new EventEmitter(), { end: vi.fn() })
+    const child = Object.assign(new EventEmitter(), { stdin })
+    copyText('中文 selection', write, asSpawn(() => child), { command: 'wl-copy', args: [] })
+    expect(() => stdin.emit('error', Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }))).not.toThrow()
+    expect(write).toHaveBeenCalledWith(encodeOsc52('中文 selection'))
+    expect(stdin.end).toHaveBeenCalledWith('中文 selection')
   })
 
   it('swallows a spawn throw after OSC 52', () => {
@@ -105,7 +115,7 @@ describe('copyText', () => {
 
   it('resolves the host helper when spec is omitted', () => {
     const write = vi.fn()
-    const stdin = { end: vi.fn() }
+    const stdin = Object.assign(new EventEmitter(), { end: vi.fn() })
     const child = Object.assign(new EventEmitter(), { stdin })
     const spawnFn = vi.fn(() => child)
     copyText('sel', write, asSpawn(spawnFn))

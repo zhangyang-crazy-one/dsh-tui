@@ -123,7 +123,7 @@ describe('createStyledMarkdownBlockRenderer', () => {
   })
 
   it('paints a single-line code block with Vim-style line-number gutter and full codeBg background', () => {
-    const lines = render('```\nconst x = 1\n```')
+    const lines = render('```js\nconst x = 1\n```')
     expect(lines.length).toBe(1)
     // Vim-style line number gutter and full width codeBg background.
     expect(lines[0]?.text).toBe('  1 │ const x = 1')

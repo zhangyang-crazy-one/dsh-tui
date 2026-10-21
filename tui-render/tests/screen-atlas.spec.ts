@@ -266,3 +266,75 @@ describe('ScreenAtlas', () => {
     expect(atlas.cellAt(1, 1)?.ch).toBe('q')
   })
 })
+
+it('tracks Ink incremental next/previous-line controls and their column resets', () => {
+  const atlas = new ScreenAtlas(20, 10)
+  atlas.feed('\x1b[3;8H\x1b[E')
+  expect(atlas.cursorPosition).toEqual({ row: 4, col: 1 })
+  atlas.feed('\x1b[2Fprevious\x1b[3Enext')
+  expect(atlas.extractRowText(2)).toBe('previous')
+  expect(atlas.extractRowText(5)).toBe('next')
+  atlas.feed('\x1b[99F')
+  expect(atlas.cursorPosition).toEqual({ row: 1, col: 1 })
+  atlas.feed('\x1b[99E')
+  expect(atlas.cursorPosition).toEqual({ row: 10, col: 1 })
+})
+
+it('copies complete content beneath chrome while restoring and clicking the painted row', () => {
+  const makeLine = (text: string) => createPhysicalLine({ blockId: 'copy-row', spans: [{ text, token: 'fg', href: 'https://example.test/read' }], sourceStart: 0, sourceEnd: text.length, blockRow: 0 })
+  const painted = createPhysicalLine({ blockId: 'copy-row', spans: [
+    { text: 'source ', token: 'fg', href: 'https://example.test/read' },
+    { text: '↓ 底部 · End/G', token: 'fgDim' },
+  ], sourceStart: 0, sourceEnd: 7, blockRow: 0 })
+  const content = makeLine('source 完整正文 without lost tail')
+  const row = { ...createFrameSnapshotRow({ id: 'copy-row:0', row: 1, col: 1, line: painted }), contentLine: content }
+  const geometry = { columns: 80, rows: 3, transcriptTop: 1, transcriptLeft: 1, transcriptWidth: 78, transcriptRows: 2 }
+  const atlas = new ScreenAtlas(80, 3)
+  atlas.applyFrameSnapshot({ revision: '1', geometry, rows: [row] })
+  expect(atlas.extractRowText(1)).toBe('source 完整正文 without lost tail')
+  expect(atlas.extractRowText(1)).not.toContain('End/G')
+  expect(atlas.restoreOverlay({ col: 1, row: 1 }, { col: 80, row: 1 })).toContain('End/G')
+  expect(atlas.urlAt(2, 1)).toBe('https://example.test/read')
+  expect(atlas.urlAt(12, 1)).toBeUndefined()
+  const updated = { ...row, contentLine: makeLine('source 新的正文 tail') }
+  expect(updated.identity).toBe(row.identity)
+  atlas.applyFrameSnapshot({ revision: '2', geometry, rows: [updated] })
+  expect(atlas.extractRowText(1)).toBe('source 新的正文 tail')
+  const stableCell = atlas.cellAt(2, 1)
+  atlas.applyFrameSnapshot({ revision: '3', geometry, rows: [{ ...updated, line: { ...painted } }] })
+  expect(atlas.cellAt(2, 1)).toBe(stableCell)
+  atlas.applyFrameSnapshot({ revision: '4', geometry, rows: [] })
+  expect(atlas.extractRowText(1)).toBe('')
+})
+
+it('does not highlight stale terminal padding outside the transcript content', () => {
+  const atlas = new ScreenAtlas(20, 3)
+  atlas.feed('\x1b[1;1H                    \r\n                    ')
+  const line = createPhysicalLine({ blockId: 'padding', spans: [{ text: 'body', token: 'fg' }], sourceStart: 0, sourceEnd: 4, blockRow: 0 })
+  atlas.applyFrameSnapshot({ revision: 'padding',
+    geometry: { columns: 20, rows: 3, transcriptTop: 1, transcriptLeft: 3, transcriptWidth: 16, transcriptRows: 2 },
+    rows: [createFrameSnapshotRow({ id: 'padding:0', row: 1, col: 3, line })],
+  })
+  const overlay = atlas.selectionOverlay({ col: 1, row: 1 }, { col: 20, row: 1 })
+  expect(overlay).toBe('\x1b[1;3H\x1b[7mbody\x1b[27m')
+  expect(atlas.selectionOverlay({ col: 1, row: 1 }, { col: 2, row: 1 })).toBe('')
+  expect(atlas.restoreOverlay({ col: 1, row: 1 }, { col: 2, row: 1 })).toBe('')
+  expect(atlas.selectionOverlay({ col: 7, row: 1 }, { col: 20, row: 1 })).toBe('')
+  expect(atlas.selectionOverlay({ col: 1, row: 2 }, { col: 20, row: 2 })).toBe('')
+})
+
+it('preserves source indentation and fallback selection outside snapshot rows', () => {
+  const atlas = new ScreenAtlas(20, 3)
+  atlas.feed('                    \r\nfallback')
+  const line = createPhysicalLine({ blockId: 'indented', spans: [{ text: '  中 body', token: 'fg' }], sourceStart: 0, sourceEnd: 8, blockRow: 0 })
+  const snapshot = { revision: 'indented',
+    geometry: { columns: 20, rows: 3, transcriptTop: 1, transcriptLeft: 3, transcriptWidth: 16, transcriptRows: 1 },
+    rows: [createFrameSnapshotRow({ id: 'indented:0', row: 1, col: 3, line })],
+  }
+  atlas.applyFrameSnapshot(snapshot)
+  const cell = atlas.cellAt(5, 1)
+  atlas.applyFrameSnapshot({ ...snapshot, revision: 'unchanged' })
+  expect(atlas.cellAt(5, 1)).toBe(cell)
+  expect(stripVTControlCharacters(atlas.selectionOverlay({ col: 1, row: 1 }, { col: 20, row: 1 }))).toBe('  中 body')
+  expect(stripVTControlCharacters(atlas.selectionOverlay({ col: 1, row: 2 }, { col: 8, row: 2 }))).toBe('fallback')
+})

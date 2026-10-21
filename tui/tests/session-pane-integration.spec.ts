@@ -29,11 +29,12 @@ import type {
   UserMessage,
 } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SessionTitleService, { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
 import { escapeContent } from '@deepseek-ai/dsh-tui-render'
-import { logPath } from '../../../session/session-persistence-jsonl/src/format.ts'
+import type {} from '@deepseek-ai/dsh-sandbox-policy'
+import { logPath } from '@deepseek-ai/dsh-session-persistence-jsonl/src/format.ts'
 import { FEEDBACK_MS, RuntimeController } from '../src/index.ts'
 import type { TuiIo } from '../src/index.ts'
 import { SESSION_WRITER_HELD_COPY } from '../src/session-errors.ts'
@@ -350,6 +351,7 @@ describe('session directory controller', () => {
     // The fresh live session remains visible before it has a durable event.
     await vi.waitFor(() => {
       expect(controller.getSessionPane().rows).toHaveLength(4)
+      expect(controller.getSessionPane().rows.find(row => row.id === 'session-1')?.title).toBe('beta')
     })
     const rows = controller.getSessionPane().rows
     const liveId = controller.session?.id
@@ -559,8 +561,10 @@ describe('session directory controller', () => {
     await vi.waitFor(() => {
       expect(reloaded.controller.getSessionPane().rows).toHaveLength(4)
     })
-    expect(reloaded.controller.getSessionPane().rows.find(row => row.id === 'session-1')?.title)
-      .toBe('beta')
+    await vi.waitFor(() => {
+      expect(reloaded.controller.getSessionPane().rows.find(row => row.id === 'session-1')?.title)
+        .toBe('beta')
+    })
     expect(reloaded.createCalls).toHaveBeenCalledTimes(1)
     expect(reloaded.resumeCalls).not.toHaveBeenCalled()
     await reloaded.controller.dispose()
@@ -800,6 +804,37 @@ describe('session directory controller', () => {
     expect(controller.getFeedback()).toBeUndefined()
     vi.useRealTimers()
     await ctx.fiber.dispose()
+  })
+
+  it('keeps the switched Session selected while its directory refresh is pending', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-sessions-'))
+    roots.push(root)
+    await preCreateSessions(root)
+    const { ctx, controller } = await bench(root)
+    await controller.start()
+    await vi.waitFor(() => {
+      expect(controller.getSessionPane().rows.map(row => row.title)).toEqual(expect.arrayContaining(['alpha', 'beta', 'gamma']))
+    })
+    const list = ctx.sessionPersistence.list.bind(ctx.sessionPersistence)
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    vi.spyOn(ctx.sessionPersistence, 'list').mockImplementationOnce(async () => {
+      entered.resolve()
+      await release.promise
+      return list()
+    })
+    try {
+      controller.dispatch({ kind: 'session-pane' })
+      selectRow(controller, 'session-1')
+      await entered.promise
+      expect(controller.session?.id).toBe('session-1')
+      const pane = controller.getSessionPane()
+      expect(pane.rows[pane.selectedIndex]?.id).toBe('session-1')
+    } finally {
+      release.resolve()
+      await controller.dispose()
+      await ctx.fiber.dispose()
+    }
   })
 
   it('derives the live session title for the top bar and follows rename (getTitle)', async () => {

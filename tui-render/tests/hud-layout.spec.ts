@@ -86,8 +86,8 @@ describe('shared HUD allocation', () => {
   })
 
   it.each([
-    ['en-US', '─ Plan 3 Pending · 1 Workflow', '─ Background 2'],
-    ['zh-CN', '─ 任务计划 3 待办 · 1 工作流', '─ 后台执行 2'],
+    ['en-US', '─ Plan 3 Pending · 1 Workflow · /todos', '─ Background 2'],
+    ['zh-CN', '─ 任务计划 3 待办 · 1 工作流 · /todos', '─ 后台执行 2'],
   ] as const)('separates plan and execution with titled rows in %s', (locale, planTitle, jobsTitle) => {
     const rows = layoutHud({ todos, jobs, workflow, rows: 8, columns: 120, locale })
     expect(rows.map(row => row.key)).toEqual([
@@ -99,10 +99,10 @@ describe('shared HUD allocation', () => {
   })
 
   it.each([
-    [2, '─ Plan 3 Pending · 1 Workflow · +4 hidden (3/1)', '─ Background 2 · +2 hidden'],
-    [3, '─ Plan 3 Pending · 1 Workflow · +4 hidden (3/1)', '─ Background 2 · +1 hidden'],
-    [4, '─ Plan 3 Pending · 1 Workflow · +3 hidden (2/1)', '─ Background 2 · +1 hidden'],
-    [5, '─ Plan 3 Pending · 1 Workflow · +2 hidden (2/0)', '─ Background 2 · +1 hidden'],
+    [2, '─ Plan 3 Pending · 1 Workflow · /todos · +4 hidden', '─ Background 2 · +2 hidden'],
+    [3, '─ Plan 3 Pending · 1 Workflow · /todos · +4 hidden', '─ Background 2 · +1 hidden'],
+    [4, '─ Plan 3 Pending · 1 Workflow · /todos · +3 hidden', '─ Background 2 · +1 hidden'],
+    [5, '─ Plan 3 Pending · 1 Workflow · /todos · +2 hidden', '─ Background 2 · +1 hidden'],
   ] as const)('includes exact todo/workflow and job overflow counts within %i rows', (limit, planTitle, jobsTitle) => {
     const rows = layoutHud({ todos, jobs, workflow, rows: limit, columns: 120, locale: 'en-US' })
     expect(rows).toHaveLength(limit)
@@ -135,7 +135,7 @@ describe('shared HUD allocation', () => {
     const settled = layoutHud({ ...input, workflow: undefined })
     expect(settled).toHaveLength(active.length - 1)
     expect(settled.some(row => row.key === 'workflow')).toBe(false)
-    expect(settled[0]?.text).toBe('─ Plan 3 Pending')
+    expect(settled[0]?.text).toBe('─ Plan 3 Pending · /todos')
     expect(settled.slice(1)).toEqual(active.filter(row => row.key !== 'plan-title' && row.key !== 'workflow'))
     expect(layoutHud({ workflow: undefined, rows: 8, columns: 120 })).toEqual([])
   })
@@ -163,9 +163,9 @@ describe('shared HUD allocation', () => {
     expect(budget).toBe(available)
     const rows = layoutHud({ todos, jobs, workflow, rows: budget, columns: 120, locale: 'en-US' })
     expect(rows.map(row => row.text)).toEqual(available === 0 ? [] : available === 1 ? [
-      '─ Plan 3 Pending · 1 Workflow | Background 2',
+      '─ Plan 3 Pending · 1 Workflow · /todos | Background 2',
     ] : [
-      '─ Plan 3 Pending · 1 Workflow · +4 hidden (3/1)',
+      '─ Plan 3 Pending · 1 Workflow · /todos · +4 hidden',
       '─ Background 2 · +2 hidden',
     ])
     expect(rows.length + 24 - available).toBe(24)

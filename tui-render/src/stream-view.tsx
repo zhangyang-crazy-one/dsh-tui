@@ -38,10 +38,11 @@ import type {
 import { displayColumnSlice, displayWidth, escapeContent, wrapDisplayLines } from './content.ts'
 import { hyperlinksEnabled, isOsc8Href, wrapOsc8 } from './hyperlink.ts'
 import { formatTurnTailStats, producedPathsForTurn } from './turn-tail.ts'
+import { deliveryLines } from './delivery-lines.ts'
 import { formatWorkspaceChangesCard } from './workspace-changes-card.ts'
 import { pathToFileURL } from 'node:url'
 import { isAbsolute } from 'node:path'
-import { currentTier, inkColor, paintBackgroundRow, paintRow, styled } from './theme.ts'
+import { currentAppearance, currentTier, inkColor, paintBackgroundRow, paintRow, styled } from './theme.ts'
 import type { StyleToken } from './theme.ts'
 import { MarkdownBlock } from './markdown.tsx'
 import { formatSeconds, ReasoningBlock } from './reasoning.tsx'
@@ -115,6 +116,7 @@ import { createFrameArbiter } from './frame-arbiter.ts'
 import type { FrameArbiter } from './frame-arbiter.ts'
 import {
   createFrameSnapshotRow,
+  physicalLineIdentity,
   setVisibleFrameSnapshot,
 } from './frame-snapshot.ts'
 import type { VisibleFrameSnapshot } from './frame-snapshot.ts'
@@ -150,6 +152,8 @@ function assistantProseScope(scope: BlockRowsScope): BlockRowsScope {
 
 /** Conversation projection inputs. */
 export interface StreamViewProps {
+  /** Local transcript width for side-by-side terminal viewing. */
+  viewportColumns?: number | undefined
   /** Locale for tool previews and their detail entry. */
   locale?: TuiLocale
   /** Changes when sibling chrome can change the measured transcript height. */
@@ -1126,7 +1130,7 @@ const SlicedLinesBlock = memo(function SlicedLinesBlock(props: SlicedLinesBlockP
   const effectiveTailRow = tailRow ?? lines.length - 1
   const out: ReactNode[] = []
   const hyperlinks = hyperlinksEnabled()
-  const paintCacheKey = `${currentTier()}:${hyperlinks ? 'links' : 'plain'}`
+  const paintCacheKey = `${currentAppearance()}:${currentTier()}:${hyperlinks ? 'links' : 'plain'}`
   for (let index = start; index < end; index += 1) {
     const line = lines.at(index)
     if (line === undefined) {
@@ -1308,6 +1312,7 @@ function makeToolCardBlockEntry(
  */
 export function StreamView({
   model,
+  viewportColumns,
   presenters,
   brandTier = 'plain',
   brandAnimation = false,
@@ -1332,7 +1337,9 @@ export function StreamView({
   useEffect(() => () =>{  presenterCache.clear() }, [presenterCache])
   useEffect(() => () =>{  toolRows.clear() }, [toolRows])
   const transcriptOverscan = policy.transcriptOverscan
-  const { columns, rows } = useWindowSize()
+  const windowSize = useWindowSize()
+  const columns = viewportColumns ?? windowSize.columns
+  const rows = windowSize.rows
   const { stdout } = useStdout()
   const physicalViewport = stdout.isTTY
   const contentWidth = conversationWidth(columns)
@@ -1504,6 +1511,7 @@ export function StreamView({
   /** Theme tier the projector paths reuse; the stream-view reads the same
    * value at render time so the projector scope key matches the JSX path. */
   const themeTier = currentTier()
+  const appearance = currentAppearance()
   const blockRowsScope = useMemo<BlockRowsScope>(() => {
     const theme = themeTier === 'truecolor' || themeTier === '256' || themeTier === '16'
       ? themeTier
@@ -1522,13 +1530,14 @@ export function StreamView({
         theme,
         { reasoning: reasoningExpanded, tools: toolCardsExpanded },
         renderMode,
-      ),
+      ) + `:${appearance}`,
     }
   }, [
     contentWidth,
     reasoningExpanded,
     status,
     themeTier,
+    appearance,
     toolCardsExpanded,
   ])
   const settledBlockRowsScope = useMemo<BlockRowsScope>(() => ({
@@ -1539,8 +1548,8 @@ export function StreamView({
       blockRowsScope.theme,
       blockRowsScope.fold,
       'settled',
-    ),
-  }), [blockRowsScope])
+    ) + `:${appearance}`,
+  }), [blockRowsScope, appearance])
   const assistantBlockRowsScope = useMemo<BlockRowsScope>(
     () => assistantProseScope(blockRowsScope),
     [blockRowsScope],
@@ -1683,6 +1692,7 @@ export function StreamView({
         ranges.push({ start, end: rows.length })
       }
       const tailMeta: BlockRowsMeta = {
+        ...(row.message.presentedFiles === undefined ? {} : { turnTailDeliveries: row.message.presentedFiles }),
         ...(latestAssistant === row.message.id
           ? { turnTailCompletionBoundary: true }
           : {}),
@@ -2137,6 +2147,7 @@ export function StreamView({
   const layoutScope = [
     contentWidth,
     currentTier(),
+    currentAppearance(),
     reasoningExpanded ? 'reasoning-open' : 'reasoning-closed',
     mode === 'focus' ? 'tools-focus' : (toolCardsExpanded ? 'tools-open' : 'tools-closed'),
     expandedCompactionId ?? '',
@@ -2161,9 +2172,9 @@ export function StreamView({
     ? 0
     : (virtualLayouts.at(-1) as TranscriptBlockLayout).top
       + (virtualLayouts.at(-1) as TranscriptBlockLayout).rows
-  const effectiveViewportRows = viewport.viewportRows > 0
-    ? viewport.viewportRows
-    : Math.max(1, rows - 7)
+  let effectiveViewportRows = Math.max(1, rows - 7)
+  if (geometryMeasured) effectiveViewportRows = Math.max(0, Math.min(viewport.viewportRows, measuredGeometry.height))
+  else if (viewport.viewportRows > 0) effectiveViewportRows = viewport.viewportRows
   const effectiveOffset = viewport.follow
     ? 0
     : Math.min(
@@ -2539,6 +2550,7 @@ export function StreamView({
           row: absoluteRow,
           col: contentLeft + 1,
           line: framePhysicalLine(entry.id, line, lead, entry.kind === 'active', promptOverlay),
+          ...(promptOverlay === undefined ? {} : { contentLine: framePhysicalLine(entry.id, line, lead, entry.kind === 'active') }),
         }))
       }
     }
@@ -2549,7 +2561,8 @@ export function StreamView({
         String(columns),
         String(rows),
         themeTier,
-        snapshotRows.map(row => `${row.id}:${row.identity}`).join('|'),
+        appearance,
+        snapshotRows.map(row => `${row.id}:${row.identity}:${row.contentLine === undefined ? '' : physicalLineIdentity(row.contentLine)}`).join('|'),
       ].join('\u0000'),
       ...(!generating && latestSettledAssistantId !== undefined
         ? {
@@ -2558,6 +2571,7 @@ export function StreamView({
             String(columns),
             String(rows),
             themeTier,
+        appearance,
           ].join(':'),
         }
         : {}),
@@ -2585,6 +2599,7 @@ export function StreamView({
     renderEntries,
     rows,
     themeTier,
+    appearance,
     viewport.offsetFromBottom,
     virtualContentRows,
     virtualLayouts,
@@ -2592,7 +2607,8 @@ export function StreamView({
     visibleEntryPairs,
     visibleTop,
   ])
-  const publishTranscript = physicalViewport && geometryMeasured && !idleHome
+  // A focused dialog owns these cells; the paused transcript must not repaint over it.
+  const publishTranscript = physicalViewport && geometryMeasured && !idleHome && !motionPaused && effectiveViewportRows > 0
   setVisibleFrameSnapshot(publishTranscript ? visibleFrame : undefined)
   if (publishTranscript) setFrameRail(publishedRail)
   else releaseFrameRail()
@@ -2683,6 +2699,7 @@ export function StreamView({
   }
 
   const renderFrozenTail = (message: FrozenMessage): ReactNode => {
+    const deliveries = deliveryLines(message.presentedFiles ?? [], contentWidth)
     const showCompletionBoundary = message.id === latestSettledAssistantId
     const cards = cardsFrom(message.content ?? []).map(card =>
       presenterCache.present(presenters, card),
@@ -2697,7 +2714,7 @@ export function StreamView({
       legacyOutputTokens: message.usageOutputTokens,
       elapsedMs: message.stepWallMs,
     })
-    if (produced.length === 0 && changeLines === undefined && stats === undefined && !showCompletionBoundary) return undefined
+    if (deliveries.length === 0 && produced.length === 0 && changeLines === undefined && stats === undefined && !showCompletionBoundary) return undefined
     const producedRows: string[][] = []
     let rowRuns = [styled('产物 · ', 'fg')]
     let rowWidth = displayWidth('产物 · ')
@@ -2724,6 +2741,10 @@ export function StreamView({
     if (pathsInRow > 0) producedRows.push(rowRuns)
     return (
       <Box key="turn-tail" marginTop={1} flexDirection="column" width="100%">
+        {deliveries.map((line, index) => (
+          <Text key={`delivery-${index}`}>{paintRow([line.href !== undefined && hyperlinksEnabled()
+            ? wrapOsc8(styled(line.text, 'fg'), line.href) : styled(line.text, 'fg')])}</Text>
+        ))}
         {(changeLines ?? []).map((line, index) => (
           <Text key={`changes-${String(index)}`}>{paintRow([styled(escapeContent(line), 'fg')])}</Text>
         ))}

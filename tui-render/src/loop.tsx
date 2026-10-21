@@ -1,3 +1,6 @@
+import { moveInputSelection, inputSelectionRange, selectedInputText, replaceInputSelection, deleteInputSelection } from './input-selection.ts'
+import { remapShortcut, shortcutCatalog, EMPTY_SHORTCUTS, type ShortcutOverrides } from './shortcut-bindings.ts'
+import { BrowserPane, EMPTY_BROWSER_PANE, type BrowserPaneState } from './browser-pane.tsx'
 /**
  * Owns terminal key routing and composes the active TUI panel. Every Ink key event
  * passes through the pure {@link mapKeyEvent} reducer before the resulting action
@@ -42,7 +45,7 @@ import type { PermissionPaneState } from './permission-pane.tsx'
 import { SettingsPane } from './settings-pane.tsx'
 import type { SettingsPaneState } from './settings-pane.tsx'
 import { AgentHubPane } from './agent-hub-pane.tsx'
-import type { AgentHubPaneState } from './agent-hub-pane.tsx'
+import type { AgentHubPaneState, AgentHubViewport } from './agent-hub-pane.tsx'
 import { PlanDirectoryPane } from './plan-directory-pane.tsx'
 import type { PlanDirectoryPaneState } from './plan-directory-pane.tsx'
 import { PlanReviewPane, PLAN_REVIEW_WINDOW } from './plan-review-pane.tsx'
@@ -92,6 +95,9 @@ import type { WorkspacePaneState, WorkspacePreviewLayout } from './workspace-pan
 import { FeedbackPane } from './feedback-pane.tsx'
 import type { FeedbackPaneState } from './feedback-pane.tsx'
 import { keyActionFor, toolDetailsKeyAction } from './keymap.ts'
+import { TodoPane } from './todo-pane.tsx'
+import { SchedulePane, EMPTY_SCHEDULE_PANE, type SchedulePaneState } from './schedule-pane.tsx'
+import { hideFrameCaret } from './frame-fill.ts'
 import { ToolDetailsPane, EMPTY_TOOL_DETAILS_PANE } from './tool-details-pane.tsx'
 import type { ToolDetailsPaneState, ToolDetailsInput } from './tool-details-pane.tsx'
 import { toolPolicyDefaults } from './render-policy.ts'
@@ -137,6 +143,12 @@ export type LoopAction =
   | { kind: 'search-pane' }
   | { kind: 'search'; query: string }
   | { kind: 'toggle-timeline' }
+  | { kind: 'browser-move'; delta: number }
+  | { kind: 'browser-offset'; offset: number }
+  | { kind: 'browser-enter' }
+  | { kind: 'browser-back' }
+  | { kind: 'browser-refresh' }
+  | { kind: 'browser-action'; key: string }
   | { kind: 'timeline-scroll'; delta: number }
   | { kind: 'session-pane-idle' }
   | { kind: 'model-pane' }
@@ -151,6 +163,11 @@ export type LoopAction =
   | { kind: 'ask-user-digit'; index: number }
   | { kind: 'ask-user-move'; delta: number }
   | { kind: 'ask-user-submit' }
+  | { kind: 'ask-user-toggle' }
+  | { kind: 'ask-user-custom' }
+  | { kind: 'ask-user-custom-edit'; text: string; caretIndex: number }
+  | { kind: 'ask-user-custom-save' }
+  | { kind: 'ask-user-custom-cancel' }
   | { kind: 'ask-user-cancel' }
   | { kind: 'permission-escape' }
   | { kind: 'permission-move'; delta: number }
@@ -158,15 +175,28 @@ export type LoopAction =
   | { kind: 'permission-apply' }
   | { kind: 'settings-escape' }
   | { kind: 'settings-move'; delta: number }
+  | { kind: 'settings-group'; delta: number }
   | { kind: 'settings-edit' }
   | { kind: 'settings-cancel-edit' }
   | { kind: 'settings-apply'; value: string }
+  | { kind: 'settings-toggle' }
   | { kind: 'settings-export' }
   | { kind: 'settings-reload' }
+  | { kind: 'todo-pane' }
+  | { kind: 'schedule-pane' }
+  | { kind: 'schedule-move'; delta: number }
+  | { kind: 'schedule-offset'; offset: number }
+  | { kind: 'schedule-enter' }
+  | { kind: 'schedule-escape' }
+  | { kind: 'schedule-refresh' }
+  | { kind: 'schedule-delete' }
+  | { kind: 'schedule-confirm'; confirmed: boolean }
   | { kind: 'agent-hub' }
   | { kind: 'agent-hub-escape' }
   | { kind: 'agent-hub-move'; delta: number }
+  | { kind: 'agent-hub-control'; input: 'stop' | 'compose' | 'split' | 'edit' | 'cancel' | 'queue' | 'steer'; text?: string; caretIndex?: number }
   | { kind: 'agent-hub-enter' }
+  | { kind: 'agent-hub-expand' }
   | { kind: 'plan-directory' }
   | { kind: 'plan-directory-escape' }
   | { kind: 'plan-directory-move'; delta: number }
@@ -175,10 +205,12 @@ export type LoopAction =
   | { kind: 'plan-review-keep' }
   | { kind: 'plan-review-scroll'; delta: number }
   | { kind: 'workspace-pane' }
+  | { kind: 'workspace-refresh' }
   | { kind: 'workspace-escape' }
   | { kind: 'workspace-move'; delta: number; unit?: 'page' }
   | { kind: 'workspace-preview-layout'; layout: WorkspacePreviewLayout }
   | { kind: 'workspace-enter' }
+  | { kind: 'workspace-open-system' }
   | { kind: 'workspace-insert' }
   | { kind: 'workspace-edit' }
   | { kind: 'workspace-apply'; value: string }
@@ -195,6 +227,7 @@ export type LoopAction =
 
 /** The controller seam: model access, subscription, and action dispatch. */
 export interface TuiController {
+  getBrowserPane?(): BrowserPaneState
   /** Latest Plugins inventory and controller-owned install state. */
   getPluginsPane?(): PluginsPaneState
   /** Latest DeepSeek account page state. */
@@ -226,6 +259,8 @@ export interface TuiController {
   /** Latest permission-preset overlay (host names, selection, confirm). */
   getPermissionPane(): PermissionPaneState
   /** Latest settings overlay (host fields, selection, editing). */
+  copySelection?(text: string): void
+  getKeybindings?(): ShortcutOverrides
   getSettingsPane(): SettingsPaneState
   /** Agent Hub overlay (`子代理`); browse replaces children and sets input null. */
   getAgentHubPane(): AgentHubPaneState
@@ -263,6 +298,9 @@ export interface TuiController {
    * @returns the todo rows, or undefined.
    */
   getTodoHud?(): readonly TodoHudItem[] | undefined
+  /** Whether the complete, read-only TODO browser is open. */
+  getTodoPaneOpen?(): boolean
+  getSchedulePane?(): SchedulePaneState
   /** Tools-registry lookup for presenter titles; absent or undefined keeps generic cards. */
   getToolPresenters?(): ToolPresenterLookup | undefined
   /** Whether Enter sends a chat message; false makes Enter insert a newline. */
@@ -343,6 +381,7 @@ export interface LoopInputState {
   mentionDismissed: boolean
   /** Caret offset into `text`; omitted means the end of the buffer. */
   caretIndex?: number | undefined
+  selectionAnchor?: number | undefined
   /** History browsing index: undefined means at live prompt; 0..N-1 is index into inputHistory. */
   historyIndex?: number | undefined
   /** Saved draft before entering history browsing. */
@@ -562,13 +601,19 @@ function verticalNavEffect(
   key: string,
   keyInfo: Key,
   state: LoopInputState,
-  actionForDelta: (delta: 1 | -1) => LoopAction,
+  actionForDelta: (delta: number) => LoopAction,
 ): LoopKeyEffect | undefined {
   if (key === 'j' || keyInfo.downArrow) {
     return holdComposer(state, actionForDelta(1))
   }
   if (key === 'k' || keyInfo.upArrow) {
     return holdComposer(state, actionForDelta(-1))
+  }
+  if (keyInfo.pageDown) {
+    return holdComposer(state, actionForDelta(5))
+  }
+  if (keyInfo.pageUp) {
+    return holdComposer(state, actionForDelta(-5))
   }
   return undefined
 }
@@ -792,6 +837,7 @@ export function mapKeyEvent(
     workspace?: {
       open: boolean
       editing?: boolean | undefined
+      deliveries?: boolean | undefined
       rootPath?: string | undefined
       selectedKind?: 'directory' | 'file' | 'other' | undefined
       selectedPath?: string | undefined
@@ -857,6 +903,8 @@ export function mapKeyEvent(
     if (keyInfo.return && plugins.mode === 'preview') return send({ kind: 'install' })
     if (keyInfo.upArrow || key === 'k') return send({ kind: 'move', delta: -1 })
     if (keyInfo.downArrow || key === 'j') return send({ kind: 'move', delta: 1 })
+    if (keyInfo.pageUp) return send({ kind: 'move', delta: -5 })
+    if (keyInfo.pageDown) return send({ kind: 'move', delta: 5 })
     const action = key === ' ' ? 'toggle' : key === 'i' ? 'edit' : key === 'd' ? 'remove'
       : key === 'a' ? 'approve' : key === 'r' ? 'retry' : key === 'R' ? 'reload' : undefined
     return action === undefined ? { kind: 'none' } : send({ kind: action })
@@ -957,13 +1005,15 @@ export function mapKeyEvent(
     if (isArmedOverlayChord(state, key)) {
       return { kind: 'none' }
     }
-    if (key === 'y' || key === 'a') {
+    if (keyInfo.ctrl || keyInfo.meta) return { kind: 'none' }
+    const decision = key.toLowerCase()
+    if (decision === 'y' || decision === 'a') {
       return holdComposer(state, { kind: 'approval-allow' })
     }
-    if (key === 'n' || key === 'd' || keyInfo.escape) {
+    if (decision === 'n' || decision === 'd' || keyInfo.escape) {
       return holdComposer(state, { kind: 'approval-deny' })
     }
-    if (key === 'i') {
+    if (decision === 'i') {
       return holdComposer(state, { kind: 'approval-detail' })
     }
     return { kind: 'none' }
@@ -976,6 +1026,9 @@ export function mapKeyEvent(
       if ((askUser.optionCount ?? 0) === 0) return { kind: 'none' }
       return holdComposer(state, { kind: 'ask-user-submit' })
     }
+    if (keyInfo.ctrl || keyInfo.meta) return { kind: 'none' }
+    if (key === 'c') return holdComposer(state, { kind: 'ask-user-custom' })
+    if (key === ' ') return holdComposer(state, { kind: 'ask-user-toggle' })
     if (key >= '1' && key <= '9') {
       const index = Number(key) - 1
       if (index >= (askUser.optionCount ?? 0)) return { kind: 'none' }
@@ -995,10 +1048,12 @@ export function mapKeyEvent(
     if (isArmedOverlayChord(state, key)) {
       return { kind: 'none' }
     }
-    if (key === 'y') {
+    if (keyInfo.ctrl || keyInfo.meta) return { kind: 'none' }
+    const decision = key.toLowerCase()
+    if (decision === 'y') {
       return holdComposer(state, { kind: 'plan-review-approve' })
     }
-    if (key === 'n') {
+    if (decision === 'n') {
       return holdComposer(state, { kind: 'plan-review-keep' })
     }
     if (keyInfo.escape) {
@@ -1033,7 +1088,7 @@ export function mapKeyEvent(
     }
     return { kind: 'none' }
   }
-  if (settings.open && (settings.editing === true || settings.onboarding === true)) {
+  if (settings.open && settings.editing === true) {
     return draftKeyEffect(state, key, keyInfo, {
       cancel:
         settings.onboarding === true
@@ -1055,6 +1110,7 @@ export function mapKeyEvent(
     })
   }
   if (settings.open) {
+    if (keyInfo.tab) return holdComposer(state, { kind: 'settings-group', delta: keyInfo.shift ? -1 : 1 })
     if (keyInfo.escape) {
       return holdComposer(state, { kind: 'settings-escape' })
     }
@@ -1073,6 +1129,21 @@ export function mapKeyEvent(
     }
     if (key === 'k' || keyInfo.upArrow) {
       return holdComposer(state, { kind: 'settings-move', delta: -1 })
+    }
+    if (keyInfo.pageDown) {
+      return holdComposer(state, { kind: 'settings-move', delta: 5 })
+    }
+    if (keyInfo.pageUp) {
+      return holdComposer(state, { kind: 'settings-move', delta: -5 })
+    }
+    if (keyInfo.home) {
+      return holdComposer(state, { kind: 'settings-move', delta: -10000 })
+    }
+    if (keyInfo.end || key === 'G') {
+      return holdComposer(state, { kind: 'settings-move', delta: 10000 })
+    }
+    if (key === ' ') {
+      return holdComposer(state, { kind: 'settings-toggle' })
     }
     if (key === 'e') {
       return holdComposer(state, { kind: 'settings-export' })
@@ -1175,6 +1246,12 @@ export function mapKeyEvent(
       renaming: state.renaming,
     }
   }
+  if (keyActionFor(key, keyInfo) === 'agent-hub') {
+    if (dialogOpen) return { kind: 'none' }
+    return holdComposer(state, { kind: 'agent-hub' })
+  }
+  if (agentHubOpen && keyInfo.rightArrow) return holdComposer(state, { kind: 'agent-hub-expand' })
+  if (agentHubOpen && keyInfo.leftArrow) return holdComposer(state, { kind: 'agent-hub-escape' })
   if (keyInfo.return) {
     if (mention.open) {
       return applySelectedMention(state, mention.selectedCandidate)
@@ -1490,12 +1567,8 @@ export function mapKeyEvent(
     }
   }
   if (agentHubOpen) {
-    if (key === 'j' || keyInfo.downArrow) {
-      return holdComposer(state, { kind: 'agent-hub-move', delta: 1 })
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return holdComposer(state, { kind: 'agent-hub-move', delta: -1 })
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'agent-hub-move', delta }))
+    if (nav !== undefined) return nav
   }
   if (planDirectoryOpen) {
     if (key === 'j' || keyInfo.downArrow) {
@@ -1506,14 +1579,12 @@ export function mapKeyEvent(
     }
   }
   if (workflowOverlayOpen) {
-    if (key === 'j' || keyInfo.downArrow) {
-      return holdComposer(state, { kind: 'workflow-overlay-scroll', delta: 1 })
-    }
-    if (key === 'k' || keyInfo.upArrow) {
-      return holdComposer(state, { kind: 'workflow-overlay-scroll', delta: -1 })
-    }
+    const nav = verticalNavEffect(key, keyInfo, state, delta => ({ kind: 'workflow-overlay-scroll', delta }))
+    if (nav !== undefined) return nav
   }
   if (workspaceOpen) {
+    if (key === 'r') return holdComposer(state, { kind: 'workspace-refresh' })
+    if (key === 'o') return holdComposer(state, { kind: 'workspace-open-system' })
     if (key === 'j' || keyInfo.downArrow) {
       return holdComposer(state, { kind: 'workspace-move', delta: 1 })
     }
@@ -1546,7 +1617,7 @@ export function mapKeyEvent(
         caretIndex: caret + path.length,
       }
     }
-    if (key === 'e' && overlays.workspace?.preview !== true) {
+    if (key === 'e' && overlays.workspace?.preview !== true && overlays.workspace?.deliveries !== true) {
       // The path draft prefills the composer with the current root (D-09).
       const draft = overlays.workspace?.rootPath ?? ''
       return {
@@ -2053,8 +2124,16 @@ export function TuiLoop({
     readonly MentionCandidate[]
   >([])
   const [timelineOffset, setTimelineOffset] = useState(0)
+  const [blockingHelp, setBlockingHelp] = useState(false)
+  const blockingHelpRef = useRef(false)
+  const [blockingHelpOffset, setBlockingHelpOffset] = useState(0)
   const [helpOffset, setHelpOffset] = useState(0)
   const [planReviewOffset, setPlanReviewOffset] = useState(0)
+  const [approvalOffset, setApprovalOffset] = useState(0)
+  const [askUserOffset, setAskUserOffset] = useState(0)
+  const [askUserDetails, setAskUserDetails] = useState(false)
+  const askUserDetailsRef = useRef(askUserDetails)
+  askUserDetailsRef.current = askUserDetails
   const viewportSequenceRef = useRef(0)
   const [viewportCommand, setViewportCommand] = useState<TranscriptViewportCommand>()
   const [topDividerLabel, setTopDividerLabel] = useState<string | undefined>()
@@ -2074,6 +2153,7 @@ export function TuiLoop({
   // effects directly and route state through this write-through ref, mirrored
   // on commit so back-to-back events never fold on stale state.
   const stateRef = useRef(state)
+  const settingsComposerRef = useRef<LoopInputState | undefined>(undefined)
   const mentionSeqRef = useRef(0)
   const mentionAbortRef = useRef<AbortController | undefined>(undefined)
   stateRef.current = state
@@ -2116,6 +2196,10 @@ export function TuiLoop({
   const search = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getSearchPane(),
+  )
+  const browserPane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getBrowserPane?.() ?? EMPTY_BROWSER_PANE,
   )
   const timelineOpen = useSyncExternalStore(
     callback => controller.subscribe(callback),
@@ -2201,6 +2285,16 @@ export function TuiLoop({
     callback => controller.subscribe(callback),
     () => controller.getAdaptiveInfoFooter?.(),
   )
+  const todoPaneOpen = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getTodoPaneOpen?.() ?? false,
+  )
+  const [todoOffset, setTodoOffset] = useState(0)
+  const schedulePane = useSyncExternalStore(
+    callback => controller.subscribe(callback),
+    () => controller.getSchedulePane?.() ?? EMPTY_SCHEDULE_PANE,
+  )
+  useEffect(() => { if (!todoPaneOpen) setTodoOffset(0) }, [todoPaneOpen])
   const todoHud = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getTodoHud?.(),
@@ -2240,6 +2334,7 @@ export function TuiLoop({
   const [localMode, setLocalMode] = useState<LoopMode>('agent')
   const currentMode: LoopMode = controllerMode ?? localMode
   const { columns, rows } = useWindowSize()
+  const dialogRowsRef = useRef(Math.max(4, rows - 6))
   const onWorkspacePreviewLayout = useCallback((layout: WorkspacePreviewLayout) => {
     controller.dispatch({ kind: 'workspace-preview-layout', layout })
   }, [controller])
@@ -2247,9 +2342,21 @@ export function TuiLoop({
   useEffect(() => {
     if (helpPane.open) setHelpOffset(0)
   }, [helpPane.open])
-  useEffect(() => {
-    if (planReviewPane.open) setPlanReviewOffset(0)
-  }, [planReviewPane.open])
+  useLayoutEffect(() => { setPlanReviewOffset(0) }, [planReviewPane.open, planReviewPane.requestId, planReviewPane.plan])
+  useLayoutEffect(() => { setApprovalOffset(0) }, [approvalPane.open, approvalPane.requestId, approvalPane.toolName, approvalPane.reason, approvalPane.arguments, approvalPane.detailsOpen])
+  useLayoutEffect(() => {
+    setAskUserOffset(0)
+    setAskUserDetails(false)
+    askUserDetailsRef.current = false
+  }, [askUserPane.open, askUserPane.requestId, askUserPane.header, askUserPane.questionNumber])
+  useLayoutEffect(() => { setAskUserOffset(0) }, [askUserPane.selectedIndex])
+  useLayoutEffect(() => {
+    const draft = settingsComposerRef.current
+    if (draft === undefined || (settingsPane.open && settingsPane.editing)) return
+    settingsComposerRef.current = undefined
+    stateRef.current = draft
+    setState(draft)
+  })
   const feedback = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getFeedback(),
@@ -2284,6 +2391,8 @@ export function TuiLoop({
   settingsPaneRef.current = settingsPane
   const agentHubPaneRef = useRef(agentHubPane)
   agentHubPaneRef.current = agentHubPane
+  const agentHubViewportRef = useRef<AgentHubViewport>({ offset: 0, maxOffset: 0, pageRows: 1 })
+  const onAgentHubViewport = useCallback((viewport: AgentHubViewport) => { agentHubViewportRef.current = viewport }, [])
   const planDirectoryPaneRef = useRef(planDirectoryPane)
   planDirectoryPaneRef.current = planDirectoryPane
   const workspacePaneRef = useRef(workspacePane)
@@ -2328,6 +2437,36 @@ export function TuiLoop({
   useEffect(() => {
     const listener = (delta: number): void => {
       frameMetrics?.recordInputEvent()
+      syncPaneRef(approvalPaneRef, controller.getApprovalPane?.bind(controller))
+      syncPaneRef(askUserPaneRef, controller.getAskUserPane?.bind(controller))
+      syncPaneRef(planReviewPaneRef, controller.getPlanReviewPane?.bind(controller))
+      syncPaneRef(agentHubPaneRef, controller.getAgentHubPane.bind(controller))
+      if (approvalPaneRef.current.open) {
+        if (approvalPaneRef.current.detailsOpen || approvalPaneRef.current.deliveryError !== undefined) setApprovalOffset(offset => nextDialogOffset(offset, -delta))
+        return
+      }
+      if (askUserPaneRef.current.open) {
+        if (askUserDetailsRef.current) setAskUserOffset(offset => nextDialogOffset(offset, -delta))
+        else if (!askUserPaneRef.current.editingCustom) controller.dispatch({ kind: 'ask-user-move', delta: -delta })
+        return
+      }
+      if (planReviewPaneRef.current.open) {
+        setPlanReviewOffset(offset => nextDialogOffset(offset, -delta))
+        return
+      }
+      if (agentHubPaneRef.current.open) {
+        if (agentHubPaneRef.current.view === 'transcript') {
+          const previous = agentHubPaneRef.current.scrollOffset ?? 0
+          const next = agentHubScrollTarget(agentHubViewportRef.current, previous, -delta)
+          if (next !== previous) controller.dispatch({ kind: 'agent-hub-move', delta: next - previous })
+        } else controller.dispatch({ kind: 'agent-hub-move', delta: -delta })
+        return
+      }
+      if (controller.getTodoPaneOpen?.() === true) {
+        if (approvalPaneRef.current.open || askUserPaneRef.current.open || planReviewPaneRef.current.open) return
+        setTodoOffset(offset => Math.max(0, offset - delta))
+        return
+      }
       if (pluginsPaneRef.current.open) {
         controller.dispatch({ kind: 'plugins-input', input: { kind: 'move', delta: -delta } })
         return
@@ -2338,7 +2477,7 @@ export function TuiLoop({
       }
       const settingsState = settingsPaneRef.current
       if (settingsState.open) {
-        if (settingsState.editing || settingsState.onboarding === true) return
+        if (settingsState.editing) return
         controller.dispatch({ kind: 'settings-move', delta: -delta })
         return
       }
@@ -2349,6 +2488,7 @@ export function TuiLoop({
         )
         return
       }
+      if (controller.getBrowserPane?.().open) { controller.dispatch({ kind: 'browser-move', delta: -delta });return }
       if (timelineOpenRef.current) {
         const maxOffset = Math.max(
           0,
@@ -2396,6 +2536,108 @@ export function TuiLoop({
     syncPaneRef(toolDetailsPaneRef, controller.getToolDetailsPane?.bind(controller))
     syncPaneRef(feedbackRef, controller.getFeedback?.bind(controller))
     controller.noteUserActivity()
+    const blockingDialog = approvalPaneRef.current.open || askUserPaneRef.current.open || planReviewPaneRef.current.open
+    if (blockingDialog && (keyInfo.meta && key.toLowerCase() === 'h' || key === '?' && !askUserPaneRef.current.editingCustom)) {
+      blockingHelpRef.current = !blockingHelpRef.current;setBlockingHelp(blockingHelpRef.current);setBlockingHelpOffset(0);return
+    }
+    if (blockingDialog && blockingHelpRef.current) {
+      if (keyInfo.escape) { blockingHelpRef.current = false;setBlockingHelp(false) }
+      else if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+      else {
+        const delta = dialogScrollDelta(key, keyInfo, Math.max(1, dialogRowsRef.current - 4))
+        if (delta !== undefined) setBlockingHelpOffset(offset => Math.max(0, offset + delta))
+      }
+      return
+    }
+    if (!blockingDialog && blockingHelpRef.current) { blockingHelpRef.current = false;setBlockingHelp(false) }
+    if (approvalPaneRef.current.open && (approvalPaneRef.current.detailsOpen || approvalPaneRef.current.deliveryError !== undefined)) {
+      const delta = dialogScrollDelta(key, keyInfo, Math.max(1, dialogRowsRef.current - 4))
+      if (delta !== undefined) { setApprovalOffset(offset => nextDialogOffset(offset, delta)); return }
+    }
+    if (askUserPaneRef.current.open && !approvalPaneRef.current.open) {
+      const question = askUserPaneRef.current
+      if (question.editingCustom) {
+        if (keyInfo.tab) {
+          askUserDetailsRef.current = !askUserDetailsRef.current
+          setAskUserDetails(askUserDetailsRef.current)
+          setAskUserOffset(0)
+          return
+        }
+        if (askUserDetailsRef.current) {
+          if (keyInfo.escape) { askUserDetailsRef.current = false;setAskUserDetails(false) }
+          else if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+          else {
+            const delta = dialogScrollDelta(key, keyInfo, Math.max(1, dialogRowsRef.current - 4))
+            if (delta !== undefined) setAskUserOffset(offset => nextDialogOffset(offset, delta))
+          }
+          return
+        }
+        if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+        else {
+          const draft = question.customText ?? ''
+          const effect = draftKeyEffect({ ...stateRef.current, text: draft, caretIndex: question.customCaretIndex ?? draft.length }, key, keyInfo, {
+            cancel: { kind: 'ask-user-custom-cancel' }, apply: () => ({ kind: 'ask-user-custom-save' }),
+          })
+          if (effect.kind === 'dispatch') {
+            if (effect.action.kind === 'ask-user-custom-save' || effect.action.kind === 'ask-user-custom-cancel') controller.dispatch(effect.action)
+            else controller.dispatch({ kind: 'ask-user-custom-edit', text: effect.text, caretIndex: effect.caretIndex ?? effect.text.length })
+          }
+        }
+        return
+      }
+      if (key.toLowerCase() === 'i' && !keyInfo.ctrl && !keyInfo.meta) {
+        askUserDetailsRef.current = !askUserDetailsRef.current
+        setAskUserDetails(askUserDetailsRef.current)
+        setAskUserOffset(0)
+        return
+      }
+      if (keyInfo.pageUp || keyInfo.pageDown || (askUserDetailsRef.current && (keyInfo.home || keyInfo.end))) {
+        const delta = dialogScrollDelta(key, keyInfo, Math.max(1, dialogRowsRef.current - 4))
+        if (!askUserDetailsRef.current) {
+          askUserDetailsRef.current = true
+          setAskUserDetails(true)
+          setAskUserOffset(0)
+        } else if (delta !== undefined) setAskUserOffset(offset => nextDialogOffset(offset, delta))
+        return
+      }
+      if ((keyInfo.home || keyInfo.end) && askUserPaneRef.current.options.length > 0) {
+        controller.dispatch({ kind: 'ask-user-digit', index: keyInfo.home ? 0 : askUserPaneRef.current.options.length - 1 })
+        return
+      }
+    }
+    if (planReviewPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open) {
+      const delta = dialogScrollDelta(key, keyInfo, Math.max(1, Math.min(PLAN_REVIEW_WINDOW, dialogRowsRef.current - 4)))
+      if (delta !== undefined) { setPlanReviewOffset(offset => nextDialogOffset(offset, delta)); return }
+    }
+    if (agentHubPaneRef.current.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      const hub = agentHubPaneRef.current
+      if (hub.prompt !== undefined) {
+        if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+        else if (keyInfo.return && keyInfo.ctrl) controller.dispatch({ kind: 'agent-hub-control', input: 'steer' })
+        else {
+          const effect = draftKeyEffect({ ...stateRef.current, text: hub.prompt, caretIndex: hub.caretIndex ?? hub.prompt.length }, key, keyInfo, {
+            cancel: { kind: 'agent-hub-control', input: 'cancel' }, apply: () => ({ kind: 'agent-hub-control', input: 'queue' }),
+          })
+          if (effect.kind === 'dispatch') {
+            if (effect.action.kind === 'agent-hub-control') controller.dispatch(effect.action)
+            else controller.dispatch({ kind: 'agent-hub-control', input: 'edit', text: effect.text, caretIndex: effect.caretIndex ?? effect.text.length })
+          }
+        }
+        return
+      }
+      if (!keyInfo.ctrl && !keyInfo.meta && ['s', 'c', 'v'].includes(key)) {
+        controller.dispatch({ kind: 'agent-hub-control', input: key === 's' ? 'stop' : key === 'c' ? 'compose' : 'split' });return
+      }
+    }
+    if (agentHubPaneRef.current.open && agentHubPaneRef.current.view === 'transcript' && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      const delta = dialogScrollDelta(key, keyInfo, agentHubViewportRef.current.pageRows)
+      if (delta !== undefined) {
+        const previous = agentHubPaneRef.current.scrollOffset ?? 0
+        const next = agentHubScrollTarget(agentHubViewportRef.current, previous, delta)
+        if (next !== previous) controller.dispatch({ kind: 'agent-hub-move', delta: next - previous })
+        return
+      }
+    }
     if (toolDetailsPaneRef.current.open
       && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
       if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
@@ -2406,7 +2648,84 @@ export function TuiLoop({
       }
       return
     }
+    if (controller.getTodoPaneOpen?.() === true
+      && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+      else if (keyInfo.ctrl && key === 'b') controller.dispatch({ kind: 'agent-hub' })
+      else if (keyInfo.escape || keyInfo.return) controller.dispatch({ kind: 'todo-pane' })
+      else if (keyInfo.home) setTodoOffset(0)
+      else if (keyInfo.end || key === 'G') setTodoOffset(Number.MAX_SAFE_INTEGER)
+      else if (keyInfo.upArrow || key === 'k') setTodoOffset(offset => Math.max(0, offset - 1))
+      else if (keyInfo.downArrow || key === 'j') setTodoOffset(offset => offset + 1)
+      else if (keyInfo.pageUp) setTodoOffset(offset => Math.max(0, offset - Math.max(1, rows - 10)))
+      else if (keyInfo.pageDown) setTodoOffset(offset => offset + Math.max(1, rows - 10))
+      else if (isNavigationBurst(key, keyInfo)) for (const char of key) handleKey(char, keyInfo)
+      return
+    }
+    const browser = controller.getBrowserPane?.()
+    if (browser?.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+      else if (keyInfo.ctrl || keyInfo.meta) return
+      else if (keyInfo.escape) controller.dispatch({ kind: 'browser-back' })
+      else if (keyInfo.return) controller.dispatch({ kind: 'browser-enter' })
+      else if (key === 'r') controller.dispatch({ kind: 'browser-refresh' })
+      else if (keyInfo.home || keyInfo.end) controller.dispatch({ kind: 'browser-move', delta: keyInfo.home ? -Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER })
+      else {
+        const delta = dialogScrollDelta(key, keyInfo, Math.max(1, dialogRowsRef.current - 4))
+        if (delta !== undefined) controller.dispatch({ kind: 'browser-move', delta })
+        else controller.dispatch({ kind: 'browser-action', key })
+      }
+      return
+    }
+    const scheduled = controller.getSchedulePane?.()
+    if (scheduled?.open && !approvalPaneRef.current.open && !askUserPaneRef.current.open && !planReviewPaneRef.current.open) {
+      if (keyInfo.ctrl && key === 'c') controller.dispatch({ kind: 'sigint' })
+      else if (keyInfo.ctrl || keyInfo.meta) return
+      else if (scheduled.busy) return
+      else if (scheduled.confirmDelete) {
+        if (key.toLowerCase() === 'y') controller.dispatch({ kind: 'schedule-confirm', confirmed: true })
+        else if (key.toLowerCase() === 'n' || keyInfo.escape) controller.dispatch({ kind: 'schedule-confirm', confirmed: false })
+      }
+      else if (keyInfo.escape) controller.dispatch({ kind: 'schedule-escape' })
+      else if (keyInfo.return) controller.dispatch({ kind: 'schedule-enter' })
+      else if (key === 'd') controller.dispatch({ kind: 'schedule-delete' })
+      else if (key === 'r') controller.dispatch({ kind: 'schedule-refresh' })
+      else if (keyInfo.upArrow || key === 'k') controller.dispatch({ kind: 'schedule-move', delta: -1 })
+      else if (keyInfo.downArrow || key === 'j') controller.dispatch({ kind: 'schedule-move', delta: 1 })
+      else if (keyInfo.pageUp) controller.dispatch({ kind: 'schedule-move', delta: -Math.max(1, rows - 9) })
+      else if (keyInfo.pageDown) controller.dispatch({ kind: 'schedule-move', delta: Math.max(1, rows - 9) })
+      else if (keyInfo.home) controller.dispatch({ kind: 'schedule-move', delta: -Number.MAX_SAFE_INTEGER })
+      else if (keyInfo.end) controller.dispatch({ kind: 'schedule-move', delta: Number.MAX_SAFE_INTEGER })
+      return
+    }
+    const modalOpen = [paneRef.current, searchRef.current, modelPaneRef.current, helpPaneRef.current,
+      approvalPaneRef.current, askUserPaneRef.current, permissionPaneRef.current, settingsPaneRef.current,
+      pluginsPaneRef.current, accountPaneRef.current, agentHubPaneRef.current, planDirectoryPaneRef.current,
+      workspacePaneRef.current, feedbackPaneRef.current, workflowOverlayRef.current, planReviewPaneRef.current].some(pane => pane.open)
+    if (!modalOpen && keyInfo.ctrl && !keyInfo.meta && !keyInfo.shift) {
+      const mapped = remapShortcut(key, controller.getKeybindings?.() ?? EMPTY_SHORTCUTS)
+      if (mapped === undefined) return
+      key = mapped
+    }
     const current = stateRef.current
+    if (!modalOpen && !current.renaming && !keyInfo.meta) {
+      const selected = { text: current.text, caretIndex: current.caretIndex ?? current.text.length, selectionAnchor: current.selectionAnchor }
+      const direction = keyInfo.leftArrow ? 'left' : keyInfo.rightArrow ? 'right' : keyInfo.home ? 'home' : keyInfo.end ? 'end' : undefined
+      const range = inputSelectionRange(selected)
+      const newline = keyInfo.return && (keyInfo.shift || !controller.getSubmitOnEnter() && !keyInfo.ctrl && !current.text.startsWith('/'))
+      if (direction !== undefined && (current.text !== '' || keyInfo.shift || direction === 'left' || direction === 'right') || newline || (range !== undefined && ( keyInfo.backspace || keyInfo.delete || isTextInput(key, keyInfo) || keyInfo.ctrl && key === 'y'))) {
+        if (keyInfo.ctrl && key === 'y') {
+          const text = selectedInputText(selected)
+          if (text !== undefined) controller.copySelection?.(text)
+          return
+        }
+        const selection = direction !== undefined ? moveInputSelection(selected, { direction, extend: keyInfo.shift })
+          : keyInfo.backspace || keyInfo.delete ? deleteInputSelection(selected, keyInfo.backspace ? 'backward' : 'forward')
+          : replaceInputSelection(selected, newline ? '\n' : key)
+        const next = { ...current, ...selection, prefixG: false, commandQuery: selection.text.startsWith('/') ? selection.text.slice(1) : undefined }
+        stateRef.current = next;setState(next);return
+      }
+    }
     const effect = mapKeyEvent(
       current,
       key,
@@ -2460,6 +2779,7 @@ export function TuiLoop({
         workspace: {
           open: workspacePaneRef.current.open,
           editing: workspacePaneRef.current.editing,
+          deliveries: workspacePaneRef.current.mode === 'deliveries',
           rootPath: workspacePaneRef.current.root,
           selectedKind:
             workspacePaneRef.current.nodes[workspacePaneRef.current.selectedIndex]?.kind,
@@ -2491,6 +2811,7 @@ export function TuiLoop({
     }
     if (effect.kind === 'dispatch') {
       const action = effect.action
+      if (action.kind === 'settings-edit' && settingsComposerRef.current === undefined) settingsComposerRef.current = current
       if (
         isSessionTransitionAction(action)
         && isSessionTransitionStatus(feedbackRef.current)
@@ -2512,11 +2833,7 @@ export function TuiLoop({
           Math.max(0, Math.min(previous + action.delta, maxOffset)),
         )
       } else if (action.kind === 'plan-review-scroll') {
-        const lines = (planReviewPaneRef.current.plan ?? '').split('\n')
-        const maxOffset = Math.max(0, lines.length - PLAN_REVIEW_WINDOW)
-        setPlanReviewOffset(previous =>
-          Math.max(0, Math.min(previous + action.delta, maxOffset)),
-        )
+        setPlanReviewOffset(previous => nextDialogOffset(previous, action.delta))
       } else if (action.kind === 'scroll') {
         issueViewportCommand({ kind: 'scroll', delta: action.delta })
       } else if (action.kind === 'scroll-page') {
@@ -2540,6 +2857,7 @@ export function TuiLoop({
         action.kind === 'new-session'
         || action.kind === 'select-session'
       ) {
+        settingsComposerRef.current = undefined
         setSentHistory([])
         issueViewportCommand({ kind: 'reset' })
         controller.dispatch(action)
@@ -2574,6 +2892,7 @@ export function TuiLoop({
       effect.kind === 'dispatch'
         ? {
           text: effect.text,
+          selectionAnchor: undefined,
           commandQuery: effect.commandQuery,
           prefixG: effect.prefixG,
           renaming: effect.renaming,
@@ -2629,6 +2948,22 @@ export function TuiLoop({
 
   const handlePaste = (pasted: string): void => {
     controller.noteUserActivity()
+    if (blockingHelpRef.current) return
+    if (askUserPaneRef.current.open && !approvalPaneRef.current.open) {
+      const question = askUserPaneRef.current
+      if (question.editingCustom && !askUserDetailsRef.current) {
+        const draft = question.customText ?? ''
+        const caret = clampCaretIndex(draft, question.customCaretIndex ?? draft.length)
+        controller.dispatch({ kind: 'ask-user-custom-edit',
+          text: draft.slice(0, caret) + pasted + draft.slice(caret), caretIndex: caret + pasted.length })
+      }
+      return
+    }
+    const hub = agentHubPaneRef.current
+    if (hub.open && hub.prompt !== undefined) {
+      const caret = hub.caretIndex ?? hub.prompt.length
+      controller.dispatch({ kind: 'agent-hub-control', input: 'edit', text: hub.prompt.slice(0, caret) + pasted + hub.prompt.slice(caret), caretIndex: caret + pasted.length });return
+    }
     if (pluginsPaneRef.current.open) {
       if (pluginsPaneRef.current.mode === 'input') controller.dispatch({ kind: 'plugins-input',
         input: { kind: 'text', value: pluginsPaneRef.current.spec + pasted } })
@@ -2636,7 +2971,8 @@ export function TuiLoop({
     }
     const current = stateRef.current
     if (
-      toolDetailsPaneRef.current.open
+      controller.getBrowserPane?.().open
+      || toolDetailsPaneRef.current.open
       || approvalPaneRef.current.open
       || askUserPaneRef.current.open
       || planReviewPaneRef.current.open
@@ -2661,7 +2997,8 @@ export function TuiLoop({
       return
     }
     const caret = clampCaretIndex(current.text, current.caretIndex)
-    const appended = current.text.slice(0, caret) + pasted + current.text.slice(caret)
+    const selection = replaceInputSelection({ text: current.text, caretIndex: caret, selectionAnchor: current.selectionAnchor }, pasted)
+    const appended = selection.text
     clearChord()
     if (searchRef.current.open) {
       controller.dispatch({ kind: 'search', query: appended })
@@ -2676,7 +3013,8 @@ export function TuiLoop({
       mentionDismissed: false,
       commandSelectedIndex: 0,
       commandDismissed: false,
-      caretIndex: caret + pasted.length,
+      caretIndex: selection.caretIndex,
+      selectionAnchor: undefined,
       historyIndex: undefined,
       historyDraft: undefined,
     }
@@ -2888,6 +3226,7 @@ export function TuiLoop({
     || pluginsPane.open
     || accountPane.open
     || search.open
+    || browserPane.open
     || timelineOpen
     || modelPane.open
     || helpPane.open
@@ -2896,11 +3235,13 @@ export function TuiLoop({
     || askUserPane.open
     || permissionPane.open
     || settingsPane.open
-    || agentHubPane.open
+    || (agentHubPane.open && !(agentHubPane.split && columns >= 100))
     || planDirectoryPane.open
     || workspacePane.open
     || feedbackPane.open
     || workflowOverlay.open
+    || todoPaneOpen
+    || schedulePane.open
     || planReviewPane.open
   const brandBlocked =
     state.text !== ''
@@ -2928,7 +3269,7 @@ export function TuiLoop({
   const inputMeasureRef = useRef<DOMElement | null>(null)
   const inputMeasureKey = useMemo(() => ({}), [
     columns, state.text, commandMode, mentionMode, mentionCandidates,
-    approvalPane, askUserPane, planReviewPane, viewportMotionPaused,
+    approvalPane, askUserPane, planReviewPane, agentHubPane.prompt, viewportMotionPaused,
   ])
   const [inputMeasure, setInputMeasure] = useState<{ key: object; height: number }>()
   useLayoutEffect(() => {
@@ -2959,6 +3300,7 @@ export function TuiLoop({
   toolDetailsSizeRef.current = { width: columns, pageRows: toolPageRows }
   const streamView = createElement(StreamView, {
     locale,
+    viewportColumns: agentHubPane.split && columns >= 100 ? Math.floor(columns / 2) : columns,
     layoutKey: streamLayoutKey,
     model,
     presenters,
@@ -3007,7 +3349,10 @@ export function TuiLoop({
         createElement(Box, { key: 'conversation-gap', width: '100%', height: 1, flexShrink: 0 }),
       )
   const overlayBrowseOpen =
-    agentHubPane.open
+    browserPane.open
+    || schedulePane.open
+    || todoPaneOpen
+    || agentHubPane.open
     || pluginsPane.open
     || accountPane.open
     || planDirectoryPane.open
@@ -3017,6 +3362,9 @@ export function TuiLoop({
   let content: ReactNode
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content = conversation
+  } else if (browserPane.open) {
+    content = createElement(BrowserPane, { state: browserPane, maxRows: Math.max(5, rows - 3 - statusRowCount), maxCols: columns,
+      onOffsetChange: offset => controller.dispatch({ kind: 'browser-offset', offset }) })
   } else if (accountPane.open) {
     content = createElement(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) })
   } else if (pluginsPane.open) {
@@ -3046,9 +3394,13 @@ export function TuiLoop({
       ...(settingsPane.updateError === undefined
         ? {}
         : { updateError: settingsPane.updateError }),
+      ...(settingsPane.busy === undefined
+        ? {}
+        : { busy: settingsPane.busy }),
     })
   } else if (modelPane.open) {
     content = createElement(ModelPane, {
+      maxRows: Math.max(4, rows - 3 - statusRowCount - inputRows),
       filter: modelPane.filter,
       rows: modelPane.rows,
       selectedIndex: modelPane.selectedIndex,
@@ -3085,6 +3437,10 @@ export function TuiLoop({
     })
   } else if (agentHubPane.open) {
     content = createElement(AgentHubPane, {
+      ...agentHubPane,
+      renderEditor: false,
+      maxCols: agentHubPane.split && columns >= 100 ? Math.floor(columns / 2) : columns,
+      maxRows: Math.max(8, rows - 3 - statusRowCount - (agentHubPane.prompt === undefined ? 0 : inputRows)),
       rows: agentHubPane.rows,
       selectedIndex: agentHubPane.selectedIndex,
       view: agentHubPane.view,
@@ -3095,7 +3451,9 @@ export function TuiLoop({
       maxActiveSubagents: agentHubPane.maxActiveSubagents,
       maxDepth: agentHubPane.maxDepth,
       scrollOffset: agentHubPane.scrollOffset,
+      onViewportChange: onAgentHubViewport,
     })
+    if (agentHubPane.split && columns >= 100) content = createElement(Box, { flexDirection: 'row', width: '100%' }, createElement(Box, { width: '50%', flexDirection: 'column', overflow: 'hidden' }, streamView), createElement(Box, { width: '50%', flexDirection: 'column', overflow: 'hidden' }, content))
   } else if (planDirectoryPane.open) {
     content = createElement(PlanDirectoryPane, {
       selectedIndex: planDirectoryPane.selectedIndex,
@@ -3114,6 +3472,12 @@ export function TuiLoop({
     content = createElement(FeedbackPane, { state: feedbackPane })
   } else if (workflowOverlay.open) {
     content = createElement(WorkflowOverlay, { state: workflowOverlay })
+  } else if (todoPaneOpen) {
+    content = createElement(TodoPane, { todos: todoHud ?? [], offset: todoOffset, onOffsetChange: setTodoOffset, locale })
+  } else if (schedulePane.open) {
+    content = createElement(SchedulePane, { state: schedulePane,
+      onOffsetChange: offset => controller.dispatch({ kind: 'schedule-offset', offset }),
+    })
   } else {
     content = conversation
   }
@@ -3124,37 +3488,38 @@ export function TuiLoop({
     ...props,
     rowsBelow: (props.rowsBelow ?? 0) + statusRowCount + 1,
   })
+  const dialogRows = Math.max(4, rows - statusRowCount - 3)
+  dialogRowsRef.current = dialogRows
+  if (approvalPane.open || askUserPane.open || planReviewPane.open) hideFrameCaret()
   let inputSlot: ReactNode
   if (approvalPane.open) {
-    inputSlot = createElement(
-      Box,
-      { flexDirection: 'column', width: '100%' },
-      createElement(ApprovalPane, {
-        toolName: approvalPane.toolName,
-        reason: approvalPane.reason,
-        arguments: approvalPane.arguments,
-        detailsOpen: approvalPane.detailsOpen,
-        deliveryError: approvalPane.deliveryError,
-      }),
-      inputBar({
-        text: state.text,
-        commandMode,
-        mentionMode,
-        caretIndex: state.caretIndex,
-      }),
-    )
+    inputSlot = createElement(ApprovalPane, {
+      toolName: approvalPane.toolName,
+      reason: approvalPane.reason,
+      arguments: approvalPane.arguments,
+      detailsOpen: approvalPane.detailsOpen,
+      deliveryError: approvalPane.deliveryError,
+      maxRows: dialogRows, maxCols: columns, offset: approvalOffset, onOffsetChange: setApprovalOffset,
+    })
   } else if (askUserPane.open) {
     inputSlot = createElement(AskUserPane, {
+      ...askUserPane,
       header: askUserPane.header,
       options: askUserPane.options,
       selectedIndex: askUserPane.selectedIndex,
+      maxRows: dialogRows, maxCols: columns, detailsOpen: askUserDetails,
+      offset: askUserOffset, onOffsetChange: setAskUserOffset,
+      customRowsBelow: statusRowCount + 2,
     })
   } else if (planReviewPane.open) {
     inputSlot = createElement(PlanReviewPane, {
       plan: planReviewPane.plan,
       offset: planReviewOffset,
       deliveryError: planReviewPane.deliveryError,
+      maxRows: dialogRows, maxCols: columns, onOffsetChange: setPlanReviewOffset,
     })
+  } else if (agentHubPane.open && agentHubPane.prompt !== undefined) {
+    inputSlot = inputBar({ text: agentHubPane.prompt, caretIndex: agentHubPane.caretIndex, commandMode: false, mentionMode: false, modelChip: '子代理续聊 · Enter 排队 / Ctrl+Enter 引导' })
   } else if (
     (permissionPane.open || overlayBrowseOpen)
     && !(workspacePane.open && workspacePane.editing)
@@ -3178,6 +3543,9 @@ export function TuiLoop({
       commandMode: false,
       mentionMode: false,
       caretIndex: state.caretIndex,
+      selectionAnchor: state.selectionAnchor,
+      secret: settingsPane.editing && (settingsPane.onboarding === true
+        || settingsPane.rows[settingsPane.selectedIndex]?.namespace === 'credentials'),
     })
   } else if (toolDetailsPane.open) {
     inputSlot = undefined
@@ -3202,6 +3570,7 @@ export function TuiLoop({
         commandMode,
         mentionMode,
         caretIndex: state.caretIndex,
+      selectionAnchor: state.selectionAnchor,
         rowsBelow: menuRows,
       }),
       createElement(CommandMenu, {
@@ -3222,6 +3591,7 @@ export function TuiLoop({
         commandMode,
         mentionMode,
         caretIndex: state.caretIndex,
+      selectionAnchor: state.selectionAnchor,
         rowsBelow: mentionRows,
       }),
       createElement(Mention, {
@@ -3236,9 +3606,13 @@ export function TuiLoop({
       commandMode,
       mentionMode,
       caretIndex: state.caretIndex,
+      selectionAnchor: state.selectionAnchor,
     })
   }
 
+  if (blockingHelp && (approvalPane.open || askUserPane.open || planReviewPane.open)) {
+    inputSlot = createElement(BrowserPane, { state: { ...EMPTY_BROWSER_PANE, open: true, title: '对话只读帮助 · Esc 返回原对话', detail: shortcutCatalog(EMPTY_SHORTCUTS).filter(row => row.id === 'blocking' || row.id === 'ime').map(row => `${row.title}\n${row.hint}`).join('\n\n'), offset: blockingHelpOffset }, maxRows: dialogRows, maxCols: columns, onOffsetChange: setBlockingHelpOffset })
+  }
   return createElement(AppShell, {
     title: liveTitle === '' ? title : liveTitle,
     badge: adaptiveInfoFooter === undefined ? badge : shortenHomePath(controller.getCwd(), homedir()),
@@ -3251,6 +3625,29 @@ export function TuiLoop({
     input: inputSlot === null || inputSlot === undefined ? inputSlot : createElement(Box, { ref: inputMeasureRef, flexDirection: 'column', width: '100%' }, inputSlot),
     topDividerLabel,
   })
+}
+
+/** Navigation is local to the dialog and cannot edit or submit the saved draft. */
+function dialogScrollDelta(key: string, info: Key, pageRows: number): number | undefined {
+  if (info.ctrl || info.meta) return undefined
+  if (info.home) return -Infinity
+  if (info.end || key === 'G') return Infinity
+  if (info.pageUp) return -pageRows
+  if (info.pageDown) return pageRows
+  if (info.upArrow || key === 'k') return -1
+  if (info.downArrow || key === 'j') return 1
+  return undefined
+}
+
+function agentHubScrollTarget(viewport: AgentHubViewport, previous: number, delta: number): number {
+  if (delta === Infinity || (previous === Number.MAX_SAFE_INTEGER && delta > 0)) return Number.MAX_SAFE_INTEGER
+  return Math.min(viewport.maxOffset, nextDialogOffset(viewport.offset, delta))
+}
+
+function nextDialogOffset(current: number, delta: number): number {
+  if (delta === Infinity) return Number.MAX_SAFE_INTEGER
+  if (delta === -Infinity) return 0
+  return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, current + delta))
 }
 
 /** Re-export for consumers that build their own palettes. */

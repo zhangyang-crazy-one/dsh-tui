@@ -2,7 +2,7 @@
  * Workspace overlay (`工作区`, `g t`): the lazy ctx.fs tree. Directories carry
  * `▸` collapsed / `▾` expanded glyphs (tree nodes, not the Ctrl+E tool-card
  * fold); the selected row carries `› `. Browse footnote
- * `j/k 选择 · Enter 打开 · e 路径 · Esc 关闭`; the path draft switches the
+ * `j/k 选择 · Enter 打开 · r 刷新 · e 路径 · Esc 关闭`; the path draft switches the
  * footnote to `Enter 解析 · Esc 取消` and a failed resolve keeps the previous
  * root with `✗ 路径无效：{原因}` + `当前路径保持不变 · 可重试` (D-09).
  * File previews wrap before paging, retain source line numbers, and reuse
@@ -22,6 +22,8 @@ import { tokenize } from './markdown.tsx'
 
 /** One visible workspace-tree row. */
 export interface WorkspaceNode {
+  /** Optional delivery description. */
+  readonly description?: string
   /** The node target's displayPath (inserted into the composer on `i`). */
   readonly path: string
   /** Basename shown in the tree (untrusted). */
@@ -36,6 +38,8 @@ export interface WorkspaceNode {
 
 /** Controller snapshot for the workspace overlay. */
 export interface WorkspacePaneState {
+  /** Explicit deliveries reuse file navigation without exposing the workspace tree. */
+  readonly mode?: 'deliveries'
   /** Whether this overlay currently replaces the conversation column. */
   readonly open: boolean
   /** Tree root display path ('' until the first resolve lands). */
@@ -50,6 +54,7 @@ export interface WorkspacePaneState {
   readonly error?: string | undefined
   /** Path-resolve failure reason (paints `✗ 路径无效：{原因}`). */
   readonly resolveError?: string | undefined
+  readonly watchError?: string | undefined
   /** Open file preview details when viewing file content. */
   readonly preview?: WorkspaceFilePreview | undefined
 }
@@ -95,10 +100,11 @@ const PREVIEW_TOKEN: Readonly<Record<ReturnType<typeof tokenize>[number]['kind']
 const PREVIEW_INDEX_BLOCK = 128
 
 /** Bounded physical rows; keyboard dispatch and file loading remain controller-owned. */
-function WorkspacePreview({ preview, columns, maxRows, onLayout }: {
+function WorkspacePreview({ preview, columns, maxRows, onLayout, systemOpen }: {
   preview: WorkspaceFilePreview
   columns: number
   maxRows: number
+  systemOpen?: boolean
   onLayout?: ((layout: WorkspacePreviewLayout) => void) | undefined
 }): ReactNode {
   const { lines, name, scrollOffset } = preview
@@ -148,7 +154,7 @@ function WorkspacePreview({ preview, columns, maxRows, onLayout }: {
   const last = page.at(-1)
   const range = `(${first === undefined ? 0 : first.line + 1}-${last === undefined ? 0 : last.line + 1}/${lines.length} 行)`
   const title = truncateDisplay(`预览: ${previewText(name)} ${range}`, columns)
-  const footnote = truncateDisplay('j/k 滚动 · q/Esc 返回 · i 插入路径', columns)
+  const footnote = truncateDisplay(systemOpen ? '↑↓ 滚动 · Esc 返回 · o 系统打开' : 'j/k 滚动 · q/Esc 返回 · i 插入路径', columns)
   const tokens = new Map<number, ReturnType<typeof tokenize>>()
   const rows = page.map((fragment) => {
     const source = (document.at(fragment.line) as ToolBodyLine).text
@@ -218,6 +224,7 @@ export function WorkspacePane({
   }
   if (state.preview !== undefined) {
     return <WorkspacePreview preview={state.preview}
+      systemOpen={state.mode === 'deliveries'}
       columns={Math.max(1, Math.min(maxCols, windowColumns))}
       maxRows={Math.max(0, Math.min(maxRows ?? windowRows - 4, windowRows))}
       onLayout={onPreviewLayout} />
@@ -225,10 +232,15 @@ export function WorkspacePane({
   const footnote = state.editing
     ? 'Enter 解析 · Esc 取消'
     : state.nodes.length === 0
-      ? 'e 输入路径 · Esc 关闭'
-      : 'j/k 选择 · Enter 打开 · e 路径 · Esc 关闭'
+      ? (state.mode === 'deliveries' ? 'Esc 返回' : 'e 输入路径 · Esc 关闭')
+      : state.mode === 'deliveries'
+        ? '↑↓ 选择 · Enter 预览 · o 系统打开 · Esc 返回'
+        : 'j/k 选择 · Enter 打开 · r 刷新 · e 路径 · Esc 关闭'
   const rows: ReactNode[] = []
-  state.nodes.forEach((node, index) => {
+  const capacity = Math.max(0, Math.min(maxRows ?? windowRows - 4, windowRows) - 4)
+  const start = Math.max(0, Math.min(state.selectedIndex - Math.floor(capacity / 2), state.nodes.length - capacity))
+  state.nodes.slice(start, start + capacity).forEach((node, offset) => {
+    const index = start + offset
     const glyph = node.kind === 'directory' ? (node.expanded ? '▾' : '▸') : ' '
     const selected = index === state.selectedIndex && !state.editing
     const head = `${selected ? '› ' : '  '}${'  '.repeat(node.depth)}${glyph} `
@@ -238,7 +250,7 @@ export function WorkspacePane({
           styled(escapeContent(head), selected ? 'accent' : 'fgDim'),
           styled(
             truncateDisplay(
-              escapeContent(node.name),
+              escapeContent(node.description === undefined ? node.name : `${node.name} · ${node.description}`),
               Math.max(1, maxCols - displayWidth(head)),
             ),
             selected ? 'fg' : 'fgDim',
@@ -249,9 +261,9 @@ export function WorkspacePane({
   })
   return (
     <OverlayShell
-      title="工作区"
-      body={state.nodes.length === 0 ? '此目录为空' : undefined}
-      footnote={footnote}
+      title={state.mode === 'deliveries' ? '交付文件' : '工作区'}
+      body={state.nodes.length === 0 ? (state.mode === 'deliveries' ? '当前会话暂无显式交付文件' : '此目录为空') : undefined}
+      footnote={state.watchError === undefined ? footnote : `${state.watchError} · ${footnote}`}
       error={
         state.resolveError === undefined ? undefined : `路径无效：${state.resolveError}`
       }

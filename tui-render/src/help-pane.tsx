@@ -38,6 +38,18 @@ export const HELP_WINDOW = 20
  * @param props - help lines and the scroll offset.
  * @returns the element tree.
  */
+function styleHelpLine(line: string): ReactNode {
+  if (line === '') return ' '
+  const escaped = escapeContent(line)
+  if (escaped.startsWith('── ') && escaped.endsWith(' ──')) {
+    return styled(escaped, 'accentText', undefined, true)
+  }
+  if (escaped.startsWith('/')) {
+    return styled(escaped, 'fgSoft')
+  }
+  return escaped
+}
+
 export function HelpPane({ lines, offset }: HelpPaneProps): ReactNode {
   const maxOffset = Math.max(0, lines.length - HELP_WINDOW)
   const safeOffset = Math.min(offset, maxOffset)
@@ -48,7 +60,7 @@ export function HelpPane({ lines, offset }: HelpPaneProps): ReactNode {
       {safeOffset > 0 ? <Text dimColor>… 还有 {safeOffset} 行</Text> : null}
       {visible.map((line, index) => (
         // An empty Text collapses to zero rows; a space keeps section gaps.
-        <Text key={safeOffset + index}>{line === '' ? ' ' : escapeContent(line)}</Text>
+        <Text key={safeOffset + index} wrap="truncate">{styleHelpLine(line)}</Text>
       ))}
       {below > 0 ? <Text dimColor>… 下方还有 {below} 行</Text> : null}
       <Text>{styled(escapeContent('↑↓/jk 滚动 · Esc/Enter 关闭'), 'fgDim')}</Text>

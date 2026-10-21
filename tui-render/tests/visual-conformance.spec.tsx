@@ -1,3 +1,4 @@
+import { SessionId } from '@deepseek-ai/dsh-session'
 /**
  * Visual conformance (03-10 W3-T7): renderToString assertions over the
  * shipped DeepSeek visual contract — the thin separator and the dynamic title
@@ -14,7 +15,7 @@
  * part of this surface (SC4 owns them).
  */
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, renderToString } from 'ink'
 import { createElement } from 'react'
 import { Text } from 'ink'
@@ -39,7 +40,7 @@ import { EMPTY_SETTINGS_PANE } from '../src/settings-pane.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
 import { ScreenAtlas } from '../src/screen-atlas.ts'
 import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
-import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { PASSIVE_CONTROLLER, fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 
 /** Strip SGR sequences so content-level assertions ignore tier bytes. */
@@ -106,9 +107,7 @@ function stubController(
     getSettingsPane: () => EMPTY_SETTINGS_PANE,
     getAgentHubPane: () => EMPTY_OVERLAY_PANE,
     getPlanDirectoryPane: () => EMPTY_OVERLAY_PANE,
-    getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-    getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-    getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+    ...PASSIVE_CONTROLLER,
     getPlanReviewPane: () => EMPTY_OVERLAY_PANE,
     getComposerHud: () => undefined,
     getToolPresenters: () => undefined,
@@ -322,7 +321,7 @@ describe('theme tiers', () => {
     expect(shell).toContain('─'.repeat(80))
 
     const stream = renderStream({
-      history: [{ kind: 'user', text: 'hi', timestamp: 1_000 }],
+      history: [{ id: 1, kind: 'user', text: 'hi', timestamp: 1_000 }],
       activeTurn: undefined,
       status: 'idle',
       reasoningExpanded: false,
@@ -369,7 +368,7 @@ describe('frame bg/fg wiring', () => {
   it('centers full-width user message surfaces in the conversation column', () => {
     applyTheme('16')
     const out = renderStream({
-      history: [{ kind: 'user', text: 'hello', timestamp: 1_000 }],
+      history: [{ id: 1, kind: 'user', text: 'hello', timestamp: 1_000 }],
       activeTurn: undefined,
       status: 'idle',
       reasoningExpanded: false,
@@ -488,7 +487,7 @@ describe('status copy and hint', () => {
 
 describe('A3 escape before styling', () => {
   it('escapes user content before the styled layer in the session directory', () => {
-    const rows = [{ id: 's1', title: 'evil \x1b[2J title', updatedAt: 0 }]
+    const rows = [{ id: SessionId('s1'), title: 'evil \x1b[2J title', updatedAt: 0 }]
     const out = renderToString(
       createElement(SessionPane, {
         columns: 80,
@@ -835,5 +834,68 @@ describe('TuiLoop mounted render branches', () => {
       controller: stubController({ getFeedbackPane: () => feedback as never }),
     }))
     expect(feedbackOut).toContain('> ')
+  })
+})
+
+describe('blocking dialog physical height', () => {
+  it.each([[80, 24], [40, 16], [120, 40]])('keeps decisions and Goal footer visible at %sx%s with long input', async (columns, rows) => {
+    applyTheme('truecolor')
+    for (const kind of ['approval', 'question', 'plan'] as const) {
+      const stdout = Object.assign(fakeTtyStdout(), { isTTY: true, columns, rows })
+      const atlas = new ScreenAtlas(columns, rows)
+      stdout.on('data', chunk => { atlas.feed(String(chunk)) })
+      const model: ViewModel = { ...IDLE_MODEL, history: [{ id: 1, kind: 'user', text: 'TRANSCRIPT_SENTINEL', timestamp: 1 }], status: 'generating' }
+      let approval = { ...EMPTY_APPROVAL_PANE, open: true, toolName: 'bash', reason: 'Long reason '.repeat(300),
+        arguments: JSON.stringify({ command: 'Third attempt separated the ear creases.\n'.repeat(300) + 'END_APPROVAL' }) }
+      const question = { ...EMPTY_ASK_USER_PANE, open: true, header: 'Long question '.repeat(300) + 'END_QUESTION', options: ['Option one', 'Option two'] }
+      const plan = { open: true, plan: `# Full plan\n${'Long physical paragraph '.repeat(400)}END_PLAN` }
+      const goal = { phase: 'active', objective: 'GOAL_FOOTER', roundsStarted: 3, maxGoalRounds: 40 }
+      const todoRows: readonly TodoHudItem[] = [{ content: 'CURRENT_TODO', status: 'in_progress' }, { content: 'NEXT_TODO', status: 'pending' }]
+      const jobRows: readonly JobHudItem[] = [{ id: 'worker', status: 'running', label: 'ACTIVE_WORKER' }]
+      const listeners = new Set<() => void>()
+      const stdin = fakeTtyStdin()
+      const screen = (): string => atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
+      const controller = stubController({
+        getModel: () => model,
+        getApprovalPane: () => kind === 'approval' ? approval : EMPTY_APPROVAL_PANE,
+        getAskUserPane: () => kind === 'question' ? question : EMPTY_ASK_USER_PANE,
+        getPlanReviewPane: () => kind === 'plan' ? plan : EMPTY_OVERLAY_PANE,
+        getGoalFooter: () => goal,
+        getTodoHud: () => todoRows, getJobsHud: () => jobRows,
+        subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+        dispatch: action => {
+          if (action.kind !== 'approval-detail') return
+          approval = { ...approval, detailsOpen: !approval.detailsOpen }
+          for (const listener of listeners) listener()
+        },
+      })
+      const instance = render(createElement(TuiLoop, { title: 'DIALOG_HEIGHT', controller }), {
+        stdout: wrapStdoutForFrameBg(stdout, () => 'truecolor'), stdin,
+        exitOnCtrlC: false, patchConsole: false, interactive: true, incrementalRendering: true, alternateScreen: true,
+      })
+      try {
+        await instance.waitUntilRenderFlush()
+        await instance.waitUntilRenderFlush()
+        const visible = atlas.extract({ col: 1, row: 1 }, { col: columns, row: rows })
+        if (kind === 'approval') { expect(visible).toContain('[Y]'); expect(visible).toContain('[n]') }
+        if (kind === 'question') { expect(visible).toContain('Enter'); expect(visible).toContain('Esc') }
+        if (kind === 'plan') { expect(visible).toContain('[y]'); expect(visible).toContain('[n]') }
+        expect(visible).toContain('目标')
+        if (kind !== 'plan') {
+          stdin.push('i')
+          await vi.waitFor(() => expect(screen()).toContain(kind === 'approval' ? '收起' : '提问全文'))
+        }
+        stdin.push('\x1b[4~')
+        await vi.waitFor(() => expect(screen().replaceAll('\n', '')).toContain(`END_${kind === 'question' ? 'QUESTION' : kind.toUpperCase()}`))
+        expect(screen()).toContain('目标')
+        if (kind === 'approval') { expect(screen()).toContain('[Y]'); expect(screen()).toContain('允许执行') }
+        if (kind === 'question') { expect(screen()).toContain('Enter'); expect(screen()).toContain('Esc') }
+        if (kind === 'plan') expect(screen()).toContain('[y]')
+      } finally {
+        const exited = instance.waitUntilExit()
+        instance.unmount()
+        await exited
+      }
+    }
   })
 })

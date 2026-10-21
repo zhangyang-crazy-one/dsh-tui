@@ -4,7 +4,7 @@ import { createElement, useLayoutEffect } from 'react'
 import { AppShell } from '../src/app-shell.tsx'
 import { StreamView, conversationWidth, scrollRailGeometry } from '../src/stream-view.tsx'
 import type { ProjectedTurnContent, ViewModel } from '../src/projection.ts'
-import { fakeTtyStdin, fakeTtyStdout, frameTtyStdout } from './helpers.ts'
+import { disposeRenderer, fakeTtyStdin, fakeTtyStdout, frameTtyStdout } from './helpers.ts'
 import { BRAND_APP_TITLE } from '../src/brand.ts'
 import { activeBrandRevealTimerCount } from '../src/pixel-fish-home.tsx'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
@@ -70,9 +70,8 @@ async function timedActiveFrame(input: {
     now += input.advanceMs
     await vi.advanceTimersByTimeAsync(input.advanceMs)
     activeTimerCount = vi.getTimerCount()
-    instance.unmount()
+    await disposeRenderer(instance)
     unmounted = true
-    await instance.waitUntilExit()
     remainingTimerCount = vi.getTimerCount()
   } finally {
     if (!unmounted) instance.unmount()
@@ -226,8 +225,7 @@ describe('StreamView', () => {
       expect(ttyFrame(atlas, columns, 24)).toContain('思考中…')
       expect(ttyFrame(atlas, columns, 24)).toContain('> INPUT')
     } finally {
-      instance.unmount()
-      await instance.waitUntilExit()
+      await disposeRenderer(instance)
       now.mockRestore()
     }
   })
@@ -566,7 +564,9 @@ describe('StreamView', () => {
       await instance.waitUntilRenderFlush()
       const afterLines = screen().split('\n')
       if (beforeAnchor === undefined) throw new Error('expected an anchor row')
-      expect(afterLines[beforeRow].slice(0, 78).trimEnd()).toBe(beforeAnchor.slice(0, 78).trimEnd())
+      const afterAnchor = afterLines[beforeRow]
+      if (afterAnchor === undefined) throw new Error('expected the retained anchor row')
+      expect(afterAnchor.slice(0, 78).trimEnd()).toBe(beforeAnchor.slice(0, 78).trimEnd())
       expect(afterLines[beforeRow]).toContain('ROW_')
       expect(screen()).toContain('↓ 最新消息 · 3')
       expect(screen()).toContain('ANCHOR_TITLE')
@@ -643,6 +643,7 @@ describe('StreamView', () => {
       await instance.waitUntilRenderFlush()
       await instance.waitUntilRenderFlush()
       const afterAnchor = screen().split('\n')[anchorRow]
+      if (anchor === undefined || afterAnchor === undefined) throw new Error('expected both anchor rows')
       expect(afterAnchor.slice(0, 78).trimEnd()).toBe(anchor.slice(0, 78).trimEnd())
       expect(afterAnchor).toContain('ROW_')
       expect(screen()).toContain('SETTLE_ANCHOR_INPUT')
@@ -1714,6 +1715,19 @@ describe('StreamView', () => {
     }
   })
 
+  it('shows explicit delivery paths and descriptions in settled conversation rows', () => {
+    setHyperlinks(false)
+    const path = '/workspace/交付报告.pdf'
+    const output = stripAnsi(renderToString(createElement(StreamView, {
+      model: model({ history: [{ id: 1, kind: 'assistant', text: 'Delivered.', timestamp: 1,
+        presentedFiles: [{ path, description: 'Final report for review' }],
+      }] }),
+    }), { columns: 40 }))
+    expect(output).toContain('交付文件 · /deliveries')
+    expect(output.replace(/\n */gu, '')).toContain(path)
+    expect(output).toContain('Final report for review')
+  })
+
   it('paints the TurnTail 产物 row and per-turn stats, hidden when empty', () => {
     setHyperlinks(false)
     const editCall: ProjectedTurnContent = {
@@ -2511,9 +2525,8 @@ describe('StreamView physical-row virtualization', () => {
       await vi.advanceTimersByTimeAsync(renderPolicyDefaults().stream.frameIntervalMs)
       await instance.waitUntilRenderFlush()
       expect(metrics.snapshot().renderQueue.currentDepth).toBe(0)
-      instance.unmount()
+      await disposeRenderer(instance)
       unmounted = true
-      await instance.waitUntilExit()
     } finally {
       if (!unmounted) instance.unmount()
       vi.useRealTimers()

@@ -31,6 +31,15 @@ function renderPane(
 }
 
 describe('ModelPane', () => {
+  it('keeps a large provider catalog within the terminal height with its title and navigation', () => {
+    const catalog = rows(...Array.from({ length: 65 }, (_, i): [string, string] => ['magpie', `model-${i}`]))
+    const out = renderPane({ rows: catalog, selectedIndex: 64, maxRows: 8 })
+    expect(out.split('\n').length).toBeLessThanOrEqual(8)
+    expect(out).toContain('65/65')
+    expect(out).toContain('model-64')
+    expect(out).toContain('Esc 关闭')
+  })
+
   it('renders the filter, model names, provider routes, and the footer', () => {
     const out = renderPane({
       filter: 'deep',

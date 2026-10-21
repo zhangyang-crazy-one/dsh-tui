@@ -40,7 +40,7 @@ export function filterCommands(
   query: string,
 ): CommandItem[] {
   const needle = query.toLowerCase()
-  if (needle === '') return [...items]
+  if (needle === '') return items.filter(item => !item.name.includes(' '))
   return items.filter(item => item.name.toLowerCase().startsWith(needle))
 }
 
@@ -98,12 +98,13 @@ export function resolveEnterQuery(
   query: string,
   selectedIndex = 0,
 ): string {
-  if (query === '') return completeSelected(items, query, selectedIndex)?.name ?? query
+  const match = completeSelected(items, query, selectedIndex)
+  if (match !== undefined) return match.name
   const space = query.indexOf(' ')
   const head = space === -1 ? query : query.slice(0, space)
   const tail = space === -1 ? '' : query.slice(space)
   if (head === '') return query
-  const completed = completeSelected(items, head, selectedIndex)
+  const completed = completeSelected(items.filter(item => !item.name.includes(' ')), head, selectedIndex)
   if (completed === undefined) return query
   return `${completed.name}${tail}`
 }

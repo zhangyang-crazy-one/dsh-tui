@@ -1,0 +1,290 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.50 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: the CLI finds a local package without PATH shims and launches its non-executable bin once
+ok 1 - the CLI finds a local package without PATH shims and launches its non-executable bin once
+  ---
+  duration_ms: 370.528826
+  type: 'test'
+  ...
+# Subtest: parses management commands and the pass-through separator
+ok 2 - parses management commands and the pass-through separator
+  ---
+  duration_ms: 3.515325
+  type: 'test'
+  ...
+# Subtest: resolves stable deployment defaults and rejects empty overrides
+ok 3 - resolves stable deployment defaults and rejects empty overrides
+  ---
+  duration_ms: 0.758731
+  type: 'test'
+  ...
+# Subtest: version reports an uninitialized runtime without creating it
+ok 4 - version reports an uninitialized runtime without creating it
+  ---
+  duration_ms: 0.445534
+  type: 'test'
+  ...
+# Subtest: version reports the runtime SHA and DSH package version
+ok 5 - version reports the runtime SHA and DSH package version
+  ---
+  duration_ms: 0.269331
+  type: 'test'
+  ...
+# Subtest: launch forwards arguments and returns the child status
+ok 6 - launch forwards arguments and returns the child status
+  ---
+  duration_ms: 0.469524
+  type: 'test'
+  ...
+# Subtest: launch rejects an absent runtime and a symbolic-link runtime
+ok 7 - launch rejects an absent runtime and a symbolic-link runtime
+  ---
+  duration_ms: 0.191698
+  type: 'test'
+  ...
+# Subtest: update clones an absent runtime and installs frozen dependencies
+ok 8 - update clones an absent runtime and installs frozen dependencies
+  ---
+  duration_ms: 0.432254
+  type: 'test'
+  ...
+# Subtest: update redacts source credentials from clone failures
+ok 9 - update redacts source credentials from clone failures
+  ---
+  duration_ms: 0.403814
+  type: 'test'
+  ...
+# Subtest: update rejects a dirty runtime before fetching
+ok 10 - update rejects a dirty runtime before fetching
+  ---
+  duration_ms: 0.448964
+  type: 'test'
+  ...
+# Subtest: update fast-forwards a clean runtime and refreshes dependencies
+ok 11 - update fast-forwards a clean runtime and refreshes dependencies
+  ---
+  duration_ms: 0.55698
+  type: 'test'
+  ...
+# Subtest: update rejects divergent history before merge
+ok 12 - update rejects divergent history before merge
+  ---
+  duration_ms: 0.258544
+  type: 'test'
+  ...
+# Subtest: update reports dependency recovery after a successful fast-forward
+ok 13 - update reports dependency recovery after a successful fast-forward
+  ---
+  duration_ms: 0.144804
+  type: 'test'
+  ...
+# Subtest: parseLauncherInvocation parses probe, --source, and --lightweight options
+ok 14 - parseLauncherInvocation parses probe, --source, and --lightweight options
+  ---
+  duration_ms: 0.159105
+  type: 'test'
+  ...
+# Subtest: probeInstalledDsh respects DSH_BIN override and inspects exit code
+ok 15 - probeInstalledDsh respects DSH_BIN override and inspects exit code
+  ---
+  duration_ms: 0.432192
+  type: 'test'
+  ...
+# Subtest: probeInstalledDsh probes PATH dsh --version
+ok 16 - probeInstalledDsh probes PATH dsh --version
+  ---
+  duration_ms: 0.34696
+  type: 'test'
+  ...
+# Subtest: probe command outputs probe details
+ok 17 - probe command outputs probe details
+  ---
+  duration_ms: 0.345878
+  type: 'test'
+  ...
+# Subtest: lightweight launch installs this package as the tui bundle, then boots the profile
+ok 18 - lightweight launch installs this package as the tui bundle, then boots the profile
+  ---
+  duration_ms: 0.346837
+  type: 'test'
+  ...
+# Subtest: lightweight launch reports a failed bundle install without booting
+ok 19 - lightweight launch reports a failed bundle install without booting
+  ---
+  duration_ms: 0.171799
+  type: 'test'
+  ...
+# Subtest: default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime
+ok 20 - default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime
+  ---
+  duration_ms: 0.150174
+  type: 'test'
+  ...
+# Subtest: default auto launch rejects a failed env DSH_BIN despite an initialized source runtime
+ok 21 - default auto launch rejects a failed env DSH_BIN despite an initialized source runtime
+  ---
+  duration_ms: 0.086364
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with no override
+ok 22 - default auto launch falls back to initialized source with no override
+  ---
+  duration_ms: 0.35849
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with blank env override
+ok 23 - default auto launch falls back to initialized source with blank env override
+  ---
+  duration_ms: 0.223856
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with blank settings override masking env
+ok 24 - default auto launch falls back to initialized source with blank settings override masking env
+  ---
+  duration_ms: 1.098746
+  type: 'test'
+  ...
+# Subtest: launch with --source forces source mode even if bundled patch and DSH_BIN exist
+ok 25 - launch with --source forces source mode even if bundled patch and DSH_BIN exist
+  ---
+  duration_ms: 0.20808
+  type: 'test'
+  ...
+# Subtest: launch provides friendly installation guidance when dsh is absent and runtime uninitialized
+ok 26 - launch provides friendly installation guidance when dsh is absent and runtime uninitialized
+  ---
+  duration_ms: 0.293412
+  type: 'test'
+  ...
+# Subtest: DSH_BIN requires an absolute path and a failed override does not select another installation
+ok 27 - DSH_BIN requires an absolute path and a failed override does not select another installation
+  ---
+  duration_ms: 0.123229
+  type: 'test'
+  ...
+# Subtest: discovers npm global package bin from its manifest when PATH is unavailable
+ok 28 - discovers npm global package bin from its manifest when PATH is unavailable
+  ---
+  duration_ms: 0.271046
+  type: 'test'
+  ...
+# Subtest: discovers pnpm global package bin from its manifest when PATH is unavailable
+ok 29 - discovers pnpm global package bin from its manifest when PATH is unavailable
+  ---
+  duration_ms: 0.131704
+  type: 'test'
+  ...
+# Subtest: local package launch reuses the probe and preserves profile, app args, and exit status
+ok 30 - local package launch reuses the probe and preserves profile, app args, and exit status
+  ---
+  duration_ms: 0.406065
+  type: 'test'
+  ...
+# Subtest: unusable package candidates are diagnosed and duplicate global roots are only probed once
+ok 31 - unusable package candidates are diagnosed and duplicate global roots are only probed once
+  ---
+  duration_ms: 0.258904
+  type: 'test'
+  ...
+# Subtest: an installed tui bundle is not reinstalled and PATH success stops package discovery
+ok 32 - an installed tui bundle is not reinstalled and PATH success stops package discovery
+  ---
+  duration_ms: 0.166491
+  type: 'test'
+  ...
+# Subtest: engineCompatibility admits the bundle release line and rejects other lines with an install hint
+ok 33 - engineCompatibility admits the bundle release line and rejects other lines with an install hint
+  ---
+  duration_ms: 0.09093
+  type: 'test'
+  ...
+# Subtest: source launch prepares generated contracts, links this bundle into the existing profile, then boots directly
+ok 34 - source launch prepares generated contracts, links this bundle into the existing profile, then boots directly
+  ---
+  duration_ms: 0.246458
+  type: 'test'
+  ...
+# Subtest: ready source launch does not reinstall dependencies or regenerate contracts
+ok 35 - ready source launch does not reinstall dependencies or regenerate contracts
+  ---
+  duration_ms: 0.14791
+  type: 'test'
+  ...
+# Subtest: source contract generation failure stops before plugin installation or terminal boot
+ok 36 - source contract generation failure stops before plugin installation or terminal boot
+  ---
+  duration_ms: 0.312664
+  type: 'test'
+  ...
+# Subtest: lightweight mode reuses the same configured profile as source mode
+ok 37 - lightweight mode reuses the same configured profile as source mode
+  ---
+  duration_ms: 0.209889
+  type: 'test'
+  ...
+# Subtest: profile selection is explicit and leaves app arguments after the separator alone
+ok 38 - profile selection is explicit and leaves app arguments after the separator alone
+  ---
+  duration_ms: 0.240338
+  type: 'test'
+  ...
+# Subtest: both launch modes install and boot the explicitly selected official profile
+ok 39 - both launch modes install and boot the explicitly selected official profile
+  ---
+  duration_ms: 0.342607
+  type: 'test'
+  ...
+# Subtest: real source update clones, fast-forwards, and rejects dirty or divergent runtime state
+ok 40 - real source update clones, fast-forwards, and rejects dirty or divergent runtime state
+  ---
+  duration_ms: 840.203612
+  type: 'test'
+  ...
+# Subtest: launch preserves the shell-visible child signal outcome
+ok 41 - launch preserves the shell-visible child signal outcome
+  ---
+  duration_ms: 658.424758
+  type: 'test'
+  ...
+# Subtest: CI checks supported Node versions and the packed package
+ok 42 - CI checks supported Node versions and the packed package
+  ---
+  duration_ms: 1.72629
+  type: 'test'
+  ...
+# Subtest: release publishing uses GitHub OIDC and validates the release tag
+ok 43 - release publishing uses GitHub OIDC and validates the release tag
+  ---
+  duration_ms: 0.396858
+  type: 'test'
+  ...
+# Subtest: zen-proxy exposes the cordis plugin face
+ok 44 - zen-proxy exposes the cordis plugin face
+  ---
+  duration_ms: 5.615268
+  type: 'test'
+  ...
+# Subtest: zen-proxy serves unknown routes with 404 and disposes cleanly
+ok 45 - zen-proxy serves unknown routes with 404 and disposes cleanly
+  ---
+  duration_ms: 130.512153
+  type: 'test'
+  ...
+# Subtest: vendored source carries the official identity headers and dynamic ids
+ok 46 - vendored source carries the official identity headers and dynamic ids
+  ---
+  duration_ms: 0.354546
+  type: 'test'
+  ...
+1..46
+# tests 46
+# suites 0
+# pass 46
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1625.578443

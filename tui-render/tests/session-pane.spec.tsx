@@ -192,7 +192,7 @@ describe('SessionPane', () => {
 
   it('windows to the newest 50 rows and shows the truncation hint', () => {
     const many = Array.from({ length: 60 }, (_, index) => ({
-      id: `s-${index}`,
+      id: SessionId(`s-${index}`),
       title: `row ${index}`,
       updatedAt: NOW - index,
     }))
@@ -283,7 +283,10 @@ describe('SessionPane', () => {
   })
 
   it('falls back to the wall clock when no now is supplied', () => {
-    const out = renderPane({ rows: rows('alpha'), now: undefined })
+    const out = renderToString(createElement(SessionPane, {
+      rows: rows('alpha'), selectedIndex: 0, currentId: undefined,
+      confirmDelete: false, columns: 80, maxRows: 24,
+    }))
     expect(out).toContain('alpha')
   })
 

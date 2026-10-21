@@ -9,7 +9,7 @@ import { PassThrough } from 'node:stream'
 import { ESC_TIMEOUT_MS } from './terminal-capabilities.ts'
 import { RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS } from './render-policy.ts'
 import { publishedCaretBytes } from './frame-fill.ts'
-import { ScreenAtlas, type ScreenPoint } from './screen-atlas.ts'
+import { ScreenAtlas, orderedPoints, type ScreenPoint } from './screen-atlas.ts'
 import { visibleFrameSnapshot } from './frame-snapshot.ts'
 import {
   consumeMouseStdin,
@@ -87,11 +87,25 @@ function hitRail(col: number, row: number): MouseRailRegion | undefined {
     : undefined
 }
 
+const START_SYNC = '\x1b[?2026h'
+const END_SYNC = '\x1b[?2026l'
+type SelectionRange = { start: ScreenPoint; end: ScreenPoint }
+
+/** Intersect a reading-order range with one physical row. */
+function selectionRow(range: SelectionRange | undefined, row: number, width: number): SelectionRange | undefined {
+  if (range === undefined || row < range.start.row || row > range.end.row) return undefined
+  return {
+    start: { row, col: row === range.start.row ? range.start.col : 1 },
+    end: { row, col: row === range.end.row ? range.end.col : width },
+  }
+}
+
 /** Drag, selection, copy, and click owner for one mounted TUI. */
 export class MouseSession {
   /** Cell atlas of bytes written through {@link feedStdout}. */
   readonly atlas: ScreenAtlas
   private lastFrameRevision: string | undefined
+  private stdoutSynchronized = false
   private drag:
     | { start: ScreenPoint; moved: boolean }
     | undefined
@@ -180,10 +194,8 @@ export class MouseSession {
       if (clampedPoint.col !== this.drag.start.col || clampedPoint.row !== this.drag.start.row) {
         this.drag.moved = true
       }
-      const { top, bottom } = this.atlas.transcriptBounds
-      const visualStartRow = Math.max(top, Math.min(bottom, this.dragVirtualStartRow))
       this.selection = {
-        start: { col: this.drag.start.col, row: visualStartRow },
+        start: this.visibleSelectionStart(this.drag.start),
         end: clampedPoint,
       }
       this.syncEdge(event.row)
@@ -195,10 +207,8 @@ export class MouseSession {
       if (clampedPoint.col !== this.drag.start.col || clampedPoint.row !== this.drag.start.row) {
         this.drag.moved = true
       }
-      const { top, bottom } = this.atlas.transcriptBounds
-      const visualStartRow = Math.max(top, Math.min(bottom, this.dragVirtualStartRow))
       this.selection = {
-        start: { col: this.drag.start.col, row: visualStartRow },
+        start: this.visibleSelectionStart(this.drag.start),
         end: clampedPoint,
       }
       if (this.drag.moved) {
@@ -242,14 +252,16 @@ export class MouseSession {
       this.atlas.applyFrameSnapshot(snapshot)
       this.lastFrameRevision = snapshot.revision
     }
-    if (this.selection === undefined) return chunk
-    const overlay = this.atlas.selectionOverlay(
-      this.selection.start,
-      this.selection.end,
-    )
+    const syncStart = chunk.lastIndexOf(START_SYNC)
+    const syncEnd = chunk.lastIndexOf(END_SYNC)
+    if (syncStart >= 0 || syncEnd >= 0) this.stdoutSynchronized = syncStart > syncEnd
+    if (this.selection === undefined || this.drag?.moved !== true || chunk === '' || this.stdoutSynchronized) return chunk
+    const overlay = this.atlas.selectionOverlay(this.selection.start, this.selection.end)
     if (overlay === '') return chunk
     this.paintedSelection = this.selection
-    return `${chunk}${overlay}${publishedCaretBytes()}`
+    const suffix = overlay + publishedCaretBytes()
+    if (syncEnd >= 0) return chunk.slice(0, syncEnd) + suffix + chunk.slice(syncEnd)
+    return START_SYNC + chunk + suffix + END_SYNC
   }
 
   /**
@@ -285,22 +297,36 @@ export class MouseSession {
     }, 80)
   }
 
+  private visibleSelectionStart(start: ScreenPoint): ScreenPoint {
+    const { top, bottom } = this.atlas.transcriptBounds
+    if (this.dragVirtualStartRow < top) return { col: 1, row: top }
+    if (this.dragVirtualStartRow > bottom) return this.atlas.clampToTranscript({ col: Number.MAX_SAFE_INTEGER, row: bottom })
+    return { col: start.col, row: this.dragVirtualStartRow }
+  }
+
   private scroll(delta: number): void {
     if (this.drag !== undefined && this.drag.moved) {
       const { top, bottom } = this.atlas.transcriptBounds
+      const count = Math.min(Math.abs(delta), bottom - top + 1)
       if (delta > 0) {
-        if (this.dragVirtualStartRow > bottom) {
-          const text = this.atlas.extractRowText(bottom)
-          if (text.length > 0) this.scrolledOffBelow.unshift(text)
+        for (let offset = 0; offset < count; offset += 1) {
+          const row = bottom - offset
+          if (this.dragVirtualStartRow < row) continue
+          let text = this.atlas.extractRowText(row)
+          if (this.dragVirtualStartRow === row) text = this.atlas.extract({ col: 1, row }, { col: this.drag.start.col, row })
+          this.scrolledOffBelow.unshift(text)
         }
-        this.dragVirtualStartRow += delta
       } else if (delta < 0) {
-        if (this.dragVirtualStartRow < top) {
-          const text = this.atlas.extractRowText(top)
-          if (text.length > 0) this.scrolledOffAbove.push(text)
+        for (let offset = 0; offset < count; offset += 1) {
+          const row = top + offset
+          if (this.dragVirtualStartRow > row) continue
+          let text = this.atlas.extractRowText(row)
+          if (this.dragVirtualStartRow === row) text = this.atlas.extract({ col: this.drag.start.col, row }, { col: Number.MAX_SAFE_INTEGER, row })
+          this.scrolledOffAbove.push(text)
         }
-        this.dragVirtualStartRow += delta
       }
+      this.dragVirtualStartRow += delta
+      if (this.selection !== undefined) this.selection = { ...this.selection, start: this.visibleSelectionStart(this.drag.start) }
     }
     this.onScroll(delta)
   }
@@ -312,23 +338,26 @@ export class MouseSession {
   }
 
   private repaintSelection(): string {
+    const previous = this.paintedSelection === undefined
+      ? undefined : orderedPoints(this.paintedSelection.start, this.paintedSelection.end)
+    const next = this.selection !== undefined && this.drag?.moved === true
+      ? orderedPoints(this.selection.start, this.selection.end) : undefined
+    const first = Math.min(previous?.start.row ?? Infinity, next?.start.row ?? Infinity)
+    const last = Math.max(previous?.end.row ?? 0, next?.end.row ?? 0)
     let bytes = ''
-    if (this.paintedSelection !== undefined) {
-      bytes += this.atlas.restoreOverlay(
-        this.paintedSelection.start,
-        this.paintedSelection.end,
-      )
+    for (let row = first; row <= last; row += 1) {
+      const before = selectionRow(previous, row, this.atlas.width)
+      const after = selectionRow(next, row, this.atlas.width)
+      if (before?.start.col === after?.start.col && before?.end.col === after?.end.col) continue
+      // Snapshot restoration can repaint a complete styled row. Reapply its
+      // new selection in the same transaction; unchanged rows stay untouched.
+      if (before !== undefined) bytes += this.atlas.restoreOverlay(before.start, before.end)
+      if (after !== undefined) bytes += this.atlas.selectionOverlay(after.start, after.end)
     }
-    if (this.selection !== undefined && this.drag?.moved === true) {
-      bytes += this.atlas.selectionOverlay(
-        this.selection.start,
-        this.selection.end,
-      )
-      this.paintedSelection = this.selection
-    } else {
-      this.paintedSelection = undefined
-    }
-    return bytes === '' ? '' : bytes + publishedCaretBytes()
+    this.paintedSelection = this.selection !== undefined && this.drag?.moved === true ? this.selection : undefined
+    if (bytes === '') return ''
+    const paint = bytes + publishedCaretBytes()
+    return this.stdoutSynchronized ? paint : START_SYNC + paint + END_SYNC
   }
 }
 

@@ -33,6 +33,7 @@
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-compaction/types'
 import type {} from '@deepseek-ai/dsh-workspace-changes/types'
+import type { PresentedFile } from '@deepseek-ai/dsh-tool-present/types'
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import type { ToolCallId, ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deriveTurnTokenUsage } from '@deepseek-ai/dsh-token-meter/client'
@@ -74,6 +75,8 @@ export type ProjectedTurnContent =
 
 /** The active (generating or just-finished) turn's live state. */
 export interface ActiveTurn {
+  /** Explicit file deliveries in the open turn. */
+  presentedFiles?: readonly PresentedFile[]
   /** Turn number from turn/start. */
   turn: number
   /** Assembled assistant text so far. */
@@ -99,6 +102,8 @@ export interface ActiveTurn {
 
 /** One frozen message row for the scrollable history. */
 export interface FrozenMessage {
+  /** Explicit file deliveries recorded by the official present tool. */
+  readonly presentedFiles?: readonly PresentedFile[]
   /** Stable session-event sequence identity, independent of array position. */
   readonly id: number
   /** Message origin; user rows use the `>` marker, assistant rows use `●`. */
@@ -195,6 +200,8 @@ export function latestAssistantCopyTarget(
 
 /** The terminal view model the render loop consumes. */
 export interface ViewModel {
+  /** Latest declarations by path in this Session, in first-declared order. */
+  readonly deliveries?: readonly PresentedFile[]
   /** Frozen historical messages (immutable between turns). */
   history: readonly FrozenMessage[]
   /** Compaction markers retained without deleting old frozen rows. */
@@ -485,6 +492,7 @@ export function formatTurnError(error: { message?: string; code?: string; status
  */
 export function createProjector(): Projector {
   const history: FrozenMessage[] = []
+  let deliveries: readonly PresentedFile[] = []
   const compactionDividers: CompactionDivider[] = []
   let assembler: BlockAssembler | undefined
   let activeTurn: ActiveTurn | undefined
@@ -587,6 +595,15 @@ export function createProjector(): Projector {
     else if (activeTurn !== undefined) turnEvents.push(event)
     if (activeTurn !== undefined) turnEventAt = event.time
     switch (event.type) {
+      case 'deliverables/presented': {
+        const merge = (previous: readonly PresentedFile[]): readonly PresentedFile[] =>
+          [...new Map([...previous, ...event.data.files].map(file => [file.path, { ...file }])).values()]
+        deliveries = deepFreeze(merge(deliveries))
+        if (activeTurn?.turn === event.data.turn) {
+          activeTurn.presentedFiles = deepFreeze(merge(activeTurn.presentedFiles ?? []))
+        }
+        return
+      }
       case 'turn/start': {
         assembler = new BlockAssembler()
         turnContent = []
@@ -706,7 +723,7 @@ export function createProjector(): Projector {
             turnUsage = undefined
           }
           const reason = event.data.reason
-          if (turnContent.length > 0 || reason.kind === 'error') {
+          if (turnContent.length > 0 || (activeTurn.presentedFiles?.length ?? 0) > 0 || reason.kind === 'error') {
             assistantTurnCount += 1
             let text = activeTurn.assistantText
             const content = (activeTurn.content as ProjectedTurnContent[]).map(item => ({ ...item }))
@@ -721,6 +738,7 @@ export function createProjector(): Projector {
               }
             }
             appendHistory({
+              ...(activeTurn.presentedFiles === undefined ? {} : { presentedFiles: activeTurn.presentedFiles }),
               id: event.seq,
               kind: 'assistant',
               text,
@@ -801,6 +819,7 @@ export function createProjector(): Projector {
     },
     snapshot(): ViewModel {
       return {
+        ...(deliveries.length === 0 ? {} : { deliveries }),
         history,
         compactionDividers,
         expandedCompactionId: undefined,

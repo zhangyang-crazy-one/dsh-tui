@@ -102,16 +102,17 @@ export function PermissionPane({
         const label = current ? `${name} · 当前` : name
         return (
           <Box key={name} flexDirection="column" width="100%">
-            <Box width="100%">
-              <Text>
-                {selected
-                  ? styled(escapeContent('› '), 'accent', undefined, true)
-                  : '  '}
-              </Text>
-              <Text>{paintRow([styled(escapeContent(label), selected ? 'fg' : 'fgDim')])}</Text>
-            </Box>
+            <Text wrap="truncate">
+              {selected
+                ? styled(escapeContent('› '), 'accent', undefined, true)
+                : '  '}
+              {paintRow([
+                styled(escapeContent(`[${String(index + 1)}] `), selected ? 'accentText' : 'fgDim'),
+                styled(escapeContent(label), selected ? 'fg' : 'fgSoft', undefined, selected),
+              ])}
+            </Text>
             {description !== undefined && description !== ''
-              ? line(description, 'fgDim')
+              ? line(`    ${description}`, 'fgDim')
               : null}
           </Box>
         )

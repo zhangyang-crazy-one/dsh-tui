@@ -3,9 +3,12 @@
  * inspect failure, and CSI escaping. Composes OverlayShell; not PlanReview.
  */
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { renderToString } from 'ink'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render as renderInk, renderToString } from 'ink'
 import { createElement } from 'react'
+import { fakeTtyStdin, fakeTtyStdout, disposeRenderer } from './helpers.ts'
+import { ScreenAtlas } from '../src/screen-atlas.ts'
+import { wrapStdoutForFrameBg } from '../src/frame-fill.ts'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { AgentHubPane } from '../src/agent-hub-pane.tsx'
 import type { AgentHubRow } from '../src/agent-hub-pane.tsx'
@@ -112,6 +115,43 @@ function stubController(
 }
 
 describe('AgentHubPane', () => {
+  it('advertises human controls only for catalog rows with an explicit direct parent', () => {
+    const out = render({ rows: [{ ...CHILD, mode: 'continuable', parentSessionId: SessionId('parent') }] })
+    expect(out).toContain('c 续聊')
+    expect(out).toContain('s 请求停止')
+    expect(out).toContain('v 并排')
+    expect(render({ rows: [CHILD] })).not.toContain('c 续聊')
+  })
+
+  it('shows the continuation draft and acceptance controls without exposing it as a sent message', () => {
+    const out = render({ rows: [{ ...CHILD, mode: 'continuable', parentSessionId: SessionId('parent') }],
+      prompt: '继续审查', caretIndex: 2, busy: true, notice: '等待回执', split: true })
+    expect(out).toContain('继续审查')
+    expect(out).toContain('发送中')
+    expect(out).toContain('Enter 排队')
+    expect(out).toContain('Ctrl+Enter 引导')
+    expect(out).toContain('等待回执')
+  })
+
+  it('wraps transcript lines inside explicit half-width and height bounds', () => {
+    const onViewportChange = vi.fn()
+    const out = render({ rows: [CHILD], view: 'transcript', transcript: '中'.repeat(60),
+      maxCols: 30, maxRows: 20, onViewportChange })
+    expect(onViewportChange).toHaveBeenLastCalledWith(expect.objectContaining({ maxOffset: expect.any(Number) }))
+    const viewport = onViewportChange.mock.calls.at(-1)?.[0] as { maxOffset: number; pageRows: number }
+    expect(viewport.maxOffset + viewport.pageRows).toBeGreaterThanOrEqual(5)
+    const plain = out.replace(/\x1b\[[0-9;:?]*[A-Za-z]/gu, '')
+    expect(plain.split('\n').some(line => line.includes('中'.repeat(20)))).toBe(false)
+  })
+
+  it('keeps a rejected continuation draft visible for correction', () => {
+    const out = render({ rows: [{ ...CHILD, mode: 'continuable', parentSessionId: SessionId('parent') }],
+      prompt: 'preserved draft', caretIndex: 3, error: 'parent unavailable' })
+    expect(out).toContain('parent unavailable')
+    expect(out).toContain('preserved draft')
+    expect(out).toContain('Enter 排队')
+  })
+
   it('paints title 子代理 and empty copy when the list is empty', () => {
     const out = render()
     expect(out).toContain('子代理')
@@ -130,7 +170,8 @@ describe('AgentHubPane', () => {
     const out = render({ rows: [CHILD], selectedIndex: 0 })
     expect(out).toContain('explorer · running')
     expect(out).toContain('子会话 ID · child-1')
-    expect(out).toContain('j/k 选择 · Enter 查看 · Esc 关闭')
+    expect(out).toContain('j/k 选择 · Enter 查看')
+    expect(out).toContain('→ 子任务')
     expect(out).toContain('\x1b[38;2;77;107;254m› ')
   })
 
@@ -277,7 +318,7 @@ describe('AgentHubPane', () => {
     })
     expect(out).toContain('explorer · running')
     expect(out).toContain('可继续 8/8 live · 深度 1 · 已达上限')
-    expect(out).toContain('j/k 选择 · Enter 查看 · Esc 关闭')
+    expect(out).toContain('j/k 选择 · Enter 查看')
     expect(out).not.toContain('✗')
   })
 
@@ -337,4 +378,67 @@ describe('TuiLoop Agent Hub', () => {
     expect(out).toContain('可继续 8/8 live · 深度 1 · 已达上限')
     expect(out).toContain('explorer · running')
   })
+})
+
+it('shows bounded child task/progress rows around the current selection', () => {
+  const rows = Array.from({ length: 30 }, (_, index) => ({
+    id: SessionId(`bounded-child-${index}`), label: `Worker ${index}`, activity: 'running', hasChildren: false,
+    task: 'Audit providers', summary: 'Reading package metadata', execution: '生成中',
+  }))
+  const out = render({ rows, selectedIndex: 20 })
+  expect(out).toContain('Worker 20 · 生成中')
+  expect(out).toContain('任务 · Audit providers')
+  expect(out).toContain('当前 · Reading package metadata')
+  expect(out).not.toContain('Worker 0 ·')
+  expect(out.match(/子会话 ID/g)?.length).toBeLessThanOrEqual(5)
+})
+
+it('follows the live child tail, pages by visible rows, and pauses following while reading', async () => {
+  let hub = { open: true, view: 'transcript', rows: [CHILD], selectedIndex: 0, scrollOffset: Number.MAX_SAFE_INTEGER,
+    transcript: Array.from({ length: 1000 }, (_, i) => `PAGE_${String(i).padStart(4, '0')}`).join('\n'),
+  } satisfies ReturnType<TuiController['getAgentHubPane']>
+  const listeners = new Set<() => void>()
+  const notify = () => { for (const listener of listeners) listener() }
+  const controller = stubController(hub)
+  controller.getAgentHubPane = () => hub
+  controller.subscribe = listener => { listeners.add(listener); return () => { listeners.delete(listener) } }
+  const dispatch = vi.fn((action: Parameters<TuiController['dispatch']>[0]) => {
+    if (action.kind !== 'agent-hub-move') return
+    hub = { ...hub, scrollOffset: Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, hub.scrollOffset + action.delta)) }
+    notify()
+  })
+  controller.dispatch = dispatch
+  const stdout = Object.assign(fakeTtyStdout(), { isTTY: true, columns: 80, rows: 24 })
+  const stdin = fakeTtyStdin()
+  const atlas = new ScreenAtlas(80, 24)
+  stdout.on('data', chunk => { atlas.feed(String(chunk)) })
+  const screen = () => atlas.extract({ col: 1, row: 1 }, { col: 80, row: 24 })
+  const visibleRows = () => [...screen().matchAll(/PAGE_(\d+)/g)].map(match => Number(match[1]))
+  const instance = renderInk(createElement(TuiLoop, { title: 'Agent viewport', controller }), {
+    stdout: wrapStdoutForFrameBg(stdout), stdin, exitOnCtrlC: false, patchConsole: false,
+    interactive: true, alternateScreen: true, incrementalRendering: true,
+  })
+  try {
+    await vi.waitFor(() => expect(screen()).toContain('PAGE_0999'))
+    stdin.push('\x1b[1~')
+    await vi.waitFor(() => expect(screen()).toContain('PAGE_0000'))
+    const pageRows = visibleRows().length
+    stdin.push('\x1b[6~')
+    await vi.waitFor(() => expect(visibleRows()[0]).toBe(pageRows))
+    stdin.push('\x1b[4~')
+    await vi.waitFor(() => expect(hub.scrollOffset).toBe(Number.MAX_SAFE_INTEGER))
+    hub = { ...hub, transcript: hub.transcript + '\nPAGE_1000' }
+    notify()
+    await vi.waitFor(() => expect(screen()).toContain('PAGE_1000'))
+    stdin.push('\x1b[A')
+    await vi.waitFor(() => expect(screen()).not.toContain('PAGE_1000'))
+    expect(screen()).toContain('PAGE_0999')
+    const readingStart = visibleRows()[0]
+    hub = { ...hub, transcript: hub.transcript + '\nPAGE_1001' }
+    notify()
+    await vi.waitFor(() => expect(visibleRows()[0]).toBe(readingStart))
+    expect(screen()).toContain('Esc 返回')
+    expect(controller.getModel()).toBe(IDLE_MODEL)
+    expect(dispatch.mock.calls.every(([action]) => action.kind === 'agent-hub-move')).toBe(true)
+  } finally { await disposeRenderer(instance) }
 })

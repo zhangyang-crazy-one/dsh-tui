@@ -26,6 +26,7 @@ import {
   type TuiController,
 } from '../src/index.ts'
 import { fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { currentAppearance, currentTier } from '../src/theme.ts'
 import { renderPolicyDefaults } from '../src/render-policy.ts'
 
 afterEach(() => {
@@ -38,7 +39,7 @@ describe('TUI mount adapters', () => {
     expect(mocks.attachMouseIo).toHaveBeenCalledOnce()
     expect(mocks.render).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       alternateScreen: true,
-      incrementalRendering: false,
+      incrementalRendering: true,
       patchConsole: false,
       exitOnCtrlC: false,
       maxFps: 62.5,
@@ -47,6 +48,30 @@ describe('TUI mount adapters', () => {
     dispose()
     expect(mocks.unmount).toHaveBeenCalledOnce()
     expect(mocks.disposeMouse).toHaveBeenCalledOnce()
+  })
+
+  it('keeps explicit saved appearance and tier across mounts', () => {
+    const dispose = mountTuiRender(createElement(Text, null, 'light'), {
+      env: { NO_COLOR: '1' }, appearance: 'light', colorTier: '256',
+    })
+    expect(currentAppearance()).toBe('light')
+    expect(currentTier()).toBe('256')
+    dispose()
+  })
+
+  it('uses a plain stream without mouse ownership for screen readers', () => {
+    const stdin = fakeTtyStdin()
+    const stdout = fakeTtyStdout()
+    const dispose = mountTuiRender(createElement(Text, null, 'accessible'), {
+      stdin, stdout, env: { INK_SCREEN_READER: 'true' },
+    })
+    expect(mocks.attachMouseIo).not.toHaveBeenCalled()
+    expect(mocks.render).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      stdout, stdin, alternateScreen: false, incrementalRendering: false, isScreenReaderEnabled: true,
+    }))
+    expect(currentTier()).toBe('none')
+    dispose()
+    expect(mocks.disposeMouse).not.toHaveBeenCalled()
   })
 
   it.each([

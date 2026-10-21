@@ -24,7 +24,7 @@ import type {
   SessionEvent,
   UserMessage,
 } from '@deepseek-ai/dsh-session'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import {
   createAssistantMessage,
   createUserMessage,

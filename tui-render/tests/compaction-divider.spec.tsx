@@ -1,3 +1,4 @@
+import { SessionSeq } from '@deepseek-ai/dsh-session'
 import { renderToString } from 'ink'
 import { createElement } from 'react'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -12,7 +13,7 @@ const COMPACTION_ID = CompactionId('divider-fixture')
 function projected() {
   const projector = createProjector()
   projector.push({
-    type: 'user/message', seq: 1, time: 1,
+    type: 'user/message', seq: SessionSeq(1), time: 1,
     data: createUserMessage({
       content: [{ type: 'text', text: 'old row remains' }],
       source: { kind: 'user' },
@@ -20,23 +21,23 @@ function projected() {
     surfaceOp: 'append',
   })
   projector.push({
-    type: 'compaction/start', seq: 2, time: 2,
+    type: 'compaction/start', seq: SessionSeq(2), time: 2,
     data: { compactionId: COMPACTION_ID, turn: null },
   })
   projector.push({
-    type: 'compaction/summary', seq: 3, time: 3,
+    type: 'compaction/summary', seq: SessionSeq(3), time: 3,
     data: {
       compactionId: COMPACTION_ID,
       summary: [{ type: 'text', text: 'summary\u001b[2J content' }],
-      shadowedRange: { start: 1, end: 120 },
-      shadowedSeqs: Array.from({ length: 120 }, (_, index) => index + 1),
+      shadowedRange: { start: SessionSeq(1), end: SessionSeq(120) },
+      shadowedSeqs: Array.from({ length: 120 }, (_, index) => SessionSeq(index + 1)),
       shadowedTokenCount: 400,
       provider: 'test-provider',
       model: 'test-model',
     },
   })
   projector.push({
-    type: 'compaction/end', seq: 4, time: 4,
+    type: 'compaction/end', seq: SessionSeq(4), time: 4,
     data: { compactionId: COMPACTION_ID, turn: null },
   })
   return projector.snapshot()
@@ -53,7 +54,9 @@ describe('compaction divider projection and rendering', () => {
       shadowedTokenCount: 400,
       summary: 'summary\u001b[2J content',
     }])
-    expect(compactionDividerLabel(model.compactionDividers[0], false)).toBe(
+    const divider = model.compactionDividers?.[0]
+    if (divider === undefined) throw new Error('Expected projected compaction divider')
+    expect(compactionDividerLabel(divider, false)).toBe(
       '──── ✂ 已压缩 120 条 · ~400 tok · Ctrl+K 展开 ────',
     )
     installTheme({ COLORTERM: 'truecolor' })
@@ -72,22 +75,23 @@ describe('compaction divider projection and rendering', () => {
   it('omits an unavailable count and ignores a summary without a start marker', () => {
     const projector = createProjector()
     projector.push({
-      type: 'compaction/summary', seq: 1, time: 1,
+      type: 'compaction/summary', seq: SessionSeq(1), time: 1,
       data: {
         compactionId: COMPACTION_ID,
         summary: [{ type: 'text', text: 'orphan' }],
-        shadowedRange: { start: 1, end: 1 },
-        shadowedSeqs: [1],
+        shadowedRange: { start: SessionSeq(1), end: SessionSeq(1) },
+        shadowedSeqs: [SessionSeq(1)],
         shadowedTokenCount: 1,
         provider: 'test-provider',
         model: 'test-model',
       },
     })
     projector.push({
-      type: 'compaction/start', seq: 2, time: 2,
+      type: 'compaction/start', seq: SessionSeq(2), time: 2,
       data: { compactionId: COMPACTION_ID, turn: null },
     })
-    const divider = projector.snapshot().compactionDividers[0]
+    const divider = projector.snapshot().compactionDividers?.[0]
+    if (divider === undefined) throw new Error('Expected projected compaction divider')
     expect(compactionDividerLabel(divider, false)).toBe(
       '──── ✂ 已压缩 · Ctrl+K 展开 ────',
     )

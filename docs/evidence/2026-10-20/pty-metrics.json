@@ -1,0 +1,501 @@
+{
+  "mouse": [
+    {
+      "columns": 80,
+      "rows": 24,
+      "phases": [
+        {
+          "name": "idle",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-drag",
+          "bytes": 282,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "duplicate-drag",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-move",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "copy-release",
+          "bytes": 512,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0,
+          "copied": [
+            "\n\n  ● Row 0498  中文复制验证 · Provider settings and subagent output.\n    Second line 498: stable terminal rendering.\n\n\n"
+          ]
+        },
+        {
+          "name": "wheel-0",
+          "bytes": 10645,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 3,
+          "sync_ends": 3,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-1",
+          "bytes": 13792,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-2",
+          "bytes": 13340,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-up",
+          "bytes": 62948,
+          "commits": 18,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 17,
+          "sync_ends": 17,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-release",
+          "bytes": 2679,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0,
+          "copied": [
+            "\n  ● Row 0491  中文复制验证 · Provider settings and subagent output.\n    Second line 491: stable terminal rendering.\n\n\n  ● Row 0492  中文复制验证 · Provider settings and subagent output.\n    Second line 492: stable terminal rendering.\n\n\n  ● Row 0493  中文复制验证 · Provider settings and subagent output.\n    Second line 493: stable terminal rendering.\n\n\n  ● Row 0494  中文复制验证 · Provider settings and subagent output.\n    Second line 494: stable terminal rendering.\n\n\n  ● Row 0495  中文复制验证 · Provider settings and subagent output.\n    Second line 495: stable terminal rendering.\n\n\n  ● Row 0496  中文复制验证 · Provider settings and subagent output.\n    Second line 496: stable terminal rendering.\n\n"
+          ]
+        }
+      ],
+      "synchronized_frame_open": false
+    },
+    {
+      "columns": 120,
+      "rows": 40,
+      "phases": [
+        {
+          "name": "idle",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-drag",
+          "bytes": 282,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "duplicate-drag",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-move",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "copy-release",
+          "bytes": 512,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0,
+          "copied": [
+            "\n\n  ● Row 0496  中文复制验证 · Provider settings and subagent output.\n    Second line 496: stable terminal rendering.\n\n\n"
+          ]
+        },
+        {
+          "name": "wheel-0",
+          "bytes": 22522,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 3,
+          "sync_ends": 3,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-1",
+          "bytes": 28208,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-2",
+          "bytes": 27714,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-up",
+          "bytes": 117970,
+          "commits": 18,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 17,
+          "sync_ends": 17,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-release",
+          "bytes": 8799,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 2,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 902,
+          "copied": [
+            "\n  ● Row 0487  中文复制验证 · Provider settings and subagent output.\n    Second line 487: stable terminal rendering.\n\n\n  ● Row 0488  中文复制验证 · Provider settings and subagent output.\n    Second line 488: stable terminal rendering.\n\n\n  ● Row 0489  中文复制验证 · Provider settings and subagent output.\n    Second line 489: stable terminal rendering.\n\n\n  ● Row 0490  中文复制验证 · Provider settings and subagent output.\n    Second line 490: stable terminal rendering.\n\n\n  ● Row 0491  中文复制验证 · Provider settings and subagent output.\n    Second line 491: stable terminal rendering.\n\n\n  ● Row 0492  中文复制验证 · Provider settings and subagent output.\n    Second line 492: stable terminal rendering.\n\n\n  ● Row 0493  中文复制验证 · Provider settings and subagent output.\n    Second line 493: stable terminal rendering.\n\n\n  ● Row 0494  中文复制验证 · Provider settings and subagent output.\n    Second line 494: stable terminal rendering.\n\n"
+          ]
+        }
+      ],
+      "synchronized_frame_open": false
+    },
+    {
+      "columns": 80,
+      "rows": 40,
+      "phases": [
+        {
+          "name": "idle",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-drag",
+          "bytes": 282,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "duplicate-drag",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "inside-move",
+          "bytes": 0,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 0,
+          "sync_ends": 0,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "copy-release",
+          "bytes": 512,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 1,
+          "sync_ends": 1,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0,
+          "copied": [
+            "\n\n  ● Row 0496  中文复制验证 · Provider settings and subagent output.\n    Second line 496: stable terminal rendering.\n\n\n"
+          ]
+        },
+        {
+          "name": "wheel-0",
+          "bytes": 19169,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 3,
+          "sync_ends": 3,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-1",
+          "bytes": 24828,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "wheel-2",
+          "bytes": 24376,
+          "commits": 4,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 4,
+          "sync_ends": 4,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-up",
+          "bytes": 108684,
+          "commits": 18,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 17,
+          "sync_ends": 17,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0
+        },
+        {
+          "name": "edge-release",
+          "bytes": 11506,
+          "commits": 0,
+          "full_row_erases": 0,
+          "display_erases": 0,
+          "sync_starts": 2,
+          "sync_ends": 2,
+          "nested_sync_starts": 0,
+          "outside_sync_cells": 0,
+          "copied": [
+            "\n  ● Row 0487  中文复制验证 · Provider settings and subagent output.\n    Second line 487: stable terminal rendering.\n\n\n  ● Row 0488  中文复制验证 · Provider settings and subagent output.\n    Second line 488: stable terminal rendering.\n\n\n  ● Row 0489  中文复制验证 · Provider settings and subagent output.\n    Second line 489: stable terminal rendering.\n\n\n  ● Row 0490  中文复制验证 · Provider settings and subagent output.\n    Second line 490: stable terminal rendering.\n\n\n  ● Row 0491  中文复制验证 · Provider settings and subagent output.\n    Second line 491: stable terminal rendering.\n\n\n  ● Row 0492  中文复制验证 · Provider settings and subagent output.\n    Second line 492: stable terminal rendering.\n\n\n  ● Row 0493  中文复制验证 · Provider settings and subagent output.\n    Second line 493: stable terminal rendering.\n\n\n  ● Row 0494  中文复制验证 · Provider settings and subagent output.\n    Second line 494: stable terminal rendering.\n\n"
+          ]
+        }
+      ],
+      "synchronized_frame_open": false
+    }
+  ],
+  "pty_scenes": [
+    {
+      "scene": "agents",
+      "columns": 120,
+      "rows": 40,
+      "captures": 9
+    },
+    {
+      "scene": "agents",
+      "columns": 40,
+      "rows": 16,
+      "captures": 9
+    },
+    {
+      "scene": "agents",
+      "columns": 80,
+      "rows": 24,
+      "captures": 9
+    },
+    {
+      "scene": "approval",
+      "columns": 120,
+      "rows": 40,
+      "captures": 5
+    },
+    {
+      "scene": "approval",
+      "columns": 40,
+      "rows": 16,
+      "captures": 5
+    },
+    {
+      "scene": "approval",
+      "columns": 80,
+      "rows": 24,
+      "captures": 5
+    },
+    {
+      "scene": "key",
+      "columns": 120,
+      "rows": 40,
+      "captures": 5
+    },
+    {
+      "scene": "key",
+      "columns": 40,
+      "rows": 16,
+      "captures": 5
+    },
+    {
+      "scene": "key",
+      "columns": 80,
+      "rows": 24,
+      "captures": 5
+    },
+    {
+      "scene": "palette",
+      "columns": 120,
+      "rows": 40,
+      "captures": 3
+    },
+    {
+      "scene": "palette",
+      "columns": 40,
+      "rows": 16,
+      "captures": 3
+    },
+    {
+      "scene": "palette",
+      "columns": 80,
+      "rows": 24,
+      "captures": 3
+    },
+    {
+      "scene": "plan",
+      "columns": 120,
+      "rows": 40,
+      "captures": 4
+    },
+    {
+      "scene": "plan",
+      "columns": 40,
+      "rows": 16,
+      "captures": 4
+    },
+    {
+      "scene": "plan",
+      "columns": 80,
+      "rows": 24,
+      "captures": 4
+    },
+    {
+      "scene": "question",
+      "columns": 120,
+      "rows": 40,
+      "captures": 6
+    },
+    {
+      "scene": "question",
+      "columns": 40,
+      "rows": 16,
+      "captures": 6
+    },
+    {
+      "scene": "question",
+      "columns": 80,
+      "rows": 24,
+      "captures": 6
+    },
+    {
+      "scene": "todos",
+      "columns": 120,
+      "rows": 40,
+      "captures": 5
+    },
+    {
+      "scene": "todos",
+      "columns": 40,
+      "rows": 16,
+      "captures": 5
+    },
+    {
+      "scene": "todos",
+      "columns": 80,
+      "rows": 24,
+      "captures": 5
+    }
+  ]
+}

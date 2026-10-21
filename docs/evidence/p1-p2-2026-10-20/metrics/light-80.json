@@ -1,0 +1,61 @@
+{
+  "scene": "light",
+  "columns": 80,
+  "rows": 24,
+  "phases": [
+    {
+      "name": "initial",
+      "state": {
+        "commits": 37,
+        "snapshots": 1,
+        "actions": [],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    },
+    {
+      "name": "typed",
+      "state": {
+        "commits": 50,
+        "snapshots": 2,
+        "actions": [],
+        "copied": "",
+        "sent": "",
+        "todoOpen": false,
+        "browserSelected": 0,
+        "browserOpen": false,
+        "browserOffset": 0,
+        "hubView": "table",
+        "hubOpen": false,
+        "settingsOpen": false,
+        "selectedSetting": 0,
+        "approvalOpen": false,
+        "questionOpen": false,
+        "planOpen": false,
+        "workspaceOpen": false,
+        "workspaceSelection": 0,
+        "workspacePreview": false,
+        "schedulesOpen": false,
+        "scheduleSelection": 0,
+        "scheduleOffset": 0
+      }
+    }
+  ]
+}

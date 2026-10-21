@@ -48,6 +48,8 @@ export interface ModelPaneProps {
   status?: ModelPaneStatus
   /** Failure detail shown in the error state. */
   error?: string
+  /** Physical row budget after the shell, filter input and footer. */
+  maxRows?: number
 }
 
 /** Controller snapshot backing the model panel. */
@@ -80,58 +82,62 @@ export function ModelPane({
   selectedIndex,
   status = 'idle',
   error,
+  maxRows = MODEL_WINDOW + 3,
 }: ModelPaneProps): ReactNode {
+  const windowSize = Math.min(MODEL_WINDOW, Math.max(1, maxRows - 3))
   const windowStart = Math.min(
-    Math.max(0, selectedIndex - MODEL_WINDOW + 1),
-    Math.max(0, rows.length - MODEL_WINDOW),
+    Math.max(0, selectedIndex - windowSize + 1),
+    Math.max(0, rows.length - windowSize),
   )
-  const visible = rows.slice(windowStart, windowStart + MODEL_WINDOW)
+  const visible = rows.slice(windowStart, windowStart + windowSize)
   const hiddenBelow = rows.length - windowStart - visible.length
-  const windowHint = windowStart === 0
-    ? `… 还有 ${hiddenBelow} 个模型`
-    : hiddenBelow === 0
-      ? `… 上方 ${windowStart} 个模型`
-      : `… 上方 ${windowStart} 个 · 下方 ${hiddenBelow} 个模型`
+  let windowHint = `… 上方 ${windowStart} 个 · 下方 ${hiddenBelow} 个模型`
+  if (windowStart === 0) {
+    windowHint = `… 还有 ${hiddenBelow} 个模型`
+  } else if (hiddenBelow === 0) {
+    windowHint = `… 上方 ${windowStart} 个模型`
+  }
+  let bodyNode: ReactNode
+  if (status === 'loading') {
+    bodyNode = <Text>{styled(escapeContent('加载中…'), 'fgDim')}</Text>
+  } else if (status === 'error') {
+    bodyNode = (
+      <Text>
+        {styled(
+          escapeContent(`✗ 加载失败：${error === undefined || error === '' ? '模型目录不可用' : error}`),
+          'error',
+        )}
+      </Text>
+    )
+  } else if (rows.length === 0) {
+    bodyNode = <Text>{styled(escapeContent('无可用模型'), 'fgDim')}</Text>
+  } else {
+    bodyNode = visible.map((row, index) => {
+      const highlighted = windowStart + index === selectedIndex
+      return (
+        <Text key={row.id} wrap="truncate">
+          {highlighted ? styled(escapeContent('› '), 'accent', undefined, true) : '  '}
+          {styled(`${escapeContent(row.name)} `, highlighted ? 'fg' : 'fgSoft', undefined, highlighted)}
+          {styled(escapeContent(row.provider), 'fgDim')}
+          {row.current ? styled(escapeContent(' · 当前'), 'accentDim') : ''}
+          {row.unavailable === undefined ? '' : styled(escapeContent(` · ${row.unavailable}`), 'warning')}
+        </Text>
+      )
+    })
+  }
   return (
     <Box flexDirection="column" width="100%">
-      <Text>模型: {escapeContent(filter)}</Text>
-      {status === 'loading' ? (
-        <Text>{styled(escapeContent('加载中…'), 'fgDim')}</Text>
-      ) : status === 'error' ? (
-        <Text>
-          {styled(
-            escapeContent(`✗ 加载失败：${error === undefined || error === '' ? '模型目录不可用' : error}`),
-            'error',
-          )}
-        </Text>
-      ) : rows.length === 0 ? (
-        <Text>{styled(escapeContent('无可用模型'), 'fgDim')}</Text>
-      ) : (
-        visible.map((row, index) => {
-          const highlighted = windowStart + index === selectedIndex
-          return (
-            <Box key={row.id} width="100%">
-              <Text>{highlighted ? styled(escapeContent('› '), 'accent', undefined, true) : '  '}</Text>
-              <Text dimColor={!highlighted}>{escapeContent(row.name)}</Text>
-              <Text dimColor={!highlighted}>
-                {highlighted
-                  ? ` ${styled(escapeContent(row.provider), 'fgDim')}`
-                  : ` ${escapeContent(row.provider)}`}
-              </Text>
-              {row.current ? (
-                <Text>{styled(escapeContent(' · 当前'), 'accentDim')}</Text>
-              ) : null}
-              {row.unavailable === undefined ? null : (
-                <Text>{styled(escapeContent(` · ${row.unavailable}`), 'fgDim')}</Text>
-              )}
-            </Box>
-          )
-        })
-      )}
-      {status !== 'loading' && status !== 'error' && rows.length > MODEL_WINDOW ? (
-        <Text dimColor>{windowHint}</Text>
+      <Text wrap="truncate">
+        {styled(`模型: ${escapeContent(filter)}`, 'fg', undefined, true)}
+        {status === 'idle' && rows.length > 0
+          ? styled(`  ·  ${String(Math.min(rows.length, Math.max(1, selectedIndex + 1)))}/${String(rows.length)}`, 'fgDim')
+          : ''}
+      </Text>
+      {bodyNode}
+      {status !== 'loading' && status !== 'error' && rows.length > windowSize ? (
+        <Text dimColor wrap="truncate">{windowHint}</Text>
       ) : null}
-      <Text>{styled(escapeContent('↑↓/jk 选择 · Enter 切换 · Esc 关闭'), 'fgDim')}</Text>
+      <Text wrap="truncate">{styled(escapeContent('↑↓/jk 选择 · Enter 切换 · Esc 关闭'), 'fgDim')}</Text>
     </Box>
   )
 }

@@ -18,6 +18,12 @@ describe('goal footer', () => {
     ).toBe('目标 active 2/8 · 落地 Phase 6 入口')
   })
 
+  it('distinguishes a disarmed active goal and shows its recovery command', () => {
+    const view = { phase: 'active', objective: 'finish', maxGoalRounds: 40, roundsStarted: 3, activation: 'disarmed' as const }
+    expect(goalFooterHead(view)).toBe('目标 active 3/40 · 自动续跑已停止 /goal resume')
+    expect(goalFooterHead({ ...view, activation: 'armed' })).toBe('目标 active 3/40 · 自动续跑')
+  })
+
   it('returns undefined when no goal is current', () => {
     expect(formatGoalFooter(undefined, 40)).toBeUndefined()
     expect(formatGoalFooter(null, 40)).toBeUndefined()

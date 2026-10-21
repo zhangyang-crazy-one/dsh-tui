@@ -17,7 +17,7 @@ import { EMPTY_WORKFLOW_OVERLAY } from '../src/workflow-overlay.tsx'
 import { EMPTY_OVERLAY_PANE } from '../src/overlay-shell.tsx'
 import { visibleFrameSnapshot } from '../src/frame-snapshot.ts'
 import { displayWidth } from '../src/content.ts'
-import { stripTerminalControls, fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
+import { disposeRenderer, stripTerminalControls, fakeTtyStdin, fakeTtyStdout } from './helpers.ts'
 
 const opened: PluginsPaneState = { ...EMPTY_PLUGINS_PANE, open: true, available: true, rows: [
   { id: 's', group: 'supplied', label: 'supplied · Selected', details: ['provided bundle', 'Not removable'], toggle: true, removable: false },
@@ -150,7 +150,7 @@ describe('Plugins input', () => {
       await vi.waitFor(() => expect(visibleFrameSnapshot()?.rows.some(row => row.id === anchor)).toBe(true))
       await pressInput(stdin, instance, '!'); await pressInput(stdin, instance, '\r')
       expect(sent).toEqual(['draft-草稿!'])
-    } finally { instance.unmount(); await instance.waitUntilExit() }
+    } finally { await disposeRenderer(instance) }
   })
   it('moves once per j/k press when a terminal batches several presses into one chunk', async () => {
     let page: PluginsPaneState = { ...opened }
@@ -197,7 +197,7 @@ describe('Plugins input', () => {
       await pressInput(stdin, instance, 'jjk')
       expect(texts).toEqual(['jjk'])
       expect(moves).toHaveLength(7)
-    } finally { instance.unmount(); await instance.waitUntilExit() }
+    } finally { await disposeRenderer(instance) }
   })
   it('maps g p and /plugins Enter to the same controller page entry', () => {
     expect(key(undefined, 'p', {}, { ...draft, text: 'g', prefixG: true })).toMatchObject({ kind: 'dispatch', action: { kind: 'plugins-pane' }, text: '' })

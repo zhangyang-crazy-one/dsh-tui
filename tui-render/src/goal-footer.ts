@@ -13,6 +13,8 @@ import { truncateDisplay } from './tool-cards.ts'
 export interface GoalFooterView {
   /** Durable lifecycle phase (host key, never translated). */
   readonly phase: string
+  /** Process-local authority, separate from the persisted phase. */
+  readonly activation?: 'armed' | 'disarmed'
   /** The human-requested objective (untrusted). */
   readonly objective: string
   /** Total admitted goal-round cap. */
@@ -28,7 +30,10 @@ export interface GoalFooterView {
  * @returns the fragment head, unescaped.
  */
 export function goalFooterHead(goal: GoalFooterView): string {
-  return `目标 ${goal.phase} ${goal.roundsStarted}/${goal.maxGoalRounds}`
+  const activation = goal.phase !== 'active' || goal.activation === undefined ? ''
+    : goal.activation === 'armed' ? ' · 自动续跑'
+    : ' · 自动续跑已停止 /goal resume'
+  return `目标 ${goal.phase} ${goal.roundsStarted}/${goal.maxGoalRounds}${activation}`
 }
 
 /** Escaped footer runs: the `目标 …` head plus the truncated objective. */

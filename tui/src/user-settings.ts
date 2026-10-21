@@ -14,6 +14,10 @@ import { DEFAULT_NOTIFY_QUIET_INPUT_SECONDS, type NotifyMode } from './notify.ts
 
 /** TUI-owned user settings: color, input, notification, and brand presentation. */
 export interface TuiUserSettings {
+  /** Terminal surfaces, independent of the detected color capability. */
+  theme?: 'dark' | 'light'
+  /** Composer-only action overrides; terminal and modal keys remain reserved. */
+  keybindings?: Record<string, string>
   /** Locale for terminal presentation controls. */
   locale?: TuiLocale
   /** Whether thinking text is visible throughout the transcript. */
@@ -36,13 +40,15 @@ export interface TuiUserSettings {
 
 /** Field schema shared by the plugin Config and unit fixtures. */
 export const TuiUserSettings: z<TuiUserSettings> = z.object({
+  keybindings: z.dict(z.string()).default({}),
+  theme: z.union(['dark', 'light'] as const).default('dark'),
   colorTier: z.union(['truecolor', '256', '16', 'none'] as const),
   submitOnEnter: z.boolean().default(true),
   notify: z.union(['off', 'attention', 'every-turn'] as const).default('attention'),
   notifyQuietInputSeconds: z.natural().default(DEFAULT_NOTIFY_QUIET_INPUT_SECONDS),
   brandAnimation: z.union(['auto', 'on', 'off'] as const).default('auto'),
   scrollbar: z.boolean().default(true),
-  locale: z.union(['zh-CN', 'en-US'] as const).default('zh-CN'),
+  locale: z.string().default('zh-CN'),
   reasoning: z.boolean().default(false),
   statusDetails: z.boolean().default(false),
 })

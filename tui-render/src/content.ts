@@ -24,7 +24,10 @@ const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
  * @param text - untrusted plain text.
  * @returns control-sequence-free text.
  */
+const HAS_CONTROL_BYTE = /[\u0000-\u0008\u000B-\u001F\u007F\r]/u
+
 export function escapeContent(text: string): string {
+  if (text === '' || !HAS_CONTROL_BYTE.test(text)) return text
   return text
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
@@ -64,8 +67,24 @@ function isNarrowSymbol(code: number): boolean {
  * @param text - the string to measure.
  * @returns its display width in columns.
  */
+const DISPLAY_WIDTH_CACHE_LIMIT = 1024
+const displayWidthCache = new Map<string, number>()
+
+function cacheDisplayWidth(text: string, width: number): number {
+  if (text.length <= 256) {
+    if (displayWidthCache.size >= DISPLAY_WIDTH_CACHE_LIMIT) {
+      const oldest = displayWidthCache.keys().next().value
+      if (oldest !== undefined) displayWidthCache.delete(oldest)
+    }
+    displayWidthCache.set(text, width)
+  }
+  return width
+}
+
 export function displayWidth(text: string): number {
   if (text === '') return 0
+  const cached = text.length <= 256 ? displayWidthCache.get(text) : undefined
+  if (cached !== undefined) return cached
   let cols = 0
   let simple = true
   for (let i = 0; i < text.length; i += 1) {
@@ -76,7 +95,10 @@ export function displayWidth(text: string): number {
       // A complete SGR sequence (ESC [ params m) is zero-width, exactly as
       // string-width strips it; any other escape takes the exact path.
       let end = i + 2
-      while (end < text.length && /[0-9;:]/u.test(text[end] as string)) end += 1
+      for (; end < text.length; end += 1) {
+        const c = text.charCodeAt(end)
+        if (c < 0x30 || c > 0x3b) break
+      }
       if (text[end] !== 'm') {
         simple = false
         break
@@ -94,11 +116,11 @@ export function displayWidth(text: string): number {
       break
     }
   }
-  if (simple) return cols
+  if (simple) return cacheDisplayWidth(text, cols)
 
   const base = stringWidth(text)
   if (!/[\u{1F300}-\u{1FAFF}\u2000-\u2BFF]/u.test(text)) {
-    return base
+    return cacheDisplayWidth(text, base)
   }
   let extra = 0
   for (const { segment } of GRAPHEME.segment(text)) {
@@ -107,7 +129,7 @@ export function displayWidth(text: string): number {
       extra += 1
     }
   }
-  return base + extra
+  return cacheDisplayWidth(text, base + extra)
 }
 
 /**

@@ -178,6 +178,33 @@ export const THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
   },
 }
 
+export type ThemeAppearance = 'dark' | 'light'
+
+/** Light surfaces retain semantic token roles at every supported color tier. */
+export const LIGHT_THEME_LEVELS: Readonly<Record<ColorTier, ThemeTokens>> = {
+  truecolor: {
+    bg: '#FAFAFC', messageBg: '#E9EDF3', toolBg: '#EEF0F5', inputBg: '#E5EAF2',
+    codeBg: '#EEF0F5', settingsCardBg: '#E8EEFF', fg: '#20232A', fgSoft: '#383F4B', fgDim: '#515D70',
+    accent: '#3450CC', accentText: '#3450CC', accentDim: '#CBD5F5', success: '#246A37', warning: '#815A00',
+    error: '#B22B29', line: '#B1BAC8', codeKeyword: '#264CB5', codeString: '#7341A0', codeComment: '#56616E',
+    codeCommand: '#246A37', markdownStrong: '#795500', markdownEmphasis: '#7136A0', markdownCode: '#23624B', markdownLink: '#155E80',
+  },
+  '256': {
+    bg: '255', messageBg: '254', toolBg: '254', inputBg: '253', codeBg: '254', settingsCardBg: '189',
+    fg: '234', fgSoft: '237', fgDim: '240', accent: '26', accentText: '26', accentDim: '189',
+    success: '22', warning: '94', error: '124', line: '247', codeKeyword: '25', codeString: '90',
+    codeComment: '240', codeCommand: '22', markdownStrong: '94', markdownEmphasis: '90', markdownCode: '29', markdownLink: '24',
+  },
+  '16': {
+    bg: 'white', messageBg: 'bright-white', toolBg: 'bright-white', inputBg: 'bright-white',
+    codeBg: 'bright-white', settingsCardBg: 'bright-white', fg: 'black', fgSoft: 'black', fgDim: 'black',
+    accent: 'blue', accentText: 'blue', accentDim: 'blue', success: 'green', warning: 'red', error: 'red', line: 'black',
+    codeKeyword: 'blue', codeString: 'magenta', codeComment: 'black', codeCommand: 'green',
+    markdownStrong: 'red', markdownEmphasis: 'magenta', markdownCode: 'green', markdownLink: 'blue',
+  },
+  none: THEME_LEVELS.none,
+}
+
 /** ANSI color names → SGR codes at the 16 tier; background = foreground + 10. */
 const ANSI_16: Readonly<Record<string, number>> = {
   black: 30,
@@ -204,14 +231,19 @@ const backgroundPaddingCache = new Map<string, string>()
 
 /** The active tier; {@link styled} styles against it. Tests may swap. */
 let activeTier: ColorTier = 'truecolor'
+let activeAppearance: ThemeAppearance = 'dark'
+
+export function currentAppearance(): ThemeAppearance { return activeAppearance }
 
 /**
  * Install the color tier detected at startup; every later {@link styled}
  * call maps tokens through this tier's table.
  * @param tier - detected color tier.
  */
-export function applyTheme(tier: ColorTier): void {
+export function applyTheme(tier: ColorTier, appearance: ThemeAppearance = 'dark'): void {
+  if (appearance !== activeAppearance) backgroundPaddingCache.clear()
   activeTier = tier
+  activeAppearance = appearance
 }
 
 /**
@@ -244,28 +276,36 @@ export function installTheme(env: NodeJS.ProcessEnv): ColorTier {
  * @param tier - tier to map at (defaults to the installed tier).
  * @returns the SGR sequence prefix, or '' at `none`.
  */
+const tokenSequenceCache = new Map<string, string>()
+
 function tokenSequence(
   token: StyleToken,
   tier: ColorTier = activeTier,
 ): string {
-  const value = THEME_LEVELS[tier][token]
+  const value = (activeAppearance === 'light' ? LIGHT_THEME_LEVELS : THEME_LEVELS)[tier][token]
   if (value === '') return ''
   const background = BACKGROUND_TOKENS.has(token)
+  const cacheKey = `${background ? 'b' : 'f'}:${value}`
+  const cached = tokenSequenceCache.get(cacheKey)
+  if (cached !== undefined) return cached
+  let seq: string
   if (value.startsWith('#')) {
     const hex = value.slice(1)
     const r = parseInt(hex.slice(0, 2), 16)
     const g = parseInt(hex.slice(2, 4), 16)
     const b = parseInt(hex.slice(4, 6), 16)
-    return `\x1b[${background ? '48' : '38'};2;${r};${g};${b}m`
+    seq = `\x1b[${background ? '48' : '38'};2;${r};${g};${b}m`
+  } else if (/^\d+$/.test(value)) {
+    seq = `\x1b[${background ? '48' : '38'};5;${value}m`
+  } else {
+    const code = ANSI_16[value]
+    if (code === undefined) {
+      throw new Error(`theme: unknown 16-color value "${value}" for ${token}`)
+    }
+    seq = `\x1b[${background ? code + 10 : code}m`
   }
-  if (/^\d+$/.test(value)) {
-    return `\x1b[${background ? '48' : '38'};5;${value}m`
-  }
-  const code = ANSI_16[value]
-  if (code === undefined) {
-    throw new Error(`theme: unknown 16-color value "${value}" for ${token}`)
-  }
-  return `\x1b[${background ? code + 10 : code}m`
+  tokenSequenceCache.set(cacheKey, seq)
+  return seq
 }
 
 /**
@@ -292,7 +332,7 @@ export function inkColor(
   token: StyleToken,
   tier: ColorTier = activeTier,
 ): string | undefined {
-  const value = THEME_LEVELS[tier][token]
+  const value = (activeAppearance === 'light' ? LIGHT_THEME_LEVELS : THEME_LEVELS)[tier][token]
   if (value === '') return undefined
   return /^\d+$/u.test(value) ? `ansi256(${value})` : value
 }

@@ -98,6 +98,53 @@ async function bench(): Promise<Bench> {
 }
 
 describe('userQuestions listener', () => {
+  it('answers multi-select plus custom text and then the free-text question in one batch', async () => {
+    const { ctx, controller, liveAgent } = await bench()
+    const answer = ctx.userQuestions.ask({ agent: liveAgent, questions: [
+      { id: 'many', question: 'Choose changes', multiSelect: true, options: [{ label: 'A' }, { label: 'B' }, { label: 'C' }] },
+      { id: 'text', question: 'Explain the result' },
+    ] })
+    await vi.waitFor(() => expect(controller.getAskUserPane().open).toBe(true))
+    controller.dispatch({ kind: 'ask-user-toggle' })
+    controller.dispatch({ kind: 'ask-user-digit', index: 2 })
+    controller.dispatch({ kind: 'ask-user-toggle' })
+    controller.dispatch({ kind: 'ask-user-custom' })
+    controller.dispatch({ kind: 'ask-user-custom-edit', text: '补充说明', caretIndex: 4 })
+    controller.dispatch({ kind: 'ask-user-custom-save' })
+    expect(controller.getAskUserPane().open).toBe(true)
+    controller.dispatch({ kind: 'ask-user-submit' })
+    expect(controller.getAskUserPane().header).toBe('Explain the result')
+    expect(controller.getAskUserPane().editingCustom).toBe(true)
+    controller.dispatch({ kind: 'ask-user-custom-edit', text: '逐项验证\n完整结果', caretIndex: 9 })
+    controller.dispatch({ kind: 'ask-user-custom-save' })
+    await expect(answer).resolves.toEqual({ answers: [
+      { id: 'many', selected: ['A', 'C'], custom: '补充说明' },
+      { id: 'text', selected: [], custom: '逐项验证\n完整结果' },
+    ] })
+    expect(controller.getAskUserPane().open).toBe(false)
+    await controller.dispose();await ctx.fiber.dispose()
+  })
+
+  it('cancels a custom draft without answering and aborts a text-only request', async () => {
+    const { ctx, controller, liveAgent } = await bench()
+    const first = ctx.userQuestions.ask({ agent: liveAgent, questions: [{ id: 'one', question: 'Choose', options: [{ label: 'Original' }] }] })
+    await vi.waitFor(() => expect(controller.getAskUserPane().open).toBe(true))
+    controller.dispatch({ kind: 'ask-user-custom' })
+    controller.dispatch({ kind: 'ask-user-custom-edit', text: 'Discarded draft', caretIndex: 15 })
+    controller.dispatch({ kind: 'ask-user-custom-cancel' })
+    controller.dispatch({ kind: 'ask-user-submit' })
+    await expect(first).resolves.toEqual({ answers: [{ id: 'one', selected: ['Original'] }] })
+    const abort = new AbortController()
+    const second = ctx.userQuestions.ask({ agent: liveAgent, signal: abort.signal, questions: [{ id: 'text', question: 'Explain' }] })
+    const rejected = expect(second).rejects.toMatchObject({ code: 'ASK_ABORTED' })
+    await vi.waitFor(() => expect(controller.getAskUserPane().editingCustom).toBe(true))
+    controller.dispatch({ kind: 'ask-user-custom-edit', text: 'unsent', caretIndex: 6 })
+    abort.abort()
+    await rejected
+    expect(controller.getAskUserPane().open).toBe(false)
+    await controller.dispose();await ctx.fiber.dispose()
+  })
+
   it('delegates an unscoped request without occupying the TUI queue', async () => {
     const { ctx, controller } = await bench()
     const dispose = ctx.on('user-questions/request', request => Promise.resolve({

@@ -15,8 +15,27 @@ English | [中文](README.zh.md)
 
 `@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
+## Release 0.1.0-alpha.50
+
+This prerelease targets DSH `0.2.1-rc.2`. It adds terminal navigation and Session tools, fixes background Goal status and input handling, and makes both launcher modes use the same official model configuration. See the [changelog](CHANGELOG.md#010-alpha50--2026-10-21) for the full changes and verification boundaries.
+
+```sh
+npm install --global @crazyhappyone/dsh-tui@next
+dsh-tui probe
+dsh-tui
+```
+
+Both lightweight and source modes now default to the official `deepseek-tui` profile under `$DSH_HOME/profiles/` (normally `~/.dsh/profiles/`). `/model` reads `ctx.llm`, and model selection uses DSH's `agentDefaultModel`; this bundle does not read a private model configuration or copy another profile's providers. Magpie writes existing `profiles/*/cordis.patch.yml` files. If Magpie is connected before a new profile is created, refresh its DSH connection/catalog after the profile exists and restart the TUI.
+
+Earlier lightweight versions used `tui`, while source mode used `deepseek-tui`. Neither directory is deleted or migrated automatically. To retain an older lightweight profile, run `dsh-tui --profile tui`. To use another TUI-enabled official profile, pass `--profile NAME`: installation and boot use that exact same target in either mode. Profiles remain independently configured by DSH; a provider configured only in `web` is not automatically global.
+
+For a running source-linked installation, `/reload` loads the rebuilt bundle but preserves that process's selected profile. To change from `tui` to `deepseek-tui`, quit and launch again (or pass the desired profile explicitly). Resumed Goals require `/goal resume` to enable automatic continuation.
+
 ## Table of Contents
 
+- [Release and upgrade](#release-010-alpha50)
+- [Changelog](CHANGELOG.md)
+- [Terminal capabilities](#terminal-capabilities)
 - [Screenshots](#screenshots)
 - [Install the launcher](#install-the-launcher)
 - [Run and update](#run-and-update)
@@ -60,18 +79,18 @@ dsh-tui probe
 dsh-tui
 ```
 
-The first launch runs `dsh plugin --profile tui add <package directory>`, which links this package into the `tui` profile after `@deepseek-ai/dsh-base`; later launches find it there and run `dsh --profile tui` directly. Without the launcher, the same two dsh commands work by hand:
+The first launch runs `dsh plugin --profile deepseek-tui add <package directory>`, which links this package into the `deepseek-tui` profile after `@deepseek-ai/dsh-base`; later launches find it there and run `dsh --profile deepseek-tui` directly. Without the launcher, the same two dsh commands work by hand:
 
 ```text
-dsh plugin --profile tui add @crazyhappyone/dsh-tui@next
-dsh --profile tui
+dsh plugin --profile deepseek-tui add @crazyhappyone/dsh-tui@next
+dsh --profile deepseek-tui
 ```
 
 Installing as a bundle matters in dsh 0.2: `/settings` edits are written to the profile's own patch layer, which applies after bundle layers. A `--patch` overlay would apply after the profile layer and dsh refuses settings writes to rows such an overlay owns.
 
 Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a ten-second timeout, which covers a cold first start. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable.
 
-The bundle targets the dsh `0.2` release line (built against `0.2.1-alpha.2`, also verified on `0.2.0-rc.2`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
+The bundle targets the dsh `0.2` release line (built against `0.2.1-rc.2`, also verified on `0.2.1-alpha.2`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
 
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:
@@ -97,7 +116,7 @@ dsh-tui
 
 Run `dsh-tui update` when you want to refresh the dedicated runtime before launching it again.
 
-Ordinary arguments pass unchanged to `tui` in lightweight mode or `deepseek-tui` in source mode:
+Ordinary arguments pass unchanged to the selected official profile (`deepseek-tui` by default) in both modes:
 
 ```text
 dsh-tui "review this repository"
@@ -121,13 +140,13 @@ dsh-tui update
 <a id="configure-the-source-runtime"></a>
 ## Configure the source runtime
 
-The defaults track the owner's private `feat/deepseek-tui` branch. Git authorization for that repository is required. Other users can select a compatible accessible repository and ref.
+The defaults use the official public repository at tag `dsh-v0.2.1-rc.2`. Source mode links this bundle into the existing `deepseek-tui` profile and preserves its user patch. Missing Typert runtime artifacts are generated with the upstream generator before boot. The source CLI runs through `pnpm exec node`, avoiding the `predsh` hook that reinstalls the entire workspace on every launch.
 
 | Environment variable | Default | Purpose |
 |---|---|---|
 | `DSH_TUI_RUNTIME_DIR` | `~/.local/share/dsh-tui/runtime` | Dedicated clone used only by the launcher |
-| `DSH_TUI_SOURCE_URL` | `https://github.com/zhangyang-crazy-one/deepseek-harness.git` | Git remote cloned and fetched by `update` |
-| `DSH_TUI_SOURCE_REF` | `feat/deepseek-tui` | Branch or ref fetched by `update` |
+| `DSH_TUI_SOURCE_URL` | `https://github.com/deepseek-ai/deepseek-harness.git` | Git remote cloned and fetched by `update` |
+| `DSH_TUI_SOURCE_REF` | `dsh-v0.2.1-rc.2` | Branch or ref fetched by `update` |
 | `DSH_TUI_PNPM` | `pnpm` | pnpm executable used for install and launch |
 
 Values must be non-empty, and the runtime directory must be absolute. The launcher refuses a symbolic-link runtime path and an existing directory that is not a Git checkout. Child commands receive argument arrays without shell interpolation.
@@ -147,10 +166,27 @@ The TUI is a dsh plugin bundle, not a fork or a separate agent runtime:
        ├─ tui-startup  (./startup)      command-line provider (task, --resume, --cwd)
        ├─ tui          (./settings)     volatile TUI preferences shown in /settings
        ├─ tui-runtime  (./runtime)      terminal lifecycle and controller
+       ├─ schedule     (./schedule)     official scheduler with shared Session activation
        └─ zen-proxy    (./zen-proxy)    optional OpenCode Zen header proxy
 ```
 
-Rows name plugins through the package's `exports`, so a settings edit records a portable row name in the profile patch. The bundle also inserts the published dsh plugins `session-stats`, `message-feedback`, `tool-ask-user`, `workspace-changes`, and a loopback `webserver` for the account sign-in callback, and overrides `system-prompt`, `tools`, `session-query-sqlite`, and `session-title-llm`.
+Rows name plugins through the package's `exports`, so a settings edit records a portable row name in the profile patch. The bundle also inserts the published dsh plugins `session-stats`, `message-feedback`, `tool-ask-user`, `workspace-changes`, `tool-schedule`, `time-context`, `tool-present`, and a loopback `webserver` for the account sign-in callback, and overrides `system-prompt`, `tools`, `session-query-sqlite`, and `session-title-llm`.
+
+### Reminders and user questions
+
+The model can use the official `schedule_create`, `schedule_list`, `schedule_update`, and `schedule_delete` tools. `/schedules` lists reminders across Sessions: ↑↓ or PgUp/PgDn selects, Enter shows the full prompt, a second Enter opens the owning Session, `r` refreshes, and `d` asks for cancellation confirmation (`y` confirms; `n` or Esc keeps it). Delivery resumes the original Session even after navigating elsewhere. Tasks persist across restart; timers run only while this process is open, and overdue tasks are handled on the next launch. A delivery receipt confirms durable inbox admission, not a completed model response. The adapter bundles the official scheduler and Session activation helpers from the pinned DSH build; upstream upgrades require integration checks.
+
+User questions support all questions in a batch, multiple selections, and custom text. Space toggles a multi-select choice; `c` opens the custom editor; Enter saves text and submits choices. Questions without choices open the editor directly. Tab opens the complete question and answer for scrolling; Tab or Esc returns to editing. Esc in the editor discards that edit (or cancels a text-only question), while Esc on the choices cancels the request. Pasted multiline answers retain their original text and do not change the chat draft.
+
+Credential editors and secret arguments in `/key` and `/login` display bullets while keeping credential reference names visible. Masking affects display only: editing and submission retain the original value, and cancelling restores the chat draft.
+
+### Time context, delivered files, and image paste
+
+The official `time-context` plugin supplies the current time and process time zone to the model when preparing a step, refreshing after ten minutes. This model context does not create an extra human transcript message.
+
+The model can explicitly deliver existing files with the official `present` tool (up to eight files per call). `/deliveries` lists this Session's recorded deliveries: ↑↓ selects, Enter previews UTF-8 text, `o` requests opening the selected file in the local system application, and Esc returns. PDF, Office, images, and other binary formats show file details and use the system application. Text reads are limited to 1 MiB by default. Completed turns also show the delivered paths and descriptions; their records survive Session replay, but the files must still exist and remain accessible.
+
+Clipboard image paste uses `pngpaste -` on macOS ([installation: `brew install pngpaste`](https://github.com/jcsalterego/pngpaste)), `wl-paste` on Wayland, or `xclip` on X11. A missing helper gives a visible error. Reads time out after five seconds by default and are cancelled when the TUI closes; existing image limits and validation still apply. The macOS command and subprocess behavior have automated coverage on Linux; macOS hardware validation remains pending.
 
 ### DeepSeek account, models, and working directory
 
@@ -205,12 +241,17 @@ The proxy listens on `127.0.0.1:4097` only; add `- id: zen-proxy` with
 `tui/` and `tui-render/` compile against an upstream dsh checkout at the tag named by `COMPATIBLE_DSH_VERSION` in `src/launcher.js`:
 
 ```text
-git clone --branch dsh-v0.2.1-alpha.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
+git clone --branch dsh-v0.2.1-rc.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
 (cd ../deepseek-harness && pnpm install)
 npm run build          # or DSH_SOURCE=/path/to/checkout npm run build
+(cd ../deepseek-harness && pnpm install) # link the mounted plugin's dev dependencies
+npm run dev:setup      # same DSH_SOURCE override; build types and link editor dependencies
+npm run typecheck      # strict checks for sources and tests
 ```
 
-`npm run build` copies the plugin packages and `cordis.patch.yml` into the checkout's `packages/tui/` workspace, bundles `dist/index.js`, `dist/startup.js`, `dist/settings.js`, and `dist/zen-proxy.js` with esbuild, and import-checks each output. Run the plugin tests from the checkout with `npx vitest run packages/tui`, and the launcher tests here with `npm test`; run `npm run pack:check` before release. Test installation through a packed tarball or `dsh plugin --profile <name> add <this directory>`.
+`npm run build` copies the plugin packages and `cordis.patch.yml` into the checkout's `packages/tui/` workspace, bundles `dist/index.js`, `dist/startup.js`, `dist/settings.js`, `dist/schedule.js`, and `dist/zen-proxy.js` with esbuild, and import-checks each output. Run the plugin tests from the checkout with `npx vitest run packages/tui`, and the launcher tests here with `npm test`; run `npm run pack:check` before release. Test installation through a packed tarball or `dsh plugin --profile <name> add <this directory>`.
+
+Local `tsconfig.json` files support editors in this standalone repository. The build mounts `tsconfig.workspace.json` as the checkout's package config to preserve upstream project references. `dev:setup` builds dependency declarations and links whole `node_modules` directories, preserving pnpm's relative links. Re-run build and setup after upstream or public type changes; restart the editor's TypeScript project if it still displays old missing-module diagnostics.
 
 -----
 
@@ -233,23 +274,40 @@ The equivalent npm website settings are organization or user `zhangyang-crazy-on
 For each release, bump `package.json`, merge the change after CI passes, then create a GitHub Release whose tag matches the package version:
 
 ```text
-gh release create v0.1.0-alpha.4 --prerelease --generate-notes
+gh release create v0.1.0-alpha.50 --prerelease --notes-file docs/releases/v0.1.0-alpha.50.md
 ```
 
 The `Publish npm` workflow runs tests and packed-package verification again before publishing. Do not rerun an old release tag: npm versions are immutable. Promotion to stable is a new version and a non-prerelease GitHub Release.
 
 -----
 
+## Terminal capabilities
+
+`/timeline` reads individual Session events, actual tool/token/timing data and full JSON; `/attachments` lists typed image/file references and opens local copies; `/review` reads each changed file's official diff. `/files` watches expanded directories with coalesced refresh and retains manual `r` refresh.
+
+`/settings` uses Tab/Shift+Tab section navigation and persists `tui.theme=dark|light`. `/keys` lists context-specific bindings; `/bind ACTION Ctrl+X`, `/bind ACTION default` and `/unbind ACTION` edit composer shortcuts with conflict checks. Shift+arrows/Home/End selects input by grapheme, typing/paste replaces the selection, and Ctrl+Y copies ordinary selections; credential selections cannot be copied. Alt+H opens read-only help during approvals, questions and plan review.
+
+`/agents` supports `c` continuation (Enter queues, Ctrl+Enter steers), `s` request Stop, and `v` side-by-side viewing at 100+ columns. Narrow terminals use the single-pane view. Human controls preserve the catalog's exact direct-parent address; Stop acknowledgement does not claim execution has already stopped.
+
+`/preset` browses standard/PTC/minimal/cordis declarations; `/preset ID` selects an isolated composition before the first turn. Started Sessions remain locked. `/market QUERY` searches configured indexes and routes `i` through plugin-manager inspection and confirmation; `n/p` pages results. `/inspect` browses official Host providers; `/inspect host PROVIDER METHOD JSON` reads an exact contract. `/focus` hides intermediate tool cards without changing model tools or the Session log. External language packs can call `registerTuiLocale`; fenced code uses bounded language-specific lexical highlighting.
+
+The Goal footer distinguishes armed automatic continuation from a stopped continuation requiring `/goal resume`. Backend-started turns update the running state and Ctrl+C cancellation path. After updating a running source installation, use `/reload`; a resumed Goal requires explicit `/goal resume` to rearm.
+
+Verification and platform boundaries: [P1/P2 evidence](docs/p1-p2-verification-2026-10-20.md).
+
+-----
+
 <a id="known-limitations"></a>
 ## Known limitations
 
-- **Private default source** — npm installation is public, but the default DSH runtime remote requires repository authorization; anonymous users must configure an accessible compatible source.
+- **Third-party plugins must match the engine** — dsh 0.2 rejects older authentication plugins that only declare dsh 0.1.x support; the launcher never grants version exemptions automatically.
 - **Source toolchain required** — runtime initialization requires Git, pnpm, and a DSH-supported Node version.
 - **No automatic conflict resolution** — dirty or non-fast-forward runtime history requires explicit human action or a new runtime directory.
 - **Runtime update is not launcher update** — `dsh-tui update` refreshes DSH source and dependencies; npm updates the launcher package.
 - **Integration owns release readiness** — launcher success does not replace the DSH branch's behavior, snapshot, build, or hygiene checks.
-- **Source mode targets the legacy integration branch** — `--source` boots the `deepseek-tui` profile of the configured DSH checkout (default `feat/deepseek-tui`, dsh 0.1.6); it does not use this 0.2 bundle.
-- **No scheduled reminders** — `@deepseek-ai/dsh-schedule` requires the Web host's Session controller, so the TUI composition does not mount it and preset `schedule_*` tools stay inactive.
+- **Source mode also uses this plugin** — the configured checkout must be compatible with this bundle's dsh version. Replace a historical profile's `@deepseek-ai/dsh-tui` bundle with `@crazyhappyone/dsh-tui`; back up the profile and preserve user settings during migration.
+- **Reminders need a running process** — `/schedules` uses the official service and persistent origin Sessions. Restart can recover pending reminders; a closed process runs no timers.
+- **Terminal capability limits** — images and PDF/Office files use metadata/text or the system opener. Ink exposes no IME composition events; native terminal preedit remains authoritative. `INK_SCREEN_READER=true` enables plain-stream rendering, without mouse capture, alternate screen or animation; physical IME/screen-reader devices and macOS clipboard have not been verified.
 - **Account sign-in needs a reachable Platform** — sign-in reports `no-response` when the host cannot reach `platform.deepseek.com`; use `/key` in that case.
 - **No physical session deletion on dsh 0.2** — 0.2 session persistence archives instead of deleting, and the TUI composition mounts no workspace archive service, so the session list reports deletion as unavailable.
 

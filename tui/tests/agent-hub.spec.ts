@@ -19,7 +19,7 @@ import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import { SessionSeq, type Session, type SessionEvent, type SessionHeader, type UserMessage } from '@deepseek-ai/dsh-session'
-import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createAssistantMessage, createUserMessage, LlmAttemptId } from '@deepseek-ai/dsh-llm'
 import type { SubagentListEntry } from '@deepseek-ai/dsh-subagent'
 import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
 import {
@@ -211,7 +211,7 @@ describe('Agent Hub controller', () => {
       await controller.start()
       controller.dispatch({ kind: 'agent-hub' })
       await vi.waitFor(() => {
-        expect(controller.getAgentHubPane().rows).toEqual([
+        expect(controller.getAgentHubPane().rows).toMatchObject([
           {
             id: liveId,
             label: 'live',
@@ -324,7 +324,7 @@ describe('Agent Hub controller', () => {
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => {
-      expect(controller.getAgentHubPane().rows).toEqual([{
+      expect(controller.getAgentHubPane().rows).toMatchObject([{
         id: childId,
         label: childId,
         activity: 'inactive',
@@ -403,6 +403,31 @@ describe('Agent Hub controller', () => {
     await ctx.fiber.dispose()
   })
 
+  it('routes human continuation and Stop to the catalog direct parent, preserving root identity', async () => {
+    const { ctx, controller } = await bench({ listChildren: async () => [{ kind: 'child', id: SessionId('child-control'), mode: 'continuable', label: 'worker', activity: 'running', hasChildren: false }] })
+    const prompt = vi.fn(async () => ({ messageId: 'accepted' }))
+    const interrupt = vi.fn()
+    Object.assign(ctx.subagents, { prompt, interrupt })
+    try {
+      await controller.start()
+      const root = ctx.agents.list()[0]!
+      controller.dispatch({ kind: 'agent-hub' })
+      await vi.waitFor(() => expect(controller.getAgentHubPane().rows).toHaveLength(1))
+      expect(controller.getAgentHubPane().rows?.[0]).toMatchObject({ mode: 'continuable', parentSessionId: root.id })
+      controller.dispatch({ kind: 'agent-hub-control', input: 'compose' })
+      controller.dispatch({ kind: 'agent-hub-control', input: 'edit', text: 'continue exact child', caretIndex: 20 })
+      controller.dispatch({ kind: 'agent-hub-control', input: 'steer' })
+      await vi.waitFor(() => expect(prompt).toHaveBeenCalledOnce())
+      expect(prompt.mock.calls[0]).toEqual([expect.objectContaining({ parentSessionId: root.id, childSessionId: 'child-control', mode: 'continuable', delivery: 'steer', content: [{ type: 'text', text: 'continue exact child' }] }), expect.any(AbortSignal)])
+      await vi.waitFor(() => expect(controller.getAgentHubPane().busy).toBe(false))
+      controller.dispatch({ kind: 'agent-hub-control', input: 'stop' })
+      expect(interrupt).toHaveBeenCalledWith('child-control', { kind: 'user', parentSessionId: root.id })
+      expect(controller.getAgentHubPane().rows?.[0]?.activity).toBe('running')
+      expect(controller.getAgentHubPane().notice).toContain('已请求停止')
+      expect(ctx.agents.get(root.id)).toBe(root)
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('inspects a running child and paints 无法读取子会话 on inspect failure', async () => {
     const { ctx, controller } = await bench({
       listChildren: async () => [
@@ -422,7 +447,7 @@ describe('Agent Hub controller', () => {
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => {
-      expect(controller.getAgentHubPane().rows).toEqual([
+      expect(controller.getAgentHubPane().rows).toMatchObject([
         {
           id: 'child-1',
           label: 'explorer',
@@ -531,12 +556,15 @@ describe('Agent Hub controller', () => {
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows?.[0]?.id).toBe('child-parent') })
-    controller.dispatch({ kind: 'agent-hub-enter' })
+    controller.dispatch({ kind: 'agent-hub-expand' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows?.[0]?.id).toBe('child-leaf') })
     expect(listChildren).toHaveBeenCalledWith(
       SessionId('child-parent'),
       expect.any(AbortSignal),
     )
+    controller.dispatch({ kind: 'agent-hub-escape' })
+    expect(controller.getAgentHubPane().rows?.[0]?.id).toBe('child-parent')
+    expect(controller.getAgentHubPane().open).toBe(true)
     await ctx.fiber.dispose()
   })
 
@@ -573,7 +601,7 @@ describe('Agent Hub controller', () => {
     await controller.start()
     controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().rows).toHaveLength(1) })
-    controller.dispatch({ kind: 'agent-hub-enter' })
+    controller.dispatch({ kind: 'agent-hub-expand' })
     await vi.waitFor(() => { expect(controller.getAgentHubPane().error).toContain('nested gone') })
     await ctx.fiber.dispose()
   })
@@ -602,7 +630,7 @@ describe('Agent Hub controller', () => {
     fixture.ctx.get = ((name: string) => {
       return name === 'subagents' ? undefined : get(name)
     }) as never
-    fixture.controller.dispatch({ kind: 'agent-hub-enter' })
+    fixture.controller.dispatch({ kind: 'agent-hub-expand' })
     await Promise.resolve()
     fixture.ctx.get = get as never
     expect(fixture.controller.getAgentHubPane().open).toBe(true)
@@ -625,7 +653,7 @@ describe('Agent Hub controller', () => {
     await fixture.controller.start()
     fixture.controller.dispatch({ kind: 'agent-hub' })
     await vi.waitFor(() => { expect(fixture.controller.getAgentHubPane().rows).toHaveLength(1) })
-    fixture.controller.dispatch({ kind: 'agent-hub-enter' })
+    fixture.controller.dispatch({ kind: 'agent-hub-expand' })
     await started.promise
     fixture.controller.dispatch({ kind: 'agent-hub' })
     if (mode === 'resolve') gate.resolve([])
@@ -850,6 +878,8 @@ describe('Agent Hub controller', () => {
     expect(controller.getAgentHubPane().transcript).toContain('▸ bash {"command":"ls"}')
     expect(controller.getAgentHubPane().transcript).toContain('└─ file1 file2')
     expect(controller.getAgentHubPane().transcript).toContain('● All done')
+    expect(controller.getAgentHubPane().scrollOffset).toBe(Number.MAX_SAFE_INTEGER)
+    controller.dispatch({ kind: 'agent-hub-move', delta: -Number.MAX_SAFE_INTEGER })
     expect(controller.getAgentHubPane().scrollOffset).toBe(0)
     controller.dispatch({ kind: 'agent-hub-move', delta: 5 })
     expect(controller.getAgentHubPane().scrollOffset).toBe(5)
@@ -859,4 +889,65 @@ describe('Agent Hub controller', () => {
     await ctx.fiber.dispose()
   })
 
+})
+
+it('shows active descendant tasks in the default HUD without exposing another session’s work', async () => {
+  const { ctx, controller } = await bench({ listChildren: async () => [] })
+  await controller.start()
+  try {
+    const parent = controller.session!
+    const child = ctx.sessions.create(SessionId('hud-child'), { meta: { parentSession: parent.id, origin: 'subagent' } })
+    const stranger = ctx.sessions.create(SessionId('other-child'), { meta: { parentSession: SessionId('other-parent'), origin: 'subagent' } })
+    child.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Audit the provider settings' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
+    child.append('turn/start', { turn: 1 })
+    stranger.append('turn/start', { turn: 1 })
+    await vi.waitFor(() => {
+      const jobs = controller.getJobsHud() ?? []
+      expect(jobs.some(row => row.id.includes('hud-child') && row.label.includes('Audit the provider') && row.label.includes('Ctrl+B'))).toBe(true)
+      expect(jobs.some(row => row.id.includes('other-child'))).toBe(false)
+    })
+    child.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+    await vi.waitFor(() => expect(controller.getJobsHud() ?? []).toHaveLength(0))
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
+})
+
+it('browses live child output with /agents, preserves the running main session and coalesces streamed updates', async () => {
+  const childId = SessionId('inspect-live-child')
+  const list = vi.fn(async (): Promise<SubagentListEntry[]> => [{
+    kind: 'child', id: childId, mode: 'one-shot', label: 'explorer', activity: 'running', hasChildren: false,
+  }])
+  const { ctx, controller } = await bench({ listChildren: list })
+  await controller.start()
+  try {
+    const parent = controller.session!
+    controller.dispatch({ kind: 'send', text: 'Main task in progress' })
+    parent.append('turn/start', { turn: 1 })
+    const child = ctx.sessions.create(childId, { meta: { parentSession: parent.id, origin: 'subagent' } })
+    child.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Inspect API contracts' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
+    child.append('turn/start', { turn: 1 })
+    const agent = scriptedAgent(ctx, child)
+    ctx.agents.register(agent)
+    controller.dispatch({ kind: 'command', query: 'agents' })
+    await vi.waitFor(() => expect(controller.getAgentHubPane().rows).toHaveLength(1))
+    controller.dispatch({ kind: 'agent-hub-enter' })
+    await vi.waitFor(() => expect(controller.getAgentHubPane().transcript).toContain('Inspect API contracts'))
+    let updates = 0
+    const unsubscribe = controller.subscribe(() => { updates += 1 })
+    try {
+      for (let index = 0; index < 100; index += 1) {
+        ctx.emit('agent/assistant-stream', { agent, frame: { type: 'chunk', attemptId: LlmAttemptId('child-test'), revision: 0, index, time: index, chunk: { type: 'text-delta', index: 0, text: 'live ' } } })
+      }
+      expect(updates).toBeLessThanOrEqual(1)
+      await vi.waitFor(() => expect(controller.getAgentHubPane().transcript).toContain('live live'))
+      expect(updates).toBeLessThanOrEqual(2)
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(controller.session).toBe(parent)
+      expect(controller.getModel().status).toBe('generating')
+      expect(controller.getModel().activeTurn?.assistantText).toBe('')
+      controller.dispatch({ kind: 'agent-hub-escape' })
+      controller.dispatch({ kind: 'agent-hub-escape' })
+      expect(controller.getAgentHubPane().open).toBe(false)
+      expect(controller.getModel().status).toBe('generating')
+    } finally { unsubscribe() }
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
 })

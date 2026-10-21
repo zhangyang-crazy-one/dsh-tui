@@ -179,13 +179,13 @@ export function SessionPane({
             <Box key={row.id} width="100%" flexDirection="column">
               <Text wrap="truncate">
                 {highlighted ? styled('› ', 'accent', undefined, true) : '  '}
-                {styled(displayTitle, highlighted ? 'fg' : 'fgDim')}
+                {styled(displayTitle, highlighted ? 'fg' : 'fgSoft', undefined, highlighted)}
                 {' '.repeat(gap)}
                 {styled(age, 'fgDim')}
                 {styled(marker, 'accentDim')}
               </Text>
               {showIdentity && row.id === currentId ? (
-                <Text dimColor wrap="truncate">{escapeContent(`会话 ID · ${row.id}`)}</Text>
+                <Text dimColor wrap="truncate">{`  ${escapeContent(`会话 ID · ${row.id}`)}`}</Text>
               ) : null}
             </Box>
           )

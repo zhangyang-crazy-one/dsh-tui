@@ -6,12 +6,12 @@
 
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 
-const DEFAULT_SOURCE_URL = 'https://github.com/zhangyang-crazy-one/deepseek-harness.git'
-const DEFAULT_SOURCE_REF = 'feat/deepseek-tui'
+const DEFAULT_SOURCE_URL = 'https://github.com/deepseek-ai/deepseek-harness.git'
+const DEFAULT_SOURCE_REF = 'dsh-v0.2.1-rc.2'
 // Bounds a hung probe; a cold first start of `dsh --version` can exceed 3s.
 const PROBE_TIMEOUT_MS = 10_000
 /** dsh release the bundle patch and dist were composed against. */
-export const COMPATIBLE_DSH_VERSION = '0.2.1-alpha.2'
+export const COMPATIBLE_DSH_VERSION = '0.2.1-rc.2'
 /** Engine release line (major.minor) whose plugin APIs the bundle targets. */
 const COMPATIBLE_DSH_LINE = COMPATIBLE_DSH_VERSION.split('.').slice(0, 2).join('.')
 
@@ -53,7 +53,7 @@ const COMPATIBLE_DSH_LINE = COMPATIBLE_DSH_VERSION.split('.').slice(0, 2).join('
 /**
  * Parse the launcher's reserved management commands and flags.
  * @param {readonly string[]} argv - arguments after the executable.
- * @returns {{kind: 'version'} | {kind: 'update'} | {kind: 'probe'} | {kind: 'launch', args: string[], mode?: 'auto' | 'lightweight' | 'source'}}
+ * @returns {{kind: 'version'} | {kind: 'update'} | {kind: 'probe'} | {kind: 'launch', args: string[], mode?: 'auto' | 'lightweight' | 'source', profile?: string}}
  */
 export function parseLauncherInvocation(argv) {
   if (argv[0] === '--') return { kind: 'launch', args: [...argv.slice(1)] }
@@ -70,10 +70,18 @@ export function parseLauncherInvocation(argv) {
     return { kind: 'probe' }
   }
   let mode = undefined
+  let profile = undefined
   const args = []
   for (let i = 0; i < argv.length; i++) {
     const item = argv[i]
-    if (item === '--source') {
+    if (item === '--') {
+      args.push(...argv.slice(i + 1))
+      break
+    } else if (item === '--profile' || item.startsWith('--profile=')) {
+      if (profile !== undefined) throw new Error('--profile may only be specified once')
+      profile = item === '--profile' ? argv[++i] : item.slice('--profile='.length)
+      if (!profile?.trim() || profile.startsWith('-')) throw new Error('--profile needs a name')
+    } else if (item === '--source') {
       mode = 'source'
     } else if (item === '--lightweight') {
       mode = 'lightweight'
@@ -81,7 +89,7 @@ export function parseLauncherInvocation(argv) {
       args.push(item)
     }
   }
-  return mode !== undefined ? { kind: 'launch', args, mode } : { kind: 'launch', args }
+  return { kind: 'launch', args, ...(mode === undefined ? {} : { mode }), ...(profile === undefined ? {} : { profile }) }
 }
 
 /**
@@ -186,8 +194,8 @@ export function probeInstalledDsh({ env = {}, settings, adapters }) {
 
 /** npm name this package installs under; the tui profile lists it as a bundle. */
 export const BUNDLE_PACKAGE = '@crazyhappyone/dsh-tui'
-/** Profile the launcher boots. */
-const TUI_PROFILE = 'tui'
+/** Both runtime modes must read the same official profile and model settings. */
+const TUI_PROFILE = 'deepseek-tui'
 
 /**
  * Locate this package's bundle root: the directory whose cordis.patch.yml the
@@ -205,13 +213,13 @@ export function findBundleRoot(packageRoot, adapters) {
 
 /**
  * Whether the tui profile already lists this package root as a linked bundle.
- * @param {{bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ * @param {{bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters, profile?: string}} input
  * @returns {boolean}
  */
-export function tuiBundleInstalled({ bundleRoot, settings, env = {}, adapters }) {
+export function tuiBundleInstalled({ bundleRoot, settings, env = {}, adapters, profile = TUI_PROFILE }) {
   const dshHome = env['DSH_HOME'] || (settings.homeDirectory ? join(settings.homeDirectory, '.dsh') : undefined)
   if (!dshHome) return false
-  const manifestPath = join(dshHome, 'profiles', TUI_PROFILE, 'package.json')
+  const manifestPath = join(dshHome, 'profiles', profile, 'package.json')
   if (adapters.inspectPath(manifestPath) !== 'file') return false
   let manifest
   try {
@@ -228,19 +236,19 @@ export function tuiBundleInstalled({ bundleRoot, settings, env = {}, adapters })
  * Install this package as a bundle of the tui profile through dsh's own
  * plugin manager, which links it, appends it after @deepseek-ai/dsh-base, and
  * keeps the profile's user patch layer after it so settings edits apply.
- * @param {{probe: {binPath: string, command?: string, args?: string[]}, bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters}} input
+ * @param {{probe: {binPath: string, command?: string, args?: string[], cwd?: string}, bundleRoot: string, settings: LauncherSettings, env?: Readonly<Record<string, string | undefined>>, adapters: LauncherAdapters, profile?: string}} input
  * @returns {{ok: true} | {ok: false, reason: string}}
  */
-export function ensureTuiBundle({ probe, bundleRoot, settings, env = {}, adapters }) {
-  if (tuiBundleInstalled({ bundleRoot, settings, env, adapters })) return { ok: true }
+export function ensureTuiBundle({ probe, bundleRoot, settings, env = {}, adapters, profile = TUI_PROFILE }) {
+  if (tuiBundleInstalled({ bundleRoot, settings, env, adapters, profile })) return { ok: true }
   const result = adapters.run(
     probe.command ?? probe.binPath,
-    [...(probe.args ?? []), 'plugin', '--profile', TUI_PROFILE, 'add', bundleRoot],
+    [...(probe.args ?? []), 'plugin', '--profile', profile, 'add', bundleRoot],
     // The install reads nothing; input typed meanwhile stays queued for the TUI.
-    { stdio: 'output' },
+    { ...(probe.cwd === undefined ? {} : { cwd: probe.cwd }), stdio: 'output' },
   )
   if (result.status === 0) return { ok: true }
-  return { ok: false, reason: `\`dsh plugin --profile ${TUI_PROFILE} add ${bundleRoot}\` failed with exit code ${result.status}` }
+  return { ok: false, reason: `\`dsh plugin --profile ${profile} add ${bundleRoot}\` failed with exit code ${result.status}` }
 }
 
 /**
@@ -257,7 +265,7 @@ export function runLauncher({ invocation, settings, packageVersion, adapters, en
     case 'probe':
       return showProbe({ settings, packageVersion, adapters, env })
     case 'launch':
-      return launchTui({ args: invocation.args, mode: invocation.mode, settings, adapters, env })
+      return launchTui({ args: invocation.args, mode: invocation.mode, profile: invocation.profile, settings, adapters, env })
     default:
       return assertNever(invocation)
   }
@@ -302,11 +310,11 @@ export function engineCompatibility(version, env = {}) {
   }
 }
 
-function launchTui({ args, mode, settings, adapters, env = {} }) {
+function launchTui({ args, mode, profile = TUI_PROFILE, settings, adapters, env = {} }) {
   const effectiveMode = mode ?? settings.mode ?? 'auto'
 
   if (effectiveMode === 'source') {
-    return launchSourceTui({ args, settings, adapters })
+    return launchSourceTui({ args, profile, settings, adapters, env })
   }
 
   const bundleRoot = findBundleRoot(settings.packageRoot, adapters)
@@ -316,7 +324,7 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
     if (probe.ok) {
       const compatibility = engineCompatibility(probe.version, env)
       if (!compatibility.ok) return reportError(adapters, compatibility.reason)
-      return launchLightweightTui({ args, probe, bundleRoot, adapters, env, settings })
+      return launchLightweightTui({ args, profile, probe, bundleRoot, adapters, env, settings })
     }
     const explicit = settings.dshBin ?? env['DSH_BIN']
     if (effectiveMode === 'lightweight' || explicit?.trim()) {
@@ -329,7 +337,7 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
   // Fallback to source runtime if initialized
   const state = runtimeState(settings, adapters)
   if (state.ok && state.initialized) {
-    return launchSourceTui({ args, settings, adapters })
+    return launchSourceTui({ args, profile, settings, adapters, env })
   }
 
   if (state.ok && !state.initialized) {
@@ -342,32 +350,56 @@ function launchTui({ args, mode, settings, adapters, env = {} }) {
     return reportError(adapters, `runtime is not initialized at ${settings.runtimeDirectory}; run \`dsh-tui update\` first`)
   }
 
-  return launchSourceTui({ args, settings, adapters })
+  return launchSourceTui({ args, profile, settings, adapters, env })
 }
 
-function launchLightweightTui({ args, probe, bundleRoot, adapters, env = {}, settings }) {
-  const installed = ensureTuiBundle({ probe, bundleRoot, settings, env, adapters })
+function launchLightweightTui({ args, profile, probe, bundleRoot, adapters, env = {}, settings }) {
+  const installed = ensureTuiBundle({ probe, bundleRoot, settings, env, adapters, profile })
   if (!installed.ok) return reportError(adapters, installed.reason)
   const result = adapters.run(
     probe.command ?? probe.binPath,
-    [...(probe.args ?? []), '--profile', TUI_PROFILE, ...args],
+    [...(probe.args ?? []), '--profile', profile, ...args],
     { stdio: 'inherit' },
   )
   return result.status
 }
 
-function launchSourceTui({ args, settings, adapters }) {
+function launchSourceTui({ args, profile, settings, adapters, env = {} }) {
   const state = runtimeState(settings, adapters)
   if (!state.ok) return reportError(adapters, state.message)
   if (!state.initialized) {
     return reportError(adapters, `runtime is not initialized at ${settings.runtimeDirectory}; run \`dsh-tui update\` first`)
   }
-  const result = adapters.run(
-    settings.packageManager,
-    ['dsh', '--profile', 'deepseek-tui', ...args],
-    { cwd: settings.runtimeDirectory, stdio: 'inherit' },
-  )
-  return result.status
+  const bundleRoot = findBundleRoot(settings.packageRoot, adapters)
+  // Preserve the library's legacy fork-only entry when no packaged bundle exists.
+  if (bundleRoot === undefined) {
+    return adapters.run(settings.packageManager, ['dsh', '--profile', profile, ...args], {
+      cwd: settings.runtimeDirectory, stdio: 'inherit',
+    }).status
+  }
+  const compatibility = engineCompatibility(readDshVersion(settings.runtimeDirectory, adapters), env)
+  if (!compatibility.ok) return reportError(adapters, compatibility.reason)
+  const command = adapters.nodeExecutable ?? 'node'
+  const cwd = settings.runtimeDirectory
+  // Source aliases do not cover generated package exports. Upstream's generator
+  // emits these contracts without requiring a complete Web/Desktop build.
+  if (adapters.inspectPath(join(cwd, 'packages/api/remote-access/lib/typert.host.js')) !== 'file') {
+    if (adapters.inspectPath(join(cwd, 'scripts/generate-typert.ts')) !== 'file') {
+      return reportError(adapters, 'source runtime is missing generated contracts and scripts/generate-typert.ts; update the dsh checkout')
+    }
+    const generated = adapters.run(command, ['--import', 'tsx/esm', 'scripts/generate-typert.ts'], { cwd, stdio: 'output' })
+    if (generated.status !== 0) return reportCommandFailure(adapters, 'generate source runtime contracts', generated)
+  }
+  // pnpm exec preserves the checkout's pinned package-manager context for the
+  // profile plugin manager, without running the `predsh` installation hook.
+  const probe = {
+    command: settings.packageManager, binPath: settings.packageManager,
+    args: ['exec', command, '--import', 'tsx/esm', 'apps/cli/src/bin.ts'], cwd,
+  }
+  const installed = ensureTuiBundle({ probe, bundleRoot, settings, env, adapters, profile })
+  if (!installed.ok) return reportError(adapters, installed.reason)
+  // Avoid `pnpm dsh`: its pre-script reinstalls the whole workspace on every boot.
+  return adapters.run(probe.command, [...probe.args, '--profile', profile, ...args], { cwd, stdio: 'inherit' }).status
 }
 
 function showProbe({ settings, packageVersion, adapters, env = {} }) {
@@ -384,9 +416,12 @@ function showProbe({ settings, packageVersion, adapters, env = {} }) {
       ? `engine compatibility: ok (built for ${COMPATIBLE_DSH_VERSION})\n`
       : `engine compatibility: ${compatibility.reason}\n`)
     const bundleRoot = findBundleRoot(settings.packageRoot, adapters)
-    adapters.writeOut(`bundle: ${bundleRoot === undefined
-      ? 'missing'
-      : `${bundleRoot} (${tuiBundleInstalled({ bundleRoot, settings, env, adapters }) ? 'installed in' : 'not yet installed in'} profile ${TUI_PROFILE})`}\n`)
+    let bundle = 'missing'
+    if (bundleRoot !== undefined) {
+      const state = tuiBundleInstalled({ bundleRoot, settings, env, adapters }) ? 'installed in' : 'not yet installed in'
+      bundle = `${bundleRoot} (${state} profile ${TUI_PROFILE})`
+    }
+    adapters.writeOut(`bundle: ${bundle}\n`)
     return 0
   }
   adapters.writeOut(`dsh: not installed (${probe.reason})\n`)

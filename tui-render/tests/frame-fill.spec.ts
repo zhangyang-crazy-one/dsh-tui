@@ -887,3 +887,47 @@ describe('transcript differential clearing', () => {
     transformFrameChunk('\x1b[?2026l', 'none')
   })
 })
+
+it('keeps Ink’s logical bottom across repeated sparse incremental frames and caret overlays', () => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } }) as unknown as NodeJS.WriteStream
+  Object.assign(sink, { isTTY: true, rows: 24, columns: 80 })
+  const wrapped = wrapStdoutForFrameBg(sink, () => 'none')
+  const atlas = new ScreenAtlas(80, 24)
+  try {
+    setFrameCaret({ row: 22, col: 5 })
+    wrapped.write(`HEADER${'\n'.repeat(23)}FOOTER\x1b[?2026l`)
+    atlas.feed(chunks.splice(0).join(''))
+    for (const text of ['first', 'second', 'third']) {
+      wrapped.write(`\x1b[?2026h\x1b[23A\x1b[E\x1b[G${text}\x1b[K\n${'\x1b[E'.repeat(21)}\x1b[?2026l`)
+      atlas.feed(chunks.splice(0).join(''))
+      expect(atlas.extract({ col: 1, row: 1 }, { col: 80, row: 1 })).toBe('HEADER')
+      expect(atlas.extract({ col: 1, row: 2 }, { col: 80, row: 2 })).toBe(text)
+      expect(atlas.extract({ col: 1, row: 24 }, { col: 80, row: 24 })).toBe('FOOTER')
+      expect(atlas.cursorPosition).toEqual({ row: 22, col: 5 })
+    }
+  } finally { setFrameCaret(undefined) }
+})
+
+it.each(['ABCDE', '甲乙A', '🌍甲A', 'A甲乙', 'A甲🌍'])('retains the final glyph of a full-width incremental row: %s', text => {
+  const chunks: string[] = []
+  const sink = new Writable({ write(chunk, _encoding, callback) { chunks.push(String(chunk)); callback() } })
+  Object.assign(sink, { isTTY: true, rows: 4, columns: 5 })
+  const wrapped = wrapStdoutForFrameBg(sink as unknown as NodeJS.WriteStream, () => 'none')
+  const atlas = new ScreenAtlas(5, 4)
+  setVisibleFrameSnapshot(undefined)
+  releaseFrameRail()
+  try {
+    setFrameCaret({ row: 4, col: 1 })
+    wrapped.write('H\nold\nI\nF\x1b[?2026l')
+    atlas.feed(chunks.splice(0).join(''))
+    // Ink 7's changed-row protocol clears to EOL after printing the row.
+    wrapped.write(`\x1b[?2026h\x1b[3A\x1b[E\x1b[G\x1b[31m${text}\x1b[0m\x1b[K\n\x1b[E\x1b[?2026l`)
+    atlas.feed(chunks.join(''))
+    expect(atlas.extract({ col: 1, row: 2 }, { col: 5, row: 2 })).toBe(text)
+    chunks.splice(0)
+    wrapped.write('\x1b[?2026h\x1b[3A\x1b[E\x1b[GX\x1b[K\n\x1b[E\x1b[?2026l')
+    atlas.feed(chunks.join(''))
+    expect(atlas.extract({ col: 1, row: 2 }, { col: 5, row: 2 })).toBe('X')
+  } finally { setFrameCaret(undefined) }
+})

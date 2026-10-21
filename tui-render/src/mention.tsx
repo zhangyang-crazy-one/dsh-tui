@@ -99,26 +99,22 @@ export function Mention({
   let rowIndex = 0
   for (const [kind, group] of sections) {
     rows.push(
-      <Box key={kind}>
-        <Text dimColor>{KIND_LABELS[kind]}</Text>
-      </Box>,
+      <Text key={kind} wrap="truncate">
+        {styled(KIND_LABELS[kind], 'accentText', undefined, true)}
+      </Text>,
     )
     for (const candidate of group) {
       const selected = rowIndex === clampedIndex
       rows.push(
-        <Box key={`${kind}:${candidate.name}`}>
-          <Text>
-            {selected
-              ? styled(escapeContent('› '), 'accent', undefined, true)
-              : '  '}
-          </Text>
-          <Text dimColor={!selected}>
-            @ {escapeContent(candidate.name)}
-          </Text>
-          {candidate.description !== undefined ? (
-            <Text dimColor> — {escapeContent(candidate.description)}</Text>
-          ) : null}
-        </Box>,
+        <Text key={`${kind}:${candidate.name}`} wrap="truncate">
+          {selected
+            ? styled(escapeContent('› '), 'accent', undefined, true)
+            : '  '}
+          {styled(`@ ${escapeContent(candidate.name)}`, selected ? 'fg' : 'fgSoft', undefined, selected)}
+          {candidate.description !== undefined
+            ? styled(` — ${escapeContent(candidate.description)}`, 'fgDim')
+            : ''}
+        </Text>,
       )
       rowIndex += 1
     }

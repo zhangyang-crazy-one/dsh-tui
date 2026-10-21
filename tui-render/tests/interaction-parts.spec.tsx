@@ -302,3 +302,18 @@ describe('reduceInteraction', () => {
     expect(next.effect).toEqual({ kind: 'cancel-generation' })
   })
 })
+
+it('completes and executes selected /key references without duplicating typed arguments', () => {
+  const items = [
+    { name: 'key', description: 'Set API key' },
+    { name: 'key DEEPSEEK_API_KEY', description: 'DeepSeek key' },
+    { name: 'key GOAT_API_KEY', description: 'Provider key' },
+  ]
+  expect(filterCommands(items, '').map(item => item.name)).toEqual(['key'])
+  expect(filterCommands(items, 'key G').map(item => item.name)).toEqual(['key GOAT_API_KEY'])
+  expect(completeFirst(items, 'key G')?.name).toBe('key GOAT_API_KEY')
+  expect(resolveEnterQuery(items, 'key', 2)).toBe('key GOAT_API_KEY')
+  expect(resolveEnterQuery(items, 'key G', 0)).toBe('key GOAT_API_KEY')
+  expect(resolveEnterQuery(items, 'key GOAT_API_KEY', 0)).toBe('key GOAT_API_KEY')
+  expect(resolveEnterQuery(items, 'key GOAT_API_KEY synthetic-secret', 2)).toBe('key GOAT_API_KEY synthetic-secret')
+})

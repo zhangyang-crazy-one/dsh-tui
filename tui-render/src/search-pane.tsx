@@ -66,28 +66,40 @@ export function SearchPane({
   selectedIndex,
   status = 'idle',
 }: SearchPaneProps): ReactNode {
-  const visible = results.slice(0, SEARCH_WINDOW)
+  const windowStart = Math.min(
+    Math.max(0, selectedIndex - SEARCH_WINDOW + 1),
+    Math.max(0, results.length - SEARCH_WINDOW),
+  )
+  const visible = results.slice(windowStart, windowStart + SEARCH_WINDOW)
+  let bodyNode: ReactNode
+  if (status === 'searching') {
+    bodyNode = <Text dimColor>搜索中…</Text>
+  } else if (status === 'error') {
+    bodyNode = <Text>{styled(escapeContent('搜索失败，请重试'), 'error')}</Text>
+  } else if (results.length === 0) {
+    bodyNode = <Text dimColor>{query === '' ? '输入关键词搜索会话' : '无匹配会话'}</Text>
+  } else {
+    bodyNode = visible.map((row, index) => {
+      const highlighted = windowStart + index === selectedIndex
+      const cleanSnippet = escapeContent(row.snippet).replace(/\s+/gu, ' ')
+      return (
+        <Text key={row.id} wrap="truncate">
+          {highlighted ? styled(escapeContent('› '), 'accent', undefined, true) : '  '}
+          {styled(escapeContent(row.title), highlighted ? 'fg' : 'fgSoft', undefined, highlighted)}
+          {styled(` — ${cleanSnippet}`, highlighted ? 'accentText' : 'fgDim')}
+        </Text>
+      )
+    })
+  }
   return (
     <Box flexDirection="column" width="100%">
-      <Text>搜索: {escapeContent(query)}</Text>
-      {status === 'searching' ? (
-        <Text dimColor>搜索中…</Text>
-      ) : status === 'error' ? (
-        <Text>搜索失败，请重试</Text>
-      ) : results.length === 0 ? (
-        <Text dimColor>{query === '' ? '输入关键词搜索会话' : '无匹配会话'}</Text>
-      ) : (
-        visible.map((row, index) => {
-          const highlighted = index === selectedIndex
-          return (
-            <Box key={row.id} width="100%">
-              <Text>{highlighted ? styled(escapeContent('› '), 'accent', undefined, true) : '  '}</Text>
-              <Text dimColor={!highlighted}>{escapeContent(row.title)}</Text>
-              <Text dimColor={!highlighted}> — {escapeContent(row.snippet)}</Text>
-            </Box>
-          )
-        })
-      )}
+      <Text wrap="truncate">
+        {styled(`搜索: ${escapeContent(query)}`, 'fg', undefined, true)}
+        {status === 'idle' && results.length > 0
+          ? styled(`  ·  ${String(Math.min(results.length, Math.max(1, selectedIndex + 1)))}/${String(results.length)}`, 'fgDim')
+          : ''}
+      </Text>
+      {bodyNode}
       {status !== 'searching' && results.length > SEARCH_WINDOW ? (
         <Text dimColor>… 还有 {results.length - SEARCH_WINDOW} 条结果</Text>
       ) : null}

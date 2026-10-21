@@ -69,6 +69,31 @@ async function bench(manager = service(), present = true) {
 }
 
 describe('Plugins inventory and controls', () => {
+  it('preserves the market registry through inspection and installation, then clears it for official catalog targets', async () => {
+    const b = await bench()
+    b.ctx.provide('pluginMarket', {
+      listIndexes: () => [{ url: 'https://fixture.invalid/index.json' }],
+      search: async () => ({ entries: [{ name: 'sample', defaultVersion: '1.0.0', versions: [{
+        version: '1.0.0', compatibility: { compatible: true }, install: { spec: 'sample@1.0.0', registry: 'https://registry.example/' },
+      }], installation: { status: 'not-installed' } }], total: 1, nextOffset: null }),
+    } as never)
+    b.controller.dispatch({ kind: 'command', query: 'market sample' })
+    await vi.waitFor(() => expect(b.controller.getBrowserPane().rows).toHaveLength(1))
+    b.controller.dispatch({ kind: 'browser-action', key: 'i' })
+    await vi.waitFor(() => expect(b.controller.getPluginsPane().mode).toBe('preview'))
+    expect(b.manager.inspect).toHaveBeenLastCalledWith('sample@1.0.0', { registry: 'https://registry.example/' }, expect.any(AbortSignal))
+    b.input({ kind: 'install' })
+    await vi.waitFor(() => expect(b.manager.installBundle).toHaveBeenCalledWith('sample@1.0.0', expect.objectContaining({ registry: 'https://registry.example/' })))
+    await vi.waitFor(() => expect(b.controller.getPluginsPane().busy).toBe(false))
+    b.manager.listBundles.mockResolvedValue([bundle({ name: '@deepseek-ai/dsh-claude-code', official: true, availability: 'missing', installed: false, enabled: false,
+      optional: false, removable: false, installTarget: { spec: '@deepseek-ai/dsh-claude-code@0.2.1-rc.2', version: '0.2.1-rc.2' } })])
+    b.input({ kind: 'close' })
+    await b.open()
+    b.input({ kind: 'toggle' })
+    await vi.waitFor(() => expect(b.controller.getPluginsPane().mode).toBe('preview'))
+    expect(b.manager.inspect).toHaveBeenLastCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-rc.2', {}, expect.any(AbortSignal))
+  })
+
   it('opens an unavailable page through the command and keeps close usable', async () => {
     const b = await bench(undefined, false)
     b.controller.dispatch({ kind: 'command', query: 'plugins' })
@@ -104,19 +129,19 @@ describe('Plugins inventory and controls', () => {
     b.manager.listBundles.mockResolvedValue([
       bundle({ name: 'own' }),
       bundle({ name: '@deepseek-ai/dsh-claude-code', official: true, availability: 'missing', installed: false, enabled: false,
-        optional: false, removable: false, installTarget: { spec: '@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', version: '0.2.1-alpha.2' } }),
+        optional: false, removable: false, installTarget: { spec: '@deepseek-ai/dsh-claude-code@0.2.1-rc.2', version: '0.2.1-rc.2' } }),
     ])
     await b.open()
     const rows = b.controller.getPluginsPane().rows
     expect(rows.map(row => [row.id, row.group])).toEqual([['bundle:@deepseek-ai/dsh-claude-code', 'official'], ['bundle:own', 'owned']])
     expect(rows[0]?.label).toBe('@deepseek-ai/dsh-claude-code · 官方 · 可安装')
-    expect(rows[0]?.details).toEqual(expect.arrayContaining(['未安装', '安装目标: @deepseek-ai/dsh-claude-code@0.2.1-alpha.2 (0.2.1-alpha.2)']))
+    expect(rows[0]?.details).toEqual(expect.arrayContaining(['未安装', '安装目标: @deepseek-ai/dsh-claude-code@0.2.1-rc.2 (0.2.1-rc.2)']))
     b.input({ kind: 'toggle' })
     await vi.waitFor(() => expect(b.controller.getPluginsPane().mode).toBe('preview'))
-    expect(b.manager.inspect).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', {}, expect.any(AbortSignal))
+    expect(b.manager.inspect).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-rc.2', {}, expect.any(AbortSignal))
     expect(b.manager.setBundleEnabled).not.toHaveBeenCalled()
     b.input({ kind: 'install' })
-    await vi.waitFor(() => expect(b.manager.installBundle).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-alpha.2', expect.anything()))
+    await vi.waitFor(() => expect(b.manager.installBundle).toHaveBeenCalledWith('@deepseek-ai/dsh-claude-code@0.2.1-rc.2', expect.anything()))
   })
 
   it('toggles optional non-removable bundles and live rows with addressable controls', async () => {
@@ -145,7 +170,7 @@ describe('Plugins inventory and controls', () => {
     expect(b.reload).toHaveBeenCalledTimes(application === 'restart-required' ? 1 : 0)
   })
 
-  it.each(['stop-profile', 'bundle-in-use', 'not-removable', 'stale-approval', 'invalid-spec', 'ambiguous-install'] satisfies ManagementError['code'][])('keeps named removal refusal %s visible', async (code) => {
+  it.each(['stop-profile', 'bundle-in-use', 'not-removable', 'stale-approval', 'invalid-spec', 'already-installed', 'ambiguous-install'] satisfies ManagementError['code'][])('keeps named removal refusal %s visible', async (code) => {
     const b = await bench()
     b.manager.removeBundle.mockResolvedValue(result({ changed: false, application: 'failed', error: { code } }))
     await b.open(); b.input({ kind: 'remove' })
@@ -156,6 +181,16 @@ describe('Plugins inventory and controls', () => {
     expect(b.controller.getPluginsPane().result).toHaveLength(2)
     expect(b.controller.getPluginsPane().rows[0]?.id).toBe('bundle:sample')
     expect(b.reload).not.toHaveBeenCalled()
+  })
+
+  it('names the dsh requirements an incompatible-version rejection carries', async () => {
+    const b = await bench()
+    b.manager.listBundles.mockResolvedValue([bundle({ error: { code: 'incompatible-version', incompatible: [
+      { name: 'bad', version: '1.0.0', runtimeVersion: '0.2.1-rc.2', requirements: { 'engines.dsh': '>=0.3.0' } }] } })])
+    await b.open()
+    const details = b.controller.getPluginsPane().rows[0]?.details.join(' ') ?? ''
+    expect(details).toContain('插件与当前 DSH 版本不兼容')
+    expect(details).toContain('bad@1.0.0 (engines.dsh >=0.3.0)')
   })
 
   it('cancels a named removal via n or Esc and rereads inventory after success', async () => {

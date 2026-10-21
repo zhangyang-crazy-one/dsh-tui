@@ -5,11 +5,16 @@
  * @module @deepseek-ai/dsh-tui-render/plan-review-pane
  */
 
-import { Box, Text } from 'ink'
-import type { ReactNode } from 'react'
+import { Box, Text, useWindowSize } from 'ink'
+import { useMemo, type ReactNode } from 'react'
 import { escapeContent } from './content.ts'
-import { MarkdownBlock } from './markdown.tsx'
 import { paintRow, styled } from './theme.ts'
+import { useDialogTextRows, useDialogWindow } from './dialog-window.ts'
+import { parseMarkdownSource } from './markdown-parse.ts'
+import { createStyledMarkdownBlockRenderer } from './markdown-render.ts'
+import { paintLineFromRenderLine } from './painted-line.ts'
+import { hyperlinksEnabled } from './hyperlink.ts'
+import type { MarkdownRenderLine, MarkdownRenderScope } from './markdown-projector.ts'
 
 /** Exact dialog heading (bold fg, never accent). */
 const TITLE = '计划评审'
@@ -26,6 +31,7 @@ export const PLAN_REVIEW_WINDOW = 12
 export interface PlanReviewPaneState {
   /** Whether the slot currently occupies the composer. */
   open: boolean
+  requestId?: number
   /** Plan markdown under review (untrusted). */
   plan?: string
   /** Delivery-failure reason without the `✗ ` prefix. */
@@ -40,6 +46,9 @@ export interface PlanReviewPaneProps {
   offset?: number | undefined
   /** Delivery-failure reason without the `✗ ` prefix. */
   deliveryError?: string | undefined
+  maxRows?: number
+  maxCols?: number
+  onOffsetChange?: (offset: number) => void
 }
 
 /** Closed snapshot: TuiLoop keeps the ordinary composer. */
@@ -60,7 +69,7 @@ function line(
   bold = false,
 ): ReactNode {
   return (
-    <Text>
+    <Text wrap="truncate">
       {paintRow([styled(escapeContent(text), token, undefined, bold)])}
     </Text>
   )
@@ -73,30 +82,41 @@ function line(
  * @returns the element tree.
  */
 export function PlanReviewPane({
-  plan = '',
-  offset = 0,
-  deliveryError,
+  plan = '', offset = 0, deliveryError, maxRows, maxCols, onOffsetChange,
 }: PlanReviewPaneProps): ReactNode {
-  const empty = plan.trim() === ''
-  const lines = plan.split('\n')
-  const safeOffset = Math.max(0, offset)
-  const windowed = lines.slice(safeOffset, safeOffset + PLAN_REVIEW_WINDOW).join('\n')
+  const size = useWindowSize()
+  const width = Math.max(1, maxCols ?? (size.columns || 80))
+  const height = Math.max(4, maxRows ?? (size.rows || 24) - 6)
+  const limit = Math.max(0, Math.min(PLAN_REVIEW_WINDOW, height - 4))
+  const links = hyperlinksEnabled()
+  const physicalRows = useMemo(() => {
+    const scope: MarkdownRenderScope = { width, theme: 'truecolor', fold: 'expanded', renderMode: 'settled' }
+    const renderer = createStyledMarkdownBlockRenderer({ width, hyperlinks: links })
+    const rows: MarkdownRenderLine[] = []
+    for (const [index, block] of parseMarkdownSource(plan, true).children.entries()) {
+      const lines = renderer.renderBlock(block, scope, index)
+      if (rows.length > 0 && lines.length > 0) rows.push(renderer.renderRawTail('', 0, scope))
+      rows.push(...lines)
+    }
+    return rows
+  }, [plan, width, links])
+  const failed = deliveryError !== undefined && deliveryError !== ''
+  const errorRows = useDialogTextRows(failed ? `✗ 计划评审未能送达：${deliveryError}\n${DELIVERY_NEXT}` : '', width)
+  const planView = useDialogWindow(physicalRows, offset, limit, failed ? undefined : onOffsetChange)
+  const errorView = useDialogWindow(errorRows, offset, limit, failed ? onOffsetChange : undefined)
+  const view = failed ? errorView : planView
+  const position = view.total > 0 ? ` ${view.start + 1}–${view.start + view.visible.length}/${view.total}` : ''
+  let body: ReactNode
+  if (failed) body = errorView.visible.map((text, index) => <Text key={errorView.start + index} wrap="truncate">{paintRow([styled(text || ' ', 'error')])}</Text>)
+  else if (plan.trim() === '') body = line(EMPTY_BODY, 'fg')
+  else body = planView.visible.map((row, index) => <Text key={planView.start + index} wrap="truncate">{row.spans.length === 0 ? ' ' : paintLineFromRenderLine(row, links)}</Text>)
   return (
-    <Box flexDirection="column" width="100%">
-      {line(TITLE, 'fg', true)}
-      {deliveryError !== undefined && deliveryError !== '' ? (
-        <Box flexDirection="column" width="100%">
-          {line(`✗ 计划评审未能送达：${deliveryError}`, 'error')}
-          {line(DELIVERY_NEXT, 'fgDim')}
-        </Box>
-      ) : empty ? (
-        line(EMPTY_BODY, 'fg')
-      ) : (
-        <MarkdownBlock source={windowed} />
-      )}
-      {line('批准', 'fg')}
-      {line('继续规划', 'fg')}
-      {line(FOOTNOTE, 'fgDim')}
+    <Box flexDirection="column" width="100%" flexShrink={0}>
+      <Text wrap="truncate">{paintRow([styled(TITLE, 'fg', undefined, true), styled(position, 'fgDim')])}</Text>
+      {body}
+      <Text wrap="truncate">{paintRow([styled('  [y] ', 'success', undefined, true), styled('批准', 'fg', undefined, true), styled(' (开始执行计划)', 'fgDim')])}</Text>
+      <Text wrap="truncate">{paintRow([styled('  [n] ', 'warning', undefined, true), styled('继续规划', 'fg', undefined, true), styled(' (返回调整方案)', 'fgDim')])}</Text>
+      {line(width < 70 ? '↑↓/PgUp/PgDn · Home/End · Esc 取消' : `${FOOTNOTE} · ↑↓/PgUp/PgDn 浏览`, 'fgDim')}
     </Box>
   )
 }

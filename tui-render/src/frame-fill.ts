@@ -39,6 +39,7 @@
  */
 
 import {
+  currentAppearance,
   bgSequence,
   currentTier,
   paintBackgroundRow,
@@ -150,9 +151,10 @@ function railCell(
   text: string,
   tier: ColorTier,
 ): string {
-  return `\x1b[${String(row)};${String(col)}H${text === ' '
-    ? styled(text, 'bg', tier)
-    : styled(styled(text, text === '█' ? 'accent' : 'fgDim', tier), 'bg', tier)}`
+  const position = `\x1b[${String(row)};${String(col)}H`
+  if (text === ' ') return position + styled(text, 'bg', tier)
+  const token = text === '█' ? 'accent' : 'fgDim'
+  return position + styled(styled(text, token, tier), 'bg', tier)
 }
 
 /** Paint one rail cell and clear the guard cell that can retain a wide glyph. */
@@ -263,7 +265,7 @@ const blankPadCache = new Map<string, string>()
 
 function blankPad(count: number, tier: ColorTier): string {
   if (count <= 0) return ''
-  const key = `${tier}:${String(count)}`
+  const key = `${currentAppearance()}:${tier}:${String(count)}`
   let cached = blankPadCache.get(key)
   if (cached === undefined) {
     cached = styled(' '.repeat(count), 'bg', tier)
@@ -452,6 +454,13 @@ type FrameOverlayStream = NodeJS.WriteStream & {
   [WRITE_FRAME_OVERLAY]?: (chunk: string) => boolean
 }
 
+/** Ink 7 appends EL at the last column; terminals erase that just-painted glyph. */
+function preserveFullWidthRows(chunk: string, columns: number): string {
+  if (columns < 1 || !chunk.includes('\x1b[K')) return chunk
+  return chunk.replace(/(\x1b\[(?:1)?G)([^\n]*?)\x1b\[K/gu, (match: string, home: string, body: string) =>
+    displayWidth(body) === columns ? home + body : match)
+}
+
 /**
  * Wrap a stdout stream so every written chunk passes through
  * {@link transformFrameChunk} at the tier current at write time. The wrapper
@@ -471,22 +480,21 @@ export function wrapStdoutForFrameBg(
   let synchronizedFrameOpen = false
   let inkBottomRow = stdout.rows
   const transformingWrite: WriteCall = (chunk, ...args) => {
-    if (typeof chunk === 'string' && chunk.includes(START_SYNC)) synchronizedFrameOpen = true
-    if (typeof chunk === 'string' && chunk.includes(END_SYNC)) synchronizedFrameOpen = false
+    if (typeof chunk !== 'string') return writeMeasured(chunk, ...args)
+    if (chunk.includes(START_SYNC)) synchronizedFrameOpen = true
+    if (chunk.includes(END_SYNC)) synchronizedFrameOpen = false
+    const source = stdout.isTTY ? preserveFullWidthRows(chunk, stdout.columns) : chunk
     // Ink erases and diffs upward from the bottom of its fullscreen output.
     // Its cursor bookkeeping does not include the composer's absolute suffix.
-    const inkChunk = typeof chunk === 'string'
-      && stdout.isTTY
+    const inkChunk = stdout.isTTY
       && frameCaret !== undefined
-      && /\x1b\[\d*A|\x1b\[2K/u.test(chunk)
-      ? `\x1b[${Math.min(inkBottomRow, stdout.rows)};1H${chunk}`
-      : chunk
-    const transformed = typeof inkChunk === 'string'
-      ? transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen)
-      : inkChunk
+      && /\x1b\[\d*A|\x1b\[2K/u.test(source)
+      ? `\x1b[${Math.min(inkBottomRow, stdout.rows)};1H${source}`
+      : source
+    const transformed = transformFrameChunk(inkChunk, getTier(), !synchronizedFrameOpen)
     // Ink's non-incremental body writes contain the complete output, including
     // a trailing newline for a frame shorter than the terminal.
-    if (typeof chunk === 'string' && chunk.includes('\n')) inkBottomRow = Math.min(stdout.rows, chunk.split('\n').length)
+    if (chunk.includes('\n')) inkBottomRow = Math.min(stdout.rows, chunk.split('\n').length)
     return writeMeasured(transformed, ...args)
   }
   const writeMeasured: WriteCall = (transformed, ...args) => {

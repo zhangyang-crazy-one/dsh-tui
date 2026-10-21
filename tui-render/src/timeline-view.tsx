@@ -54,15 +54,13 @@ export function TimelineView({
       {history.length === 0 ? <Text dimColor>（无历史消息）</Text> : null}
       {start > 0 ? <Text dimColor>… 还有 {start} 条</Text> : null}
       {visible.map((message, index) => (
-        <Box key={start + index} width="100%">
-          <Text dimColor>{relativeTime(message.timestamp, clock)}</Text>
-          <Text dimColor> {message.kind === 'user' ? '> ' : '● '}</Text>
-          <Text>
-            {index === current
-              ? styled(escapeContent(firstLine(message.text)), 'accent')
-              : escapeContent(firstLine(message.text))}
-          </Text>
-        </Box>
+        <Text key={start + index}>
+          {styled(relativeTime(message.timestamp, clock), 'fgDim')}
+          {` ${message.kind === 'user' ? '> ' : '● '}`}
+          {index === current
+            ? styled(escapeContent(firstLine(message.text)), 'accent')
+            : escapeContent(firstLine(message.text))}
+        </Text>
       ))}
       <Text>{styled(escapeContent('↑↓/jk 滚动 · Esc 关闭'), 'fgDim')}</Text>
     </Box>

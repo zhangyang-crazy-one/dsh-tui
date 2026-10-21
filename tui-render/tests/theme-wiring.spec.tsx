@@ -46,7 +46,7 @@ function renderUserRow(): string {
   return renderToString(
     createElement(StreamView, {
       model: {
-        history: [{ kind: 'user', text: 'hello', timestamp: 1 }],
+        history: [{ id: 1, kind: 'user', text: 'hello', timestamp: 1 }],
         activeTurn: undefined,
         status: 'idle',
         reasoningExpanded: false,

@@ -17,8 +17,10 @@ import { composerFrameAnchor, composerLineWindow } from './composer-cursor.ts'
 import { tokenizeComposer } from './composer-tokens.ts'
 import { displayColumnSlice, displayWidth, escapeContent } from './content.ts'
 import { hideFrameCaret, setFrameCaret } from './frame-fill.ts'
-import { inkColor, paintBackgroundRow, styled } from './theme.ts'
+import { currentTier, inkColor, paintBackgroundRow, styled } from './theme.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
+import { maskComposerInput } from './secret-input.ts'
+import { inputSelectionRange } from './input-selection.ts'
 
 /** Input state handed between the state machine steps. */
 export interface InputState {
@@ -103,6 +105,8 @@ export function handleInput(
 
 /** InputBar props: display state the keymap owner supplies. */
 export interface InputBarProps {
+  /** Mask a credential editor while keeping the owner-controlled source buffer intact. */
+  secret?: boolean
   /** Presentation-copy locale, Chinese when omitted. */
   locale?: TuiLocale
   /** The buffered text to display. */
@@ -115,6 +119,8 @@ export interface InputBarProps {
   rowsBelow?: number
   /** Caret offset into `text`; omitted means the end of the buffer. */
   caretIndex?: number | undefined
+  /** Selection origin in the unmasked buffer's UTF-16 coordinates. */
+  selectionAnchor?: number | undefined
   /** Model name to show in the composer frame chip. */
   modelChip?: string | undefined
   /** Mode name ('agent' | 'plan' | 'focus') to show in the composer frame chip. */
@@ -140,15 +146,21 @@ export const COMPOSER_PLACEHOLDER = tuiCopy('inputHint')
  * @returns the element tree.
  */
 export function InputBar({
-  text,
+  text: sourceText,
   commandMode,
   mentionMode,
   rowsBelow = 0,
-  caretIndex,
+  caretIndex: sourceCaretIndex,
+  selectionAnchor: sourceSelectionAnchor,
   modelChip,
   modeChip,
   locale,
+  secret,
 }: InputBarProps): ReactNode {
+  const { text, caretIndex } = maskComposerInput(sourceText, sourceCaretIndex ?? sourceText.length, secret)
+  const selectionAnchor = sourceSelectionAnchor === undefined ? undefined
+    : maskComposerInput(sourceText, sourceSelectionAnchor, secret).caretIndex
+  const selection = inputSelectionRange({ text, caretIndex, selectionAnchor })
   const { stdout } = useStdout()
   const { columns, rows } = useWindowSize()
   const lines = text.split('\n')
@@ -227,19 +239,29 @@ export function InputBar({
       {lines.map((line, lineIndex) => {
         const window = windows[lineIndex] as (typeof windows)[number]
         let sourceColumn = 0
+        let sourceOffset = lines.slice(0, lineIndex).reduce((offset, item) => offset + item.length + 1, 0)
         const endColumn = window.startColumn + displayWidth(window.text)
-        const tokenParts = tokenizeComposer(line).map((token) => {
-          const safe = escapeContent(token.text).replace(/\t/gu, '\\t')
-          const width = displayWidth(safe)
-          const visible = displayColumnSlice(
-            safe, Math.max(0, window.startColumn - sourceColumn), Math.min(width, endColumn - sourceColumn),
-          )
-          sourceColumn += width
-          return styled(visible, token.kind === 'command' || token.kind === 'mention'
-            ? 'accent'
-            : token.kind === 'image'
-              ? 'fgDim'
-              : 'fg')
+        const tokenParts = tokenizeComposer(line).flatMap((token) => {
+          const start = sourceOffset
+          sourceOffset += token.text.length
+          const cuts = [0, ...(selection === undefined ? [] : [selection.start - start, selection.end - start]
+            .filter(offset => offset > 0 && offset < token.text.length)), token.text.length].sort((a, b) => a - b)
+          return cuts.slice(1).map((end, index) => {
+            const begin = cuts[index] as number
+            const safe = escapeContent(token.text.slice(begin, end)).replace(/\t/gu, '\\t')
+            const width = displayWidth(safe)
+            const visible = displayColumnSlice(
+              safe, Math.max(0, window.startColumn - sourceColumn), Math.min(width, endColumn - sourceColumn),
+            )
+            sourceColumn += width
+            const painted = styled(visible, token.kind === 'command' || token.kind === 'mention'
+              ? 'accent'
+              : token.kind === 'image'
+                ? 'fgDim'
+                : 'fg')
+            return selection !== undefined && start + begin >= selection.start && start + begin < selection.end
+              && visible !== '' && currentTier() !== 'none' ? `\x1b[7m${painted}\x1b[27m` : painted
+          })
         })
         return (
           <Text key={lineIndex} wrap="truncate">

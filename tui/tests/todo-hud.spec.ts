@@ -123,3 +123,26 @@ describe('todo HUD', () => {
     await ctx.fiber.dispose()
   })
 })
+
+it('opens the complete TODO projection during generation and closes without switching sessions', async () => {
+  const { ctx, controller } = await bench()
+  let todos = ROWS
+  ctx.provide('sessionProjections', { snapshot: () => ({ values: { todos } }) } as never)
+  const parent = controller.session
+  try {
+    controller.dispatch({ kind: 'send', text: 'Keep working' })
+    controller.dispatch({ kind: 'command', query: 'todos' })
+    expect(controller.getTodoPaneOpen()).toBe(true)
+    expect(controller.getTodoHud()).toBe(ROWS)
+    expect(controller.getTodoHud()?.some(todo => todo.status === 'completed')).toBe(true)
+    todos = [{ content: 'Updated task', status: 'in_progress' }]
+    parent?.append('todo/write', { todos })
+    expect(controller.getTodoHud()).toBe(todos)
+    expect(controller.getTodoPaneOpen()).toBe(true)
+    expect(controller.session).toBe(parent)
+    expect(controller.getModel().status).toBe('generating')
+    controller.dispatch({ kind: 'todo-pane' })
+    expect(controller.getTodoPaneOpen()).toBe(false)
+    expect(controller.getModel().status).toBe('generating')
+  } finally { await controller.dispose(); await ctx.fiber.dispose() }
+})

@@ -16,9 +16,9 @@ import { join, resolve } from 'node:path'
 import SessionStore from '@deepseek-ai/dsh-session'
 import { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { MessageId } from '@deepseek-ai/dsh-llm'
-import { logPath } from '../../../../session/session-persistence-jsonl/src/format.ts'
+import { logPath } from '@deepseek-ai/dsh-session-persistence-jsonl/src/format.ts'
 
 /** One thousand completed turns, each with one user and one assistant message. */
 export const LONG_SESSION_TURNS = 1000

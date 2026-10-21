@@ -1,0 +1,218 @@
+[
+  {
+    "package": "@deepseek-ai/dsh-agent-instructions",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-agent-preset",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-agent-preset-registry",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-agent-tool-presentation",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-command-compact",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-command-goal",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-compaction-basic",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-cordis-host-runner",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-persona",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-plan-mode",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-plugin-manager",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-plugin-market",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-skill-filesystem",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-terminal",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-terminal-bash",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-time-context",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-ask-user",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-bash",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-bash-persistent",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-cordis",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-fs",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-fs-search",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-goal",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-jobs",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-present",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-pwsh",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-pwsh-persistent",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-schedule",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-skill",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-subagent",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-subagent-control",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-todo",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-web",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-workflow",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  },
+  {
+    "package": "@deepseek-ai/dsh-workflow-ptc",
+    "version": "0.2.1-rc.2",
+    "available": true,
+    "exit": 0
+  }
+]

@@ -6,7 +6,7 @@ import type { ViewModel } from '../src/projection.ts'
 
 function model(status: ViewModel['status']): ViewModel {
   return {
-    history: [{ kind: 'assistant', text: 'settled message' }],
+    history: [{ id: 1, kind: 'assistant', text: 'settled message', timestamp: 1 }],
     activeTurn:
       status === 'generating'
         ? {

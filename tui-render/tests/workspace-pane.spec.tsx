@@ -71,7 +71,7 @@ describe('WorkspacePane', () => {
     expect(output).toContain('› ▾ src')
     expect(output).toContain('app.ts')
     expect(output).toContain('▸ docs')
-    expect(output).toContain('j/k 选择 · Enter 打开 · e 路径 · Esc 关闭')
+    expect(output).toContain('j/k 选择 · Enter 打开 · r 刷新 · e 路径 · Esc 关闭')
   })
 
   it('switches the footnote while the path draft is editing', () => {
@@ -303,4 +303,17 @@ describe('WorkspacePane', () => {
     expect(renderPlain({ ...state, open: false })).toBe('')
   })
 
+})
+
+
+it('keeps a large delivery list within the physical window and shows the selected tail', () => {
+  const state = openState({ mode: 'deliveries', selectedIndex: 999,
+    nodes: Array.from({ length: 1000 }, (_, index) => ({ path: `/ws/${index}.md`, name: `${index}.md`, kind: 'file' as const, depth: 0, expanded: false })),
+  })
+  const text = renderPlain(state, 40, 10)
+  expect(text).toContain('交付文件')
+  expect(text).toContain('999.md')
+  expect(text).not.toContain('100.md')
+  expect(text.split('\n').length).toBeLessThanOrEqual(10)
+  expect(text).toContain('o 系统打开')
 })

@@ -1,126 +1,30 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "target": "es2024",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": [
+      "node"
+    ],
     "rootDir": "src",
     "outDir": "lib/types"
   },
   "include": [
     "src"
-  ],
-  "references": [
-    {
-      "path": "../../boot/plugin-manager"
-    },
-    {
-      "path": "../../../vendor/cordis"
-    },
-    {
-      "path": "../../../vendor/loader"
-    },
-    {
-      "path": "../../../vendor/schemastery"
-    },
-    {
-      "path": "../../core/agent"
-    },
-    {
-      "path": "../../core/agent-default-model"
-    },
-    {
-      "path": "../../llm/llm"
-    },
-    {
-      "path": "../../llm/llm-retry"
-    },
-    {
-      "path": "../../llm/token-meter"
-    },
-    {
-      "path": "../../core/session"
-    },
-    {
-      "path": "../../session/session-persistence"
-    },
-    {
-      "path": "../../session/session-persistence-jsonl"
-    },
-    {
-      "path": "../../session/session-title"
-    },
-    {
-      "path": "../../session-query/session-query"
-    },
-    {
-      "path": "../../session-query/session-query-sqlite"
-    },
-    {
-      "path": "../../interaction/commands"
-    },
-    {
-      "path": "../../credentials/credentials"
-    },
-    {
-      "path": "../../fs/fs"
-    },
-    {
-      "path": "../../skill/skill"
-    },
-    {
-      "path": "../../subagent/subagent"
-    },
-    {
-      "path": "../../plan/plan-mode"
-    },
-    {
-      "path": "../tui-render"
-    },
-    {
-      "path": "../../boot/cmdline"
-    },
-    {
-      "path": "../../interaction/permission-presets"
-    },
-    {
-      "path": "../../interaction/user-approval"
-    },
-    {
-      "path": "../../interaction/user-questions"
-    },
-    {
-      "path": "../../settings/settings"
-    },
-    {
-      "path": "../../goal/goal"
-    },
-    {
-      "path": "../../session/working-directory"
-    },
-    {
-      "path": "../../credentials/deepseek-account"
-    },
-    {
-      "path": "../../host/webserver"
-    },
-    {
-      "path": "../../session/session-projection"
-    },
-    {
-      "path": "../../todo/tool-todo"
-    },
-    {
-      "path": "../../jobs/jobs"
-    },
-    {
-      "path": "../../workflow/workflow"
-    },
-    {
-      "path": "../../feedback/message-feedback"
-    },
-    {
-      "path": "../../session/session-stats"
-    },
-    {
-      "path": "../../deliverables/workspace-changes"
-    }
   ]
 }

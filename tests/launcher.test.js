@@ -58,8 +58,8 @@ function createFixture(options = {}) {
 function settings(overrides = {}) {
   return {
     runtimeDirectory: RUNTIME,
-    sourceUrl: 'https://github.com/zhangyang-crazy-one/deepseek-harness.git',
-    sourceRef: 'feat/deepseek-tui',
+    sourceUrl: 'https://github.com/deepseek-ai/deepseek-harness.git',
+    sourceRef: 'dsh-v0.2.1-rc.2',
     packageManager: 'pnpm',
     homeDirectory: '/home/test',
     ...overrides,
@@ -192,7 +192,7 @@ test('update clones an absent runtime and installs frozen dependencies', () => {
     {
       operation: 'run',
       command: 'git',
-      args: ['clone', '--branch', 'feat/deepseek-tui', '--single-branch', '--', settings().sourceUrl, RUNTIME],
+      args: ['clone', '--branch', 'dsh-v0.2.1-rc.2', '--single-branch', '--', settings().sourceUrl, RUNTIME],
       options: { capture: true },
     },
     {
@@ -270,7 +270,7 @@ test('update fast-forwards a clean runtime and refreshes dependencies', () => {
   assert.deepEqual(fixture.calls.filter(call => call.operation === 'run').map(call => [call.command, call.args]), [
     ['git', ['status', '--porcelain']],
     ['git', ['rev-parse', 'HEAD']],
-    ['git', ['fetch', '--no-tags', '--', settings().sourceUrl, 'feat/deepseek-tui']],
+    ['git', ['fetch', '--no-tags', '--', settings().sourceUrl, 'dsh-v0.2.1-rc.2']],
     ['git', ['rev-parse', 'FETCH_HEAD']],
     ['git', ['merge-base', '--is-ancestor', 'oldsha', 'newsha']],
     ['git', ['merge', '--ff-only', 'newsha']],
@@ -402,7 +402,7 @@ test('probe command outputs probe details', () => {
   assert.match(fixture.stdout.join(''), /dsh: installed/)
   assert.match(fixture.stdout.join(''), /executable: dsh/)
   assert.match(fixture.stdout.join(''), /engine compatibility: ok/)
-  assert.match(fixture.stdout.join(''), /bundle: \/pkg \(not yet installed in profile tui\)/)
+  assert.match(fixture.stdout.join(''), /bundle: \/pkg \(not yet installed in profile deepseek-tui\)/)
 })
 
 test('lightweight launch installs this package as the tui bundle, then boots the profile', () => {
@@ -410,8 +410,8 @@ test('lightweight launch installs this package as the tui bundle, then boots the
     paths: { '/pkg/cordis.patch.yml': 'file' },
     results: [
       { status: 0, stdout: '0.2.0-rc.2\n', stderr: '' }, // probe dsh --version
-      { status: 0, stdout: '', stderr: '' }, // dsh plugin --profile tui add /pkg
-      { status: 0, stdout: '', stderr: '' }, // dsh --profile tui my-task
+      { status: 0, stdout: '', stderr: '' }, // dsh plugin --profile deepseek-tui add /pkg
+      { status: 0, stdout: '', stderr: '' }, // dsh --profile deepseek-tui my-task
     ],
   })
   const status = runLauncher({
@@ -423,8 +423,8 @@ test('lightweight launch installs this package as the tui bundle, then boots the
   assert.equal(status, 0)
   assert.deepEqual(fixture.calls.filter(call => call.operation === 'run').map(call => call.args), [
     ['--version'],
-    ['plugin', '--profile', 'tui', 'add', '/pkg'],
-    ['--profile', 'tui', 'my-task'],
+    ['plugin', '--profile', 'deepseek-tui', 'add', '/pkg'],
+    ['--profile', 'deepseek-tui', 'my-task'],
   ])
   assert.ok(fixture.calls.every(call => call.operation !== 'writeText'))
 })
@@ -443,7 +443,7 @@ test('lightweight launch reports a failed bundle install without booting', () =>
     adapters: fixture.adapters,
   })
   assert.equal(status, 1)
-  assert.match(fixture.stderr.join(''), /dsh plugin --profile tui add \/pkg` failed with exit code 3/)
+  assert.match(fixture.stderr.join(''), /dsh plugin --profile deepseek-tui add \/pkg` failed with exit code 3/)
   assert.equal(fixture.calls.filter(call => call.operation === 'run').length, 2)
 })
 
@@ -482,7 +482,7 @@ for (const [entry, overrides, env] of [
   ['blank settings override masking env', { dshBin: '   ' }, { DSH_BIN: '/broken/dsh' }],
 ]) {
   test(`default auto launch falls back to initialized source with ${entry}`, () => {
-    const fixture = createFixture({
+    const fixture = createReadySourceFixture({
       paths: {
         '/pkg/cordis.patch.yml': 'file',
         [RUNTIME]: 'directory',
@@ -509,7 +509,7 @@ for (const [entry, overrides, env] of [
       { operation: 'resolveDshPackage', directory: '/pkg' },
       {
         operation: 'run', command: 'pnpm',
-        args: ['dsh', '--profile', 'deepseek-tui', 'task'],
+        args: ['exec', '/usr/bin/node', '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'deepseek-tui', 'task'],
         options: { cwd: RUNTIME, stdio: 'inherit' },
       },
     ])
@@ -517,14 +517,14 @@ for (const [entry, overrides, env] of [
 }
 
 test('launch with --source forces source mode even if bundled patch and DSH_BIN exist', () => {
-  const fixture = createFixture({
+  const fixture = createReadySourceFixture({
     paths: {
       '/pkg/cordis.patch.yml': 'file',
       [RUNTIME]: 'directory',
       [`${RUNTIME}/.git`]: 'directory',
     },
     results: [
-      { status: 0, stdout: '', stderr: '' }, // pnpm dsh ...
+      { status: 0, stdout: '', stderr: '' }, // pnpm exec node ...
     ],
   })
   const status = runLauncher({
@@ -539,7 +539,7 @@ test('launch with --source forces source mode even if bundled patch and DSH_BIN 
   assert.deepEqual(fixture.calls.at(-1), {
     operation: 'run',
     command: 'pnpm',
-    args: ['dsh', '--profile', 'deepseek-tui', 'task'],
+    args: ['exec', '/usr/bin/node', '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'deepseek-tui', 'task'],
     options: { cwd: RUNTIME, stdio: 'inherit' },
   })
 })
@@ -622,11 +622,11 @@ test('local package launch reuses the probe and preserves profile, app args, and
   assert.equal(status, 7)
   assert.deepEqual(fixture.calls.at(-1), {
     operation: 'run', command: '/usr/bin/node',
-    args: ['/workspace/node_modules/@deepseek-ai/dsh/bin.cjs', '--profile', 'tui', '--resume', 'session-1', '--cwd', '/work space', 'task'],
+    args: ['/workspace/node_modules/@deepseek-ai/dsh/bin.cjs', '--profile', 'deepseek-tui', '--resume', 'session-1', '--cwd', '/work space', 'task'],
     options: { stdio: 'inherit' },
   })
   assert.equal(fixture.calls.filter(call => call.args?.includes('--version')).length, 2)
-  assert.deepEqual(fixture.calls.at(-2).args, ['/workspace/node_modules/@deepseek-ai/dsh/bin.cjs', 'plugin', '--profile', 'tui', 'add', '/pkg'])
+  assert.deepEqual(fixture.calls.at(-2).args, ['/workspace/node_modules/@deepseek-ai/dsh/bin.cjs', 'plugin', '--profile', 'deepseek-tui', 'add', '/pkg'])
   assert.ok(fixture.calls.every(call => call.command !== 'git' && !call.args?.includes('install')))
 })
 
@@ -652,7 +652,7 @@ test('unusable package candidates are diagnosed and duplicate global roots are o
 })
 
 test('an installed tui bundle is not reinstalled and PATH success stops package discovery', () => {
-  const manifest = '/home/test/.dsh/profiles/tui/package.json'
+  const manifest = '/home/test/.dsh/profiles/deepseek-tui/package.json'
   const fixture = createFixture({
     paths: { '/pkg/cordis.patch.yml': 'file', [manifest]: 'file' },
     text: { [manifest]: JSON.stringify({
@@ -665,16 +665,149 @@ test('an installed tui bundle is not reinstalled and PATH success stops package 
     settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
   }), 0)
   assert.deepEqual(fixture.calls.map(call => call.args), [
-    ['--version'], ['--profile', 'tui', '--dump-config'],
+    ['--version'], ['--profile', 'deepseek-tui', '--dump-config'],
   ])
 })
 
 test('engineCompatibility admits the bundle release line and rejects other lines with an install hint', () => {
   assert.deepEqual(engineCompatibility('0.2.0-rc.2\n'), { ok: true })
+  assert.deepEqual(engineCompatibility('0.2.1-rc.2'), { ok: true })
   assert.deepEqual(engineCompatibility('0.2.1-alpha.2'), { ok: true })
   assert.deepEqual(engineCompatibility('unknown'), { ok: true })
   const rejected = engineCompatibility('0.1.6-alpha.2')
   assert.equal(rejected.ok, false)
-  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.1-alpha\.2/)
+  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.1-rc\.2/)
   assert.deepEqual(engineCompatibility('0.1.6-alpha.2', { DSH_TUI_SKIP_ENGINE_CHECK: '1' }), { ok: true })
+})
+
+test('source launch prepares generated contracts, links this bundle into the existing profile, then boots directly', () => {
+  const fixture = createFixture({
+    paths: {
+      [RUNTIME]: 'directory', [`${RUNTIME}/.git`]: 'directory',
+      '/pkg/cordis.patch.yml': 'file',
+      [`${RUNTIME}/scripts/generate-typert.ts`]: 'file',
+    },
+    text: { [`${RUNTIME}/package.json`]: '{"version":"0.2.1-rc.2"}' },
+    results: [
+      { status: 0, stdout: '', stderr: '' },
+      { status: 0, stdout: '', stderr: '' },
+      { status: 7, stdout: '', stderr: '' },
+    ],
+  })
+  const status = runLauncher({
+    invocation: { kind: 'launch', mode: 'source', args: ['--resume', 'session-1'] },
+    settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+  })
+  assert.equal(status, 7)
+  assert.deepEqual(fixture.calls.map(call => [call.command, call.args, call.options]), [
+    ['/usr/bin/node', ['--import', 'tsx/esm', 'scripts/generate-typert.ts'], { cwd: RUNTIME, stdio: 'output' }],
+    ['pnpm', ['exec', '/usr/bin/node', '--import', 'tsx/esm', 'apps/cli/src/bin.ts', 'plugin', '--profile', 'deepseek-tui', 'add', '/pkg'], { cwd: RUNTIME, stdio: 'output' }],
+    ['pnpm', ['exec', '/usr/bin/node', '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'deepseek-tui', '--resume', 'session-1'], { cwd: RUNTIME, stdio: 'inherit' }],
+  ])
+})
+
+test('ready source launch does not reinstall dependencies or regenerate contracts', () => {
+  const manifest = '/home/test/.dsh/profiles/deepseek-tui/package.json'
+  const fixture = createFixture({
+    paths: {
+      [RUNTIME]: 'directory', [`${RUNTIME}/.git`]: 'directory',
+      '/pkg/cordis.patch.yml': 'file', [manifest]: 'file',
+      [`${RUNTIME}/packages/api/remote-access/lib/typert.host.js`]: 'file',
+    },
+    text: {
+      [`${RUNTIME}/package.json`]: '{"version":"0.2.1-rc.2"}',
+      [manifest]: JSON.stringify({
+        dependencies: { '@crazyhappyone/dsh-tui': 'link:/pkg' },
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@crazyhappyone/dsh-tui'] } },
+      }),
+    },
+  })
+  assert.equal(runLauncher({
+    invocation: { kind: 'launch', mode: 'source', args: [] },
+    settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+  }), 0)
+  assert.equal(fixture.calls.length, 1)
+  assert.equal(fixture.calls[0].command, 'pnpm')
+  assert.deepEqual(fixture.calls[0].args, ['exec', '/usr/bin/node', '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'deepseek-tui'])
+})
+
+test('source contract generation failure stops before plugin installation or terminal boot', () => {
+  const fixture = createFixture({
+    paths: {
+      [RUNTIME]: 'directory', [`${RUNTIME}/.git`]: 'directory',
+      '/pkg/cordis.patch.yml': 'file',
+      [`${RUNTIME}/scripts/generate-typert.ts`]: 'file',
+    },
+    text: { [`${RUNTIME}/package.json`]: '{"version":"0.2.1-rc.2"}' },
+    results: [{ status: 4, stdout: '', stderr: 'contract generation failed' }],
+  })
+  assert.equal(runLauncher({
+    invocation: { kind: 'launch', mode: 'source', args: [] },
+    settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+  }), 4)
+  assert.equal(fixture.calls.length, 1)
+  assert.match(fixture.stderr.join(''), /contract/iu)
+})
+
+function createReadySourceFixture(options = {}) {
+  const profileManifest = '/home/test/.dsh/profiles/deepseek-tui/package.json'
+  return createFixture({
+    ...options,
+    paths: {
+      [RUNTIME]: 'directory', [`${RUNTIME}/.git`]: 'directory',
+      '/pkg/cordis.patch.yml': 'file', [profileManifest]: 'file',
+      [`${RUNTIME}/packages/api/remote-access/lib/typert.host.js`]: 'file',
+      ...options.paths,
+    },
+    text: {
+      [`${RUNTIME}/package.json`]: '{"version":"0.2.1-rc.2"}',
+      [profileManifest]: JSON.stringify({
+        dependencies: { '@crazyhappyone/dsh-tui': 'link:/pkg' },
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@crazyhappyone/dsh-tui'] } },
+      }),
+      ...options.text,
+    },
+  })
+}
+
+test('lightweight mode reuses the same configured profile as source mode', () => {
+  const fixture = createReadySourceFixture()
+  assert.equal(runLauncher({
+    invocation: { kind: 'launch', mode: 'lightweight', args: ['--resume', 's1'] },
+    settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+  }), 0)
+  assert.deepEqual(fixture.calls.filter(call => call.operation === 'run').map(call => call.args), [
+    ['--version'], ['--profile', 'deepseek-tui', '--resume', 's1'],
+  ])
+})
+
+test('profile selection is explicit and leaves app arguments after the separator alone', () => {
+  assert.deepEqual(parseLauncherInvocation(['--lightweight', '--profile', 'shared', '--resume', 's1']), {
+    kind: 'launch', mode: 'lightweight', profile: 'shared', args: ['--resume', 's1'],
+  })
+  assert.deepEqual(parseLauncherInvocation(['--source', '--profile=shared', 'task']), {
+    kind: 'launch', mode: 'source', profile: 'shared', args: ['task'],
+  })
+  assert.deepEqual(parseLauncherInvocation(['--source', '--', '--profile', 'literal']), {
+    kind: 'launch', mode: 'source', args: ['--profile', 'literal'],
+  })
+  for (const argv of [['--profile'], ['--profile='], ['--profile', '--source'], ['--profile', 'one', '--profile', 'two']]) {
+    assert.throws(() => parseLauncherInvocation(argv), /profile/)
+  }
+})
+
+test('both launch modes install and boot the explicitly selected official profile', () => {
+  for (const mode of ['lightweight', 'source']) {
+    const fixture = createReadySourceFixture()
+    assert.equal(runLauncher({
+      invocation: parseLauncherInvocation([`--${mode}`, '--profile', 'shared', '--resume', 's1']),
+      settings: settings({ packageRoot: '/pkg' }), adapters: fixture.adapters,
+    }), 0)
+    const runs = fixture.calls.filter(call => call.operation === 'run')
+    const install = runs.find(call => call.args.includes('plugin'))
+    assert.ok(install)
+    assert.deepEqual(install.args.slice(install.args.indexOf('plugin')), ['plugin', '--profile', 'shared', 'add', '/pkg'])
+    assert.deepEqual(runs.at(-1).args.slice(-4), ['--profile', 'shared', '--resume', 's1'])
+    assert.equal(fixture.calls.some(call => call.operation === 'writeText'), false)
+  }
 })

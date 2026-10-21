@@ -57,16 +57,20 @@ function bodyRow(line: string, key: number, width?: number): ReactNode {
  * @param props - display state and available width.
  * @returns the element tree.
  */
-export function ReasoningBlock({
-  text,
-  collapsed,
-  durationMs,
-  live = false,
-  maxCols,
-}: ReasoningBlockProps): ReactNode {
+export function ReasoningBlock(props: ReasoningBlockProps): ReactNode {
+  if (props.collapsed || props.text === '') return null
+  if (props.maxCols === undefined) return <ResponsiveReasoningBlock {...props} />
+  return <ReasoningContent {...props} maxCols={props.maxCols} />
+}
+
+function ResponsiveReasoningBlock(props: ReasoningBlockProps): ReactNode {
   const { columns } = useWindowSize()
-  if (collapsed || text === '') return null
-  const width = maxCols ?? columns
+  return <ReasoningContent {...props} maxCols={columns} />
+}
+
+function ReasoningContent({
+  text, durationMs, live = false, maxCols: width,
+}: ReasoningBlockProps & { maxCols: number }): ReactNode {
   const escaped = escapeContent(text)
   const body = wrapDisplayLines(escaped, Math.max(1, width - 4))
 

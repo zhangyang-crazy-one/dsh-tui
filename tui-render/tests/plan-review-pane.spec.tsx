@@ -1,3 +1,4 @@
+import { PASSIVE_CONTROLLER } from './helpers.ts'
 /**
  * PlanReviewPane chrome: 计划评审, empty body, delivery failure, footnote,
  * CSI escaping, and no OverlayShell wrap. y/n labels stay host-side.
@@ -85,9 +86,7 @@ function stubController(
     getSettingsPane: () => EMPTY_SETTINGS_PANE,
     getAgentHubPane: () => EMPTY_OVERLAY_PANE,
     getPlanDirectoryPane: () => EMPTY_PLAN_DIRECTORY_PANE,
-    getWorkspacePane: () => EMPTY_OVERLAY_PANE,
-    getFeedbackPane: () => EMPTY_OVERLAY_PANE,
-    getWorkflowOverlay: () => EMPTY_OVERLAY_PANE,
+    ...PASSIVE_CONTROLLER,
     getPlanReviewPane: () => review,
     getComposerHud: () => undefined,
     getToolPresenters: () => undefined,
