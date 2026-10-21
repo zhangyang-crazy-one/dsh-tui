@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "version": "0.1.0-alpha.52",
+  "tag": "v0.1.0-alpha.52",
+  "commit": "b90443f075d52b0893491ba9a43e3f5fd3c9bbf7",
+  "npmChannel": "next",
+  "npmDistTags": {
+    "latest": "0.1.0-alpha.45",
+    "next": "0.1.0-alpha.52"
+  },
+  "integrity": "sha512-SIZ9n3vLUl0fwluonrKi/jX1J3trONxfeER+nPMSXei6rEhsh6C0sg58cUDSEETb04v26bZAFuXs41CPrxPyGQ==",
+  "sha256": "16ef5b14489d39640ea98c38586e60d9c46388bf4645a9b840f506b89f9b09b6",
+  "githubRelease": "https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.52",
+  "publishRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39625086157",
+  "ciRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39624921570",
+  "provenance": "https://registry.npmjs.org/-/npm/v1/attestations/@crazyhappyone%2fdsh-tui@0.1.0-alpha.52",
+  "checks": [
+    "registry next/version/gitHead",
+    "published tarball SHA-1 and SHA-512 integrity",
+    "npm tarball matches GitHub asset SHA-256 digest",
+    "all 22 packaged files byte-match the release checkout",
+    "updated settings screenshot, README translations and changelog shipped"
+  ],
+  "files": [
+    "LICENSE",
+    "bin/dsh-tui.js",
+    "dist/index.js",
+    "src/launcher.js",
+    "dist/schedule.js",
+    "dist/settings.js",
+    "dist/startup.js",
+    "dist/zen-proxy.js",
+    "package.json",
+    "CHANGELOG.md",
+    "README.md",
+    "README.zh.md",
+    "assets/screenshots/dsh-tui-hello.png",
+    "assets/screenshots/dsh-tui-settings.png",
+    "README.i18n.yaml",
+    "presets/base-disable.patch.yml",
+    "cordis.patch.yml",
+    "presets/cordis.patch.yml",
+    "presets/minimal.patch.yml",
+    "presets/ptc.patch.yml",
+    "presets/registry.patch.yml",
+    "presets/standard.patch.yml"
+  ]
+}

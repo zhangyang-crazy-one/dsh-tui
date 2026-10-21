@@ -4,6 +4,8 @@
 
 ## 已验证
 
+发布验证：2026-10-21 已发布 [v0.1.0-alpha.52](https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.52)，npm `next` 指向 `0.1.0-alpha.52`，`gitHead` 为 `b90443f075d52b0893491ba9a43e3f5fd3c9bbf7`。发布提交的 Node 22.19.0 / 24 CI 与 OIDC 发布工作流均通过；公开 npm 包的 SHA-256 匹配 GitHub 附件，22 个包内文件与发布提交逐字节一致，包含更新的设置截图、双语 README 和 changelog。记录见 [publication.json](publication.json)。
+
 | 问题 | 当前行为 |
 |---|---|
 | 分类切换仅藏在页脚 | 显示分类栏，当前分类带方括号和强调色；窄屏保留当前分类及左右隐藏提示 |
