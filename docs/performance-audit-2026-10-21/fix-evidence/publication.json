@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "version": "0.1.0-alpha.51",
+  "tag": "v0.1.0-alpha.51",
+  "commit": "50162e6983b93a62d0c66e7a3cf2bf859ab0eab2",
+  "npmChannel": "next",
+  "npmDistTags": {
+    "latest": "0.1.0-alpha.45",
+    "next": "0.1.0-alpha.51"
+  },
+  "integrity": "sha512-z5x84tQrt6LZQLhw+SAeTNvcIz4pgggbtLdRAMFJwNY1+HLf9/8cozIzbFp/1rMsGXsRyA7RrkruJN1MfBEJHA==",
+  "sha256": "15eb6fb759c6c24b92394becdba1e9b24f0335e222e31b82500024997b7605ac",
+  "githubRelease": "https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.51",
+  "publishRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39617997149",
+  "ciRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39617481731",
+  "provenance": "https://registry.npmjs.org/-/npm/v1/attestations/@crazyhappyone%2fdsh-tui@0.1.0-alpha.51",
+  "checks": [
+    "registry next/version/gitHead",
+    "published tarball SHA-1 and SHA-512 integrity",
+    "npm tarball matches GitHub asset SHA-256 digest",
+    "all 22 packaged files byte-match the release checkout",
+    "five runtime bundles, launcher, README translations, changelog and seven patches shipped"
+  ],
+  "files": [
+    "LICENSE",
+    "bin/dsh-tui.js",
+    "dist/index.js",
+    "src/launcher.js",
+    "dist/schedule.js",
+    "dist/settings.js",
+    "dist/startup.js",
+    "dist/zen-proxy.js",
+    "package.json",
+    "CHANGELOG.md",
+    "README.md",
+    "README.zh.md",
+    "assets/screenshots/dsh-tui-hello.png",
+    "assets/screenshots/dsh-tui-settings.png",
+    "README.i18n.yaml",
+    "presets/base-disable.patch.yml",
+    "cordis.patch.yml",
+    "presets/cordis.patch.yml",
+    "presets/minimal.patch.yml",
+    "presets/ptc.patch.yml",
+    "presets/registry.patch.yml",
+    "presets/standard.patch.yml"
+  ]
+}

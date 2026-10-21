@@ -1,6 +1,8 @@
 # TUI 修复与验证
 
-修复基线：`7952c5f`。本记录对应 `fix/tui-rendering-scroll-settings` 的源码与本地 bundle；npm 版本仍为 `0.1.0-alpha.50`，本轮没有发布新包。
+修复基线：`7952c5f`。下述修复验证在 `fix/tui-rendering-scroll-settings` 的源码与本地 bundle 上完成，当时 npm 版本为 `0.1.0-alpha.50`。
+
+后续发布已验证：2026-10-21 发布 [v0.1.0-alpha.51](https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.51)，npm `next` 指向该版本，`gitHead` 为 `50162e6983b93a62d0c66e7a3cf2bf859ab0eab2`。发布提交的 Node 22.19.0 / 24 CI 与 OIDC 发布工作流均通过；公开 npm 包与 GitHub 附件 SHA-256 一致，全部 22 个文件与发布源码逐字节一致。发布记录见 [publication.json](fix-evidence/publication.json)。
 
 ## 已验证：渲染与交互
 

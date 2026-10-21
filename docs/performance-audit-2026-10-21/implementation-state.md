@@ -27,12 +27,14 @@
 
 ## 已验证
 
-全部实现与离线验收已完成，见 [fix-verification.md](fix-verification.md)。最终 173 文件 / 2299 测试、46 launcher 测试、4 个严格类型检查项目、构建及打包检查通过。2928 个完成 PTY 帧无正文越界；2812 个具有当前快照的帧、77558 行比较无不一致。
+全部实现与离线验收已完成，见 [fix-verification.md](fix-verification.md)。最终 173 文件 / 2299 测试、46 launcher 测试、4 个严格类型检查项目、构建及打包检查通过。2928 个完成 PTY 帧中，2812 个具有当前快照的帧、77558 行比较无不一致或正文越界。
+
+用户随后授权发布。2026-10-21 已推送 `main`，发布提交为 `50162e6983b93a62d0c66e7a3cf2bf859ab0eab2`，标签/GitHub 预发布版为 `v0.1.0-alpha.51`，npm `next` 为 `0.1.0-alpha.51`。发布提交的 Node 22.19.0 / 24 CI、OIDC 发布及公开包完整性检查均通过；22 个包内文件与发布提交一致。版本号、双语 README、changelog 和 release notes 已更新，证据见 [publication.json](fix-evidence/publication.json)。
 
 ## 未验证
 
-用户已运行的旧进程未重启；真实触控板/GPU呈现、联网模型认证仍未以合成 fixture 代替验收。源码与本地 bundle 已更新，npm 未发布新版本。
+用户已运行的旧进程未重启；真实触控板/GPU 呈现、联网模型认证仍未以合成 fixture 代替验收。
 
 ## 阻塞
 
-无。后续如需发布，使用本分支已验证构建及 Unreleased changelog 准备新的版本。
+无。
