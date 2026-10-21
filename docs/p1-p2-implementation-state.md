@@ -37,4 +37,4 @@
 
 - 已验证：修复 Magpie 模型目录入口 profile 分裂，两种模式默认 deepseek-tui，显式 --profile 控制安装和启动；官方 pi-ai 三协议 65 模型逐项一致，真实本机 /model 过滤后 1/65，退出 0。模型大目录按实际高度显示。
 - 已验证：最终 169 文件/2232 测试、入口 46 项、四工程严格类型、五产物构建、双入口 profile 启动及 36 个 npm 依赖可获得性。说明见 model-config-verification-2026-10-21.md。
-- 用户已授权推送、GitHub Release 和 npm 发布；目标 0.1.0-alpha.50，GitHub prerelease/npm next。README/changelog 已更新；采用既有 OIDC workflow，不需要本机 npm 登录。等待当前发布结果核验。
+- 用户已授权推送、GitHub Release 和 npm 发布；目标 0.1.0-alpha.50，GitHub prerelease/npm next。README/changelog 已更新；采用既有 OIDC workflow，不需要本机 npm 登录。已验证远端 main/tag、GitHub prerelease、npm next@0.1.0-alpha.50 与 OIDC 发布工作流；registry gitHead 对应 938cd92，下载包与 GitHub 附件 SHA-256 一致。发布证据见 evidence/model-config-2026-10-21/publication.json。

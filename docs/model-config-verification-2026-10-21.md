@@ -19,4 +19,4 @@
 
 ## 阻塞
 
-本地修复无阻塞。GitHub/npm 发布继续使用 0.1.0-alpha.50 和原有 OIDC 工作流，最终发布结果另记。
+本地修复无阻塞。GitHub/npm 已发布 0.1.0-alpha.50；原有 OIDC 工作流成功，npm next 指向新版本，包 gitHead 与 tag 一致；下载包和 GitHub 附件 SHA-256 相同。证据见 evidence/model-config-2026-10-21/publication.json。

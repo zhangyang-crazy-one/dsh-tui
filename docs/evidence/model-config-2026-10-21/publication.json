@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "version": "0.1.0-alpha.50",
+  "tag": "v0.1.0-alpha.50",
+  "commit": "938cd921cfed75f1b0dbb17fb116bfaf03c22995",
+  "npmChannel": "next",
+  "integrity": "sha512-F53tIR7fqu0of07s+0m2GpSt4Kbsd2IFIa+0b+HjvHa/rM7pc35zhZtwH2tYQjhJ2aItGN9Qs3/hpdgCdpPdhA==",
+  "sha256": "e042361796f22c6d45da51fa5838f0266f4a66dbbb64c9880e8b26b73e904af3",
+  "githubRelease": "https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.50",
+  "publishRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39535247608",
+  "ciRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/39534978987",
+  "checks": [
+    "registry next/version/gitHead",
+    "published tarball integrity",
+    "npm tarball matches GitHub asset digest",
+    "shared official profile in shipped launcher",
+    "CHANGELOG, six patches and schedule entrypoint shipped"
+  ]
+}
