@@ -15,9 +15,9 @@ English | [中文](README.zh.md)
 
 `@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
-## Release 0.1.0-alpha.50
+## Release 0.1.0-alpha.51
 
-This prerelease targets DSH `0.2.1-rc.2`. It adds terminal navigation and Session tools, fixes background Goal status and input handling, and makes both launcher modes use the same official model configuration. See the [changelog](CHANGELOG.md#010-alpha50--2026-10-21) for the full changes and verification boundaries.
+This prerelease targets DSH `0.2.1-rc.2`. It fixes streamed text overlapping the input area, removes wheel scrolling catch-up, reduces history-rendering work, and adds hierarchical settings navigation. It also fixes failed-stream text, SSH login guidance and file paths after `/cd` (#14–#16). See the [changelog](CHANGELOG.md#010-alpha51--2026-10-21) for the full changes and verification boundaries.
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -31,11 +31,11 @@ Earlier lightweight versions used `tui`, while source mode used `deepseek-tui`. 
 
 For a running source-linked installation, `/reload` loads the rebuilt bundle but preserves that process's selected profile. To change from `tui` to `deepseek-tui`, quit and launch again (or pass the desired profile explicitly). Resumed Goals require `/goal resume` to enable automatic continuation.
 
-The source tree also includes unreleased rendering and settings fixes: TTY transcript content has one physical painter, wheel input lands without animated catch-up, and `/settings` opens a hierarchy. Use Enter to open a category, namespace, provider, model or field; ←/Esc returns one level; `/` searches; `i` edits an object's JSON; Space toggles supported values. Successful edits stay in the current location and use DSH's official settings/credential services. See [Unreleased](CHANGELOG.md#unreleased) and the [performance audit](docs/performance-audit-2026-10-21/analysis.md). These source changes are not part of npm `0.1.0-alpha.50`.
+`/settings` now opens a hierarchy. Use Enter to open a category, namespace, provider, model or field; ←/Esc returns one level; `/` searches; `i` edits an object's JSON; Space toggles supported values. Successful edits stay in the current location and use DSH's official settings/credential services. In the recorded PTY comparison, a nine-line wheel burst reached its target in 17.93 ms instead of 168.07 ms; 2,812 frames with published transcript snapshots had no text mismatches or input-area leaks. These are synthetic PTY results, not hardware latency guarantees. See the [fix verification](docs/performance-audit-2026-10-21/fix-verification.md) for fixtures and limits.
 
 ## Table of Contents
 
-- [Release and upgrade](#release-010-alpha50)
+- [Release and upgrade](#release-010-alpha51)
 - [Changelog](CHANGELOG.md)
 - [Terminal capabilities](#terminal-capabilities)
 - [Screenshots](#screenshots)

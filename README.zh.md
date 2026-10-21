@@ -15,9 +15,9 @@ kind: "package-group"
 
 `@crazyhappyone/dsh-tui` 是 DeepSeek Harness（dsh）的终端界面，以 dsh **插件 bundle** 加 `dsh-tui` launcher 的形式发布。包声明了 `dsh.bundle`，因此 dsh 会像安装其他插件一样把它装进 profile；launcher 只负责自动完成这一安装并启动 profile。本仓库拥有插件源码（`tui/`、`tui-render/`）。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
-## 0.1.0-alpha.50 版本
+## 0.1.0-alpha.51 版本
 
-本预发布版面向 DSH `0.2.1-rc.2`，新增终端导航和会话能力，修复 Goal 后台状态与输入交互，并让两种启动模式使用同一份官方模型配置。完整变更与验证边界见 [changelog](CHANGELOG.md#010-alpha50--2026-10-21)。
+本预发布版面向 DSH `0.2.1-rc.2`，修复实时输出穿插到输入区、滚轮逐行追赶，减少历史渲染开销，并加入设置多级导航。同时修复失败流式文本残留、SSH 登录提示和 `/cd` 后的文件路径问题（#14–#16）。完整变更与验证边界见 [changelog](CHANGELOG.md#010-alpha51--2026-10-21)。
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -31,11 +31,11 @@ dsh-tui
 
 正在运行的源码链接安装可通过 `/reload` 加载新构建，但会保留进程原先选中的 profile。若从 `tui` 切换到 `deepseek-tui`，需退出后重新启动，或显式指定 profile。恢复的 Goal 需执行 `/goal resume` 才会自动续跑。
 
-源码另包含尚未发布的渲染与设置修复：TTY 聊天内容由单一物理帧绘制，滚轮不再逐行追赶，`/settings` 改为多级浏览。Enter 进入分类、namespace、Provider、model 或字段；←/Esc 返回上一层；`/` 搜索；`i` 编辑对象 JSON；Space 切换支持的值。保存后停留当前位置，继续使用 DSH 官方 settings/credentials 服务。详情见 [Unreleased](CHANGELOG.md#unreleased) 和[性能审计](docs/performance-audit-2026-10-21/analysis.md)。这些源码修复尚未包含在 npm `0.1.0-alpha.50` 中。
+`/settings` 现在支持多级浏览。Enter 进入分类、namespace、Provider、model 或字段；←/Esc 返回上一层；`/` 搜索；`i` 编辑对象 JSON；Space 切换支持的值。保存后停留当前位置，继续使用 DSH 官方 settings/credentials 服务。本次 PTY 对照中，9 行滚动到达目标从 168.07 ms 降至 17.93 ms；2,812 个有正文快照的比较帧未发现正文不一致或越界。这是合成数据的 PTY 实测，不是硬件延迟保证。数据与边界见[修复验证](docs/performance-audit-2026-10-21/fix-verification.md)。
 
 ## 目录
 
-- [版本与升级](#010-alpha50-版本)
+- [版本与升级](#010-alpha51-版本)
 - [Changelog](CHANGELOG.md)
 - [终端能力](#终端能力)
 - [截图](#screenshots)
