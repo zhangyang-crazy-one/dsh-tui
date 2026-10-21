@@ -15,9 +15,9 @@ kind: "package-group"
 
 `@crazyhappyone/dsh-tui` 是 DeepSeek Harness（dsh）的终端界面，以 dsh **插件 bundle** 加 `dsh-tui` launcher 的形式发布。包声明了 `dsh.bundle`，因此 dsh 会像安装其他插件一样把它装进 profile；launcher 只负责自动完成这一安装并启动 profile。本仓库拥有插件源码（`tui/`、`tui-render/`）。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
-## 0.1.0-alpha.51 版本
+## 0.1.0-alpha.52 版本
 
-本预发布版面向 DSH `0.2.1-rc.2`，修复实时输出穿插到输入区、滚轮逐行追赶，减少历史渲染开销，并加入设置多级导航。同时修复失败流式文本残留、SSH 登录提示和 `/cd` 后的文件路径问题（#14–#16）。完整变更与验证边界见 [changelog](CHANGELOG.md#010-alpha51--2026-10-21)。
+本预发布版面向 DSH `0.2.1-rc.2`，设置增加可见分类栏、选中行背景、长值详情和明确的保存/取消提示。切换分类记忆深层位置，搜索确认保留选择，保存期间防止重复提交。完整变更与验证边界见 [changelog](CHANGELOG.md#010-alpha52--2026-10-21)。
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -31,13 +31,11 @@ dsh-tui
 
 正在运行的源码链接安装可通过 `/reload` 加载新构建，但会保留进程原先选中的 profile。若从 `tui` 切换到 `deepseek-tui`，需退出后重新启动，或显式指定 profile。恢复的 Goal 需执行 `/goal resume` 才会自动续跑。
 
-`/settings` 现在支持多级浏览。Enter 进入分类、namespace、Provider、model 或字段；←/Esc 返回上一层；`/` 搜索；`i` 编辑对象 JSON；Space 切换支持的值。保存后停留当前位置，继续使用 DSH 官方 settings/credentials 服务。本次 PTY 对照中，9 行滚动到达目标从 168.07 ms 降至 17.93 ms；2,812 个有正文快照的比较帧未发现正文不一致或越界。这是合成数据的 PTY 实测，不是硬件延迟保证。数据与边界见[修复验证](docs/performance-audit-2026-10-21/fix-verification.md)。
-
-源码分支另包含尚未发布的设置易用性改进：可见分类选项卡、分类内位置记忆、选中行高亮、长值详情和明确的保存/取消提示。这些改进尚未包含在 npm `0.1.0-alpha.51` 中，见 [Unreleased](CHANGELOG.md#unreleased)。
+在 `/settings` 中，Tab / Shift+Tab 切换分类并恢复各分类的位置；Enter 进入 namespace、Provider 或 model，编辑字段或切换支持的布尔/枚举值。←/Esc 返回上层，在分类根部关闭面板；`/` 搜索；`i` 编辑可修改对象的 JSON；Space 也可切换支持的值。搜索中可用方向键和翻页键移动结果，Enter 确认时保留选择，Esc 清除搜索。保存后停留原位，继续使用 DSH 官方 settings/credentials 服务。分类栏通过键盘操作。40/80/120 列 PTY 检查与边界见[验证记录及截图](docs/settings-usability-2026-10-21/verification.md)。
 
 ## 目录
 
-- [版本与升级](#010-alpha51-版本)
+- [版本与升级](#010-alpha52-版本)
 - [Changelog](CHANGELOG.md)
 - [终端能力](#终端能力)
 - [截图](#screenshots)
@@ -56,7 +54,7 @@ dsh-tui
 <a id="screenshots"></a>
 ## 截图
 
-交互式设置面板（`/settings`）：
+设置分类栏与 Provider 多级导航（`/settings`，80 列 OS PTY，合成目录数据）：
 
 ![dsh-tui 设置面板](assets/screenshots/dsh-tui-settings.png)
 

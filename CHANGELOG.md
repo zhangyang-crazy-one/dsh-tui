@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.52 — 2026-10-21
+
+Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`.
 
 ### Fixed
 
@@ -8,11 +10,22 @@
 - Tab / Shift+Tab restores the last nested location in each category. Search supports arrow/page navigation and preserves selection when accepted. Enter changes supported booleans/choices; Right only opens nested objects. Controls describe the selected item's actual actions, and the value editor says save/cancel instead of send-message.
 - Settings writes reject duplicate submissions and read-only quick changes while preserving official settings/credential ownership and unknown user fields.
 
+### Verification and upgrade
+
+- Passed 2,325 TUI tests across 174 files with two workers, 46 launcher tests, four strict TypeScript projects, five bundle builds/import checks and the npm package-content check.
+- Production rendering in OS PTYs at 40, 80 and 120 columns passed 12 steps each: category navigation, location restoration, search selection, editing/saving and long-value cancellation. The catalog used synthetic services with 25 providers and 65 models per provider. See the [verification and screenshots](docs/settings-usability-2026-10-21/verification.md).
+- Update with `npm install --global @crazyhappyone/dsh-tui@next`, then relaunch. Source-linked installations can use `/reload` once the new bundle is available. The official profile and configuration services remain authoritative; no migration is required.
+- Tabs use Tab / Shift+Tab; this release does not add mouse-click tab controls. PTY checks do not establish live model authentication or every physical terminal's behavior.
+
 ### 中文变更说明
 
 - 设置增加可见分类选项卡、选中行背景、长值详情和搜索结果来源路径；窄屏保留当前分类，无色模式也可识别选中项。
 - Tab / Shift+Tab 切换分类并恢复深层位置；搜索中可用方向键/翻页，确认搜索保留选择。Enter 快速切换支持的布尔/枚举值，右方向键仅进入分支；编辑框明确显示保存/取消。
 - 保存期间防止重复写入或切换编辑位置，禁止只读项快速修改；继续使用 DSH 官方 settings/credentials 服务并保留未知字段。
+- 验证：174 个文件、2,325 项 TUI 测试、46 项 launcher 测试、4 个严格类型检查项目及构建/打包通过；40/80/120 列 OS PTY 各完成 12 个操作检查点，服务与目录数据为合成 fixture。
+- 升级：`npm install --global @crazyhappyone/dsh-tui@next` 后重新启动；源码链接安装可在新 bundle 就绪后 `/reload`。分类切换使用 Tab / Shift+Tab，本版未新增鼠标点击分类控件。
+
+[Full comparison](https://github.com/zhangyang-crazy-one/dsh-tui/compare/v0.1.0-alpha.51...v0.1.0-alpha.52)
 
 ## 0.1.0-alpha.51 — 2026-10-21
 

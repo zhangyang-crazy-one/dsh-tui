@@ -15,9 +15,9 @@ English | [中文](README.zh.md)
 
 `@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
-## Release 0.1.0-alpha.51
+## Release 0.1.0-alpha.52
 
-This prerelease targets DSH `0.2.1-rc.2`. It fixes streamed text overlapping the input area, removes wheel scrolling catch-up, reduces history-rendering work, and adds hierarchical settings navigation. It also fixes failed-stream text, SSH login guidance and file paths after `/cd` (#14–#16). See the [changelog](CHANGELOG.md#010-alpha51--2026-10-21) for the full changes and verification boundaries.
+This prerelease targets DSH `0.2.1-rc.2`. Settings now shows category tabs, a contrasting selected row, long-value details and clear save/cancel controls. Switching categories remembers the last nested location; search preserves selection, and pending settings writes reject duplicate submissions. See the [changelog](CHANGELOG.md#010-alpha52--2026-10-21) for the full changes and verification boundaries.
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -31,13 +31,11 @@ Earlier lightweight versions used `tui`, while source mode used `deepseek-tui`. 
 
 For a running source-linked installation, `/reload` loads the rebuilt bundle but preserves that process's selected profile. To change from `tui` to `deepseek-tui`, quit and launch again (or pass the desired profile explicitly). Resumed Goals require `/goal resume` to enable automatic continuation.
 
-`/settings` now opens a hierarchy. Use Enter to open a category, namespace, provider, model or field; ←/Esc returns one level; `/` searches; `i` edits an object's JSON; Space toggles supported values. Successful edits stay in the current location and use DSH's official settings/credential services. In the recorded PTY comparison, a nine-line wheel burst reached its target in 17.93 ms instead of 168.07 ms; 2,812 frames with published transcript snapshots had no text mismatches or input-area leaks. These are synthetic PTY results, not hardware latency guarantees. See the [fix verification](docs/performance-audit-2026-10-21/fix-verification.md) for fixtures and limits.
-
-The source branch also includes unreleased settings usability improvements: visible category tabs, remembered per-category locations, selected-row highlighting, long-value details and contextual save/cancel controls. These changes are not in npm `0.1.0-alpha.51`; see [Unreleased](CHANGELOG.md#unreleased).
+In `/settings`, Tab / Shift+Tab switches categories and restores each category's location. Enter opens a namespace, provider or model, edits a field, or changes a supported boolean/choice. ←/Esc returns one level and closes at the category root; `/` searches; `i` edits an editable object's JSON; Space also changes supported values. While searching, arrows and page keys move through results, Enter accepts the search without resetting selection, and Esc clears it. Successful edits stay in place and use DSH's official settings/credential services. Tabs are operated with the keyboard. See the [verification and screenshots](docs/settings-usability-2026-10-21/verification.md) for the 40/80/120-column PTY checks and their limits.
 
 ## Table of Contents
 
-- [Release and upgrade](#release-010-alpha51)
+- [Release and upgrade](#release-010-alpha52)
 - [Changelog](CHANGELOG.md)
 - [Terminal capabilities](#terminal-capabilities)
 - [Screenshots](#screenshots)
@@ -56,7 +54,7 @@ The source branch also includes unreleased settings usability improvements: visi
 <a id="screenshots"></a>
 ## Screenshots
 
-Interactive settings pane (`/settings`):
+Settings category tabs and nested provider navigation (`/settings`, 80-column OS PTY with a synthetic catalog):
 
 ![dsh-tui settings pane](assets/screenshots/dsh-tui-settings.png)
 
