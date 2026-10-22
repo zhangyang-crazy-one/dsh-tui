@@ -1,6 +1,6 @@
 {
   "name": "@crazyhappyone/dsh-tui",
-  "version": "0.1.0-alpha.52",
+  "version": "0.1.0-alpha.53",
   "description": "DeepSeek Harness terminal interface: a dsh plugin bundle plus its launcher",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.0-alpha.53 — 2026-10-22
+
+Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`.
+
+### Fixed
+
+- String arrays such as `defaultInput` and `tags` stay on one editable settings row. Enter opens the value editor instead of one child row per element, and JSON or comma-separated input round-trips through the official settings patch. Arrays containing non-strings, including model lists and numeric arrays, remain browsable.
+- Settings details stop measuring a long value once the visible row budget is full. The last visible row keeps the next source chunk and ends with `…`.
+- Rapid settings selection updates coalesce to one notification per turn, and settled transcript rows reuse their projection while the block version and render scope stay unchanged.
+- CI checks out the DSH tag named by `COMPATIBLE_DSH_VERSION`, activates that checkout's declared pnpm version, and runs the TUI tests from the mounted plugin sources.
+
+### Verification and upgrade
+
+- Focused verification passed 250 tests: settings navigation, settings interaction, content wrapping, settings usability and hierarchy layout, stream view, markdown rendering, and block rows. The full TUI suite, launcher tests, typecheck, and OS PTY checks were not rerun for this patch.
+- Update with `npm install --global @crazyhappyone/dsh-tui@next`, then relaunch. Source-linked installations can use `/reload` once the new bundle is available. The official profile and configuration services remain authoritative; no migration is required.
+
+### 中文变更说明
+
+- `defaultInput`、`tags` 等纯字符串数组留在同一行编辑，Enter 打开值编辑器，不再为每个元素生成子行；JSON 和逗号输入都通过官方 settings patch 往返。包含非字符串的数组，包括模型列表和数字数组，仍可逐项浏览。
+- 设置详情在可见行数用完后停止测量超长值，最后一行保留下一段内容并以 `…` 结束。
+- 连续移动设置选中项时，每个事件循环只通知一次；已完成的聊天投影在块版本和渲染范围不变时复用。
+- CI 按 `COMPATIBLE_DSH_VERSION` 检出对应 DSH tag，启用该检出声明的 pnpm 版本，再运行挂载后的 TUI 测试。
+- 验证：上述聚焦测试 250 项通过。本补丁未重跑完整 TUI 套件、launcher 测试、类型检查和 OS PTY。
+- 升级：`npm install --global @crazyhappyone/dsh-tui@next` 后重新启动；源码链接安装可在新 bundle 就绪后 `/reload`。继续使用官方配置服务，无需迁移。
+
+[Full comparison](https://github.com/zhangyang-crazy-one/dsh-tui/compare/v0.1.0-alpha.52...v0.1.0-alpha.53)
+
 ## 0.1.0-alpha.52 — 2026-10-21
 
 Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`.

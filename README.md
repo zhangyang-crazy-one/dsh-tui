@@ -15,9 +15,9 @@ English | [中文](README.zh.md)
 
 `@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
-## Release 0.1.0-alpha.52
+## Release 0.1.0-alpha.53
 
-This prerelease targets DSH `0.2.1-rc.2`. Settings now shows category tabs, a contrasting selected row, long-value details and clear save/cancel controls. Switching categories remembers the last nested location; search preserves selection, and pending settings writes reject duplicate submissions. See the [changelog](CHANGELOG.md#010-alpha52--2026-10-21) for the full changes and verification boundaries.
+This prerelease targets DSH `0.2.1-rc.2`. String arrays such as `defaultInput` now edit in place, settings details truncate long values at the visible row budget, and settled transcript rows reuse their projection while unchanged. See the [changelog](CHANGELOG.md#010-alpha53--2026-10-22) for the verification boundary.
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -35,7 +35,7 @@ In `/settings`, Tab / Shift+Tab switches categories and restores each category's
 
 ## Table of Contents
 
-- [Release and upgrade](#release-010-alpha52)
+- [Release and upgrade](#release-010-alpha53)
 - [Changelog](CHANGELOG.md)
 - [Terminal capabilities](#terminal-capabilities)
 - [Screenshots](#screenshots)

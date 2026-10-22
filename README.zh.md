@@ -15,9 +15,9 @@ kind: "package-group"
 
 `@crazyhappyone/dsh-tui` 是 DeepSeek Harness（dsh）的终端界面，以 dsh **插件 bundle** 加 `dsh-tui` launcher 的形式发布。包声明了 `dsh.bundle`，因此 dsh 会像安装其他插件一样把它装进 profile；launcher 只负责自动完成这一安装并启动 profile。本仓库拥有插件源码（`tui/`、`tui-render/`）。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
-## 0.1.0-alpha.52 版本
+## 0.1.0-alpha.53 版本
 
-本预发布版面向 DSH `0.2.1-rc.2`，设置增加可见分类栏、选中行背景、长值详情和明确的保存/取消提示。切换分类记忆深层位置，搜索确认保留选择，保存期间防止重复提交。完整变更与验证边界见 [changelog](CHANGELOG.md#010-alpha52--2026-10-21)。
+本预发布版面向 DSH `0.2.1-rc.2`。`defaultInput` 等纯字符串数组改为原位编辑，设置详情按可见行数截断长值，未变化的已完成聊天行复用投影。验证边界见 [changelog](CHANGELOG.md#010-alpha53--2026-10-22)。
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -35,7 +35,7 @@ dsh-tui
 
 ## 目录
 
-- [版本与升级](#010-alpha52-版本)
+- [版本与升级](#010-alpha53-版本)
 - [Changelog](CHANGELOG.md)
 - [终端能力](#终端能力)
 - [截图](#screenshots)
