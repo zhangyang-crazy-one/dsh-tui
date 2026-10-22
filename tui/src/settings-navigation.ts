@@ -15,6 +15,11 @@ function childSchema(schema: unknown, key: string): unknown {
   const node = record(schema)
   return record(node.dict)[key] ?? record(node.properties)[key] ?? node.inner ?? node.items
 }
+/** String collections stay one editable value; records, objects, and other arrays open. */
+function navigableValue(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(item => typeof item !== 'string')
+  return value !== null && typeof value === 'object'
+}
 function summary(value: unknown): string {
   return Array.isArray(value) ? `${String(value.length)} 项`
     : value !== null && typeof value === 'object' ? `${String(Object.keys(value).length)} 个字段`
@@ -63,6 +68,7 @@ export function settingsTreeFromDescribe(
         && parentValue.filter(entry => record(entry).id === modelId).length === 1 ? `id:${modelId}` : key
       const id = `${parentId}:${JSON.stringify(identity)}`
       const nested = value !== null && typeof value === 'object'
+      const navigable = navigableValue(value)
       const meta = record(record(schema).meta)
       const label = Array.isArray(parentValue)
         ? String(record(value).id ?? record(value).name ?? key) : key
@@ -70,14 +76,14 @@ export function settingsTreeFromDescribe(
         id, parentId, namespace, field, sourcePath: path, label,
         value: path.length === 2 && path[0] === 'providers'
           ? `${String(Array.isArray(record(value).models) ? (record(value).models as unknown[]).length : 0)} 模型 · ${String(record(value).api ?? '默认协议')}`
-          : nested ? summary(value) : stringifySettingsFieldValue(namespace, field, value),
+          : navigable ? summary(value) : stringifySettingsFieldValue(namespace, field, value),
         editValue: stringifySettingValue(value),
-        ...(nested && secrets.some(secret => path.every((key, index) => secret[index] === key)) ? { editable: false } : {}),
-        ...(nested ? { navigable: true } : {}),
+        ...(navigable && secrets.some(secret => path.every((key, index) => secret[index] === key)) ? { editable: false } : {}),
+        ...(navigable ? { navigable: true } : {}),
         ...(typeof meta.description === 'string' ? { description: meta.description } : {}),
         ...(meta.required === true ? { required: true } : {}),
       })
-      if (nested) {
+      if (navigable) {
         for (const [child, next] of Object.entries(value)) walk(next, [...path, child], id, childSchema(schema, child))
         if (namespace === 'llm-pi-ai' && field === 'providers') {
           nodes.push({ id: `${id}:add`, parentId: id, namespace, field, sourcePath: path, label: '+ 添加 Provider', value: '目录名 / 表单', editValue: PROVIDER_FORM_TEMPLATE })

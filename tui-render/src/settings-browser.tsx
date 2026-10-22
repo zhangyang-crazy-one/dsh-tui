@@ -1,7 +1,7 @@
 /** Bounded category navigation and contextual details for the settings browser. */
 import { Box, Text } from 'ink'
 import type { ReactNode } from 'react'
-import { displayWidth, escapeContent, wcwidthSafeSlice, wrapDisplayLines } from './content.ts'
+import { displayWidth, escapeContent, wcwidthSafeSlice, wrapDisplayLinesLimited } from './content.ts'
 import { paintBackgroundRow, styled, type BackgroundToken, type StyleToken } from './theme.ts'
 import type { SettingsFieldRow, SettingsPaneProps } from './settings-pane.tsx'
 import { tuiCopy } from './ui-copy.ts'
@@ -87,14 +87,16 @@ export function SettingsBrowser(props: SettingsPaneProps & { columns: number }):
   const detailBudget = compact || active === undefined ? 0 : Math.min(6, Math.max(0, space - Math.min(3, Math.max(1, rows.length))))
   if (active !== undefined && detailBudget > 0) {
     const source = filtered ? `${active.namespace} · ${active.field}` : fieldLabel(active, locale)
-    detail.push(...wrapDisplayLines(escapeContent(`当前项: ${source}`), width).slice(0, filtered ? 2 : 1))
-    const value = active.value === '' ? '—' : active.value
-    detail.push(...wrapDisplayLines(escapeContent(`${active.navigable === true ? '包含' : '当前值'}: ${value}`), width))
-    if (active.description !== undefined) detail.push(...wrapDisplayLines(escapeContent(active.description), width))
-    if (detail.length > detailBudget) {
-      detail.length = detailBudget
-      detail[detail.length - 1] = `${wcwidthSafeSlice(detail[detail.length - 1]!, Math.max(0, width - 1))}…`
+    const pushBounded = (text: string, limit: number): void => {
+      if (limit <= 0 || detail.length >= detailBudget) return
+      const room = Math.min(limit, detailBudget - detail.length)
+      const wrapped = wrapDisplayLinesLimited(escapeContent(text), width, room)
+      detail.push(...wrapped.lines)
     }
+    pushBounded(`当前项: ${source}`, filtered ? 2 : 1)
+    const value = active.value === '' ? '—' : active.value
+    pushBounded(`${active.navigable === true ? '包含' : '当前值'}: ${value}`, detailBudget)
+    if (active.description !== undefined) pushBounded(active.description, detailBudget)
   }
   const size = Math.min(rows.length, Math.max(0, space - detail.length))
   const start = Math.max(0, Math.min(rows.length - size, selected - Math.floor(size / 2)))

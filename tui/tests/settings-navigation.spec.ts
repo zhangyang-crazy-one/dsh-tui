@@ -82,6 +82,25 @@ it('omits secret fields and refuses editing their containing JSON while retainin
   expect(nodes.find(row => row.field === 'nested.enabled')?.value).toBe('true')
 })
 
+it('edits primitive arrays in place instead of opening one row per element', () => {
+  const nodes = settingsTreeFromDescribe([{
+    ns: 'llm-pi-ai',
+    value: { providers: { acme: { defaultInput: ['text', 'image'], tags: ['vision'] } } },
+    schema: {},
+  } as SettingsDescriptor], [])
+  const input = nodes.find(row => row.field === 'providers.acme.defaultInput')
+  expect(input).toMatchObject({
+    value: 'text, image (支持视觉)',
+    editValue: '["text","image"]',
+  })
+  expect(input).not.toHaveProperty('navigable')
+  expect(nodes.some(row => row.field.startsWith('providers.acme.defaultInput.'))).toBe(false)
+  const tags = nodes.find(row => row.field === 'providers.acme.tags')
+  expect(tags).toMatchObject({ value: '["vision"]' })
+  expect(tags).not.toHaveProperty('navigable')
+  expect(nodes.some(row => row.field.startsWith('providers.acme.tags.'))).toBe(false)
+})
+
 
 describe('settings category tabs', () => {
   function categories() {

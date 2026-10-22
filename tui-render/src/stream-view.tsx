@@ -374,6 +374,24 @@ function transcriptBlockVersion(row: TranscriptRow, revisions: DisplayRevisionIn
   return revisions.revision(row.kind === 'compaction' ? row.divider : row.message)
 }
 
+/** Inputs that decide one settled transcript row and stay stable across unrelated deltas. */
+function settledProjectionSignature(
+  row: TranscriptRow,
+  revisions: DisplayRevisionIndex,
+  options: {
+    readonly hasSubsequent: boolean
+    readonly isLatestAssistant: boolean
+    readonly expandedCompactionId: string | undefined
+  },
+): string {
+  return [
+    transcriptBlockVersion(row, revisions),
+    options.hasSubsequent ? 'gap' : 'tail',
+    options.isLatestAssistant ? 'latest' : '',
+    options.expandedCompactionId ?? '',
+  ].join('\u0000')
+}
+
 function activeTurnVersion(turn: ActiveTurn, revisions: DisplayRevisionIndex): string {
   return revisions.revision(turn, [
     turn.assistantText, turn.reasoningText, turn.reasoningDurationMs, turn.reason,
@@ -1244,6 +1262,18 @@ export function StreamView({
   const layoutCache = useRef(new TranscriptLayoutCache())
   /** Per-scope projector/scanner pair the markdown entries delegate to. */
   const projectorStates = useRef(new Map<string, MarkdownProjectorState>())
+  /** Settled projections keyed by transcript block; unchanged versions keep their row arrays. */
+  const settledProjectionCache = useRef(new Map<string, {
+    signature: string
+    lines: RowSource<MarkdownRenderLine>
+    textRanges: readonly BlockTextRange[] | undefined
+    storeBlocks: readonly StoredBlockRows[]
+    reasoningSticky: readonly StickyReasoningRange[] | undefined
+    toolSticky: readonly StickyToolRange[] | undefined
+    userSticky: StickyUserRange | undefined
+  }>())
+  const settledProjectionScope = useRef('')
+  const settledProjectionPresenters = useRef<ToolPresenterLookup | undefined>(undefined)
   /** Canonical source descriptors used to rebuild an evicted derived block. */
   const rebuildBlocks = useRef(new Map<string, StoredBlockRows>())
   /**
@@ -1459,6 +1489,24 @@ export function StreamView({
    * completely decoupled from active streaming deltas and duration timers.
    */
   const settledEntryRows = useMemo<ProjectedEntryRows>(() => {
+    const projectionScope = [
+      settledBlockRowsScope.scopeKey,
+      settledAssistantBlockRowsScope.scopeKey,
+      reasoningExpanded ? 'r1' : 'r0',
+      toolCardsExpanded ? 't1' : 't0',
+      mode,
+      locale,
+    ].join('\u0000')
+    if (settledProjectionScope.current !== projectionScope) {
+      settledProjectionCache.current = new Map()
+      settledProjectionScope.current = projectionScope
+    }
+    if (settledProjectionPresenters.current !== presenters) {
+      settledProjectionCache.current = new Map()
+      settledProjectionPresenters.current = presenters
+    }
+    const previousCache = settledProjectionCache.current
+    const nextCache = new Map<string, (typeof previousCache extends Map<string, infer V> ? V : never)>()
     const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
     const batchPresenters: ToolPresenterLookup | undefined = presenters === undefined ? undefined : { get(name) {
       if (!definitions.has(name)) definitions.set(name, presenters.get(name))
@@ -1475,6 +1523,24 @@ export function StreamView({
     const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
     for (const [index, row] of transcript.entries()) {
       const id = transcriptBlockId(row)
+      const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
+      const cached = previousCache.get(id)
+      const signature = settledProjectionSignature(row, revisions, {
+        hasSubsequent,
+        isLatestAssistant: row.kind === 'message' && row.message.id === latestAssistant,
+        expandedCompactionId,
+      })
+      if (cached?.signature === signature) {
+        map.set(id, cached.lines)
+        if (cached.textRanges !== undefined) textRanges.set(id, cached.textRanges)
+        if (cached.reasoningSticky !== undefined) reasoningSticky.set(id, cached.reasoningSticky)
+        if (cached.toolSticky !== undefined) toolSticky.set(id, [...cached.toolSticky])
+        if (cached.userSticky !== undefined) userSticky.set(id, cached.userSticky)
+        for (const block of cached.storeBlocks) storeBlocks.set(block.entry.id, block)
+        nextCache.set(id, cached)
+        continue
+      }
+      const blocksBefore = storeBlocks.size
       if (row.kind === 'compaction') {
         const meta: BlockRowsMeta = {
           compactionSummary: row.divider.summary,
@@ -1493,10 +1559,14 @@ export function StreamView({
           meta,
         }, settledBlockRowsScope, undefined, false)
         map.set(id, projection.lines)
+        nextCache.set(id, {
+          signature, lines: projection.lines, textRanges: undefined,
+          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          reasoningSticky: undefined, toolSticky: undefined, userSticky: undefined,
+        })
         continue
       }
       if (row.message.kind === 'user') {
-        const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
         const projection = project(id, {
           id,
           kind: 'user',
@@ -1504,7 +1574,13 @@ export function StreamView({
           ...(hasSubsequent ? { meta: { userMessageGap: true } } : {}),
         }, settledBlockRowsScope, undefined, false)
         map.set(id, projection.lines)
-        userSticky.set(id, { start: 0, end: projection.lines.length, text: row.message.text })
+        const sticky = { start: 0, end: projection.lines.length, text: row.message.text }
+        userSticky.set(id, sticky)
+        nextCache.set(id, {
+          signature, lines: projection.lines, textRanges: undefined,
+          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          reasoningSticky: undefined, toolSticky: undefined, userSticky: sticky,
+        })
         continue
       }
       const parts = displayedParts(
@@ -1614,9 +1690,20 @@ export function StreamView({
           meta: tailMeta,
         }, settledBlockRowsScope, undefined, false).lines)
       }
-      map.set(id, rows.build())
+      const built = rows.build()
+      map.set(id, built)
       if (ranges.length > 0) textRanges.set(id, ranges)
+      nextCache.set(id, {
+        signature,
+        lines: built,
+        textRanges: ranges.length > 0 ? ranges : undefined,
+        storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+        reasoningSticky: reasoningSticky.get(id),
+        toolSticky: toolSticky.get(id),
+        userSticky: undefined,
+      })
     }
+    settledProjectionCache.current = nextCache
     return { rows: map, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky }
   }, [
     contentWidth,

@@ -583,6 +583,45 @@ describe('SettingsPane intercept', () => {
     await ctx.fiber.dispose()
   })
 
+  it('round-trips defaultInput JSON and retains comma input', async () => {
+    const piNs = 'llm-pi-ai'
+    const piStored = { providers: { acme: { api: 'openai-completions', baseURL: 'https://gw.example', defaultInput: ['text', 'image'] } } }
+    const { ctx, controller, update } = await bench()
+    const settings = ctx.get('settings') as never as { describe: () => { ns: unknown; value?: unknown }[]; get: (ns: unknown) => unknown }
+    settings.describe = () => [{ ns: piNs, value: settings.get(piNs) }]
+    settings.get = (ns: unknown) => ns === piNs ? piStored : undefined
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller, 'llm-pi-ai')
+    const descend = (label: string): void => {
+      const index = controller.getSettingsPane().rows.findIndex(item => item.label === label)
+      if (index < 0) throw new Error(`missing ${label}`)
+      controller.dispatch({ kind: 'settings-move', delta: index - controller.getSettingsPane().selectedIndex })
+      controller.dispatch({ kind: 'settings-edit' })
+    }
+    descend('providers')
+    descend('acme')
+    const row = controller.getSettingsPane().rows.findIndex(item => item.field.endsWith('defaultInput'))
+    if (row < 0) throw new Error('missing defaultInput')
+    controller.dispatch({ kind: 'settings-move', delta: row - controller.getSettingsPane().selectedIndex })
+    controller.dispatch({ kind: 'settings-edit-json' })
+    controller.dispatch({ kind: 'settings-apply', value: controller.getSettingsPane().rows[controller.getSettingsPane().selectedIndex]?.editValue ?? '' })
+    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1))
+    expect(update).toHaveBeenLastCalledWith(piNs, { providers: { acme: { defaultInput: ['text', 'image'] } } })
+    controller.dispatch({ kind: 'settings-edit-json' })
+    controller.dispatch({ kind: 'settings-apply', value: '["text"]' })
+    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+    expect(update).toHaveBeenLastCalledWith(piNs, { providers: { acme: { defaultInput: ['text'] } } })
+    controller.dispatch({ kind: 'settings-edit' })
+    controller.dispatch({ kind: 'settings-apply', value: 'text, image' })
+    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(3))
+    expect(update).toHaveBeenLastCalledWith(piNs, { providers: { acme: { defaultInput: ['text', 'image'] } } })
+    controller.dispatch({ kind: 'settings-edit-json' })
+    controller.dispatch({ kind: 'settings-apply', value: '["audio"]' })
+    expect(controller.getSettingsPane().updateError).toContain('未知输入模态')
+    expect(update).toHaveBeenCalledTimes(3)
+    await ctx.fiber.dispose()
+  })
+
   it('keeps the overlay open and reports invalid JSON', async () => {
     const stored = { models: [{ id: 'a' }] }
     const { ctx, controller, update } = await bench()

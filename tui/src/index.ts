@@ -1281,6 +1281,9 @@ export class RuntimeController implements TuiController {
   private settingsOpen = false
   private settingsRows: SettingsFieldRow[] = []
   private settingsSelectedIndex = 0
+  /** Selection changes inside one input burst share one settings notification. */
+  private settingsMovePending = false
+  private settingsMoveEmit: ReturnType<typeof queueMicrotask> | undefined
   private settingsNavigation = new SettingsNavigation([])
   private settingsSearching = false
   private settingsEditing = false
@@ -4457,7 +4460,8 @@ export class RuntimeController implements TuiController {
           Math.max(0, this.settingsSelectedIndex + action.delta),
         )
         this.settingsNavigation.selectedIndex = this.settingsSelectedIndex
-        this.emit()
+        this.settingsPaneSnapshot = undefined
+        this.scheduleSettingsSelectionEmit()
         return
       case 'settings-edit':
       case 'settings-edit-json':
@@ -8109,6 +8113,8 @@ export class RuntimeController implements TuiController {
   private notifyListeners(): void {
     this.emitLastRun = Date.now()
     this.emitPending = false
+    this.settingsMovePending = false
+    this.settingsMoveEmit = undefined
     for (const listener of this.listeners) {
       try {
         listener()
@@ -8118,8 +8124,28 @@ export class RuntimeController implements TuiController {
     }
   }
 
+  /**
+   * Publish only the settings selection. A wheel or key burst keeps the latest
+   * index readable immediately and notifies subscribers once per turn.
+   */
+  private scheduleSettingsSelectionEmit(): void {
+    if (this.closed) return
+    this.settingsMovePending = true
+    if (this.settingsMoveEmit !== undefined) return
+    const token = queueMicrotask(() => {
+      if (this.settingsMoveEmit !== token || this.closed || !this.settingsMovePending) return
+      this.settingsMoveEmit = undefined
+      this.settingsMovePending = false
+      if (this.emitTimer !== undefined) this.emitPending = true
+      else this.notifyListeners()
+    })
+    this.settingsMoveEmit = token
+  }
+
   private emit(): void {
     if (this.closed) return
+    this.settingsMovePending = false
+    this.settingsMoveEmit = undefined
     // Drop the cached snapshots at the mutation point (not at the throttled
     // listener call), so any read after a change rebuilds current state.
     this.modelSnapshot = undefined

@@ -7,6 +7,7 @@ import {
   padDisplayEnd,
   wcwidthSafeSlice,
   wrapDisplayLines,
+  wrapDisplayLinesLimited,
 } from '../src/content.ts'
 
 describe('displayColumnSlice', () => {
@@ -183,5 +184,25 @@ describe('wrapDisplayLines', () => {
 
   it('returns the source lines when the budget is non-positive', () => {
     expect(wrapDisplayLines('ab\ncd', 0)).toEqual(['ab', 'cd'])
+  })
+})
+
+describe('wrapDisplayLinesLimited', () => {
+  it('stops after the row budget and marks the last visible row', () => {
+    expect(wrapDisplayLinesLimited('abcdefghij', 4, 2)).toEqual({
+      lines: ['abcd', 'efg…'],
+      truncated: true,
+    })
+    expect(wrapDisplayLinesLimited('中文测试', 4, 1)).toEqual({
+      lines: ['中…'],
+      truncated: true,
+    })
+  })
+
+  it('reports a complete result without adding a marker', () => {
+    expect(wrapDisplayLinesLimited('abcd\nef', 4, 2)).toEqual({
+      lines: ['abcd', 'ef'],
+      truncated: false,
+    })
   })
 })

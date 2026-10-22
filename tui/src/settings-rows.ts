@@ -670,7 +670,16 @@ export function parseSettingsFieldValue(
   if (field === 'defaultInput' || field.endsWith('.defaultInput')) {
     const trimmed = draft.trim().toLowerCase()
     if (trimmed === '') return ['text', 'image']
-    const tokens = trimmed.split(/[,\s]+/).filter(t => t !== '')
+    // JSON edit serializes arrays; retain the older comma/space vocabulary too.
+    const json = trimmed.startsWith('[') ? trimmed : undefined
+    let parsed: unknown
+    if (json !== undefined) {
+      try { parsed = JSON.parse(json) } catch { throw new TypeError('JSON 无效') }
+      if (!Array.isArray(parsed) || parsed.some(item => typeof item !== 'string')) {
+        throw new TypeError('defaultInput 需要字符串数组，例如 ["text", "image"]')
+      }
+    }
+    const tokens = parsed === undefined ? trimmed.split(/[,\s]+/).filter(t => t !== '') : parsed as string[]
     const result: ('text' | 'image')[] = []
     for (const token of tokens) {
       if (token === 'text' || token === '文本') {

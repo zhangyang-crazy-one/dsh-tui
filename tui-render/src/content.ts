@@ -264,36 +264,102 @@ export function padDisplayEnd(text: string, width: number): string {
  * @returns one string per terminal row.
  */
 export function wrapDisplayLines(text: string, maxCols: number): string[] {
+  return wrapDisplayLinesLimited(text, maxCols, Number.POSITIVE_INFINITY).lines
+}
+
+/**
+ * Wrap at most `limit` display rows. A truncated result means later source
+ * was not measured, so callers can stop on long values.
+ * @param text - already-escaped plain text.
+ * @param maxCols - column budget per row.
+ * @param limit - maximum returned rows; must be positive.
+ * @returns fitted rows and whether source remains beyond the limit.
+ */
+export function wrapDisplayLinesLimited(
+  text: string,
+  maxCols: number,
+  limit: number,
+): { readonly lines: string[]; readonly truncated: boolean } {
+  const bounded = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : Number.POSITIVE_INFINITY
   const source = text.split('\n')
-  if (maxCols <= 0) return source
+  if (bounded === 0) return { lines: [], truncated: text !== '' }
+  if (maxCols <= 0) {
+    const lines = source.slice(0, bounded)
+    return { lines, truncated: source.length > lines.length }
+  }
   const out: string[] = []
-  for (const line of source) {
+  const room = (): boolean => out.length < bounded
+  const mark = (line: string): void => {
+    const marker = `${wcwidthSafeSlice(line, Math.max(0, maxCols - 1))}…`
+    if (out.length < bounded) out.push(marker)
+    else out[out.length - 1] = marker
+  }
+  for (let lineIndex = 0; lineIndex < source.length; lineIndex += 1) {
+    const line = source[lineIndex] ?? ''
+    const laterLine = lineIndex < source.length - 1
     if (line === '' || displayWidth(line) <= maxCols) {
+      if (!room()) {
+        mark('')
+        return { lines: out, truncated: true }
+      }
+      if (out.length + 1 === bounded && laterLine) {
+        mark(line)
+        return { lines: out, truncated: true }
+      }
       out.push(line)
       continue
     }
     if (/^[\x20-\x7e]*$/u.test(line)) {
       for (let i = 0; i < line.length; i += maxCols) {
-        out.push(line.slice(i, i + maxCols))
+        const piece = line.slice(i, i + maxCols)
+        const continues = i + maxCols < line.length || laterLine
+        if (!room()) {
+          mark(piece)
+          return { lines: out, truncated: true }
+        }
+        if (out.length + 1 === bounded && continues) {
+          mark(piece)
+          return { lines: out, truncated: true }
+        }
+        out.push(piece)
       }
       continue
     }
     let curLine = ''
     let curCols = 0
-    for (const { segment } of GRAPHEME.segment(line)) {
+    const segments = [...GRAPHEME.segment(line)]
+    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 1) {
+      const segment = segments[segmentIndex]?.segment ?? ''
       const width = displayWidth(segment)
-      if (curCols + width > maxCols && curLine !== '') {
-        out.push(curLine)
-        curLine = segment
-        curCols = width
-      } else {
+      if (curCols + width <= maxCols || curLine === '') {
         curLine += segment
         curCols += width
+        continue
       }
+      if (!room()) {
+        mark(curLine)
+        return { lines: out, truncated: true }
+      }
+      const continues = segmentIndex < segments.length || laterLine
+      if (out.length + 1 === bounded && continues) {
+        mark(curLine)
+        return { lines: out, truncated: true }
+      }
+      out.push(curLine)
+      curLine = segment
+      curCols = width
     }
     if (curLine !== '') {
+      if (!room()) {
+        mark(curLine)
+        return { lines: out, truncated: true }
+      }
+      if (out.length + 1 === bounded && laterLine) {
+        mark(curLine)
+        return { lines: out, truncated: true }
+      }
       out.push(curLine)
     }
   }
-  return out
+  return { lines: out, truncated: false }
 }

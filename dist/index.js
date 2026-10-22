@@ -39537,38 +39537,91 @@ function padDisplayEnd(text4, width) {
   return `${text4}${" ".repeat(width - cols)}`;
 }
 function wrapDisplayLines(text4, maxCols) {
+  return wrapDisplayLinesLimited(text4, maxCols, Number.POSITIVE_INFINITY).lines;
+}
+function wrapDisplayLinesLimited(text4, maxCols, limit) {
+  const bounded = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : Number.POSITIVE_INFINITY;
   const source = text4.split("\n");
-  if (maxCols <= 0) return source;
+  if (bounded === 0) return { lines: [], truncated: text4 !== "" };
+  if (maxCols <= 0) {
+    const lines = source.slice(0, bounded);
+    return { lines, truncated: source.length > lines.length };
+  }
   const out = [];
-  for (const line5 of source) {
+  const room = () => out.length < bounded;
+  const mark2 = (line5) => {
+    const marker = `${wcwidthSafeSlice(line5, Math.max(0, maxCols - 1))}\u2026`;
+    if (out.length < bounded) out.push(marker);
+    else out[out.length - 1] = marker;
+  };
+  for (let lineIndex = 0; lineIndex < source.length; lineIndex += 1) {
+    const line5 = source[lineIndex] ?? "";
+    const laterLine = lineIndex < source.length - 1;
     if (line5 === "" || displayWidth(line5) <= maxCols) {
+      if (!room()) {
+        mark2("");
+        return { lines: out, truncated: true };
+      }
+      if (out.length + 1 === bounded && laterLine) {
+        mark2(line5);
+        return { lines: out, truncated: true };
+      }
       out.push(line5);
       continue;
     }
     if (/^[\x20-\x7e]*$/u.test(line5)) {
       for (let i2 = 0; i2 < line5.length; i2 += maxCols) {
-        out.push(line5.slice(i2, i2 + maxCols));
+        const piece = line5.slice(i2, i2 + maxCols);
+        const continues = i2 + maxCols < line5.length || laterLine;
+        if (!room()) {
+          mark2(piece);
+          return { lines: out, truncated: true };
+        }
+        if (out.length + 1 === bounded && continues) {
+          mark2(piece);
+          return { lines: out, truncated: true };
+        }
+        out.push(piece);
       }
       continue;
     }
     let curLine = "";
     let curCols = 0;
-    for (const { segment: segment2 } of GRAPHEME.segment(line5)) {
+    const segments = [...GRAPHEME.segment(line5)];
+    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 1) {
+      const segment2 = segments[segmentIndex]?.segment ?? "";
       const width = displayWidth(segment2);
-      if (curCols + width > maxCols && curLine !== "") {
-        out.push(curLine);
-        curLine = segment2;
-        curCols = width;
-      } else {
+      if (curCols + width <= maxCols || curLine === "") {
         curLine += segment2;
         curCols += width;
+        continue;
       }
+      if (!room()) {
+        mark2(curLine);
+        return { lines: out, truncated: true };
+      }
+      const continues = segmentIndex < segments.length || laterLine;
+      if (out.length + 1 === bounded && continues) {
+        mark2(curLine);
+        return { lines: out, truncated: true };
+      }
+      out.push(curLine);
+      curLine = segment2;
+      curCols = width;
     }
     if (curLine !== "") {
+      if (!room()) {
+        mark2(curLine);
+        return { lines: out, truncated: true };
+      }
+      if (out.length + 1 === bounded && laterLine) {
+        mark2(curLine);
+        return { lines: out, truncated: true };
+      }
       out.push(curLine);
     }
   }
-  return out;
+  return { lines: out, truncated: false };
 }
 
 // packages/tui/tui-render/src/terminal-capabilities.ts
@@ -56347,6 +56400,14 @@ function transcriptBlockId(row) {
 function transcriptBlockVersion(row, revisions) {
   return revisions.revision(row.kind === "compaction" ? row.divider : row.message);
 }
+function settledProjectionSignature(row, revisions, options) {
+  return [
+    transcriptBlockVersion(row, revisions),
+    options.hasSubsequent ? "gap" : "tail",
+    options.isLatestAssistant ? "latest" : "",
+    options.expandedCompactionId ?? ""
+  ].join("\0");
+}
 function activeTurnVersion(turn, revisions) {
   return revisions.revision(turn, [
     turn.assistantText,
@@ -56880,6 +56941,9 @@ function StreamView({
   const viewportRef = (0, import_react37.useRef)(null);
   const layoutCache = (0, import_react37.useRef)(new TranscriptLayoutCache());
   const projectorStates = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
+  const settledProjectionCache = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
+  const settledProjectionScope = (0, import_react37.useRef)("");
+  const settledProjectionPresenters = (0, import_react37.useRef)(void 0);
   const rebuildBlocks = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
   const lineStore = (0, import_react37.useRef)(void 0);
   if (lineStore.current === void 0) {
@@ -57059,6 +57123,24 @@ function StreamView({
   );
   const hasActiveTurn = activeTurn !== void 0;
   const settledEntryRows = (0, import_react37.useMemo)(() => {
+    const projectionScope = [
+      settledBlockRowsScope.scopeKey,
+      settledAssistantBlockRowsScope.scopeKey,
+      reasoningExpanded ? "r1" : "r0",
+      toolCardsExpanded ? "t1" : "t0",
+      mode,
+      locale
+    ].join("\0");
+    if (settledProjectionScope.current !== projectionScope) {
+      settledProjectionCache.current = /* @__PURE__ */ new Map();
+      settledProjectionScope.current = projectionScope;
+    }
+    if (settledProjectionPresenters.current !== presenters) {
+      settledProjectionCache.current = /* @__PURE__ */ new Map();
+      settledProjectionPresenters.current = presenters;
+    }
+    const previousCache = settledProjectionCache.current;
+    const nextCache = /* @__PURE__ */ new Map();
     const definitions = /* @__PURE__ */ new Map();
     const batchPresenters = presenters === void 0 ? void 0 : { get(name2) {
       if (!definitions.has(name2)) definitions.set(name2, presenters.get(name2));
@@ -57075,6 +57157,24 @@ function StreamView({
     const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
     for (const [index2, row] of transcript.entries()) {
       const id = transcriptBlockId(row);
+      const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
+      const cached2 = previousCache.get(id);
+      const signature = settledProjectionSignature(row, revisions, {
+        hasSubsequent,
+        isLatestAssistant: row.kind === "message" && row.message.id === latestAssistant,
+        expandedCompactionId
+      });
+      if (cached2?.signature === signature) {
+        map2.set(id, cached2.lines);
+        if (cached2.textRanges !== void 0) textRanges.set(id, cached2.textRanges);
+        if (cached2.reasoningSticky !== void 0) reasoningSticky.set(id, cached2.reasoningSticky);
+        if (cached2.toolSticky !== void 0) toolSticky.set(id, [...cached2.toolSticky]);
+        if (cached2.userSticky !== void 0) userSticky.set(id, cached2.userSticky);
+        for (const block of cached2.storeBlocks) storeBlocks.set(block.entry.id, block);
+        nextCache.set(id, cached2);
+        continue;
+      }
+      const blocksBefore = storeBlocks.size;
       if (row.kind === "compaction") {
         const meta3 = {
           compactionSummary: row.divider.summary,
@@ -57089,10 +57189,18 @@ function StreamView({
           meta: meta3
         }, settledBlockRowsScope, void 0, false);
         map2.set(id, projection.lines);
+        nextCache.set(id, {
+          signature,
+          lines: projection.lines,
+          textRanges: void 0,
+          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          reasoningSticky: void 0,
+          toolSticky: void 0,
+          userSticky: void 0
+        });
         continue;
       }
       if (row.message.kind === "user") {
-        const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
         const projection = project(id, {
           id,
           kind: "user",
@@ -57100,7 +57208,17 @@ function StreamView({
           ...hasSubsequent ? { meta: { userMessageGap: true } } : {}
         }, settledBlockRowsScope, void 0, false);
         map2.set(id, projection.lines);
-        userSticky.set(id, { start: 0, end: projection.lines.length, text: row.message.text });
+        const sticky = { start: 0, end: projection.lines.length, text: row.message.text };
+        userSticky.set(id, sticky);
+        nextCache.set(id, {
+          signature,
+          lines: projection.lines,
+          textRanges: void 0,
+          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          reasoningSticky: void 0,
+          toolSticky: void 0,
+          userSticky: sticky
+        });
         continue;
       }
       const parts = displayedParts(
@@ -57204,9 +57322,20 @@ function StreamView({
           meta: tailMeta
         }, settledBlockRowsScope, void 0, false).lines);
       }
-      map2.set(id, rows2.build());
+      const built = rows2.build();
+      map2.set(id, built);
       if (ranges.length > 0) textRanges.set(id, ranges);
+      nextCache.set(id, {
+        signature,
+        lines: built,
+        textRanges: ranges.length > 0 ? ranges : void 0,
+        storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+        reasoningSticky: reasoningSticky.get(id),
+        toolSticky: toolSticky.get(id),
+        userSticky: void 0
+      });
     }
+    settledProjectionCache.current = nextCache;
     return { rows: map2, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky };
   }, [
     contentWidth,
@@ -59068,14 +59197,16 @@ function SettingsBrowser(props) {
   const detailBudget = compact || active === void 0 ? 0 : Math.min(6, Math.max(0, space - Math.min(3, Math.max(1, rows.length))));
   if (active !== void 0 && detailBudget > 0) {
     const source = filtered ? `${active.namespace} \xB7 ${active.field}` : fieldLabel(active, locale);
-    detail.push(...wrapDisplayLines(escapeContent(`\u5F53\u524D\u9879: ${source}`), width).slice(0, filtered ? 2 : 1));
+    const pushBounded = (text4, limit) => {
+      if (limit <= 0 || detail.length >= detailBudget) return;
+      const room = Math.min(limit, detailBudget - detail.length);
+      const wrapped = wrapDisplayLinesLimited(escapeContent(text4), width, room);
+      detail.push(...wrapped.lines);
+    };
+    pushBounded(`\u5F53\u524D\u9879: ${source}`, filtered ? 2 : 1);
     const value = active.value === "" ? "\u2014" : active.value;
-    detail.push(...wrapDisplayLines(escapeContent(`${active.navigable === true ? "\u5305\u542B" : "\u5F53\u524D\u503C"}: ${value}`), width));
-    if (active.description !== void 0) detail.push(...wrapDisplayLines(escapeContent(active.description), width));
-    if (detail.length > detailBudget) {
-      detail.length = detailBudget;
-      detail[detail.length - 1] = `${wcwidthSafeSlice(detail[detail.length - 1], Math.max(0, width - 1))}\u2026`;
-    }
+    pushBounded(`${active.navigable === true ? "\u5305\u542B" : "\u5F53\u524D\u503C"}: ${value}`, detailBudget);
+    if (active.description !== void 0) pushBounded(active.description, detailBudget);
   }
   const size = Math.min(rows.length, Math.max(0, space - detail.length));
   const start = Math.max(0, Math.min(rows.length - size, selected - Math.floor(size / 2)));
@@ -99586,7 +99717,19 @@ function parseSettingsFieldValue(namespace, field, current, draft, knownProvider
   if (field === "defaultInput" || field.endsWith(".defaultInput")) {
     const trimmed = draft.trim().toLowerCase();
     if (trimmed === "") return ["text", "image"];
-    const tokens = trimmed.split(/[,\s]+/).filter((t2) => t2 !== "");
+    const json2 = trimmed.startsWith("[") ? trimmed : void 0;
+    let parsed;
+    if (json2 !== void 0) {
+      try {
+        parsed = JSON.parse(json2);
+      } catch {
+        throw new TypeError("JSON \u65E0\u6548");
+      }
+      if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== "string")) {
+        throw new TypeError('defaultInput \u9700\u8981\u5B57\u7B26\u4E32\u6570\u7EC4\uFF0C\u4F8B\u5982 ["text", "image"]');
+      }
+    }
+    const tokens = parsed === void 0 ? trimmed.split(/[,\s]+/).filter((t2) => t2 !== "") : parsed;
     const result = [];
     for (const token of tokens) {
       if (token === "text" || token === "\u6587\u672C") {
@@ -99633,6 +99776,10 @@ function childSchema(schema, key) {
   const node2 = record2(schema);
   return record2(node2.dict)[key] ?? record2(node2.properties)[key] ?? node2.inner ?? node2.items;
 }
+function navigableValue(value) {
+  if (Array.isArray(value)) return value.some((item) => typeof item !== "string");
+  return value !== null && typeof value === "object";
+}
 function summary(value) {
   return Array.isArray(value) ? `${String(value.length)} \u9879` : value !== null && typeof value === "object" ? `${String(Object.keys(value).length)} \u4E2A\u5B57\u6BB5` : stringifySettingValue(value);
 }
@@ -99672,6 +99819,7 @@ function settingsTreeFromDescribe(descriptors, credentials) {
       const identity = Array.isArray(parentValue) && typeof modelId === "string" && parentValue.filter((entry) => record2(entry).id === modelId).length === 1 ? `id:${modelId}` : key;
       const id = `${parentId}:${JSON.stringify(identity)}`;
       const nested = value !== null && typeof value === "object";
+      const navigable = navigableValue(value);
       const meta3 = record2(record2(schema).meta);
       const label = Array.isArray(parentValue) ? String(record2(value).id ?? record2(value).name ?? key) : key;
       nodes.push({
@@ -99681,14 +99829,14 @@ function settingsTreeFromDescribe(descriptors, credentials) {
         field,
         sourcePath: path2,
         label,
-        value: path2.length === 2 && path2[0] === "providers" ? `${String(Array.isArray(record2(value).models) ? record2(value).models.length : 0)} \u6A21\u578B \xB7 ${String(record2(value).api ?? "\u9ED8\u8BA4\u534F\u8BAE")}` : nested ? summary(value) : stringifySettingsFieldValue(namespace, field, value),
+        value: path2.length === 2 && path2[0] === "providers" ? `${String(Array.isArray(record2(value).models) ? record2(value).models.length : 0)} \u6A21\u578B \xB7 ${String(record2(value).api ?? "\u9ED8\u8BA4\u534F\u8BAE")}` : navigable ? summary(value) : stringifySettingsFieldValue(namespace, field, value),
         editValue: stringifySettingValue(value),
-        ...nested && secrets.some((secret) => path2.every((key2, index2) => secret[index2] === key2)) ? { editable: false } : {},
-        ...nested ? { navigable: true } : {},
+        ...navigable && secrets.some((secret) => path2.every((key2, index2) => secret[index2] === key2)) ? { editable: false } : {},
+        ...navigable ? { navigable: true } : {},
         ...typeof meta3.description === "string" ? { description: meta3.description } : {},
         ...meta3.required === true ? { required: true } : {}
       });
-      if (nested) {
+      if (navigable) {
         for (const [child, next] of Object.entries(value)) walk(next, [...path2, child], id, childSchema(schema, child));
         if (namespace === "llm-pi-ai" && field === "providers") {
           nodes.push({ id: `${id}:add`, parentId: id, namespace, field, sourcePath: path2, label: "+ \u6DFB\u52A0 Provider", value: "\u76EE\u5F55\u540D / \u8868\u5355", editValue: PROVIDER_FORM_TEMPLATE });
@@ -100599,6 +100747,9 @@ var RuntimeController = class _RuntimeController {
   settingsOpen = false;
   settingsRows = [];
   settingsSelectedIndex = 0;
+  /** Selection changes inside one input burst share one settings notification. */
+  settingsMovePending = false;
+  settingsMoveEmit;
   settingsNavigation = new SettingsNavigation([]);
   settingsSearching = false;
   settingsEditing = false;
@@ -103523,7 +103674,8 @@ ${line5}`.slice(-64e3);
           Math.max(0, this.settingsSelectedIndex + action.delta)
         );
         this.settingsNavigation.selectedIndex = this.settingsSelectedIndex;
-        this.emit();
+        this.settingsPaneSnapshot = void 0;
+        this.scheduleSettingsSelectionEmit();
         return;
       case "settings-edit":
       case "settings-edit-json":
@@ -106857,6 +107009,8 @@ ${row.hint ?? ""}` });
   notifyListeners() {
     this.emitLastRun = Date.now();
     this.emitPending = false;
+    this.settingsMovePending = false;
+    this.settingsMoveEmit = void 0;
     for (const listener of this.listeners) {
       try {
         listener();
@@ -106865,8 +107019,27 @@ ${row.hint ?? ""}` });
       }
     }
   }
+  /**
+   * Publish only the settings selection. A wheel or key burst keeps the latest
+   * index readable immediately and notifies subscribers once per turn.
+   */
+  scheduleSettingsSelectionEmit() {
+    if (this.closed) return;
+    this.settingsMovePending = true;
+    if (this.settingsMoveEmit !== void 0) return;
+    const token = queueMicrotask(() => {
+      if (this.settingsMoveEmit !== token || this.closed || !this.settingsMovePending) return;
+      this.settingsMoveEmit = void 0;
+      this.settingsMovePending = false;
+      if (this.emitTimer !== void 0) this.emitPending = true;
+      else this.notifyListeners();
+    });
+    this.settingsMoveEmit = token;
+  }
   emit() {
     if (this.closed) return;
+    this.settingsMovePending = false;
+    this.settingsMoveEmit = void 0;
     this.modelSnapshot = void 0;
     this.sessionPaneSnapshot = void 0;
     this.searchPaneSnapshot = void 0;
