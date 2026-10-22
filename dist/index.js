@@ -39537,91 +39537,76 @@ function padDisplayEnd(text4, width) {
   return `${text4}${" ".repeat(width - cols)}`;
 }
 function wrapDisplayLines(text4, maxCols) {
-  return wrapDisplayLinesLimited(text4, maxCols, Number.POSITIVE_INFINITY).lines;
-}
-function wrapDisplayLinesLimited(text4, maxCols, limit) {
-  const bounded = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : Number.POSITIVE_INFINITY;
   const source = text4.split("\n");
-  if (bounded === 0) return { lines: [], truncated: text4 !== "" };
-  if (maxCols <= 0) {
-    const lines = source.slice(0, bounded);
-    return { lines, truncated: source.length > lines.length };
-  }
+  if (maxCols <= 0) return source;
   const out = [];
-  const room = () => out.length < bounded;
-  const mark2 = (line5) => {
-    const marker = `${wcwidthSafeSlice(line5, Math.max(0, maxCols - 1))}\u2026`;
-    if (out.length < bounded) out.push(marker);
-    else out[out.length - 1] = marker;
-  };
-  for (let lineIndex = 0; lineIndex < source.length; lineIndex += 1) {
-    const line5 = source[lineIndex] ?? "";
-    const laterLine = lineIndex < source.length - 1;
+  for (const line5 of source) {
     if (line5 === "" || displayWidth(line5) <= maxCols) {
-      if (!room()) {
-        mark2("");
-        return { lines: out, truncated: true };
-      }
-      if (out.length + 1 === bounded && laterLine) {
-        mark2(line5);
-        return { lines: out, truncated: true };
-      }
       out.push(line5);
       continue;
     }
     if (/^[\x20-\x7e]*$/u.test(line5)) {
       for (let i2 = 0; i2 < line5.length; i2 += maxCols) {
-        const piece = line5.slice(i2, i2 + maxCols);
-        const continues = i2 + maxCols < line5.length || laterLine;
-        if (!room()) {
-          mark2(piece);
-          return { lines: out, truncated: true };
-        }
-        if (out.length + 1 === bounded && continues) {
-          mark2(piece);
-          return { lines: out, truncated: true };
-        }
-        out.push(piece);
+        out.push(line5.slice(i2, i2 + maxCols));
       }
       continue;
     }
     let curLine = "";
     let curCols = 0;
-    const segments = [...GRAPHEME.segment(line5)];
-    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 1) {
-      const segment2 = segments[segmentIndex]?.segment ?? "";
+    for (const { segment: segment2 } of GRAPHEME.segment(line5)) {
       const width = displayWidth(segment2);
-      if (curCols + width <= maxCols || curLine === "") {
+      if (curCols + width > maxCols && curLine !== "") {
+        out.push(curLine);
+        curLine = segment2;
+        curCols = width;
+      } else {
         curLine += segment2;
         curCols += width;
-        continue;
       }
-      if (!room()) {
-        mark2(curLine);
-        return { lines: out, truncated: true };
-      }
-      const continues = segmentIndex < segments.length || laterLine;
-      if (out.length + 1 === bounded && continues) {
-        mark2(curLine);
-        return { lines: out, truncated: true };
-      }
-      out.push(curLine);
-      curLine = segment2;
-      curCols = width;
     }
     if (curLine !== "") {
-      if (!room()) {
-        mark2(curLine);
-        return { lines: out, truncated: true };
-      }
-      if (out.length + 1 === bounded && laterLine) {
-        mark2(curLine);
-        return { lines: out, truncated: true };
-      }
       out.push(curLine);
     }
   }
-  return { lines: out, truncated: false };
+  return out;
+}
+function wrapDisplayLinesLimited(text4, maxCols, limit) {
+  const bounded = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : Number.POSITIVE_INFINITY;
+  if (bounded === 0) return { lines: [], truncated: text4 !== "" };
+  if (bounded === Number.POSITIVE_INFINITY) return { lines: wrapDisplayLines(text4, maxCols), truncated: false };
+  if (maxCols <= 0) {
+    const lines2 = text4.split("\n", bounded + 1);
+    const truncated2 = lines2.length > bounded;
+    if (truncated2) lines2.pop();
+    return { lines: lines2, truncated: truncated2 };
+  }
+  const lines = [];
+  let row = "";
+  let columns = 0;
+  const truncated = () => ({
+    lines: [...lines, `${wcwidthSafeSlice(row, Math.max(0, maxCols - 1))}\u2026`],
+    truncated: true
+  });
+  for (const { segment: segment2 } of GRAPHEME.segment(text4)) {
+    if (segment2 === "\n") {
+      if (lines.length + 1 === bounded) return truncated();
+      lines.push(row);
+      row = "";
+      columns = 0;
+      continue;
+    }
+    const width = displayWidth(segment2);
+    if (columns + width > maxCols && row !== "") {
+      if (lines.length + 1 === bounded) return truncated();
+      lines.push(row);
+      row = "";
+      columns = 0;
+    }
+    row += segment2;
+    columns += width;
+  }
+  lines.push(row);
+  return { lines, truncated: false };
 }
 
 // packages/tui/tui-render/src/terminal-capabilities.ts
@@ -56405,7 +56390,7 @@ function settledProjectionSignature(row, revisions, options) {
     transcriptBlockVersion(row, revisions),
     options.hasSubsequent ? "gap" : "tail",
     options.isLatestAssistant ? "latest" : "",
-    options.expandedCompactionId ?? ""
+    row.kind === "compaction" && options.expandedCompactionId === row.divider.compactionId ? "expanded" : ""
   ].join("\0");
 }
 function activeTurnVersion(turn, revisions) {
@@ -57153,7 +57138,6 @@ function StreamView({
     const toolSticky = /* @__PURE__ */ new Map();
     const userSticky = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
-    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks);
     const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
     for (const [index2, row] of transcript.entries()) {
       const id = transcriptBlockId(row);
@@ -57174,7 +57158,13 @@ function StreamView({
         nextCache.set(id, cached2);
         continue;
       }
-      const blocksBefore = storeBlocks.size;
+      const rowBlocks = /* @__PURE__ */ new Map();
+      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks);
+      const collectBlocks = () => {
+        const blocks = [...rowBlocks.values()];
+        for (const block of blocks) storeBlocks.set(block.entry.id, block);
+        return blocks;
+      };
       if (row.kind === "compaction") {
         const meta3 = {
           compactionSummary: row.divider.summary,
@@ -57193,7 +57183,7 @@ function StreamView({
           signature,
           lines: projection.lines,
           textRanges: void 0,
-          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          storeBlocks: collectBlocks(),
           reasoningSticky: void 0,
           toolSticky: void 0,
           userSticky: void 0
@@ -57214,7 +57204,7 @@ function StreamView({
           signature,
           lines: projection.lines,
           textRanges: void 0,
-          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          storeBlocks: collectBlocks(),
           reasoningSticky: void 0,
           toolSticky: void 0,
           userSticky: sticky
@@ -57329,7 +57319,7 @@ function StreamView({
         signature,
         lines: built,
         textRanges: ranges.length > 0 ? ranges : void 0,
-        storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+        storeBlocks: collectBlocks(),
         reasoningSticky: reasoningSticky.get(id),
         toolSticky: toolSticky.get(id),
         userSticky: void 0
@@ -59123,7 +59113,8 @@ var SETTINGS_GROUP_LABELS = {
 var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
 function fit(text4, width) {
   const safe = escapeContent(text4).replace(/\n/gu, " \u21B5 ");
-  return displayWidth(safe) <= width ? safe : `${wcwidthSafeSlice(safe, Math.max(0, width - 1))}\u2026`;
+  const prefix = wcwidthSafeSlice(safe, width);
+  return prefix.length === safe.length ? safe : `${wcwidthSafeSlice(prefix, Math.max(0, width - 1))}\u2026`;
 }
 function canToggleSetting(row) {
   return row !== void 0 && row.navigable !== true && row.editable !== false && (row.value === "true" || row.value === "false" || row.namespace === "tui" && ["brandAnimation", "locale", "theme", "colorTier"].includes(row.field));
@@ -99818,7 +99809,6 @@ function settingsTreeFromDescribe(descriptors, credentials) {
       const modelId = record2(value).id;
       const identity = Array.isArray(parentValue) && typeof modelId === "string" && parentValue.filter((entry) => record2(entry).id === modelId).length === 1 ? `id:${modelId}` : key;
       const id = `${parentId}:${JSON.stringify(identity)}`;
-      const nested = value !== null && typeof value === "object";
       const navigable = navigableValue(value);
       const meta3 = record2(record2(schema).meta);
       const label = Array.isArray(parentValue) ? String(record2(value).id ?? record2(value).name ?? key) : key;
@@ -107027,14 +107017,15 @@ ${row.hint ?? ""}` });
     if (this.closed) return;
     this.settingsMovePending = true;
     if (this.settingsMoveEmit !== void 0) return;
-    const token = queueMicrotask(() => {
+    const token = {};
+    this.settingsMoveEmit = token;
+    queueMicrotask(() => {
       if (this.settingsMoveEmit !== token || this.closed || !this.settingsMovePending) return;
       this.settingsMoveEmit = void 0;
       this.settingsMovePending = false;
       if (this.emitTimer !== void 0) this.emitPending = true;
       else this.notifyListeners();
     });
-    this.settingsMoveEmit = token;
   }
   emit() {
     if (this.closed) return;

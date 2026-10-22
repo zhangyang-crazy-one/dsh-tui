@@ -16,7 +16,7 @@ function childSchema(schema: unknown, key: string): unknown {
   return record(node.dict)[key] ?? record(node.properties)[key] ?? node.inner ?? node.items
 }
 /** String collections stay one editable value; records, objects, and other arrays open. */
-function navigableValue(value: unknown): boolean {
+function navigableValue(value: unknown): value is Record<string, unknown> | unknown[] {
   if (Array.isArray(value)) return value.some(item => typeof item !== 'string')
   return value !== null && typeof value === 'object'
 }
@@ -67,7 +67,6 @@ export function settingsTreeFromDescribe(
       const identity = Array.isArray(parentValue) && typeof modelId === 'string'
         && parentValue.filter(entry => record(entry).id === modelId).length === 1 ? `id:${modelId}` : key
       const id = `${parentId}:${JSON.stringify(identity)}`
-      const nested = value !== null && typeof value === 'object'
       const navigable = navigableValue(value)
       const meta = record(record(schema).meta)
       const label = Array.isArray(parentValue)

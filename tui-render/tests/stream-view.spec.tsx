@@ -159,6 +159,55 @@ describe('scrollRailGeometry', () => {
 })
 
 describe('StreamView', () => {
+  it('reprojects only the affected compaction divider and changed history entry', async () => {
+    const project = vi.spyOn(blockRows, 'projectBlockRows')
+    let history = historyRows(20)
+    const compactionDividers = [{ id: 30, compactionId: 'compact-a', summary: 'SUMMARY_A' },
+      { id: 40, compactionId: 'compact-b', summary: 'SUMMARY_B' }]
+    const view = (expandedCompactionId?: string) => createElement(StreamView, {
+      model: model({ history, compactionDividers, expandedCompactionId }),
+    })
+    const instance = render(view(), { stdout: fakeTtyStdout(), stdin: fakeTtyStdin(),
+      exitOnCtrlC: false, patchConsole: false, interactive: false })
+    try {
+      await instance.waitUntilRenderFlush()
+      project.mockClear()
+      instance.rerender(view('compact-a'))
+      await instance.waitUntilRenderFlush()
+      expect(project.mock.calls.map(([entry]) => entry.source)).toEqual(['compact-a'])
+      project.mockClear()
+      instance.rerender(view('compact-b'))
+      await instance.waitUntilRenderFlush()
+      expect(project.mock.calls.map(([entry]) => entry.source)).toEqual(['compact-a', 'compact-b'])
+      project.mockClear()
+      history = history.map((entry, index) => index === 3 ? { ...entry, text: 'CHANGED_ROW' } : entry)
+      instance.rerender(view('compact-b'))
+      await instance.waitUntilRenderFlush()
+      expect(project.mock.calls.map(([entry]) => entry.source)).toEqual(['CHANGED_ROW'])
+    } finally {
+      await disposeRenderer(instance)
+      project.mockRestore()
+    }
+  })
+
+  it('collects rebuild descriptors in linear work when loading history', () => {
+    const values = Map.prototype.values
+    let visited = 0
+    const spy = vi.spyOn(Map.prototype, 'values').mockImplementation(function* (this: Map<unknown, unknown>) {
+      for (const value of values.call(this)) {
+        if (value !== null && typeof value === 'object' && 'ownerId' in value && 'entry' in value && 'scope' in value) visited++
+        yield value
+      }
+      return undefined
+    })
+    try {
+      const history = historyRows(200)
+      const out = stripAnsi(renderToString(streamElement(history)))
+      expect(out).toContain('ROW_199')
+      expect(visited).toBeLessThanOrEqual(history.length * 10)
+    } finally { spy.mockRestore() }
+  })
+
   it('does not project a large hidden reasoning source while enabled reasoning still projects', () => {
     const project = vi.spyOn(blockRows, 'projectBlockRows')
     const plainRows = vi.spyOn(PlainTextRowCache.prototype, 'rows')

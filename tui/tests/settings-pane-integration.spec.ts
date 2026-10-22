@@ -155,6 +155,49 @@ function openNamespace(controller: RuntimeController, name?: string): void {
 }
 
 describe('SettingsPane intercept', () => {
+  it('queues one selection notification per burst and cancels stale callbacks', async () => {
+    const { ctx, controller } = await bench()
+    const settings = ctx.get('settings') as never as { describe: () => { ns: string; value: unknown }[] }
+    settings.describe = () => [{ ns: NS, value: { a: 'one', b: 'two', c: 'three' } }]
+    controller.dispatch({ kind: 'command', query: 'settings' })
+    openNamespace(controller)
+    const listener = vi.fn()
+    const unsubscribe = controller.subscribe(listener)
+    await vi.waitFor(() => expect(listener).toHaveBeenCalled())
+    listener.mockClear()
+    const model = controller.getModel()
+    const callbacks: (() => void)[] = []
+    const queue = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(callback => { callbacks.push(callback) })
+    try {
+      controller.dispatch({ kind: 'settings-move', delta: 1 })
+      controller.dispatch({ kind: 'settings-move', delta: 1 })
+      controller.dispatch({ kind: 'settings-move', delta: -1 })
+      expect(controller.getSettingsPane().selectedIndex).toBe(1)
+      expect(controller.getModel()).toBe(model)
+      expect(listener).not.toHaveBeenCalled()
+      expect(callbacks).toHaveLength(1)
+      callbacks.shift()!()
+      expect(listener).toHaveBeenCalledTimes(1)
+      // A normal mutation cancels the queued selection publication. A later
+      // selection burst must not be published by the cancelled callback.
+      controller.dispatch({ kind: 'settings-move', delta: 1 })
+      const stale = callbacks.shift()!
+      controller.dispatch({ kind: 'settings-edit' })
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(2))
+      controller.dispatch({ kind: 'settings-cancel-edit' })
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(3))
+      controller.dispatch({ kind: 'settings-move', delta: -1 })
+      stale()
+      expect(listener).toHaveBeenCalledTimes(3)
+      callbacks.shift()!()
+      expect(listener).toHaveBeenCalledTimes(4)
+    } finally {
+      queue.mockRestore()
+      unsubscribe()
+      await ctx.fiber.dispose()
+    }
+  })
+
   it('starts quiet with thinking hidden and exposes each display command with its current state', async () => {
     const { ctx, controller } = await bench({ settings: false })
     try {

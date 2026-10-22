@@ -1283,7 +1283,7 @@ export class RuntimeController implements TuiController {
   private settingsSelectedIndex = 0
   /** Selection changes inside one input burst share one settings notification. */
   private settingsMovePending = false
-  private settingsMoveEmit: ReturnType<typeof queueMicrotask> | undefined
+  private settingsMoveEmit: object | undefined
   private settingsNavigation = new SettingsNavigation([])
   private settingsSearching = false
   private settingsEditing = false
@@ -8132,14 +8132,15 @@ export class RuntimeController implements TuiController {
     if (this.closed) return
     this.settingsMovePending = true
     if (this.settingsMoveEmit !== undefined) return
-    const token = queueMicrotask(() => {
+    const token = {}
+    this.settingsMoveEmit = token
+    queueMicrotask(() => {
       if (this.settingsMoveEmit !== token || this.closed || !this.settingsMovePending) return
       this.settingsMoveEmit = undefined
       this.settingsMovePending = false
       if (this.emitTimer !== undefined) this.emitPending = true
       else this.notifyListeners()
     })
-    this.settingsMoveEmit = token
   }
 
   private emit(): void {

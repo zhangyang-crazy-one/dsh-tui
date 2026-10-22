@@ -264,7 +264,38 @@ export function padDisplayEnd(text: string, width: number): string {
  * @returns one string per terminal row.
  */
 export function wrapDisplayLines(text: string, maxCols: number): string[] {
-  return wrapDisplayLinesLimited(text, maxCols, Number.POSITIVE_INFINITY).lines
+  const source = text.split('\n')
+  if (maxCols <= 0) return source
+  const out: string[] = []
+  for (const line of source) {
+    if (line === '' || displayWidth(line) <= maxCols) {
+      out.push(line)
+      continue
+    }
+    if (/^[\x20-\x7e]*$/u.test(line)) {
+      for (let i = 0; i < line.length; i += maxCols) {
+        out.push(line.slice(i, i + maxCols))
+      }
+      continue
+    }
+    let curLine = ''
+    let curCols = 0
+    for (const { segment } of GRAPHEME.segment(line)) {
+      const width = displayWidth(segment)
+      if (curCols + width > maxCols && curLine !== '') {
+        out.push(curLine)
+        curLine = segment
+        curCols = width
+      } else {
+        curLine += segment
+        curCols += width
+      }
+    }
+    if (curLine !== '') {
+      out.push(curLine)
+    }
+  }
+  return out
 }
 
 /**
@@ -281,85 +312,41 @@ export function wrapDisplayLinesLimited(
   limit: number,
 ): { readonly lines: string[]; readonly truncated: boolean } {
   const bounded = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : Number.POSITIVE_INFINITY
-  const source = text.split('\n')
   if (bounded === 0) return { lines: [], truncated: text !== '' }
+  if (bounded === Number.POSITIVE_INFINITY) return { lines: wrapDisplayLines(text, maxCols), truncated: false }
   if (maxCols <= 0) {
-    const lines = source.slice(0, bounded)
-    return { lines, truncated: source.length > lines.length }
+    const lines = text.split('\n', bounded + 1)
+    const truncated = lines.length > bounded
+    if (truncated) lines.pop()
+    return { lines, truncated }
   }
-  const out: string[] = []
-  const room = (): boolean => out.length < bounded
-  const mark = (line: string): void => {
-    const marker = `${wcwidthSafeSlice(line, Math.max(0, maxCols - 1))}…`
-    if (out.length < bounded) out.push(marker)
-    else out[out.length - 1] = marker
-  }
-  for (let lineIndex = 0; lineIndex < source.length; lineIndex += 1) {
-    const line = source[lineIndex] ?? ''
-    const laterLine = lineIndex < source.length - 1
-    if (line === '' || displayWidth(line) <= maxCols) {
-      if (!room()) {
-        mark('')
-        return { lines: out, truncated: true }
-      }
-      if (out.length + 1 === bounded && laterLine) {
-        mark(line)
-        return { lines: out, truncated: true }
-      }
-      out.push(line)
+  const lines: string[] = []
+  let row = ''
+  let columns = 0
+  const truncated = () => ({
+    lines: [...lines, `${wcwidthSafeSlice(row, Math.max(0, maxCols - 1))}…`],
+    truncated: true,
+  })
+  // Walk lazily, including explicit newlines. Neither width measurement nor
+  // grapheme allocation should depend on the invisible suffix of a value.
+  for (const { segment } of GRAPHEME.segment(text)) {
+    if (segment === '\n') {
+      if (lines.length + 1 === bounded) return truncated()
+      lines.push(row)
+      row = ''
+      columns = 0
       continue
     }
-    if (/^[\x20-\x7e]*$/u.test(line)) {
-      for (let i = 0; i < line.length; i += maxCols) {
-        const piece = line.slice(i, i + maxCols)
-        const continues = i + maxCols < line.length || laterLine
-        if (!room()) {
-          mark(piece)
-          return { lines: out, truncated: true }
-        }
-        if (out.length + 1 === bounded && continues) {
-          mark(piece)
-          return { lines: out, truncated: true }
-        }
-        out.push(piece)
-      }
-      continue
+    const width = displayWidth(segment)
+    if (columns + width > maxCols && row !== '') {
+      if (lines.length + 1 === bounded) return truncated()
+      lines.push(row)
+      row = ''
+      columns = 0
     }
-    let curLine = ''
-    let curCols = 0
-    const segments = [...GRAPHEME.segment(line)]
-    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 1) {
-      const segment = segments[segmentIndex]?.segment ?? ''
-      const width = displayWidth(segment)
-      if (curCols + width <= maxCols || curLine === '') {
-        curLine += segment
-        curCols += width
-        continue
-      }
-      if (!room()) {
-        mark(curLine)
-        return { lines: out, truncated: true }
-      }
-      const continues = segmentIndex < segments.length || laterLine
-      if (out.length + 1 === bounded && continues) {
-        mark(curLine)
-        return { lines: out, truncated: true }
-      }
-      out.push(curLine)
-      curLine = segment
-      curCols = width
-    }
-    if (curLine !== '') {
-      if (!room()) {
-        mark(curLine)
-        return { lines: out, truncated: true }
-      }
-      if (out.length + 1 === bounded && laterLine) {
-        mark(curLine)
-        return { lines: out, truncated: true }
-      }
-      out.push(curLine)
-    }
+    row += segment
+    columns += width
   }
-  return { lines: out, truncated: false }
+  lines.push(row)
+  return { lines, truncated: false }
 }

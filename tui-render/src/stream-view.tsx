@@ -388,7 +388,7 @@ function settledProjectionSignature(
     transcriptBlockVersion(row, revisions),
     options.hasSubsequent ? 'gap' : 'tail',
     options.isLatestAssistant ? 'latest' : '',
-    options.expandedCompactionId ?? '',
+    row.kind === 'compaction' && options.expandedCompactionId === row.divider.compactionId ? 'expanded' : '',
   ].join('\u0000')
 }
 
@@ -1519,7 +1519,6 @@ export function StreamView({
     const toolSticky = new Map<string, StickyToolRange[]>()
     const userSticky = new Map<string, StickyUserRange>()
     const projectorCache = projectorStates.current
-    const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks)
     const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
     for (const [index, row] of transcript.entries()) {
       const id = transcriptBlockId(row)
@@ -1540,7 +1539,13 @@ export function StreamView({
         nextCache.set(id, cached)
         continue
       }
-      const blocksBefore = storeBlocks.size
+      const rowBlocks = new Map<string, StoredBlockRows>()
+      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks)
+      const collectBlocks = (): StoredBlockRows[] => {
+        const blocks = [...rowBlocks.values()]
+        for (const block of blocks) storeBlocks.set(block.entry.id, block)
+        return blocks
+      }
       if (row.kind === 'compaction') {
         const meta: BlockRowsMeta = {
           compactionSummary: row.divider.summary,
@@ -1561,7 +1566,7 @@ export function StreamView({
         map.set(id, projection.lines)
         nextCache.set(id, {
           signature, lines: projection.lines, textRanges: undefined,
-          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          storeBlocks: collectBlocks(),
           reasoningSticky: undefined, toolSticky: undefined, userSticky: undefined,
         })
         continue
@@ -1578,7 +1583,7 @@ export function StreamView({
         userSticky.set(id, sticky)
         nextCache.set(id, {
           signature, lines: projection.lines, textRanges: undefined,
-          storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+          storeBlocks: collectBlocks(),
           reasoningSticky: undefined, toolSticky: undefined, userSticky: sticky,
         })
         continue
@@ -1697,7 +1702,7 @@ export function StreamView({
         signature,
         lines: built,
         textRanges: ranges.length > 0 ? ranges : undefined,
-        storeBlocks: [...storeBlocks.values()].slice(blocksBefore),
+        storeBlocks: collectBlocks(),
         reasoningSticky: reasoningSticky.get(id),
         toolSticky: toolSticky.get(id),
         userSticky: undefined,

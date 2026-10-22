@@ -3,6 +3,7 @@ import { createElement } from 'react'
 import { renderToString, useWindowSize } from 'ink'
 import { SettingsPane, type SettingsPaneProps } from '../src/settings-pane.tsx'
 import { displayWidth } from '../src/content.ts'
+import * as content from '../src/content.ts'
 import { applyTheme } from '../src/theme.ts'
 import { InputBar } from '../src/input-bar.tsx'
 
@@ -44,6 +45,20 @@ it('wraps the selected value in a detail area instead of losing its suffix', () 
   expect(plain).toContain('unique-endpoint')
   expect(plain).toContain('当前值')
   expect(plain).not.toContain('i JSON')
+})
+it('bounds width measurement of long settings values while keeping controls visible', () => {
+  const measure = vi.spyOn(content, 'displayWidth')
+  try {
+    const value = '中文👩‍💻á'.repeat(1000)
+    const { plain } = screen(40, { rows: [{ namespace: 'llm', field: 'value', value }], maxRows: 12 })
+    expect(plain).toContain('当前值')
+    expect(plain).toContain('Enter 编辑')
+    expect(plain).toContain('Esc')
+    expect(plain).toContain('…')
+    expect(plain.split('\n').length).toBeLessThanOrEqual(12)
+    expect(plain.split('\n').every(line => displayWidth(line) <= 40)).toBe(true)
+    expect(Math.max(...measure.mock.calls.map(([text]) => text.length))).toBeLessThan(200)
+  } finally { measure.mockRestore() }
 })
 it('shows the full source identity for indistinguishable search results', () => {
   const { plain } = screen(80, { filter: 'contextWindow', rows: [{ namespace: 'llm-pi-ai', field: 'providers.acme.models.0.contextWindow', sourcePath: ['providers', 'acme', 'models', '0', 'contextWindow'], label: 'contextWindow', value: '32768' }] })

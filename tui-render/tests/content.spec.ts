@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   displayWidth,
   displayColumnSlice,
@@ -188,6 +188,38 @@ describe('wrapDisplayLines', () => {
 })
 
 describe('wrapDisplayLinesLimited', () => {
+  it('only walks the visible graphemes of a long mixed value', () => {
+    const segment = Intl.Segmenter.prototype.segment
+    let visited = 0
+    const spy = vi.spyOn(Intl.Segmenter.prototype, 'segment').mockImplementation(function (this: Intl.Segmenter, input) {
+      const segments = segment.call(this, input)
+      const iterator = segments[Symbol.iterator].bind(segments)
+      Object.defineProperty(segments, Symbol.iterator, { value: function* () {
+        for (const item of iterator()) { visited++; yield item }
+      } })
+      return segments
+    })
+    try {
+      expect(wrapDisplayLinesLimited('中🙂á'.repeat(2000), 6, 2)).toEqual({
+        lines: ['中🙂á', '中🙂á…'], truncated: true,
+      })
+      expect(visited).toBeLessThan(30)
+    } finally { spy.mockRestore() }
+  })
+
+  it('matches unlimited wrapping at newline, wide-glyph and grapheme boundaries', () => {
+    for (const text of ['', 'a\nb\n', '\n\n', 'abcdefghij', '中文测试', '👩‍💻á❤️\n最后一行', '中\n', 'ab\n中\nx']) {
+      for (const width of [1, 2, 4, 8]) {
+        const full = wrapDisplayLines(text, width)
+        for (const limit of [1, 2, 3, 8]) {
+          const lines = full.slice(0, limit)
+          if (full.length > limit) lines[limit - 1] = `${wcwidthSafeSlice(lines[limit - 1]!, width - 1)}…`
+          expect(wrapDisplayLinesLimited(text, width, limit), `${JSON.stringify(text)} width=${width} limit=${limit}`).toEqual({ lines, truncated: full.length > limit })
+        }
+      }
+    }
+  })
+
   it('stops after the row budget and marks the last visible row', () => {
     expect(wrapDisplayLinesLimited('abcdefghij', 4, 2)).toEqual({
       lines: ['abcd', 'efg…'],

@@ -8,7 +8,8 @@ import { tuiCopy } from './ui-copy.ts'
 
 function fit(text: string, width: number): string {
   const safe = escapeContent(text).replace(/\n/gu, ' ↵ ')
-  return displayWidth(safe) <= width ? safe : `${wcwidthSafeSlice(safe, Math.max(0, width - 1))}…`
+  const prefix = wcwidthSafeSlice(safe, width)
+  return prefix.length === safe.length ? safe : `${wcwidthSafeSlice(prefix, Math.max(0, width - 1))}…`
 }
 
 /** Match the quick changes supported by the official settings controller. */
