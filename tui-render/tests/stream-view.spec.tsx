@@ -1288,6 +1288,8 @@ describe('StreamView', () => {
         stdin: fakeTtyStdin(),
         exitOnCtrlC: false,
         patchConsole: false,
+        // This fixture asserts live TTY frames even when the runner sets CI=true.
+        interactive: true,
       },
     )
     try {
