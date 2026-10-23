@@ -32,16 +32,21 @@ jobs:
         run: npm test
       - name: Check out compatible DSH
         run: |
-          node --input-type=module -e "import { writeFileSync } from 'node:fs'; import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; writeFileSync(process.env.GITHUB_ENV, 'COMPATIBLE_DSH_VERSION=' + COMPATIBLE_DSH_VERSION + '\n', { flag: 'a' })"
+          COMPATIBLE_DSH_VERSION="$(node --input-type=module -e "import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; process.stdout.write(COMPATIBLE_DSH_VERSION)")"
           git clone --depth 1 --branch "dsh-v${COMPATIBLE_DSH_VERSION}" https://github.com/deepseek-ai/deepseek-harness.git "${RUNNER_TEMP}/deepseek-harness"
           corepack enable
           corepack prepare "pnpm@$(node -p "require('${RUNNER_TEMP}/deepseek-harness/package.json').packageManager.split('@')[1]")" --activate
-          pnpm install --frozen-lockfile --dir "${RUNNER_TEMP}/deepseek-harness"
+          DSH_SOURCE="${RUNNER_TEMP}/deepseek-harness" node scripts/prepare-workspace.js
+          # The upstream tag has no TUI importers; extend its lock in this temporary checkout.
+          pnpm install --no-frozen-lockfile --dir "${RUNNER_TEMP}/deepseek-harness"
       - name: Run TUI tests
         env:
           DSH_SOURCE: ${{ runner.temp }}/deepseek-harness
         run: |
           npm run dev:setup
+          cd "${DSH_SOURCE}"
+          pnpm run build:native-system
           node "${DSH_SOURCE}/node_modules/vitest/vitest.mjs" run packages/tui/tui/tests packages/tui/tui-render/tests --maxWorkers 2
       - name: Verify package contents
         run: npm run pack:check
+

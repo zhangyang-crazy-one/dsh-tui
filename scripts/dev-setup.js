@@ -1,4 +1,5 @@
-// Run after `npm run build` has mounted the plugin sources in the dsh checkout.
+// Run after `node scripts/prepare-workspace.js` (or `npm run build`) has mounted
+// the plugin sources in the dsh checkout.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, symlinkSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -34,3 +35,4 @@ for (const [local, upstream] of [
   }
 }
 console.log('Editor dependencies and upstream declarations are ready.')
+
