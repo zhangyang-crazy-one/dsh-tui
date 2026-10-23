@@ -45,6 +45,7 @@ jobs:
         run: |
           npm run dev:setup
           cd "${DSH_SOURCE}"
+          pnpm run build:native-system
           node "${DSH_SOURCE}/node_modules/vitest/vitest.mjs" run packages/tui/tui/tests packages/tui/tui-render/tests --maxWorkers 2
       - name: Verify package contents
         run: npm run pack:check

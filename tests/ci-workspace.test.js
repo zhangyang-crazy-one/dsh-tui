@@ -103,8 +103,10 @@ test('TUI step sets up the mounted candidate and invokes Vitest from the DSH roo
   const bin = join(dir, 'bin')
   put(join(bin, 'npm'), `#!/bin/sh\ntest "$1 $2" = 'run dev:setup'\ntest -f "$DSH_SOURCE/packages/tui/tui/tests/candidate-only.spec.ts"\n`)
   chmodSync(join(bin, 'npm'), 0o755)
+  put(join(bin, 'pnpm'), `#!/bin/sh\nset -e\ntest \"$1 $2\" = 'run build:native-system'\ntest \"$PWD\" = \"$DSH_SOURCE\"\ntouch .native-built\n`)
+  chmodSync(join(bin, 'pnpm'), 0o755)
   const probe = join(dir, 'vitest-probe.json')
-  put(join(dsh, 'node_modules/vitest/vitest.mjs'), `import fs from 'node:fs';\nfs.writeFileSync(process.env.VITEST_PROBE, JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2), sentinel: fs.readFileSync('packages/tui/tui/tests/candidate-only.spec.ts', 'utf8') }));\n`)
+  put(join(dsh, 'node_modules/vitest/vitest.mjs'), `import fs from 'node:fs';\nif (!fs.existsSync('.native-built')) process.exit(9);\nfs.writeFileSync(process.env.VITEST_PROBE, JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2), sentinel: fs.readFileSync('packages/tui/tui/tests/candidate-only.spec.ts', 'utf8') }));\n`)
   const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', runBlock('Run TUI tests')], {
     cwd: candidate, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, DSH_SOURCE: dsh, VITEST_PROBE: probe }, encoding: 'utf8',
   })
