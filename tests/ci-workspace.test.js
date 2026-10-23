@@ -76,12 +76,12 @@ test('wrong upstream version is rejected before any workspace mutation', t => {
   assert.equal(readFileSync(join(dsh, 'packages/tui/tui/src/upstream-only.ts'), 'utf8'), 'old upstream')
 })
 
-test('checkout step resolves the exact compatible tag in a clean shell', t => {
+test('checkout step resolves the exact tag and mounts candidate before dependency installation', t => {
   const { dir, candidate } = fixture(t)
   const bin = join(dir, 'bin')
   const log = join(dir, 'commands.jsonl')
   for (const name of ['git', 'corepack', 'pnpm']) {
-    put(join(bin, name), `#!${process.execPath}\nimport fs from 'node:fs'; import path from 'node:path';\nconst args=process.argv.slice(2);\nfs.appendFileSync(process.env.COMMAND_LOG, JSON.stringify({ command: '${name}', args })+'\\n');\nif ('${name}' === 'git') { const dst=args.at(-1); fs.mkdirSync(dst,{recursive:true}); fs.writeFileSync(path.join(dst,'package.json'), JSON.stringify({packageManager:'pnpm@10.0.0'})); }\n`)
+    put(join(bin, name), `#!${process.execPath}\nimport fs from 'node:fs'; import path from 'node:path';\nconst args=process.argv.slice(2);\nfs.appendFileSync(process.env.COMMAND_LOG, JSON.stringify({ command: '${name}', args })+'\\n');\nif ('${name}' === 'git') { const dst=args.at(-1); fs.mkdirSync(dst,{recursive:true}); fs.writeFileSync(path.join(dst,'package.json'), JSON.stringify({packageManager:'pnpm@10.0.0',version:'${COMPATIBLE_DSH_VERSION}'})); for (const name of ['tui','tui-render']) { fs.mkdirSync(path.join(dst,'packages/tui',name,'node_modules'),{recursive:true}); fs.writeFileSync(path.join(dst,'packages/tui',name,'node_modules/keep'),'dependency sentinel'); } }\nif ('${name}' === 'pnpm') { const dst=args.at(-1); if (!fs.existsSync(path.join(dst,'packages/tui/tui/tests/candidate-only.spec.ts'))) process.exit(9); }\n`)
     // Executable mocks only record arguments; no clone, package install or network.
     cpSync(join(bin, name), join(bin, `${name}.mjs`))
     writeFileSync(join(bin, name), `#!/bin/sh\nexec '${process.execPath}' '${join(bin, `${name}.mjs`)}' "$@"\n`, { mode: 0o755 })
@@ -92,11 +92,14 @@ test('checkout step resolves the exact compatible tag in a clean shell', t => {
   const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', runBlock('Check out compatible DSH')], { cwd: candidate, env, encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr)
   const commands = readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse)
+  assertCandidate(candidate, join(dir, 'runner/deepseek-harness'))
+  assert.deepEqual(commands.at(-1), { command: 'pnpm', args: ['install', '--no-frozen-lockfile', '--dir', join(dir, 'runner/deepseek-harness')] })
   assert.deepEqual(commands[0], { command: 'git', args: ['clone', '--depth', '1', '--branch', `dsh-v${COMPATIBLE_DSH_VERSION}`, 'https://github.com/deepseek-ai/deepseek-harness.git', join(dir, 'runner/deepseek-harness')] })
 })
 
-test('TUI step mounts candidate before setup and invokes Vitest from the DSH root', t => {
+test('TUI step sets up the mounted candidate and invokes Vitest from the DSH root', t => {
   const { dir, candidate, dsh } = fixture(t)
+  prepareWorkspace(candidate, dsh)
   const bin = join(dir, 'bin')
   put(join(bin, 'npm'), `#!/bin/sh\ntest "$1 $2" = 'run dev:setup'\ntest -f "$DSH_SOURCE/packages/tui/tui/tests/candidate-only.spec.ts"\n`)
   chmodSync(join(bin, 'npm'), 0o755)
