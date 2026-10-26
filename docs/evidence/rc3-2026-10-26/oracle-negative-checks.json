@@ -1,0 +1,83 @@
+{
+  "draft": {
+    "frames": 3439,
+    "compared": 3062,
+    "transitions": 377,
+    "resizeRecovery": 278,
+    "deferredPresentation": 0,
+    "unmatched": 0,
+    "failed": 3063,
+    "examples": [
+      {
+        "offset": 8819,
+        "mismatches": [
+          {
+            "row": 38,
+            "actual": "\u2502 > DRXFT                                                                                                               ",
+            "expected": "\u2502 > DRAFT                                                                                                               "
+          }
+        ]
+      },
+      {
+        "offset": 15849,
+        "mismatches": [
+          {
+            "row": 38,
+            "actual": "\u2502 > DRXFT                                                                                                               ",
+            "expected": "\u2502 > DRAFT                                                                                                               "
+          }
+        ]
+      },
+      {
+        "offset": 22851,
+        "mismatches": [
+          {
+            "row": 38,
+            "actual": "\u2502 > DRXFT                                                                                                               ",
+            "expected": "\u2502 > DRAFT                                                                                                               "
+          }
+        ]
+      },
+      {
+        "offset": 29853,
+        "mismatches": [
+          {
+            "row": 38,
+            "actual": "\u2502 > DRXFT                                                                                                               ",
+            "expected": "\u2502 > DRAFT                                                                                                               "
+          }
+        ]
+      },
+      {
+        "offset": 36855,
+        "mismatches": [
+          {
+            "row": 38,
+            "actual": "\u2502 > DRXFT                                                                                                               ",
+            "expected": "\u2502 > DRAFT                                                                                                               "
+          }
+        ]
+      },
+      {
+        "error": "Final presentation did not catch up",
+        "lastPresentedTick": -1,
+        "expectedTick": 2997
+      }
+    ]
+  },
+  "late-resize": {
+    "frames": 3439,
+    "compared": 3329,
+    "transitions": 109,
+    "resizeRecovery": 10,
+    "deferredPresentation": 0,
+    "unmatched": 1,
+    "failed": 1,
+    "examples": [
+      {
+        "offset": 8168116,
+        "error": "Missing canonical tick in a stable frame"
+      }
+    ]
+  }
+}

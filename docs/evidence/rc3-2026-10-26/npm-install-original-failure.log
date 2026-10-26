@@ -1,0 +1,27 @@
+npm error code ERESOLVE
+npm error ERESOLVE could not resolve
+npm error
+npm error While resolving: @crazyhappyone/dsh-tui@0.1.0-alpha.55
+npm error Found: @deepseek-ai/dsh@0.2.1-rc.3
+npm error node_modules/@deepseek-ai/dsh
+npm error   @deepseek-ai/dsh@"0.2.1-rc.3" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peerOptional @deepseek-ai/dsh@">=0.2.0-rc.2 <0.3.0" from @crazyhappyone/dsh-tui@0.1.0-alpha.55
+npm error node_modules/@crazyhappyone/dsh-tui
+npm error   @crazyhappyone/dsh-tui@"file:../dsh-tui-validation-x25dGu/crazyhappyone-dsh-tui-0.1.0-alpha.55.tgz" from the root project
+npm error
+npm error Conflicting peer dependency: @deepseek-ai/dsh@0.2.0-rc.2
+npm error node_modules/@deepseek-ai/dsh
+npm error   peerOptional @deepseek-ai/dsh@">=0.2.0-rc.2 <0.3.0" from @crazyhappyone/dsh-tui@0.1.0-alpha.55
+npm error   node_modules/@crazyhappyone/dsh-tui
+npm error     @crazyhappyone/dsh-tui@"file:../dsh-tui-validation-x25dGu/crazyhappyone-dsh-tui-0.1.0-alpha.55.tgz" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/zhangyangrui/.npm/_logs/2026-10-26T06_07_58_988Z-eresolve-report.txt
+npm error A complete log of this run can be found in: /home/zhangyangrui/.npm/_logs/2026-10-26T06_07_58_988Z-debug-0.log

@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { test } from 'node:test'
 import { COMPATIBLE_DSH_VERSION } from '../src/launcher.js'
 
@@ -204,4 +205,20 @@ test('lock provenance rejects a different upstream version, commit or lock befor
   put(join(repo, 'scripts/validation-lock.patch'), 'fixture patch')
   put(join(workspace.dshRoot, 'pnpm-lock.yaml'), 'different upstream lock\n')
   assert.throws(() => validation.assertLockProvenance(workspace), /lock/iu)
+})
+
+test('published compatibility ranges admit supported DSH prereleases with standard npm semver', {
+  skip: !existsSync(state) && 'DSH dependencies are available after validate:prepare',
+}, () => {
+  const workspace = JSON.parse(readFileSync(state, 'utf8'))
+  const { satisfies } = createRequire(join(workspace.dshRoot, 'package.json'))('semver')
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  for (const range of [manifest.engines.dsh, manifest.peerDependencies['@deepseek-ai/dsh']]) {
+    for (const version of ['0.2.0-rc.2', '0.2.1-alpha.2', '0.2.1-rc.2', COMPATIBLE_DSH_VERSION, '0.2.1']) {
+      assert.equal(satisfies(version, range), true, `${range} must admit ${version}`)
+    }
+    for (const version of ['0.1.6-alpha.2', '0.2.0-rc.1', '0.3.0-rc.1', '0.3.0']) {
+      assert.equal(satisfies(version, range), false, `${range} must reject ${version}`)
+    }
+  }
 })

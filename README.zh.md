@@ -92,7 +92,7 @@ dsh --profile deepseek-tui
 
 探测顺序为绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包；每个探测子进程限时十秒，以覆盖冷启动。显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用 launcher 的 Node 执行。
 
-本 bundle 面向 dsh `0.2` 发布线（基于 `0.2.1-rc.3` 构建和测试）。包把 `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` 声明为可选 peer，因此手动安装时由 dsh 自身的插件兼容性检查把关；launcher 会拒绝其他引擎发布线并给出确切的安装命令，设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过 launcher 的检查。
+本 bundle 面向 dsh `0.2` 发布线（基于 `0.2.1-rc.3` 构建和测试）。包把 `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0 || ^0.2.1-0` 声明为可选 peer，因此手动安装时由 dsh 自身的插件兼容性检查把关；launcher 会拒绝其他引擎发布线并给出确切的安装命令，设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过 launcher 的检查。
 
 ### 模式 B：源码模式（开发者调试）
 若需对 TUI 或 DSH 底层代码进行修改与调试：

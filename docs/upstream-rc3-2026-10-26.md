@@ -18,6 +18,12 @@
 - 复现 CI=true 下 live-frame fixture 无输出失败，采纳现有分支 commit 016efe3 的 interactive=true 修正；相同测试由失败转为通过。其余 CI 准备/原生编译修复已由本次完整隔离验证链覆盖，不混入另一套准备实现。
 - 原始合成 heap snapshot 继续保留本地；版本控制纳入实现、测试、验收文档与压缩输出/汇总证据，不上传进程堆快照。
 
+- 本轮额外执行上游模型目录、缓存、能力合并与 API-key 路由的 5 个 suite，90 项通过；网络由官方测试 fixture 替代，未使用真实凭据。
+- 发现实际 npm 安装的 ERESOLVE：原范围没有显式接纳 0.2.1 prerelease。补充 `|| ^0.2.1-0`，并加入使用标准 semver 的支持/拒绝版本回归测试；不使用 --force 或 --legacy-peer-deps 绕过。
+- 80×24、120×40 各运行 300 秒 production 输出组件 PTY。当前独立 oracle：80 列 3440 完成帧、3323 可比、117 过渡；120 列 3439 完成帧、3329 可比、110 过渡；两者 0 未匹配/0 失败。
+- 120 列初版 oracle 报过 1 个空白 resize 帧。逐帧回放确认，同一 resize tick 的控制写入仍可呈现旧的完整画面，之后 Ink 才输出 resize 布局；原 oracle 因该控制写入提前关闭过渡窗口。现改为收到 resize tick 之后的完整 canonical 帧才关闭窗口，仍保持原来的最多 6 写入/2 tick 上限，未修改产品代码。DRAFT 篡改、把同一空白帧延后 3 tick 均被拒绝。[失败原文](evidence/rc3-2026-10-26/soak120-original-oracle-failure.json)、[负向检查](evidence/rc3-2026-10-26/oracle-negative-checks.json)。全部原始合成捕获已压缩保存。
+- 发布重跑判断改用 npm dist.integrity 与已验证 tarball 的 SHA-512；已验证不存在、相同和不匹配三种行为。tarball 内不要求 npm 自动添加 gitHead，源码提交通过 provenance 单独证明。
+
 ## 未验证
 
 - 当前完整离线门禁、CI 和发布尚在执行。

@@ -92,7 +92,7 @@ Installing as a bundle matters in dsh 0.2: `/settings` edits are written to the 
 
 Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a ten-second timeout, which covers a cold first start. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable.
 
-The bundle targets the dsh `0.2` release line (built and tested against `0.2.1-rc.3`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
+The bundle targets the dsh `0.2` release line (built and tested against `0.2.1-rc.3`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0 || ^0.2.1-0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
 
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:

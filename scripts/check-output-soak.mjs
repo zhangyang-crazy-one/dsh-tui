@@ -27,7 +27,7 @@ for(const frame of frames){
  // Explicitly count incomplete mount/resize layout frames, never call them passes.
  if(resize){result.transitions++;continue}
  // Resize may emit clear, layout, then transcript as distinct completed writes.
- // Count these as uncomparable until the first canonical frame, with a strict
+ // Count these as uncomparable until a canonical frame after the resize tick, with a strict
  // two-tick/six-write deadline; persistent or unrelated corruption still fails.
  const recovery=resizePending&&++resizeFrames<=6&&frame.expectedTick-resizeTick<=2
  if(!tickMatch){
@@ -56,7 +56,9 @@ for(const frame of frames){
  }
  if(terminal.buffer.active.cursorX!==9||terminal.buffer.active.cursorY!==rows-2)mismatches.push({cursor:[terminal.buffer.active.cursorX,terminal.buffer.active.cursorY],expectedCursor:[9,rows-2]})
  if(recovery&&(mismatches.length||deferred)){result.transitions++;result.resizeRecovery++;continue}
- resizePending=false
+ // A same-tick control write can still show the old valid frame before Ink
+ // emits its resize layout. Keep the original six-write/two-tick budget open.
+ if(frame.expectedTick>resizeTick)resizePending=false
  result.compared++
  if(mismatches.length){result.failed++;if(result.examples.length<5)result.examples.push({offset:frame.offset,mismatches:mismatches.slice(0,4)})}
  else {lastPresentedTick=tick;if(deferred)result.deferredPresentation++}
