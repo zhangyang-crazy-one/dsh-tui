@@ -28,11 +28,14 @@
 - 普通 npm install 同时安装官方 rc.3 与 alpha.55 tarball 成功（617 packages），没有 force/legacy-peer-deps。显式指定隔离安装的 DSH_BIN 后，probe 确认引擎 rc.3；临时 DSH_HOME 的首次插件安装及 --help 退出 0，profile 含官方 base 和本插件。未发送模型请求。
 - 首次远端 CI 在创建 job 前拒绝 job.env 中的 runner.temp 引用。依据 [GitHub context 可用性](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability) 改为 step 写 GITHUB_ENV；actionlint 1.7.12 对旧配置报错、对修正后的 CI/publish 均通过，根目录工作流测试通过。该工作流修正后的完整门禁以远端新 run 为准。
 
+- [Node 22.19 / 24 CI](https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/40279027259) 与 [OIDC 发布工作流](https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/40279451885) 均成功，发布提交 fc465f8fd86b28835509e302173d20a027094965。
+- [GitHub v0.1.0-alpha.55](https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.55) 已发布，npm next=0.1.0-alpha.55（latest 保持 alpha.45）。npm 接受提交后经历服务端处理，再通过公开 registry 下载验证。
+- npm tarball 与 GitHub 附件逐字节相同，SHA-256 为 39b5a9a1cdde55e962e74695178873c097344534839cc8379d0d33516b5f3c2a；22 个包内文件、五 bundle 哈希、40 个 rc.3 依赖及 peer 范围全部复核。发布 provenance 与 CI/本地发布源码身份相同；registry 未附带 gitHead，因此使用来源证明中的 commit/source hash 建立关联。[发布核验记录](evidence/rc3-2026-10-26/publication.json)、[发布来源证明](evidence/rc3-2026-10-26/published-provenance.json)。
+
 ## 未验证
 
-- 远端 CI 与发布尚在执行。
 - 真实模型请求、live 登录、用户现场终端根因和生产长期内存趋势不在离线验证结论内。
 
 ## 阻塞
 
-暂无。下一步：完成 rc.3 完整门禁、托管 CI、GitHub release、npm OIDC 发布及公开包完整性复核。
+无。GitHub 与 npm 发布及公开包核验已完成。

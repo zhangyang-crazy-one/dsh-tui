@@ -1,0 +1,40 @@
+{
+  "version": "0.1.0-alpha.55",
+  "releaseCommit": "fc465f8fd86b28835509e302173d20a027094965",
+  "sourceSha256": "b26077ebea2f480dd27ac3a526c5e11890121c57d87ee4f69c011ff8582c6e78",
+  "githubRelease": "https://github.com/zhangyang-crazy-one/dsh-tui/releases/tag/v0.1.0-alpha.55",
+  "ciRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/40279027259",
+  "publishRun": "https://github.com/zhangyang-crazy-one/dsh-tui/actions/runs/40279451885",
+  "publishedAt": "2026-10-26T06:28:34.766Z",
+  "distTags": {
+    "latest": "0.1.0-alpha.45",
+    "next": "0.1.0-alpha.55"
+  },
+  "tarballSha256": "39b5a9a1cdde55e962e74695178873c097344534839cc8379d0d33516b5f3c2a",
+  "registryIntegrity": "sha512-78ZroVG2AKxDoog0MDJcnSfSK6T2NqqWFg1VvvExIxxvWtrpS5C4x0Xterk9AygtPBQPj1Y7umTw4+xfq3STUA==",
+  "registryGitHead": null,
+  "tests": {
+    "root": {
+      "total": 57,
+      "passed": 57,
+      "failed": 0,
+      "skipped": 0
+    },
+    "tui": {
+      "total": 2400,
+      "passed": 2399,
+      "failed": 0,
+      "skipped": 1,
+      "files": 181
+    }
+  },
+  "checks": [
+    "npm next matches version",
+    "npm and GitHub tarballs byte-identical",
+    "npm SRI and release provenance SHA-256 match downloaded bytes",
+    "release provenance matches local release source",
+    "all 40 runtime dependencies pinned to rc.3",
+    "all five downloaded bundle hashes match publishing provenance; manifest admits rc.3"
+  ],
+  "packageFiles": 22
+}

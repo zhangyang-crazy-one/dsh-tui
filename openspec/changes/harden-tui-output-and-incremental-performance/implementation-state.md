@@ -34,3 +34,8 @@
 - 最终源码0046b11858b1a8d80251a725f88bc67b9d2624ad80129c94067679f1cfde1e95；/tmp/dsh-validation-final7.log 全部门禁通过，证明/tmp/dsh-tui-validation-FsLbEW/provenance.json。
 - 稳定产品版本最后soak各300秒：3437/3439完成帧、3324/3325可比、113/114过渡、0未匹配/0失败；120维度2个前一canonical在途展示单列，最终追上。原始gzip/运行信息/oracle结果均已落盘evidence/output/final-soak-*。
 - 现场实际调用者/终端宿主根因、真实模型/live、硬件p95和生产长期堆趋势未验证；无剩余实施阻塞。
+
+
+## 后续已授权发布（2026-10-26）
+
+用户明确要求跟进上游并发布，并确认纳入本 change。已随 alpha.55 跟进 DSH rc.3 发布到 GitHub prerelease/npm next；完整本地/Node22/24 CI/发布门禁与公开 tarball 核验通过。详细记录见 [rc.3 跟进](../../../docs/upstream-rc3-2026-10-26.md)。上文“不发布”保留为原实现阶段的边界，不代表本次发布未经授权。现场终端根因与 live 模型验证仍未声明完成。
