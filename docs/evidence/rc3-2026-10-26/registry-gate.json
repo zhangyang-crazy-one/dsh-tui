@@ -1,0 +1,20 @@
+[
+  {
+    "case": "absent",
+    "exitCode": 0,
+    "output": "exists=false\n",
+    "stdout": ""
+  },
+  {
+    "case": "identical",
+    "exitCode": 0,
+    "output": "exists=true\n",
+    "stdout": "npm @crazyhappyone/dsh-tui@0.1.0-alpha.55 already contains this verified tarball.\n"
+  },
+  {
+    "case": "different",
+    "exitCode": 1,
+    "output": "",
+    "stdout": "npm @crazyhappyone/dsh-tui@0.1.0-alpha.55 does not match the verified tarball.\n"
+  }
+]

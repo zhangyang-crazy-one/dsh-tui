@@ -50,23 +50,6 @@ jobs:
             echo "Release tag ${RELEASE_TAG} must equal v${package_version}."
             exit 1
           fi
-      - name: Check npm registry
-        id: registry
-        run: |
-          package_name="$(node -p "require('./package.json').name")"
-          package_version="$(node -p "require('./package.json').version")"
-          published_git_head="$(npm view "${package_name}@${package_version}" gitHead 2>/dev/null || true)"
-          if [[ -z "${published_git_head}" ]]; then
-            echo "exists=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          checkout_git_head="$(git rev-parse HEAD)"
-          if [[ "${published_git_head}" != "${checkout_git_head}" ]]; then
-            echo "npm ${package_name}@${package_version} points to ${published_git_head}, not ${checkout_git_head}."
-            exit 1
-          fi
-          echo "npm ${package_name}@${package_version} already contains this Git commit."
-          echo "exists=true" >> "${GITHUB_OUTPUT}"
       - name: Prepare compatible DSH clone source and pinned pnpm
         run: |
           compatible_dsh_version="$(node --input-type=module -e "import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; console.log(COMPATIBLE_DSH_VERSION)")"
@@ -76,6 +59,25 @@ jobs:
       - name: Validate current sources and packed entrypoints
         id: validation
         run: npm run validate
+      - name: Check npm registry
+        id: registry
+        env:
+          VERIFIED_TARBALL: ${{ steps.validation.outputs.tarball }}
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          published_integrity="$(npm view "${package_name}@${package_version}" dist.integrity 2>/dev/null || true)"
+          if [[ -z "${published_integrity}" ]]; then
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          verified_integrity="$(node --input-type=module -e "import { createHash } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log('sha512-' + createHash('sha512').update(readFileSync(process.env.VERIFIED_TARBALL)).digest('base64'))")"
+          if [[ "${published_integrity}" != "${verified_integrity}" ]]; then
+            echo "npm ${package_name}@${package_version} does not match the verified tarball."
+            exit 1
+          fi
+          echo "npm ${package_name}@${package_version} already contains this verified tarball."
+          echo "exists=true" >> "${GITHUB_OUTPUT}"
       - name: Publish package
         if: steps.registry.outputs.exists != 'true'
         env:
