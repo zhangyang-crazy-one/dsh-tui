@@ -24,9 +24,13 @@
 - 120 列初版 oracle 报过 1 个空白 resize 帧。逐帧回放确认，同一 resize tick 的控制写入仍可呈现旧的完整画面，之后 Ink 才输出 resize 布局；原 oracle 因该控制写入提前关闭过渡窗口。现改为收到 resize tick 之后的完整 canonical 帧才关闭窗口，仍保持原来的最多 6 写入/2 tick 上限，未修改产品代码。DRAFT 篡改、把同一空白帧延后 3 tick 均被拒绝。[失败原文](evidence/rc3-2026-10-26/soak120-original-oracle-failure.json)、[负向检查](evidence/rc3-2026-10-26/oracle-negative-checks.json)。全部原始合成捕获已压缩保存。
 - 发布重跑判断改用 npm dist.integrity 与已验证 tarball 的 SHA-512；已验证不存在、相同和不匹配三种行为。tarball 内不要求 npm 自动添加 gitHead，源码提交通过 provenance 单独证明。
 
+- 最终本地代码提交 e83e90e 完整验证：57 根目录测试、181 文件 / 2399 TUI 通过 / 1 性能基准默认跳过，四个 TS 项目、五 bundle 及实际打包导入通过；产物来源复核通过。[最终本地证明](evidence/rc3-2026-10-26/final-local-provenance.json)。
+- 普通 npm install 同时安装官方 rc.3 与 alpha.55 tarball 成功（617 packages），没有 force/legacy-peer-deps。显式指定隔离安装的 DSH_BIN 后，probe 确认引擎 rc.3；临时 DSH_HOME 的首次插件安装及 --help 退出 0，profile 含官方 base 和本插件。未发送模型请求。
+- 首次远端 CI 在创建 job 前拒绝 job.env 中的 runner.temp 引用。依据 [GitHub context 可用性](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability) 改为 step 写 GITHUB_ENV；actionlint 1.7.12 对旧配置报错、对修正后的 CI/publish 均通过，根目录工作流测试通过。该工作流修正后的完整门禁以远端新 run 为准。
+
 ## 未验证
 
-- 当前完整离线门禁、CI 和发布尚在执行。
+- 远端 CI 与发布尚在执行。
 - 真实模型请求、live 登录、用户现场终端根因和生产长期内存趋势不在离线验证结论内。
 
 ## 阻塞

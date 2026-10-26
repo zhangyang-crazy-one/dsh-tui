@@ -27,10 +27,11 @@ jobs:
   publish:
     name: Publish ${{ github.event.release.tag_name || inputs.tag }}
     runs-on: ubuntu-latest
-    env:
-      DSH_SOURCE: ${{ runner.temp }}/dsh-source
-      TMPDIR: ${{ runner.temp }}
     steps:
+      - name: Configure validation paths
+        run: |
+          echo "DSH_SOURCE=${RUNNER_TEMP}/dsh-source" >> "${GITHUB_ENV}"
+          echo "TMPDIR=${RUNNER_TEMP}" >> "${GITHUB_ENV}"
       - name: Check out release tag
         uses: actions/checkout@v6
         with:

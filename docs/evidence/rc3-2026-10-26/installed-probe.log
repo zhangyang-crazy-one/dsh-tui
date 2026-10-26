@@ -1,0 +1,6 @@
+dsh-tui: 0.1.0-alpha.55
+dsh: installed
+executable: /tmp/dsh-alpha55-install/node_modules/.bin/dsh
+dsh engine version: 0.2.1-rc.3
+engine compatibility: ok (built for 0.2.1-rc.3)
+bundle: /tmp/dsh-alpha55-install/node_modules/@crazyhappyone/dsh-tui (not yet installed in profile deepseek-tui)

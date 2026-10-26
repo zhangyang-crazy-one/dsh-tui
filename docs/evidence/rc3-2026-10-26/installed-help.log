@@ -1,0 +1,39 @@
+dsh: initialized profile deepseek-tui at /tmp/dsh-alpha55-smoke-home/profiles/deepseek-tui
+
+dependencies:
++ @crazyhappyone/dsh-tui link:/tmp/dsh-alpha55-install/node_modules/@crazyhappyone/dsh-tui
+
+Already up to date
+Done in 110ms using pnpm v10.28.0
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.28.0 → 12.15.0.   │
+   │   Changelog: https://pnpm.io/v/12.15.0   │
+   │     To update, run: pnpm self-update     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Usage: dsh --profile deepseek-tui [options] [task...]
+
+Boot the interactive deepseek-tui terminal loop; an optional task positional
+seeds the first message.
+
+Arguments:
+  task                  an optional first-message seed; multiple words are
+                        joined by spaces
+
+Options:
+  --model <id>          model id override
+  --resume <id>         resume the session with this id
+  --cwd <dir>           working directory override
+  --frame-stats <path>  write per-commit render-cost JSON to this path on
+                        orderly exit
+  -h, --help            show this help
+
+Examples:
+  dsh --profile deepseek-tui                  open the interactive loop idle
+  dsh --profile deepseek-tui "说 hi"          seed the first message, then keep the loop open
+  dsh --profile deepseek-tui --resume <id>    resume an earlier session (loads history idle)
+  dsh --profile deepseek-tui --model <id>     override startup model
+

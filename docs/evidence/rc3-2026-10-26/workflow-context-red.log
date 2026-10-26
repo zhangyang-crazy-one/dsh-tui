@@ -1,0 +1,8 @@
+../../../../tmp/dsh-ci-before-context-fix.yml:20:23: context "runner" is not allowed here. available contexts are "github", "inputs", "matrix", "needs", "secrets", "strategy", "vars". see https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability for more details [expression]
+   |
+20 |       DSH_SOURCE: ${{ runner.temp }}/dsh-source
+   |                       ^~~~~~~~~~~
+../../../../tmp/dsh-ci-before-context-fix.yml:21:19: context "runner" is not allowed here. available contexts are "github", "inputs", "matrix", "needs", "secrets", "strategy", "vars". see https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability for more details [expression]
+   |
+21 |       TMPDIR: ${{ runner.temp }}
+   |                   ^~~~~~~~~~~

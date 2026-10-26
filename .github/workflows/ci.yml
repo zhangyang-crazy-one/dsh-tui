@@ -16,14 +16,15 @@ jobs:
   test:
     name: Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
-    env:
-      DSH_SOURCE: ${{ runner.temp }}/dsh-source
-      TMPDIR: ${{ runner.temp }}
     strategy:
       fail-fast: false
       matrix:
         node-version: ["22.19.0", "24"]
     steps:
+      - name: Configure validation paths
+        run: |
+          echo "DSH_SOURCE=${RUNNER_TEMP}/dsh-source" >> "${GITHUB_ENV}"
+          echo "TMPDIR=${RUNNER_TEMP}" >> "${GITHUB_ENV}"
       - name: Check out repository
         uses: actions/checkout@v6
       - name: Set up Node.js
