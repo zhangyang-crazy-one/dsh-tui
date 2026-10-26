@@ -3543,6 +3543,62 @@ function scopeTarget(base, key) {
   return carrier;
 }
 
+// packages/core/agent/src/consumed-work.ts
+function accountsForClaim(reason) {
+  switch (reason.kind) {
+    case "completed":
+      return false;
+    case "blocked":
+    case "aborted":
+    case "interrupted":
+    case "error":
+      return true;
+    /* v8 ignore next 5 -- unreachable: `max-tokens` requires a step and short-circuits
+     * before this call; `forked` exists only in constructor seed history, while production
+     * callers fold an operation-owned suffix. `TurnEndReasonMap` is merge-extensible, so a
+     * backend-added variant cannot be listed; an unnameable ending over consumed input must
+     * not read as success. */
+    default:
+      return true;
+  }
+}
+function foldConsumedWork(events) {
+  const stepped = /* @__PURE__ */ new Set();
+  const claimed = /* @__PURE__ */ new Set();
+  let open;
+  let end;
+  let droppedUnrun = false;
+  for (const event of events) {
+    switch (event.type) {
+      case "turn/start":
+        open = event.data.turn;
+        break;
+      case "step/start":
+        stepped.add(event.data.turn);
+        break;
+      case "agent/inbox/spliced": {
+        const { removedCount, outcome, inserted } = event.data;
+        if (removedCount === void 0) break;
+        if (outcome === "canceled") droppedUnrun ||= inserted.length === 0;
+        else if (open !== void 0) claimed.add(open);
+        break;
+      }
+      case "turn/end": {
+        const { turn, reason } = event.data;
+        open = void 0;
+        if (stepped.delete(turn) || claimed.delete(turn) && accountsForClaim(reason)) {
+          end = event;
+          droppedUnrun = false;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return { ...end === void 0 ? {} : { end }, droppedUnrun };
+}
+
 // packages/typert/protocol/src/remote-error.ts
 var RemoteError = class extends Error {
   /**
@@ -3562,6 +3618,12 @@ var RemoteError = class extends Error {
   /** Structural marker: cross-realm/bundle identification never uses instanceof. */
   isDSHRemoteError = true;
 };
+function remoteErrorOf(value) {
+  if (typeof value === "object" && value !== null && value.isDSHRemoteError === true && typeof value.code === "string") {
+    return value;
+  }
+  return void 0;
+}
 
 // packages/typert/protocol/src/principal.ts
 function principalOf(invocation) {
@@ -3653,9 +3715,9 @@ function readRemoteMethodDescriptor(prototype) {
   if (descriptor === null || typeof descriptor !== "object") {
     throw new TypeError("typert-protocol: Remote method descriptor must be an object");
   }
-  const version4 = Reflect.get(descriptor, "version");
-  if (version4 !== 1) {
-    throw new TypeError(`typert-protocol: unsupported Remote method descriptor version ${String(version4)}`);
+  const version3 = Reflect.get(descriptor, "version");
+  if (version3 !== 1) {
+    throw new TypeError(`typert-protocol: unsupported Remote method descriptor version ${String(version3)}`);
   }
   const methods = Reflect.get(descriptor, "methods");
   if (!Array.isArray(methods)) {
@@ -6315,7 +6377,7 @@ function detachDirectoryEntry(entry) {
   };
 }
 
-// packages/core/agent/lib/index.js
+// packages/core/agent/src/model-selection.ts
 function sameRoute(left, right) {
   return left.provider === right.provider && left.model === right.model;
 }
@@ -6352,1081 +6414,38 @@ function installModelSelection(agentCtx, selection) {
       }
     };
   });
-  const disposeRequest = agentCtx.on("agent/request", async (_payload, next) => {
-    const resolved = await next();
-    const selected = selection.assembled;
-    if (selected === void 0) return resolved;
-    const { reasoningEffort: _inheritedEffort, ...withoutInheritedEffort } = resolved;
-    return {
-      ...withoutInheritedEffort,
-      provider: selected.provider,
-      model: selected.model,
-      ...selected.reasoningEffort === void 0 ? {} : { reasoningEffort: selected.reasoningEffort }
-    };
-  });
-  const disposeNotice = agentCtx.on("agent/pre-step", async ({ agent, messages, signal, step }, next) => {
-    const decision = await next();
-    if (decision.kind === "reject" || signal.aborted) return decision;
-    if (decision.messages.length === 0 && (step === 1 || messages.length > 0)) return decision;
-    const selected = selection.assembled;
-    const previous = agent.session.requestHeader()?.config;
-    if (selected === void 0 || previous === void 0 || sameRoute(selected, previous)) return decision;
-    return {
-      ...decision,
-      messages: [...decision.messages, modelSwitchNotice(previous, selected)]
-    };
-  }, { prepend: true });
+  const disposeRequest = agentCtx.on(
+    "agent/request",
+    async (_payload, next) => {
+      const resolved = await next();
+      const selected = selection.assembled;
+      if (selected === void 0) return resolved;
+      const { reasoningEffort: _inheritedEffort, ...withoutInheritedEffort } = resolved;
+      return {
+        ...withoutInheritedEffort,
+        provider: selected.provider,
+        model: selected.model,
+        ...selected.reasoningEffort === void 0 ? {} : { reasoningEffort: selected.reasoningEffort }
+      };
+    }
+  );
+  const disposeNotice = agentCtx.on(
+    "agent/pre-step",
+    async ({ agent, messages, signal, step }, next) => {
+      const decision = await next();
+      if (decision.kind === "reject" || signal.aborted) return decision;
+      if (decision.messages.length === 0 && (step === 1 || messages.length > 0)) return decision;
+      const selected = selection.assembled;
+      const previous = agent.session.requestHeader()?.config;
+      if (selected === void 0 || previous === void 0 || sameRoute(selected, previous)) return decision;
+      return { ...decision, messages: [...decision.messages, modelSwitchNotice(previous, selected)] };
+    },
+    { prepend: true }
+  );
   return () => {
     disposeAssembly();
     disposeRequest();
     disposeNotice();
-  };
-}
-
-// packages/util/brand/lib/index.js
-function brandString2(value) {
-  return value;
-}
-
-// packages/llm/llm/lib/index.js
-import { createRequire as createRequire2 } from "node:module";
-function freezeMessage2(message) {
-  return deepFreeze(structuredClone(message));
-}
-var HarnessError2 = class extends Error {
-  /** Stable machine-routable failure class (e.g. `RATE_LIMIT`); route on this, never by parsing `message`. */
-  code;
-  constructor(message, code, options) {
-    super(message, options);
-    this.code = code;
-    this.name = new.target.name;
-  }
-};
-var EMPTY_RESPONSE_CODE2 = "EMPTY_RESPONSE";
-var STRUCTURED_CONTEXT_OVERFLOW2 = new RegExp(String.raw`(?:^|[^a-z0-9])context[\s_-](?:length|window)[\s_-]` + String.raw`(?:exceed(?:ed|s)?|overflow(?:ed)?|limit[\s_-]exceeded)(?:$|[^a-z0-9])`, "i");
-var TOO_LARGE_FOR_CONTEXT2 = new RegExp(String.raw`\b(?:request|prompt|input|messages?)\s+(?:is\s+|are\s+)?` + String.raw`too\s+(?:large|long)\s+for\s+(?:(?:this|the)\s+)?` + String.raw`(?:model(?:'s)?\s+)?context(?:\s+window)?\b`, "i");
-var EXCEEDS_MODEL_CONTEXT2 = new RegExp(String.raw`\b(?:input|prompt|request|messages?)\b.{0,40}` + String.raw`\b(?:exceed(?:s|ed)?|overflows?|is\s+larger\s+than)\b.{0,40}` + String.raw`\b(?:the\s+)?(?:model(?:'s)?\s+)?context(?:\s+(?:length|window))?\b`, "i");
-var DEFAULT_MAX_RETRIES2 = 5;
-var DEFAULT_INITIAL_DELAY_MS2 = 500;
-var DEFAULT_MAX_DELAY_MS2 = 1e4;
-var DEFAULT_JITTER_RATIO2 = 0.1;
-var DEFAULT_RETRYABLE_CODES2 = Object.freeze([
-  EMPTY_RESPONSE_CODE2,
-  "RATE_LIMIT",
-  "SERVER",
-  "TIMEOUT",
-  "TRANSPORT"
-]);
-var backoffSchema2 = src_default.object({
-  initialDelayMs: src_default.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_INITIAL_DELAY_MS2),
-  maxDelayMs: src_default.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_MAX_DELAY_MS2),
-  jitterRatio: src_default.number().min(0).max(1).default(DEFAULT_JITTER_RATIO2)
-});
-var normalPolicySchema2 = src_default.object({
-  mode: src_default.const("normal").required(),
-  maxRetries: src_default.number().step(1).min(0).max(Number.MAX_SAFE_INTEGER).default(DEFAULT_MAX_RETRIES2),
-  retryableCodes: src_default.array(src_default.string()).default([...DEFAULT_RETRYABLE_CODES2]),
-  backoff: backoffSchema2
-});
-var alwaysPolicySchema2 = src_default.object({
-  mode: src_default.const("always").required(),
-  backoff: backoffSchema2
-});
-var RetryPolicySchema2 = src_default.union([normalPolicySchema2, alwaysPolicySchema2]);
-var NORMAL_POLICY_KEYS2 = /* @__PURE__ */ new Set([
-  "mode",
-  "maxRetries",
-  "retryableCodes",
-  "backoff"
-]);
-var ALWAYS_POLICY_KEYS2 = /* @__PURE__ */ new Set([
-  "mode",
-  "maxRetries",
-  "retryableCodes",
-  "backoff"
-]);
-var BACKOFF_KEYS2 = /* @__PURE__ */ new Set([
-  "initialDelayMs",
-  "maxDelayMs",
-  "jitterRatio"
-]);
-function validateKeys2(value, allowed, path) {
-  for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`${path}: unknown key "${key}"`);
-}
-function resolveBackoff2(config2, path) {
-  if (config2 !== void 0) validateKeys2(config2, BACKOFF_KEYS2, path);
-  const initialDelayMs = config2?.initialDelayMs ?? DEFAULT_INITIAL_DELAY_MS2;
-  const maxDelayMs = config2?.maxDelayMs ?? DEFAULT_MAX_DELAY_MS2;
-  const jitterRatio = config2?.jitterRatio ?? DEFAULT_JITTER_RATIO2;
-  if (!Number.isFinite(initialDelayMs) || initialDelayMs <= 0 || initialDelayMs > MAX_TIMER_DELAY_MS) throw new Error(`${path}.initialDelayMs must be a positive finite number no greater than ${MAX_TIMER_DELAY_MS}`);
-  if (!Number.isFinite(maxDelayMs) || maxDelayMs <= 0 || maxDelayMs > MAX_TIMER_DELAY_MS) throw new Error(`${path}.maxDelayMs must be a positive finite number no greater than ${MAX_TIMER_DELAY_MS}`);
-  if (initialDelayMs > maxDelayMs) throw new Error(`${path}.initialDelayMs must be less than or equal to maxDelayMs`);
-  if (!Number.isFinite(jitterRatio) || jitterRatio < 0 || jitterRatio > 1) throw new Error(`${path}.jitterRatio must be between 0 and 1`);
-  return Object.freeze({
-    initialDelayMs,
-    maxDelayMs,
-    jitterRatio
-  });
-}
-function resolveRetryPolicy2(config2, path) {
-  if (config2 === void 0) return Object.freeze({
-    mode: "normal",
-    maxRetries: DEFAULT_MAX_RETRIES2,
-    retryableCodes: DEFAULT_RETRYABLE_CODES2,
-    ...resolveBackoff2(void 0, `${path}.backoff`)
-  });
-  switch (config2.mode) {
-    case "normal": {
-      validateKeys2(config2, NORMAL_POLICY_KEYS2, path);
-      const maxRetries = config2.maxRetries ?? DEFAULT_MAX_RETRIES2;
-      const retryableCodes = config2.retryableCodes ?? [...DEFAULT_RETRYABLE_CODES2];
-      if (!Number.isSafeInteger(maxRetries) || maxRetries < 0) throw new Error(`${path}.maxRetries must be a non-negative safe integer`);
-      if (retryableCodes.length === 0) throw new Error(`${path}.retryableCodes must not be empty`);
-      if (retryableCodes.some((code) => typeof code !== "string" || code.length === 0)) throw new Error(`${path}.retryableCodes must contain only non-empty strings`);
-      if (new Set(retryableCodes).size !== retryableCodes.length) throw new Error(`${path}.retryableCodes must not contain duplicates`);
-      return Object.freeze({
-        mode: "normal",
-        maxRetries,
-        retryableCodes: Object.freeze([...retryableCodes]),
-        ...resolveBackoff2(config2.backoff, `${path}.backoff`)
-      });
-    }
-    case "always":
-      validateKeys2(config2, ALWAYS_POLICY_KEYS2, path);
-      return Object.freeze({
-        mode: "always",
-        ...resolveBackoff2(config2.backoff, `${path}.backoff`)
-      });
-    default:
-      throw new Error(`${path}.mode must be "normal" or "always"`);
-  }
-}
-function callConfigEquals2(a2, b2) {
-  if (a2.provider !== b2.provider || a2.model !== b2.model || a2.reasoningEffort !== b2.reasoningEffort || a2.temperature !== b2.temperature || a2.maxTokens !== b2.maxTokens) return false;
-  if (a2.stop === void 0 || b2.stop === void 0) return a2.stop === b2.stop;
-  return a2.stop.length === b2.stop.length && a2.stop.every((s2, i2) => s2 === b2.stop?.[i2]);
-}
-function normalizeLlmFailure2(value) {
-  const error51 = value instanceof Error ? value : new HarnessError2(thrownMessage2(value), "UNKNOWN", { cause: value });
-  const carried = ownFailureSnapshot2(error51);
-  if (carried !== void 0 && carried.code === ownErrorCode2(error51)) return carried;
-  return Object.freeze({
-    message: errorMessage2(error51),
-    code: harnessErrorCode2(error51)
-  });
-}
-function thrownMessage2(value) {
-  try {
-    const message = String(value);
-    return message.length > 0 ? message : "LLM adapter failed";
-  } catch (_hostileThrownValue) {
-    return "LLM adapter failed";
-  }
-}
-function ownErrorCode2(error51) {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(error51, "code");
-    return descriptor !== void 0 && "value" in descriptor ? descriptor.value : void 0;
-  } catch (_sdkPropertyTrap) {
-    return;
-  }
-}
-function ownFailureSnapshot2(error51) {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(error51, "failure");
-    return descriptor !== void 0 && "value" in descriptor ? failureSnapshot2(descriptor.value) : void 0;
-  } catch (_sdkPropertyTrap) {
-    return;
-  }
-}
-function failureSnapshot2(value) {
-  if (typeof value !== "object" || value === null) return void 0;
-  try {
-    const candidate = value;
-    const message = candidate.message;
-    const code = candidate.code;
-    const status = candidate.status;
-    const providerRetryAfterMs = candidate.providerRetryAfterMs;
-    const requestId = candidate.requestId;
-    const offloadImages = candidate.offloadImages;
-    if (typeof message !== "string" || message.length === 0 || typeof code !== "string" || code.length === 0 || status !== void 0 && (!Number.isInteger(status) || status < 100 || status > 599) || providerRetryAfterMs !== void 0 && (!Number.isFinite(providerRetryAfterMs) || providerRetryAfterMs <= 0) || requestId !== void 0 && (typeof requestId !== "string" || requestId.length === 0) || offloadImages !== void 0 && (!Number.isSafeInteger(offloadImages) || offloadImages <= 0)) return void 0;
-    return Object.freeze({
-      message,
-      code,
-      ...status === void 0 ? {} : { status },
-      ...providerRetryAfterMs === void 0 ? {} : { providerRetryAfterMs },
-      ...requestId === void 0 ? {} : { requestId },
-      ...offloadImages === void 0 ? {} : { offloadImages }
-    });
-  } catch (_sdkFailureGetter) {
-    return;
-  }
-}
-function errorMessage2(error51) {
-  try {
-    const message = error51.message;
-    if (typeof message === "string" && message.length > 0) return message;
-  } catch (_sdkMessageGetter) {
-  }
-  return "LLM adapter failed";
-}
-function harnessErrorCode2(error51) {
-  return error51 instanceof HarnessError2 ? error51.code : "UNKNOWN";
-}
-function quoted2(value) {
-  return JSON.stringify(value);
-}
-function textOnlyImageText2(ref) {
-  return `[image omitted because this model accepts text only; attachment sha256:${String(ref.attachmentId).slice(7, 15)}]`;
-}
-function contentHasImage2(content) {
-  return content.some((block) => block.type === "image");
-}
-function contentHasFile2(content) {
-  for (const block of content) if (block.type === "file") return true;
-  return false;
-}
-function fileHandleText2(ref, readonlyPath) {
-  const digest = String(ref.attachmentId).slice(7, 15);
-  const identity = `File ${quoted2(ref.name)} (${ref.bytes} bytes, sha256:${digest})`;
-  if (readonlyPath === void 0) return `[${identity} was uploaded, but the current execution environment cannot access a readable path. Report that limitation if its contents are needed; do not claim to have read it.]`;
-  return `[${identity}: verbatim read-only copy saved at ${quoted2(readonlyPath)}. Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]`;
-}
-function replaceFilesWithHandles2(blocks, resolvePath) {
-  let next;
-  for (const [index, block] of blocks.entries()) {
-    if (block.type === "file") {
-      next ??= blocks.slice(0, index);
-      next.push({
-        type: "text",
-        text: fileHandleText2(block.attachment, resolvePath(block.attachment))
-      });
-      continue;
-    }
-    next?.push(block);
-  }
-  return next ?? blocks;
-}
-function projectFilesToText2(messages, resolvePath) {
-  if (!messages.some((message) => contentHasFile2(message.content))) return messages;
-  return messages.map((message) => {
-    const content = replaceFilesWithHandles2(message.content, resolvePath);
-    return content === message.content ? message : {
-      ...message,
-      content
-    };
-  });
-}
-function replaceImagesForTextModel2(blocks) {
-  let next;
-  for (const [index, block] of blocks.entries()) {
-    if (block.type === "image") {
-      next ??= blocks.slice(0, index);
-      next.push({
-        type: "text",
-        text: textOnlyImageText2(block.attachment)
-      });
-      continue;
-    }
-    next?.push(block);
-  }
-  return next ?? blocks;
-}
-function projectImagesForTextModel2(messages) {
-  if (!messages.some((message) => contentHasImage2(message.content))) return messages;
-  return messages.map((message) => {
-    const content = replaceImagesForTextModel2(message.content);
-    return content === message.content ? message : {
-      ...message,
-      content
-    };
-  });
-}
-function withoutDeveloperMessages2(messages) {
-  const retained = messages.filter((message) => message.role !== "developer");
-  return retained.length === messages.length ? messages : retained;
-}
-function toolDeclarations2(tools, mode, history) {
-  const declarations = new Map(history.tools.map((tool) => [tool.name, tool]));
-  for (const update of history.updates) for (const tool of update.additions) if (!declarations.has(tool.name)) declarations.set(tool.name, {
-    ...tool,
-    deferLoading: true
-  });
-  switch (mode) {
-    case "in-history":
-      return declarations;
-    case "addition-only": {
-      const activeNames = new Set(tools?.map((tool) => tool.name));
-      for (const name2 of declarations.keys()) if (!activeNames.has(name2)) declarations.delete(name2);
-      return declarations;
-    }
-    /* v8 ignore next 2 -- closed-union exhaustiveness guard */
-    default:
-      return assertNever(mode);
-  }
-}
-function projectToolUpdates2(messages, tools, toolUpdate, history) {
-  if (toolUpdate === void 0) {
-    let immediateTools = tools;
-    if (tools?.some((tool) => tool.deferLoading === true)) immediateTools = tools.map(({ deferLoading: _loading, ...tool }) => tool);
-    return {
-      messages: withoutDeveloperMessages2(messages),
-      tools: immediateTools
-    };
-  }
-  if (history === void 0) return {
-    messages: withoutDeveloperMessages2(messages),
-    tools
-  };
-  const messageIds = new Set(messages.flatMap((message) => message.role === "developer" ? [message.id] : []));
-  if (history.updates.some((update) => !messageIds.has(update.messageId))) return {
-    messages: withoutDeveloperMessages2(messages),
-    tools
-  };
-  const declarations = toolDeclarations2(tools, toolUpdate, history);
-  const updateIds = new Set(history.updates.map((update) => update.messageId));
-  const offered = new Set(history.tools.filter((tool) => !tool.deferLoading).map((tool) => tool.name));
-  const projectedMessages = [];
-  for (const message of messages) {
-    if (message.role !== "developer") {
-      projectedMessages.push(message);
-      continue;
-    }
-    if (!updateIds.has(message.id)) continue;
-    const content = message.content.filter((block) => {
-      switch (block.type) {
-        case "tool-addition":
-          if (!declarations.has(block.toolName) || offered.has(block.toolName)) return false;
-          offered.add(block.toolName);
-          return true;
-        case "tool-removal":
-          if (toolUpdate !== "in-history") return false;
-          return offered.delete(block.toolName);
-        default:
-          return true;
-      }
-    });
-    if (content.length === 0) continue;
-    if (content.length === message.content.length) projectedMessages.push(message);
-    else projectedMessages.push({
-      ...message,
-      content
-    });
-  }
-  return {
-    messages: projectedMessages.length === messages.length && projectedMessages.every((message, index) => message === messages[index]) ? messages : projectedMessages,
-    tools: [...declarations.values()]
-  };
-}
-var { version: version2 } = createRequire2(import.meta.url)("../package.json");
-function ReasoningEffortId2(id) {
-  return brandString(id);
-}
-var __runInitializers2 = function(thisArg, initializers, value) {
-  var useValue = arguments.length > 2;
-  for (var i2 = 0; i2 < initializers.length; i2++) value = useValue ? initializers[i2].call(thisArg, value) : initializers[i2].call(thisArg);
-  return useValue ? value : void 0;
-};
-var __esDecorate = function(ctor, descriptorIn, decorators, contextIn, initializers, extraInitializers) {
-  function accept(f2) {
-    if (f2 !== void 0 && typeof f2 !== "function") throw new TypeError("Function expected");
-    return f2;
-  }
-  var kind = contextIn.kind, key = kind === "getter" ? "get" : kind === "setter" ? "set" : "value";
-  var target = !descriptorIn && ctor ? contextIn["static"] ? ctor : ctor.prototype : null;
-  var descriptor = descriptorIn || (target ? Object.getOwnPropertyDescriptor(target, contextIn.name) : {});
-  var _2, done = false;
-  for (var i2 = decorators.length - 1; i2 >= 0; i2--) {
-    var context = {};
-    for (var p2 in contextIn) context[p2] = p2 === "access" ? {} : contextIn[p2];
-    for (var p2 in contextIn.access) context.access[p2] = contextIn.access[p2];
-    context.addInitializer = function(f2) {
-      if (done) throw new TypeError("Cannot add initializers after decoration has completed");
-      extraInitializers.push(accept(f2 || null));
-    };
-    var result = (0, decorators[i2])(kind === "accessor" ? {
-      get: descriptor.get,
-      set: descriptor.set
-    } : descriptor[key], context);
-    if (kind === "accessor") {
-      if (result === void 0) continue;
-      if (result === null || typeof result !== "object") throw new TypeError("Object expected");
-      if (_2 = accept(result.get)) descriptor.get = _2;
-      if (_2 = accept(result.set)) descriptor.set = _2;
-      if (_2 = accept(result.init)) initializers.unshift(_2);
-    } else if (_2 = accept(result)) if (kind === "field") initializers.unshift(_2);
-    else descriptor[key] = _2;
-  }
-  if (target) Object.defineProperty(target, contextIn.name, descriptor);
-  done = true;
-};
-var LlmError2 = class extends HarnessError2 {
-  /** Serializable facts retained beside this live Error. */
-  failure;
-  /**
-  * @param message - non-empty human-readable failure summary.
-  * @param code - non-empty stable provider-neutral machine code.
-  * @param options - optional cause and validated serializable provider facts.
-  */
-  constructor(message, code, options) {
-    if (typeof message !== "string" || message.length === 0) throw new Error("LlmError message must be a non-empty string");
-    if (typeof code !== "string" || code.length === 0) throw new Error("LlmError code must be a non-empty string");
-    if (options?.status !== void 0 && (!Number.isInteger(options.status) || options.status < 100 || options.status > 599)) throw new Error("LlmError status must be an integer from 100 through 599");
-    if (options?.providerRetryAfterMs !== void 0 && (!Number.isFinite(options.providerRetryAfterMs) || options.providerRetryAfterMs <= 0)) throw new Error("LlmError providerRetryAfterMs must be a positive finite number");
-    if (options?.requestId !== void 0 && (typeof options.requestId !== "string" || options.requestId.length === 0)) throw new Error("LlmError requestId must be a non-empty string");
-    super(message, code, options);
-    this.name = "LlmError";
-    this.failure = Object.freeze({
-      message,
-      code,
-      ...options?.status === void 0 ? {} : { status: options.status },
-      ...options?.providerRetryAfterMs === void 0 ? {} : { providerRetryAfterMs: options.providerRetryAfterMs },
-      ...options?.requestId === void 0 ? {} : { requestId: options.requestId },
-      ...options?.offloadImages === void 0 ? {} : { offloadImages: options.offloadImages }
-    });
-  }
-};
-var LlmRuntime2 = (() => {
-  let _classSuper = TypertRemoteService;
-  let _instanceExtraInitializers = [];
-  let _listProviders_decorators;
-  let _listConfigurableProviders_decorators;
-  let _remoteDiscoverModels_decorators;
-  return class LlmRuntime extends _classSuper {
-    static {
-      const _metadata = typeof Symbol === "function" && Symbol.metadata ? Object.create(_classSuper[Symbol.metadata] ?? null) : void 0;
-      _listProviders_decorators = [Remote];
-      _listConfigurableProviders_decorators = [Remote];
-      _remoteDiscoverModels_decorators = [Remote("discoverModels")];
-      __esDecorate(this, null, _listProviders_decorators, {
-        kind: "method",
-        name: "listProviders",
-        static: false,
-        private: false,
-        access: {
-          has: (obj) => "listProviders" in obj,
-          get: (obj) => obj.listProviders
-        },
-        metadata: _metadata
-      }, null, _instanceExtraInitializers);
-      __esDecorate(this, null, _listConfigurableProviders_decorators, {
-        kind: "method",
-        name: "listConfigurableProviders",
-        static: false,
-        private: false,
-        access: {
-          has: (obj) => "listConfigurableProviders" in obj,
-          get: (obj) => obj.listConfigurableProviders
-        },
-        metadata: _metadata
-      }, null, _instanceExtraInitializers);
-      __esDecorate(this, null, _remoteDiscoverModels_decorators, {
-        kind: "method",
-        name: "remoteDiscoverModels",
-        static: false,
-        private: false,
-        access: {
-          has: (obj) => "remoteDiscoverModels" in obj,
-          get: (obj) => obj.remoteDiscoverModels
-        },
-        metadata: _metadata
-      }, null, _instanceExtraInitializers);
-      if (_metadata) Object.defineProperty(this, Symbol.metadata, {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: _metadata
-      });
-    }
-    adapters = (__runInitializers2(this, _instanceExtraInitializers), /* @__PURE__ */ new Map());
-    directory = /* @__PURE__ */ new Map();
-    discoveries = /* @__PURE__ */ new Map();
-    constructor(ctx) {
-      super(ctx, "llm");
-    }
-    /** Notify topology observers without letting one broken listener veto the commit. */
-    emitAdaptersUpdated() {
-      for (const listener of this.ctx.events.dispatch("emit", ["llm/adapters-updated"])) try {
-        const returned = listener();
-        if (returned != null && typeof returned.then === "function") Promise.resolve(returned).then(void 0, (error51) => {
-          this.warnAdaptersListenerFailure(error51);
-        });
-      } catch (error51) {
-        this.warnAdaptersListenerFailure(error51);
-      }
-    }
-    /** Contained-listener diagnostic shared by the sync and async failure paths. */
-    warnAdaptersListenerFailure(error51) {
-      this.ctx.logger.warn("llm: an llm/adapters-updated listener failed");
-      this.ctx.logger.warn(error51);
-    }
-    /**
-    * Register an adapter for the given provider routes. Throws `LlmError` with code
-    * `DUPLICATE_ADAPTER` if any provider already has an adapter (all-or-nothing).
-    * Disposed with the fiber.
-    * @param providers - every provider route this adapter should serve.
-    * @param adapter - the adapter that streams calls for those providers.
-    * @returns the disposer, carrying {@link AdapterRegistrationHandle.replace}.
-    */
-    registerAdapter(providers, adapter) {
-      const owned = /* @__PURE__ */ new Set();
-      let released = false;
-      const dispose = this.ctx.effect(function* () {
-        if (providers.length === 0) throw new LlmError2("an adapter must register at least one provider", "INVALID_ADAPTER");
-        this.commitRoutes(owned, this.prepareRoutes(providers, adapter, owned));
-        yield () => {
-          released = true;
-          for (const provider of owned) this.adapters.delete(provider);
-          owned.clear();
-          this.emitAdaptersUpdated();
-        };
-      }.bind(this), "llm.registerAdapter()");
-      const handle = (() => void dispose());
-      handle.replace = (next) => {
-        if (released) throw new LlmError2("a disposed adapter registration cannot replace its routes", "REGISTRATION_DISPOSED");
-        this.commitRoutes(owned, this.prepareRoutes(next, adapter, owned));
-      };
-      return handle;
-    }
-    /**
-    * Validate one candidate route set for `adapter`, treating routes this
-    * registration already holds as available. Nothing is mutated: a rejected
-    * candidate leaves the registry exactly as it was.
-    */
-    prepareRoutes(providers, adapter, owned) {
-      const unique = /* @__PURE__ */ new Set();
-      const registrations = [];
-      for (const provider of providers) {
-        if (provider.length === 0) throw new LlmError2("adapter provider names must be non-empty", "INVALID_ADAPTER");
-        if (unique.has(provider) || this.adapters.has(provider) && !owned.has(provider)) throw new LlmError2(`an adapter for provider "${provider}" is already registered`, "DUPLICATE_ADAPTER");
-        const info = adapter.providerInfo(provider);
-        if (typeof info.id !== "string" || info.id !== provider || typeof info.name !== "string" || info.name.length === 0) throw new LlmError2(`adapter metadata for provider "${provider}" must preserve its id and have a non-empty name`, "INVALID_ADAPTER");
-        unique.add(provider);
-        const retryPolicy = adapter.providerRetryPolicy(provider) ?? resolveRetryPolicy2(void 0, `llm: provider "${provider}" retryPolicy`);
-        registrations.push({
-          adapter,
-          provider: {
-            id: info.id,
-            name: info.name
-          },
-          retryPolicy
-        });
-      }
-      return registrations;
-    }
-    /**
-    * Swap this registration's routes for the prepared ones in one synchronous
-    * section, so no observer can see the registry between the release and the
-    * re-registration. The route set's one mutation point is also where
-    * `llm/adapters-updated` is published, so a `replace` announces itself
-    * exactly like a first registration.
-    */
-    commitRoutes(owned, registrations) {
-      for (const provider of owned) this.adapters.delete(provider);
-      owned.clear();
-      for (const registration of registrations) {
-        this.adapters.set(registration.provider.id, registration);
-        owned.add(registration.provider.id);
-      }
-      this.emitAdaptersUpdated();
-    }
-    /**
-    * Describe provider routes with a registered adapter.
-    * @returns detached provider metadata in registration order.
-    */
-    listProviders() {
-      return [...this.adapters.values()].map(({ provider }) => ({ ...provider }));
-    }
-    /**
-    * Declare provider routes an adapter plugin can activate through
-    * configuration. Registration is all-or-nothing: an empty list, invalid
-    * entry, or a provider already declared by any registration throws
-    * `LlmError` without registering the rest. Disposed with the fiber.
-    * @param entries - every configurable provider this plugin owns.
-    * @returns a handle that withdraws all of them, and can atomically replace them.
-    */
-    registerConfigurableProviders(entries) {
-      let held = [];
-      let disposed = false;
-      const commit = (candidates) => {
-        const detached = [];
-        const own = new Set(held.map((entry) => entry.provider));
-        for (const entry of candidates) {
-          if (entry.provider.length === 0 || entry.displayName.length === 0 || entry.settingsNs.length === 0) throw new LlmError2("configurable providers need a non-empty provider, displayName, and settingsNs", "INVALID_DIRECTORY");
-          if (entry.settingsPath.some((segment) => segment.length === 0)) throw new LlmError2(`configurable provider "${entry.provider}" has an empty settingsPath segment`, "INVALID_DIRECTORY");
-          if (this.directory.has(entry.provider) && !own.has(entry.provider) || detached.some((seen) => seen.provider === entry.provider)) throw new LlmError2(`configurable provider "${entry.provider}" is already declared`, "DUPLICATE_DIRECTORY");
-          detached.push({
-            ...entry,
-            settingsPath: [...entry.settingsPath]
-          });
-        }
-        for (const entry of held) this.directory.delete(entry.provider);
-        for (const entry of detached) this.directory.set(entry.provider, entry);
-        held = detached;
-        this.emitAdaptersUpdated();
-      };
-      const dispose = this.ctx.effect(function* () {
-        if (entries.length === 0) throw new LlmError2("a configurable-provider registration must declare at least one provider", "INVALID_DIRECTORY");
-        commit(entries);
-        yield () => {
-          disposed = true;
-          for (const entry of held) this.directory.delete(entry.provider);
-          held = [];
-          this.emitAdaptersUpdated();
-        };
-      }.bind(this), "llm.registerConfigurableProviders()");
-      const handle = (() => void dispose());
-      handle.replace = (next) => {
-        if (disposed) throw new LlmError2("this configurable-provider registration was disposed", "REGISTRATION_DISPOSED");
-        commit(next);
-      };
-      return handle;
-    }
-    /**
-    * List every declared configurable provider, registered or dormant.
-    * @returns detached directory entries in declaration order.
-    */
-    listConfigurableProviders() {
-      return [...this.directory.values()].map((entry) => ({
-        ...entry,
-        settingsPath: [...entry.settingsPath]
-      }));
-    }
-    /**
-    * Offer to interrogate provider endpoints on behalf of the settings
-    * namespace this plugin owns. The namespace is the key because that is what
-    * a configuration surface already holds from the configurable-provider
-    * directory, and because a provider being *added* has no route to name yet.
-    * Disposed with the fiber.
-    * @param settingsNs - the namespace whose profiles this discovery serves.
-    * @param discover - interrogates one endpoint and must honor the supplied signal.
-    * @returns the disposer that withdraws the offer.
-    */
-    registerModelDiscovery(settingsNs, discover) {
-      const dispose = this.ctx.effect(function* () {
-        if (settingsNs.length === 0) throw new LlmError2("model discovery needs a non-empty settings namespace", "INVALID_DISCOVERY");
-        if (this.discoveries.has(settingsNs)) throw new LlmError2(`model discovery for "${settingsNs}" is already registered`, "DUPLICATE_DISCOVERY");
-        this.discoveries.set(settingsNs, discover);
-        yield () => {
-          this.discoveries.delete(settingsNs);
-        };
-      }.bind(this), "llm.registerModelDiscovery()");
-      return () => void dispose();
-    }
-    /**
-    * Interrogate one provider endpoint for the models it advertises. The
-    * request describes a draft, not a stored route, so nothing here reads or
-    * writes settings or credentials — the caller owns both, and the reply is
-    * candidate metadata a surface may offer for adoption.
-    * @param settingsNs - namespace whose registered discovery serves this draft.
-    * @param request - the endpoint, protocol, and one-shot credential to use.
-    * @param signal - caller cancellation.
-    * @returns the advertised models, deduplicated in endpoint order.
-    */
-    async discoverModels(settingsNs, request, signal) {
-      const discover = this.discoveries.get(settingsNs);
-      if (discover === void 0) throw new LlmError2(`no model discovery is registered for "${settingsNs}"`, "NO_DISCOVERY");
-      if ((request.provider ?? "").length === 0 && (request.baseURL ?? "").length === 0) throw new LlmError2("model discovery needs a provider route or a baseURL", "INVALID_DISCOVERY");
-      const discovered = signal === void 0 ? await discover(request) : await discover(request, signal);
-      const seen = /* @__PURE__ */ new Set();
-      const models = [];
-      for (const model of discovered) {
-        if (typeof model.id !== "string" || model.id.length === 0 || seen.has(model.id)) continue;
-        seen.add(model.id);
-        models.push({
-          id: model.id,
-          ...model.name === void 0 ? {} : { name: model.name },
-          ...model.contextWindow === void 0 ? {} : { contextWindow: model.contextWindow },
-          ...model.maxTokens === void 0 ? {} : { maxTokens: model.maxTokens },
-          ...model.inputModalities === void 0 ? {} : { inputModalities: [...model.inputModalities] }
-        });
-      }
-      return models;
-    }
-    /**
-    * Remote adapter for one draft provider interrogation.
-    * @param settingsNs - namespace whose registered discovery serves this draft.
-    * @param request - endpoint, protocol, and one-shot credential to use.
-    * @param signal - caller cancellation supplied by the Remote carrier.
-    * @returns advertised models in endpoint order.
-    * @throws RemoteError with `llm/model-discovery-rejected` when discovery refuses or fails.
-    */
-    async remoteDiscoverModels(settingsNs, request, signal) {
-      try {
-        return await this.discoverModels(settingsNs, request, signal);
-      } catch (error51) {
-        throw new RemoteError("llm/model-discovery-rejected", error51 instanceof Error ? error51.message : String(error51), {
-          settingsNs,
-          ...request.baseURL === void 0 ? {} : { baseURL: request.baseURL }
-        }, { cause: error51 });
-      }
-    }
-    /**
-    * Resolve the retry policy captured when one provider route was registered.
-    * @param provider - registered provider route to inspect.
-    * @returns the provider-owned policy, with normal defaults already resolved.
-    */
-    providerRetryPolicy(provider) {
-      return this.registration(provider).retryPolicy;
-    }
-    /**
-    * Resolve provider-side request-image pricing for one exact route, or
-    * `undefined` when the provider is unregistered or declares none. Unknown
-    * providers degrade to `undefined` rather than throwing because callers
-    * price durable history whose route may no longer be mounted.
-    * @param provider - provider route named by a request header.
-    * @param model - exact model id named by the same header.
-    * @returns the owning adapter's image pricing for the route, when declared.
-    */
-    imageRequestPricing(provider, model) {
-      return this.adapters.get(provider)?.adapter.imageRequestPricing(provider, model);
-    }
-    /**
-    * Resolve the exact text one durable file occurrence contributes to every
-    * provider request in the current execution environment.
-    * @param ref - durable verbatim file reference from model history.
-    * @returns the same deterministic handle text used at adapter dispatch.
-    */
-    fileRequestText(ref) {
-      return fileHandleText2(ref, this.fileReadPath(ref));
-    }
-    /** Detach typed adapter-owned modality metadata. */
-    detachedModalities(modalities) {
-      return modalities === void 0 ? void 0 : [...modalities];
-    }
-    /**
-    * Discover models advertised by one registered provider. Catalog membership
-    * does not constrain core routing. Catalog-driven entry points may restrict
-    * selection and submission to the advertised models.
-    * @param provider - registered provider route to inspect.
-    * @returns detached model metadata in adapter-preferred order.
-    */
-    async listModels(provider) {
-      const models = await this.registration(provider).adapter.listModels(provider);
-      const seen = /* @__PURE__ */ new Set();
-      return models.map((model) => {
-        if (typeof model.provider !== "string" || model.provider !== provider || typeof model.id !== "string" || model.id.length === 0 || typeof model.name !== "string" || model.name.length === 0 || model.description !== void 0 && typeof model.description !== "string" || seen.has(model.id)) throw new LlmError2(`adapter returned invalid or duplicate model metadata for provider "${provider}"`, "INVALID_CATALOG");
-        seen.add(model.id);
-        const inputModalities = this.detachedModalities(model.inputModalities);
-        return {
-          provider: model.provider,
-          id: model.id,
-          name: model.name,
-          ...model.description === void 0 ? {} : { description: model.description },
-          ...inputModalities === void 0 ? {} : { inputModalities }
-        };
-      });
-    }
-    /**
-    * Resolve and validate all metadata from the adapter that owns one exact
-    * route. The result is detached from adapter-owned objects; catalog
-    * membership remains advisory and does not control request routing.
-    * @param provider - registered provider route to inspect.
-    * @param model - exact model id passed to the adapter.
-    * @param signal - optional cancellation for adapter-owned asynchronous lookup.
-    * @returns exact model identity plus available context and reasoning metadata.
-    */
-    async resolveModelInfo(provider, model, signal) {
-      return this.resolveModelInfoFor(this.registration(provider), model, signal);
-    }
-    async resolveModelInfoFor(registration, model, signal) {
-      const resolved = await registration.adapter.resolveModel(registration.provider.id, model, signal);
-      return this.normalizeModelInfo(registration, model, resolved);
-    }
-    /** Validate and detach one adapter-returned exact model result. */
-    normalizeModelInfo(registration, model, resolved) {
-      const provider = registration.provider.id;
-      if (typeof resolved.provider !== "string" || resolved.provider !== provider || typeof resolved.id !== "string" || resolved.id !== model || typeof resolved.name !== "string" || resolved.name.length === 0 || resolved.description !== void 0 && typeof resolved.description !== "string") throw new LlmError2(`adapter returned invalid exact model metadata for provider "${provider}" model "${model}"`, "INVALID_MODEL_INFO");
-      const context = resolved.context;
-      if (context !== void 0 && (!Number.isInteger(context.contextWindow) || context.contextWindow <= 0)) throw new LlmError2(`adapter returned invalid context metadata for provider "${provider}" model "${model}"`, "INVALID_MODEL_CONTEXT");
-      const inputModalities = this.detachedModalities(resolved.inputModalities);
-      const systemPromptUpdate = resolved.systemPromptUpdate;
-      if (systemPromptUpdate !== void 0 && systemPromptUpdate !== "in-history") throw new LlmError2(`adapter returned invalid system prompt update mode for provider "${provider}" model "${model}"`, "INVALID_MODEL_INFO");
-      const toolUpdate = resolved.toolUpdate;
-      if (toolUpdate !== void 0 && toolUpdate !== "in-history" && toolUpdate !== "addition-only") throw new LlmError2(`adapter returned invalid tool update mode for provider "${provider}" model "${model}"`, "INVALID_MODEL_INFO");
-      const defaultMaxTokens = resolved.defaultMaxTokens;
-      if (defaultMaxTokens !== void 0 && (!Number.isSafeInteger(defaultMaxTokens) || defaultMaxTokens <= 0)) throw new LlmError2(`adapter returned invalid default maxTokens for provider "${provider}" model "${model}"`, "INVALID_MODEL_MAX_TOKENS");
-      const info = {
-        provider,
-        id: model,
-        name: resolved.name,
-        ...resolved.description === void 0 ? {} : { description: resolved.description },
-        ...inputModalities === void 0 ? {} : { inputModalities },
-        ...context === void 0 ? {} : { context: { contextWindow: context.contextWindow } },
-        ...defaultMaxTokens === void 0 ? {} : { defaultMaxTokens },
-        ...resolved.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: resolved.systemPromptUpdate },
-        ...resolved.toolUpdate === void 0 ? {} : { toolUpdate: resolved.toolUpdate }
-      };
-      const reasoning = resolved.reasoning;
-      if (reasoning === void 0) return info;
-      if (reasoning.efforts.length === 0) throw new LlmError2(`adapter returned invalid reasoning metadata for provider "${provider}" model "${model}"`, "INVALID_MODEL_REASONING");
-      const seen = /* @__PURE__ */ new Set();
-      const efforts = reasoning.efforts.map((effort) => {
-        if (typeof effort.id !== "string" || effort.id.length === 0 || typeof effort.name !== "string" || effort.name.length === 0 || effort.description !== void 0 && typeof effort.description !== "string" || seen.has(effort.id)) throw new LlmError2(`adapter returned invalid or duplicate reasoning effort metadata for provider "${provider}" model "${model}"`, "INVALID_MODEL_REASONING");
-        seen.add(effort.id);
-        return {
-          id: effort.id,
-          name: effort.name,
-          ...effort.description === void 0 ? {} : { description: effort.description }
-        };
-      });
-      if (reasoning.defaultEffort !== void 0 && !seen.has(reasoning.defaultEffort)) throw new LlmError2(`adapter returned an unknown default reasoning effort for provider "${provider}" model "${model}"`, "INVALID_MODEL_REASONING");
-      return {
-        ...info,
-        reasoning: {
-          efforts,
-          ...reasoning.defaultEffort === void 0 ? {} : { defaultEffort: reasoning.defaultEffort }
-        }
-      };
-    }
-    /**
-    * Validate a conversation call config against its exact model capability and
-    * materialize adapter-configured defaults. Unsupported explicit efforts
-    * reject before provider I/O; no clamping or aliasing is performed. This
-    * standalone query does not bind a later dispatch; use {@link prepareCall}
-    * when logging and streaming must share one adapter registration.
-    * @param config - provider/model route and optional request controls.
-    * @param signal - optional cancellation for adapter-owned capability lookup.
-    * @returns a detached config only when a default must be materialized.
-    */
-    async resolveCallConfig(config2, signal) {
-      return (await this.resolveCallFor(this.registration(config2.provider), config2, signal)).config;
-    }
-    async resolveCallFor(registration, config2, signal) {
-      const info = await this.resolveModelInfoFor(registration, config2.model, signal);
-      return this.resolveCallWithInfo(config2, info);
-    }
-    /** Validate request controls against one already-bound exact model result. */
-    resolveCallWithInfo(config2, info) {
-      const defaulted = config2.maxTokens === void 0 && info.defaultMaxTokens !== void 0 ? {
-        ...config2,
-        maxTokens: info.defaultMaxTokens
-      } : config2;
-      const reasoning = info.reasoning;
-      const requested = defaulted.reasoningEffort;
-      let resolvedConfig = defaulted;
-      if (reasoning === void 0) {
-        if (requested !== void 0) throw new LlmError2(`provider "${config2.provider}" model "${config2.model}" does not support reasoning effort "${requested}"`, "UNSUPPORTED_REASONING_EFFORT");
-      } else {
-        const effective = requested ?? reasoning.defaultEffort;
-        if (effective !== void 0) {
-          if (!reasoning.efforts.some((effort) => effort.id === effective)) throw new LlmError2(`provider "${config2.provider}" model "${config2.model}" does not support reasoning effort "${effective}"`, "UNSUPPORTED_REASONING_EFFORT");
-          if (requested !== effective) resolvedConfig = {
-            ...defaulted,
-            reasoningEffort: effective
-          };
-        }
-      }
-      return {
-        config: resolvedConfig,
-        ...info.context === void 0 ? {} : { context: info.context },
-        modelInfo: info
-      };
-    }
-    /**
-    * Resolve one call under its current adapter registration. The returned
-    * one-shot handle keeps that registration across header logging and dispatch,
-    * so HMR cannot combine one adapter's capability result with another adapter.
-    * An optional synchronous callback selects concrete controls using captured
-    * model metadata. Defaults and validation apply to its result. Callback
-    * failures and cancellation reject preparation before dispatch.
-    * @param config - provider/model route and optional concrete request controls.
-    * @param signal - optional cancellation for adapter-owned capability lookup.
-    * @param configure - pure control selection, called once before defaults and validation.
-    * @returns a prepared config and its registration-bound stream entry point.
-    */
-    async prepareCall(config2, signal, configure) {
-      signal?.throwIfAborted();
-      const { provider, model, ...controls } = config2;
-      const registration = this.registration(provider);
-      const adapterCall = await registration.adapter.prepareCall(provider, model, signal);
-      signal?.throwIfAborted();
-      const modelInfo = this.normalizeModelInfo(registration, model, adapterCall.model);
-      const proposed = configure === void 0 ? config2 : {
-        ...configure(deepFreeze(structuredClone(controls)), deepFreeze(modelInfo)),
-        provider,
-        model
-      };
-      signal?.throwIfAborted();
-      const resolved = this.resolveCallWithInfo(proposed, modelInfo);
-      const resolvedConfig = deepFreeze(structuredClone(resolved.config));
-      const context = resolved.context === void 0 ? void 0 : deepFreeze(structuredClone(resolved.context));
-      const adapterDefaults = deepFreeze({
-        ...proposed.reasoningEffort === void 0 && resolvedConfig.reasoningEffort !== void 0 ? { reasoningEffort: true } : {},
-        ...proposed.maxTokens === void 0 && resolvedConfig.maxTokens !== void 0 ? { maxTokens: true } : {}
-      });
-      let dispatched = false;
-      return Object.freeze({
-        config: resolvedConfig,
-        retryPolicy: registration.retryPolicy,
-        adapterDefaults,
-        ...context === void 0 ? {} : { context },
-        ...modelInfo.inputModalities === void 0 ? {} : { inputModalities: Object.freeze([...modelInfo.inputModalities]) },
-        ...modelInfo.systemPromptUpdate === void 0 ? {} : { systemPromptUpdate: modelInfo.systemPromptUpdate },
-        ...modelInfo.toolUpdate === void 0 ? {} : { toolUpdate: modelInfo.toolUpdate },
-        stream: (options) => {
-          if (dispatched) throw new LlmError2("a prepared LLM call can only be dispatched once", "INVALID_PREPARED_CALL");
-          if (!callConfigEquals2(options, resolvedConfig)) throw new LlmError2("prepared LLM call config changed before adapter dispatch", "INVALID_PREPARED_CALL");
-          dispatched = true;
-          return this.streamWithRegistration(options, {
-            registration,
-            config: resolvedConfig,
-            modelInfo,
-            dispatch: (options2) => adapterCall.stream(options2)
-          });
-        }
-      });
-    }
-    registration(provider) {
-      const registration = this.adapters.get(provider);
-      if (!registration) throw new LlmError2(`no adapter registered for provider "${provider}"`, "NO_ADAPTER");
-      return registration;
-    }
-    /** Remove replay state whose historical route is owned by another adapter. */
-    forAdapter(options, adapter) {
-      const messages = options.messages.map((message) => {
-        if (message.role !== "assistant") return message;
-        const source = message.source;
-        if (source.replayState === void 0) return message;
-        if (this.adapters.get(source.provider)?.adapter === adapter) return message;
-        return freezeMessage2({
-          ...message,
-          source: {
-            kind: "model",
-            provider: source.provider,
-            model: source.model
-          }
-        });
-      });
-      if (messages.every((message, index) => message === options.messages[index])) return options;
-      const filtered = {
-        ...options,
-        messages
-      };
-      return Object.isFrozen(options) ? deepFreeze(filtered) : filtered;
-    }
-    /**
-    * Resolve the current execution-world read path of one durable file
-    * reference through the mounted attachment and filesystem providers.
-    */
-    fileReadPath(ref) {
-      let hostPath;
-      try {
-        hostPath = this.ctx.get("attachments")?.fileHostPath(ref);
-      } catch {
-        return;
-      }
-      if (hostPath === void 0) return void 0;
-      return this.ctx.get("fs")?.processPathFromHostPath(hostPath);
-    }
-    /**
-    * Final adapter boundary. Adapter selection, dispatch, iterator construction,
-    * and iteration failures become one terminal failure chunk. Middleware and
-    * downstream consumer failures remain thrown plugin or consumer errors.
-    */
-    async *adapterStream(options, prepared) {
-      let iterator;
-      try {
-        const registration = prepared?.registration ?? this.registration(options.provider);
-        const adapter = registration.adapter;
-        let modelInfo;
-        let resolvedConfig;
-        let dispatch;
-        if (prepared === void 0) {
-          const adapterCall = await adapter.prepareCall(options.provider, options.model, options.signal);
-          modelInfo = this.normalizeModelInfo(registration, options.model, adapterCall.model);
-          resolvedConfig = this.resolveCallWithInfo(options, modelInfo).config;
-          dispatch = (options2) => adapterCall.stream(options2);
-        } else {
-          modelInfo = prepared.modelInfo;
-          resolvedConfig = prepared.config;
-          dispatch = prepared.dispatch;
-        }
-        if (prepared !== void 0 && !callConfigEquals2(options, resolvedConfig)) throw new LlmError2("prepared LLM call config changed before adapter dispatch", "INVALID_PREPARED_CALL");
-        const resolvedOptions = callConfigEquals2(options, resolvedConfig) ? options : Object.isFrozen(options) ? deepFreeze({
-          ...options,
-          ...resolvedConfig
-        }) : {
-          ...options,
-          ...resolvedConfig
-        };
-        let projectedMessages = resolvedOptions.messages;
-        if (projectedMessages.some((message) => contentHasFile2(message.content))) projectedMessages = projectFilesToText2(projectedMessages, (ref) => this.fileReadPath(ref));
-        if (modelInfo.inputModalities !== void 0 && !modelInfo.inputModalities.includes("image") && projectedMessages.some((message) => contentHasImage2(message.content))) projectedMessages = projectImagesForTextModel2(projectedMessages);
-        const projectedTools = projectToolUpdates2(projectedMessages, resolvedOptions.tools, modelInfo.toolUpdate, resolvedOptions.toolHistory);
-        projectedMessages = projectedTools.messages;
-        let projectedOptions = resolvedOptions;
-        if (projectedMessages !== resolvedOptions.messages || projectedTools.tools !== resolvedOptions.tools) {
-          projectedOptions = {
-            ...resolvedOptions,
-            messages: projectedMessages,
-            ...projectedTools.tools === void 0 ? {} : { tools: projectedTools.tools }
-          };
-          if (Object.isFrozen(resolvedOptions)) deepFreeze(projectedOptions);
-        }
-        iterator = dispatch(this.forAdapter(projectedOptions, adapter))[Symbol.asyncIterator]();
-      } catch (error51) {
-        yield adapterFailureChunk2(error51, options.signal);
-        return;
-      }
-      let completed = false;
-      try {
-        while (true) {
-          let item;
-          try {
-            const next = await iterator.next();
-            item = next.done ? { done: true } : {
-              done: false,
-              value: next.value
-            };
-          } catch (error51) {
-            completed = true;
-            yield adapterFailureChunk2(error51, options.signal);
-            return;
-          }
-          if (item.done) {
-            completed = true;
-            return;
-          }
-          yield item.value;
-        }
-      } finally {
-        if (!completed) {
-          const close = iterator.return?.bind(iterator);
-          if (close) await close();
-        }
-      }
-    }
-    /**
-    * Stream one model call as raw chunks (token-level deltas). Replay state is
-    * retained only when the same adapter instance owns its historical provider
-    * and the target provider. Final adapter selection remains fixed through
-    * asynchronous exact-model resolution and dispatch. Adapter selection,
-    * dispatch, and iteration failures become terminal `error` or `aborted`
-    * finish chunks; middleware, nested-call, cleanup, and consumer failures
-    * remain thrown.
-    * @param options - the full request; `options.provider` selects the adapter.
-    * @returns the chunk stream, possibly wrapped by `llm/stream` listeners.
-    */
-    stream(options) {
-      return this.streamWithRegistration(options);
-    }
-    streamWithRegistration(options, prepared) {
-      return this.ctx.waterfall(this, "llm/stream", options, () => this.adapterStream(options, prepared));
-    }
-  };
-})();
-function adapterFailureChunk2(error51, signal) {
-  const failure = normalizeLlmFailure2(error51);
-  return {
-    type: "finish",
-    reason: signal?.aborted || failure.code === "ABORTED" ? {
-      kind: "aborted",
-      failure
-    } : {
-      kind: "error",
-      failure
-    }
   };
 }
 
@@ -9164,7 +8183,7 @@ __export(core_exports2, {
   toJSONSchema: () => toJSONSchema,
   treeifyError: () => treeifyError,
   util: () => util_exports,
-  version: () => version3
+  version: () => version2
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
@@ -10239,10 +9258,10 @@ var nanoid = /^[a-zA-Z0-9_-]{21}$/;
 var duration = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
 var extendedDuration = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
 var guid = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-var uuid = (version4) => {
-  if (!version4)
+var uuid = (version3) => {
+  if (!version3)
     return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version4}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version3}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
 };
 var uuid4 = /* @__PURE__ */ uuid(4);
 var uuid6 = /* @__PURE__ */ uuid(6);
@@ -10911,7 +9930,7 @@ var Doc = class {
 };
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
-var version3 = {
+var version2 = {
   major: 4,
   minor: 4,
   patch: 3
@@ -10923,7 +9942,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version3;
+  inst._zod.version = version2;
   const checks = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks.unshift(inst);
@@ -23118,10 +22137,10 @@ function fromJSONSchema(schema, params) {
   } catch {
     throw new Error("fromJSONSchema input is not valid JSON (possibly cyclic); use $defs/$ref for recursive schemas");
   }
-  const version4 = detectVersion(normalized, params?.defaultTarget);
+  const version3 = detectVersion(normalized, params?.defaultTarget);
   const defs = normalized.$defs || normalized.definitions || {};
   const ctx = {
-    version: version4,
+    version: version3,
     defs,
     refs: /* @__PURE__ */ new Map(),
     processing: /* @__PURE__ */ new Set(),
@@ -23758,35 +22777,14 @@ var SessionTitleService = class extends Service {
   }
 };
 
-// packages/session-query/session-query/lib/index.js
+// packages/session-query/session-query/src/config.ts
 var SessionQueryError = class extends HarnessError {
+  // The base stores the value; this signature narrows its open string code.
+  // oxlint-disable-next-line typescript/no-useless-constructor
   constructor(message, code, options) {
     super(message, code, options);
   }
 };
-
-// packages/typert/protocol/lib/index.js
-var RemoteError2 = class extends Error {
-  code;
-  details;
-  /** Structural marker: cross-realm/bundle identification never uses instanceof. */
-  isDSHRemoteError = true;
-  /**
-  * @param code - stable failure code declared in {@link RemoteErrorDetailsMap}.
-  * @param message - human diagnostic carried across the wire.
-  * @param details - structured payload typed by the code.
-  * @param options - standard Error options (`cause` survives in-process only).
-  */
-  constructor(code, message, details, options) {
-    super(message, options);
-    this.code = code;
-    this.details = details;
-    this.name = "RemoteError";
-  }
-};
-function remoteErrorOf2(value) {
-  if (typeof value === "object" && value !== null && value.isDSHRemoteError === true && typeof value.code === "string") return value;
-}
 
 // packages/api/session-controller/src/agent.ts
 var ApiSessionNotFound = class extends Error {
@@ -23831,7 +22829,7 @@ function hasApiSessionSubagentOwner(ctx, session, agent) {
   return parent !== void 0 && ctx.agents.isOwnedBy(agent.id, parent);
 }
 function apiSessionSubagentOwnershipError(sessionId) {
-  return new RemoteError2(
+  return new RemoteError(
     "session/agent-busy",
     `session "${sessionId}" is owned by subagent routing`,
     { reason: "use subagent delivery for this child session" }
@@ -23898,7 +22896,7 @@ var ApiSessionAgentController = class {
       return published ?? { agent };
     } catch (error51) {
       if (error51 instanceof ApiSessionNotFound) {
-        return { error: new RemoteError2("session/not-found", error51.message, { sessionId }) };
+        return { error: new RemoteError("session/not-found", error51.message, { sessionId }) };
       }
       if (error51 instanceof ApiSessionSubagentOwnership) {
         return { error: apiSessionSubagentOwnershipError(error51.sessionId) };
@@ -23910,10 +22908,10 @@ var ApiSessionAgentController = class {
         return { error: apiSessionSubagentOwnershipError(sessionId) };
       }
       if (error51 instanceof Error && error51.name === "SessionAlreadyOwnedError") {
-        return { error: new RemoteError2("session/writer-held", error51.message, { sessionId }) };
+        return { error: new RemoteError("session/writer-held", error51.message, { sessionId }) };
       }
       return {
-        error: new RemoteError2(
+        error: new RemoteError(
           "gateway/internal",
           `resume failed for session "${sessionId}": ${String(error51)}`,
           {}
@@ -24163,7 +23161,7 @@ var ApiSessionAgentController = class {
     try {
       await presets.select(live, target);
     } catch (error51) {
-      if (remoteErrorOf2(error51)?.code !== "agent-preset/locked") throw error51;
+      if (remoteErrorOf(error51)?.code !== "agent-preset/locked") throw error51;
       return void 0;
     }
     return live;
@@ -24194,7 +23192,7 @@ var ApiSessionAgentController = class {
     return { agent, agentPreset: this.presetForSession(agent.session) };
   }
   createMinted(cwd, composition) {
-    return this.createAgent(brandString2(`session-${randomUUID2()}`), cwd, composition);
+    return this.createAgent(brandString(`session-${randomUUID2()}`), cwd, composition);
   }
   async createAgent(sessionId, cwd, composition) {
     try {
@@ -24235,7 +23233,7 @@ function agentModelSelection(selection) {
   return {
     provider: selection.provider,
     model: selection.model,
-    ...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: ReasoningEffortId2(selection.reasoningEffort) }
+    ...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: ReasoningEffortId(selection.reasoningEffort) }
   };
 }
 
@@ -26193,7 +25191,7 @@ var ToolOutputError = class extends HarnessError {
   }
 };
 function projectionError(toolName, projector, error51) {
-  return new ToolOutputError(toolName, [`output.${projector} failed: ${errorMessage3(error51)}`]);
+  return new ToolOutputError(toolName, [`output.${projector} failed: ${errorMessage2(error51)}`]);
 }
 function snapshotProjection(toolName, projector, candidate) {
   try {
@@ -26214,10 +25212,10 @@ function snapshotToolValue(toolName, candidate) {
     return detached;
   } catch (error51) {
     if (error51 instanceof ToolOutputError) throw error51;
-    throw new ToolOutputError(toolName, [`value snapshot failed: ${errorMessage3(error51)}`]);
+    throw new ToolOutputError(toolName, [`value snapshot failed: ${errorMessage2(error51)}`]);
   }
 }
-function errorMessage3(error51) {
+function errorMessage2(error51) {
   try {
     if (error51 instanceof Error) return error51.message;
     if (typeof error51 === "object" && error51 !== null && "message" in error51 && typeof error51.message === "string") {
@@ -26754,7 +25752,7 @@ var ToolRuntime = class extends Service {
         () => Promise.resolve(dispatch.content)
       );
     } catch (error51) {
-      this.ctx.logger.warn(`tools: ptc-dispatch-log listener failed for ${dispatch.name}: ${errorMessage3(error51)}; logging the original settled content`);
+      this.ctx.logger.warn(`tools: ptc-dispatch-log listener failed for ${dispatch.name}: ${errorMessage2(error51)}; logging the original settled content`);
       return dispatch.content;
     }
   }
@@ -27062,7 +26060,7 @@ var ToolRuntime = class extends Service {
     Object.freeze(exec);
     const { name: toolName, callId } = exec;
     const reportFailure = (error51) => {
-      this.ctx.logger.warn(`tool "${toolName}" (${callId}): tools/result observer failed: ${errorMessage3(error51)}`);
+      this.ctx.logger.warn(`tool "${toolName}" (${callId}): tools/result observer failed: ${errorMessage2(error51)}`);
     };
     const callbacks = this.ctx.events.dispatch("emit", [
       scopeTarget(this, exec.agent),
@@ -27270,7 +26268,7 @@ function createExecutionToken() {
 }
 function toolErrorResult(error51) {
   const info = errorInfo(error51);
-  const message = errorMessage3(error51);
+  const message = errorMessage2(error51);
   return {
     content: [{ type: "text", text: `Error: ${message}` }],
     isError: true,
@@ -27486,62 +26484,6 @@ function assertSubagentMaxDepth(maxDepth) {
 
 // packages/subagent/subagent/src/lifecycle.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
-
-// packages/core/agent/src/consumed-work.ts
-function accountsForClaim(reason) {
-  switch (reason.kind) {
-    case "completed":
-      return false;
-    case "blocked":
-    case "aborted":
-    case "interrupted":
-    case "error":
-      return true;
-    /* v8 ignore next 5 -- unreachable: `max-tokens` requires a step and short-circuits
-     * before this call; `forked` exists only in constructor seed history, while production
-     * callers fold an operation-owned suffix. `TurnEndReasonMap` is merge-extensible, so a
-     * backend-added variant cannot be listed; an unnameable ending over consumed input must
-     * not read as success. */
-    default:
-      return true;
-  }
-}
-function foldConsumedWork(events) {
-  const stepped = /* @__PURE__ */ new Set();
-  const claimed = /* @__PURE__ */ new Set();
-  let open;
-  let end;
-  let droppedUnrun = false;
-  for (const event of events) {
-    switch (event.type) {
-      case "turn/start":
-        open = event.data.turn;
-        break;
-      case "step/start":
-        stepped.add(event.data.turn);
-        break;
-      case "agent/inbox/spliced": {
-        const { removedCount, outcome, inserted } = event.data;
-        if (removedCount === void 0) break;
-        if (outcome === "canceled") droppedUnrun ||= inserted.length === 0;
-        else if (open !== void 0) claimed.add(open);
-        break;
-      }
-      case "turn/end": {
-        const { turn, reason } = event.data;
-        open = void 0;
-        if (stepped.delete(turn) || claimed.delete(turn) && accountsForClaim(reason)) {
-          end = event;
-          droppedUnrun = false;
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  return { ...end === void 0 ? {} : { end }, droppedUnrun };
-}
 
 // packages/subagent/subagent/src/types.ts
 function SubagentRunId(id) {
@@ -27874,11 +26816,11 @@ function parseSubagentDescriptor(value) {
   if (!isRecord2(value)) {
     throw new Error("persisted subagent descriptor payload must be an object");
   }
-  const version4 = value["version"];
-  if (typeof version4 !== "number") {
+  const version3 = value["version"];
+  if (typeof version3 !== "number") {
     throw new Error("persisted subagent descriptor version must be a number");
   }
-  if (version4 !== SUBAGENT_DESCRIPTOR_VERSION) return void 0;
+  if (version3 !== SUBAGENT_DESCRIPTOR_VERSION) return void 0;
   const mode = value["mode"];
   if (mode !== "one-shot" && mode !== "continuable") {
     throw new Error('persisted subagent descriptor mode must be "one-shot" or "continuable"');

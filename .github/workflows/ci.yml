@@ -16,6 +16,9 @@ jobs:
   test:
     name: Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    env:
+      DSH_SOURCE: ${{ runner.temp }}/dsh-source
+      TMPDIR: ${{ runner.temp }}
     strategy:
       fail-fast: false
       matrix:
@@ -28,20 +31,24 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           package-manager-cache: false
-      - name: Run launcher tests
-        run: npm test
-      - name: Check out compatible DSH
+      - name: Prepare compatible DSH clone source and pinned pnpm
         run: |
-          node --input-type=module -e "import { writeFileSync } from 'node:fs'; import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; writeFileSync(process.env.GITHUB_ENV, 'COMPATIBLE_DSH_VERSION=' + COMPATIBLE_DSH_VERSION + '\n', { flag: 'a' })"
-          git clone --depth 1 --branch "dsh-v${COMPATIBLE_DSH_VERSION}" https://github.com/deepseek-ai/deepseek-harness.git "${RUNNER_TEMP}/deepseek-harness"
+          compatible_dsh_version="$(node --input-type=module -e "import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; console.log(COMPATIBLE_DSH_VERSION)")"
+          git clone --depth 1 --branch "dsh-v${compatible_dsh_version}" https://github.com/deepseek-ai/deepseek-harness.git "${DSH_SOURCE}"
           corepack enable
-          corepack prepare "pnpm@$(node -p "require('${RUNNER_TEMP}/deepseek-harness/package.json').packageManager.split('@')[1]")" --activate
-          pnpm install --frozen-lockfile --dir "${RUNNER_TEMP}/deepseek-harness"
-      - name: Run TUI tests
-        env:
-          DSH_SOURCE: ${{ runner.temp }}/deepseek-harness
-        run: |
-          npm run dev:setup
-          node "${DSH_SOURCE}/node_modules/vitest/vitest.mjs" run packages/tui/tui/tests packages/tui/tui-render/tests --maxWorkers 2
-      - name: Verify package contents
-        run: npm run pack:check
+          corepack prepare "$(node -p "require(process.env.DSH_SOURCE + '/package.json').packageManager")" --activate
+      - name: Validate current sources and packed entrypoints
+        id: validation
+        run: npm run validate
+      - name: Verify exact validated artifact
+        run: npm run verify:artifact -- "${{ steps.validation.outputs.provenance }}"
+      - name: Save verified package and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-package-node-${{ matrix.node-version }}
+          path: |
+            ${{ steps.validation.outputs.tarball }}
+            ${{ steps.validation.outputs.provenance }}
+            ${{ runner.temp }}/dsh-tui-validation-*/root-tests.tap
+            ${{ runner.temp }}/dsh-tui-validation-*/tui-tests.json
+          if-no-files-found: error

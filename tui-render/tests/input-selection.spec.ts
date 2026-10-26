@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { composerIndex } from '../src/composer-index.ts'
 import {
   deleteInputSelection, inputSelectionRange, moveInputSelection,
   replaceInputSelection, selectedInputText,
@@ -61,4 +62,65 @@ describe('composer keyboard selection', () => {
     expect(selectedInputText({ text, caretIndex: text.length, selectionAnchor: 0 })).toBeUndefined()
     expect(selectedInputText({ text: '普通文字', caretIndex: 4, selectionAnchor: 0 })).toBe('普通文字')
   })
+})
+
+describe('indexed selection boundary reuse', () => {
+  it.each([700, 7000, 70000])('does not segment the full prefix for repeated %i-unit tail selections', units => {
+    const text = '中文🙂abc'.repeat(units / 7)
+    // Initial ingestion is allowed to be linear. Count only unchanged revisions.
+    composerIndex(text).line(0)
+    const segment = vi.spyOn(Intl.Segmenter.prototype, 'segment')
+    try {
+      let state: InputSelectionState = { text, caretIndex: text.length }
+      for (let step = 0; step < 40; step++) {
+        state = moveInputSelection(state, { direction: 'left', extend: true })
+        expect(inputSelectionRange(state)).toEqual({ start: state.caretIndex, end: text.length })
+        expect(selectedInputText(state)).toBe(text.slice(state.caretIndex))
+      }
+      expect(segment.mock.calls).toHaveLength(0)
+      expect(replaceInputSelection(state, '替换\n[图片 #2]').text)
+        .toBe(text.slice(0, state.caretIndex) + '替换\n[图片 #2]')
+      expect(deleteInputSelection(state, 'backward').text).toBe(text.slice(0, state.caretIndex))
+      expect(segment.mock.calls).toHaveLength(0)
+    } finally { segment.mockRestore() }
+  })
+
+  it('matches the full-draft grapheme reference for stale and reversed selection offsets', () => {
+    const splitter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    for (const text of ['中é👩‍💻\t\n[图片 #1]\n', 'a\r\né👩‍💻\r\n', '', '\n\n']) {
+      const starts = [...splitter.segment(text)].map(part => part.index)
+      const reference = (offset: number) => {
+        const caret = Math.max(0, Math.min(offset, text.length))
+        return caret === text.length ? caret : (starts.findLast(start => start <= caret) ?? 0)
+      }
+      for (let caret = -1; caret <= text.length + 1; caret++) {
+        const anchor = text.length - caret
+        const a = reference(caret)
+        const b = reference(anchor)
+        expect(inputSelectionRange({ text, caretIndex: caret, selectionAnchor: anchor }))
+          .toEqual(a === b ? undefined : { start: Math.min(a, b), end: Math.max(a, b) })
+      }
+    }
+  })
+})
+
+it('extends and deletes a CRLF as one complete source grapheme', () => {
+  const text = 'a\r\nb'
+  const right = moveInputSelection({ text, caretIndex: 1 }, { direction: 'right', extend: true })
+  expect(right).toEqual({ text, caretIndex: 3, selectionAnchor: 1 })
+  expect(selectedInputText(right)).toBe('\r\n')
+  expect(moveInputSelection({ text, caretIndex: 3 }, { direction: 'left', extend: true }))
+    .toEqual({ text, caretIndex: 1, selectionAnchor: 3 })
+  expect(deleteInputSelection({ text, caretIndex: 3 }, 'backward').text).toBe('ab')
+  expect(deleteInputSelection({ text, caretIndex: 1 }, 'forward').text).toBe('ab')
+})
+
+it('keeps End and Shift+End before the whole CRLF grapheme', () => {
+  const text = 'a\r\nb'
+  for (const extend of [false, true]) {
+    const state = moveInputSelection({ text, caretIndex: 0 }, { direction: 'end', extend })
+    expect(state.caretIndex).toBe(1)
+    expect(selectedInputText(state)).toBe(extend ? 'a' : undefined)
+    expect(deleteInputSelection(state, 'forward').text).toBe(extend ? '\r\nb' : 'ab')
+  }
 })

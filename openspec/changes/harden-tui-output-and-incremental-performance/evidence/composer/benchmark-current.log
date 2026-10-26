@@ -1,0 +1,129 @@
+{
+  "output": "/tmp/dsh-composer-phase5/benchmark-current.json",
+  "ssr": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "coldMs": 8.697957999999971,
+      "warmMedianMs": 6.17989399999999
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "coldMs": 29.408227000000124,
+      "warmMedianMs": 7.773587000000134
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "coldMs": 47.45451600000001,
+      "warmMedianMs": 7.089876999999888
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "coldMs": 13.56109400000014,
+      "warmMedianMs": 9.094302999999854
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "coldMs": 10.421240000000125,
+      "warmMedianMs": 7.023813999999675
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "coldMs": 37.80773799999997,
+      "warmMedianMs": 5.33956199999966
+    }
+  ],
+  "operations": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    }
+  ],
+  "pty": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 4.179943999999978,
+      "insertMedianMs": 4.746830999999929
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 4.748502000000144,
+      "insertMedianMs": 6.436296000000084
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 3.508737999999994,
+      "insertMedianMs": 35.47535199999993
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 5.0660179999999855,
+      "insertMedianMs": 5.197747000000163
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 5.303849999999784,
+      "insertMedianMs": 7.17770100000007
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 4.59994099999949,
+      "insertMedianMs": 31.084845999999743
+    }
+  ]
+}

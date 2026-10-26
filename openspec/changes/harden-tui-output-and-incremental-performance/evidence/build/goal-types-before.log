@@ -1,0 +1,18 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.54 typecheck
+> node scripts/typecheck.js
+
+generate-typert: wrote 30 Typert artifact(s) for 30 package(s) in 4.1s
+tui/tests/goal-continuation.spec.ts(6,29): error TS2307: Cannot find module '@deepseek-ai/dsh-goal-round-driver' or its corresponding type declarations.
+file:///home/zhangyangrui/my_programes/dsh-tui/scripts/validation.js:21
+  if (result.error || result.status !== 0) throw new Error(`${basename(command)} ${args.join(' ')} failed (${result.status ?? result.signal})`, { cause: result.error })
+                                                 ^
+
+Error: node-22 /tmp/dsh-tui-validation-21MdYW/dsh/node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/bin/tsc --noEmit -p /tmp/dsh-tui-validation-21MdYW/typecheck/tui/tests/tsconfig.json failed (2)
+    at run (file:///home/zhangyangrui/my_programes/dsh-tui/scripts/validation.js:21:50)
+    at checkTypes (file:///home/zhangyangrui/my_programes/dsh-tui/scripts/validation.js:184:5)
+    at file:///home/zhangyangrui/my_programes/dsh-tui/scripts/typecheck.js:6:1 {
+  [cause]: undefined
+}
+
+Node.js v22.23.1

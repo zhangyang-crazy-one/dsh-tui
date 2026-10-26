@@ -204,3 +204,14 @@ describe('moveCaretUpLine and moveCaretDownLine', () => {
     expect(moveCaretUpLine(text, 14)).toBe(5) // clamped to end of 'short' (col 5)
   })
 })
+
+describe('indexed vertical grapheme movement', () => {
+  it('keeps vertical movement on whole graphemes at the same display column', () => {
+    const text = 'ab\n👩‍💻中\néx'
+    expect(moveCaretDownLine(text, 1)).toBe(3)
+    expect(moveCaretUpLine(text, 3 + '👩‍💻'.length)).toBe(2)
+    expect(moveCaretDownLine(text, 3 + '👩‍💻'.length)).toBe(text.length)
+    expect(moveCaretDownLine('a\nb', 0)).toBe(2)
+    expect(moveCaretUpLine('a\nb', 0)).toBeUndefined()
+  })
+})

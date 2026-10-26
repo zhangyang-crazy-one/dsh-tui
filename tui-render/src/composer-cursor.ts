@@ -7,10 +7,7 @@
  * @module @deepseek-ai/dsh-tui-render/composer-cursor
  */
 
-import { displayWidth, escapeContent, wcwidthSafeSlice } from './content.ts'
-
-/** Grapheme splitter for left/right caret steps. */
-const GRAPHEME = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+import { composerIndex } from './composer-index.ts'
 
 /** One caret position on the composer's line/column grid. */
 export interface ComposerCaretPosition {
@@ -33,12 +30,10 @@ export function composerCursorPosition(
   text: string,
   caretIndex: number,
 ): ComposerCaretPosition {
-  const clamped = Math.max(0, Math.min(caretIndex, text.length))
-  const before = text.slice(0, clamped)
-  const lines = before.split('\n')
-  // v8 ignore next -- String.prototype.split('\n') always yields at least one string.
-  const lastLine = lines[lines.length - 1] ?? ''
-  return { row: lines.length - 1, col: displayWidth(lastLine) }
+  const index = composerIndex(text)
+  const clamped = clampCaretIndex(text, caretIndex)
+  const row = index.rowAt(clamped)
+  return { row, col: index.line(row).columnAt(clamped - (index.lineStarts[row] as number), true) }
 }
 
 /**
@@ -54,21 +49,7 @@ export function composerLineWindow(text: string, caretIndex: number | undefined,
   caretColumn: number
   hiddenPrefix: boolean
 } {
-  const safe = (value: string): string => escapeContent(value).replace(/\t/gu, '\\t')
-  const escaped = safe(text)
-  const caret = caretIndex === undefined ? 0 : displayWidth(safe(text.slice(0, caretIndex)))
-  const hiddenPrefix = caret >= columns
-  const budget = Math.max(1, columns - 1 - (hiddenPrefix ? 1 : 0))
-  const desiredStart = Math.max(0, caret - budget)
-  let startColumn = 0
-  let startOffset = 0
-  if (desiredStart > 0) for (const part of GRAPHEME.segment(escaped)) {
-    if (startColumn >= desiredStart) break
-    startColumn += displayWidth(part.segment)
-    startOffset += part.segment.length
-  }
-  return { text: wcwidthSafeSlice(escaped.slice(startOffset), budget), startColumn,
-    caretColumn: caret - startColumn + (hiddenPrefix ? 1 : 0), hiddenPrefix }
+  return composerIndex(text).line(0).window(caretIndex, columns)
 }
 
 /**
@@ -97,22 +78,22 @@ export function moveCaretByGrapheme(
   direction: -1 | 1,
 ): number {
   const caret = clampCaretIndex(text, caretIndex)
-  if (direction < 0) {
-    if (caret <= 0) return 0
-    let last = 0
-    let offset = 0
-    for (const part of GRAPHEME.segment(text.slice(0, caret))) {
-      last = offset
-      offset += part.segment.length
-    }
-    return last
+  const index = composerIndex(text)
+  const row = index.rowAt(caret)
+  const start = index.lineStarts[row] as number
+  const line = index.line(row)
+  const local = caret - start
+  if (direction < 0 && local === 0) return Math.max(0, caret - (text[caret - 2] === '\r' ? 2 : 1))
+  if (direction > 0 && text[caret] === '\r' && text[caret + 1] === '\n') return caret + 2
+  if (direction > 0 && local === line.text.length) return Math.min(text.length, caret + 1)
+  let low = 0
+  let high = line.offsets.length
+  while (low < high) {
+    const mid = (low + high) >>> 1
+    if ((line.offsets[mid] as number) < local || (direction > 0 && line.offsets[mid] === local)) low = mid + 1
+    else high = mid
   }
-  if (caret >= text.length) return text.length
-  for (const part of GRAPHEME.segment(text.slice(caret))) {
-    return caret + part.segment.length
-  }
-  // v8 ignore next -- Intl.Segmenter yields a grapheme for every non-empty remainder.
-  return text.length
+  return start + (line.offsets[direction < 0 ? Math.max(0, low - 1) : low] ?? line.text.length)
 }
 
 /**
@@ -122,14 +103,7 @@ export function moveCaretByGrapheme(
  * @returns new caret offset, or undefined if already on the first line.
  */
 export function moveCaretUpLine(text: string, caretIndex: number): number | undefined {
-  const caret = clampCaretIndex(text, caretIndex)
-  const prevNewline = text.lastIndexOf('\n', caret - 1)
-  if (prevNewline === -1) return undefined
-  const currentLineStart = prevNewline + 1
-  const col = caret - currentLineStart
-  const lineBeforeStart = text.lastIndexOf('\n', prevNewline - 1) + 1
-  const lineBeforeLength = prevNewline - lineBeforeStart
-  return lineBeforeStart + Math.min(col, lineBeforeLength)
+  return moveCaretVertical(text, caretIndex, -1)
 }
 
 /**
@@ -139,15 +113,18 @@ export function moveCaretUpLine(text: string, caretIndex: number): number | unde
  * @returns new caret offset, or undefined if already on the last line.
  */
 export function moveCaretDownLine(text: string, caretIndex: number): number | undefined {
+  return moveCaretVertical(text, caretIndex, 1)
+}
+
+/** Reuse both line indexes and keep a target inside a wide glyph at its leading edge. */
+function moveCaretVertical(text: string, caretIndex: number, direction: -1 | 1): number | undefined {
+  const index = composerIndex(text)
   const caret = clampCaretIndex(text, caretIndex)
-  const nextNewline = text.indexOf('\n', caret)
-  if (nextNewline === -1) return undefined
-  const currentLineStart = text.lastIndexOf('\n', caret - 1) + 1
-  const col = caret - currentLineStart
-  let nextLineEnd = text.indexOf('\n', nextNewline + 1)
-  if (nextLineEnd === -1) nextLineEnd = text.length
-  const nextLineLength = nextLineEnd - (nextNewline + 1)
-  return (nextNewline + 1) + Math.min(col, nextLineLength)
+  const row = index.rowAt(caret)
+  const targetRow = row + direction
+  if (targetRow < 0 || targetRow >= index.lineStarts.length) return undefined
+  const column = index.line(row).columnAt(caret - (index.lineStarts[row] as number))
+  return (index.lineStarts[targetRow] as number) + index.line(targetRow).offsetAtColumn(column)
 }
 
 /** Viewport used to turn composer caret geometry into a frame-suffix CSI anchor. */
@@ -171,6 +148,8 @@ export interface ComposerFrameAnchorOptions {
    * those rows must be counted in `up`.
    */
   rowsBelow?: number
+  /** Logical line range actually painted by a windowed composer. */
+  lineWindow?: { start: number; end: number }
 }
 
 /**
@@ -200,7 +179,7 @@ export function composerFrameAnchor(
   options: ComposerFrameAnchorOptions,
 ): ComposerFrameAnchor {
   const caret = composerCursorPosition(text, caretIndex)
-  const lineCount = Math.max(1, text.split('\n').length)
+  const lineCount = options.lineWindow?.end ?? composerIndex(text).lineStarts.length
   const rowsBelow = Math.max(0, options.rowsBelow ?? 0)
   const lastLineUp = lineCount - 1 - caret.row + rowsBelow
   const upFromCursor = options.fullscreen ? lastLineUp : lastLineUp + 1

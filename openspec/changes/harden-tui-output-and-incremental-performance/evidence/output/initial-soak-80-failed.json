@@ -1,0 +1,112 @@
+{
+  "frames": 3439,
+  "compared": 3338,
+  "transitions": 99,
+  "failed": 13,
+  "examples": [
+    {
+      "offset": 490799,
+      "error": "Missing canonical tick in a stable frame"
+    },
+    {
+      "offset": 497252,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_6 TICK_150 ROW_0                                                 ",
+          "expected": "  TURN_6 TICK_151 ROW_0                                                 "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_6 TICK_150 ROW_1                                                 ",
+          "expected": "  TURN_6 TICK_151 ROW_1                                                 "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_6 TICK_150 ROW_2                                                 ",
+          "expected": "  TURN_6 TICK_151 ROW_2                                                 "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_6 TICK_150 ROW_3                                                 ",
+          "expected": "  TURN_6 TICK_151 ROW_3                                                 "
+        }
+      ]
+    },
+    {
+      "offset": 1474785,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_17 TICK_449 ROW_0                                                ",
+          "expected": "  TURN_18 TICK_450 ROW_0                                                "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_17 TICK_449 ROW_1                                                ",
+          "expected": "  TURN_18 TICK_450 ROW_1                                                "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_17 TICK_449 ROW_2                                                ",
+          "expected": "  TURN_18 TICK_450 ROW_2                                                "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_17 TICK_449 ROW_3                                                ",
+          "expected": "  TURN_18 TICK_450 ROW_3                                                "
+        }
+      ]
+    },
+    {
+      "offset": 2455319,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_29 TICK_749 ROW_0                                                ",
+          "expected": "  TURN_30 TICK_750 ROW_0                                                "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_29 TICK_749 ROW_1                                                ",
+          "expected": "  TURN_30 TICK_750 ROW_1                                                "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_29 TICK_749 ROW_2                                                ",
+          "expected": "  TURN_30 TICK_750 ROW_2                                                "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_29 TICK_749 ROW_3                                                ",
+          "expected": "  TURN_30 TICK_750 ROW_3                                                "
+        }
+      ]
+    },
+    {
+      "offset": 3619955,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_44 TICK_1108 ROW_0                                               ",
+          "expected": "  TURN_44 TICK_1109 ROW_0                                               "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_44 TICK_1108 ROW_1                                               ",
+          "expected": "  TURN_44 TICK_1109 ROW_1                                               "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_44 TICK_1108 ROW_2                                               ",
+          "expected": "  TURN_44 TICK_1109 ROW_2                                               "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_44 TICK_1108 ROW_3                                               ",
+          "expected": "  TURN_44 TICK_1109 ROW_3                                               "
+        }
+      ]
+    }
+  ]
+}

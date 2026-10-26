@@ -1,0 +1,59 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /tmp/dsh-tui-validation-aN6rfv/dsh
+
+ ❯ |thread-safe| packages/tui/tui-render/tests/input-selection.spec.ts (12 tests | 1 failed) 64ms
+   × keeps End and Shift+End before the whole CRLF grapheme 6ms
+ ❯ |thread-safe| packages/tui/tui-render/tests/input-bar-window.spec.tsx (13 tests | 3 failed) 308ms
+     × anchors stale editor offset 2 at a whole emoji instead of inside its terminal cells 6ms
+     × anchors stale editor offset 3 at a whole emoji instead of inside its terminal cells 2ms
+     × anchors stale editor offset 4 at a whole emoji instead of inside its terminal cells 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/tui/tui-render/tests/input-bar-window.spec.tsx > external caret normalization > anchors stale editor offset 2 at a whole emoji instead of inside its terminal cells
+ FAIL  |thread-safe| packages/tui/tui-render/tests/input-bar-window.spec.tsx > external caret normalization > anchors stale editor offset 3 at a whole emoji instead of inside its terminal cells
+ FAIL  |thread-safe| packages/tui/tui-render/tests/input-bar-window.spec.tsx > external caret normalization > anchors stale editor offset 4 at a whole emoji instead of inside its terminal cells
+AssertionError: expected '\u001b[24;7H\u001b[?25h\u001b[?2026l' to contain '\u001b[24;5H'
+
+Expected: "[24;5H"
+Received: "[24;7H[?25h[?2026l"
+
+ ❯ packages/tui/tui-render/tests/input-bar-window.spec.tsx:119:58
+    117|     try {
+    118|       await instance.waitUntilRenderFlush()
+    119|       expect(transformFrameChunk('\x1b[?2026l', 'none')).toContain('\x…
+       |                                                          ^
+    120|     } finally { await disposeRenderer(instance); setFrameCaret(undefin…
+    121|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |thread-safe| packages/tui/tui-render/tests/input-selection.spec.ts > keeps End and Shift+End before the whole CRLF grapheme
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/tui/tui-render/tests/input-selection.spec.ts:122:30
+    120|   for (const extend of [false, true]) {
+    121|     const state = moveInputSelection({ text, caretIndex: 0 }, { direct…
+    122|     expect(state.caretIndex).toBe(1)
+       |                              ^
+    123|     expect(selectedInputText(state)).toBe(extend ? 'a' : undefined)
+    124|     expect(deleteInputSelection(state, 'forward').text).toBe(extend ? …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  4 failed | 21 passed (25)
+   Start at  20:14:25
+   Duration  674ms (transform 268ms, setup 70ms, import 322ms, tests 372ms, environment 0ms)
+
+[?25h

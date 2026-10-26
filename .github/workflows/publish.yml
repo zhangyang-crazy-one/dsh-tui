@@ -27,6 +27,9 @@ jobs:
   publish:
     name: Publish ${{ github.event.release.tag_name || inputs.tag }}
     runs-on: ubuntu-latest
+    env:
+      DSH_SOURCE: ${{ runner.temp }}/dsh-source
+      TMPDIR: ${{ runner.temp }}
     steps:
       - name: Check out release tag
         uses: actions/checkout@v6
@@ -64,26 +67,36 @@ jobs:
           fi
           echo "npm ${package_name}@${package_version} already contains this Git commit."
           echo "exists=true" >> "${GITHUB_OUTPUT}"
-      - name: Run tests
-        run: npm test
-      - name: Verify package contents
-        run: npm run pack:check
+      - name: Prepare compatible DSH clone source and pinned pnpm
+        run: |
+          compatible_dsh_version="$(node --input-type=module -e "import { COMPATIBLE_DSH_VERSION } from './src/launcher.js'; console.log(COMPATIBLE_DSH_VERSION)")"
+          git clone --depth 1 --branch "dsh-v${compatible_dsh_version}" https://github.com/deepseek-ai/deepseek-harness.git "${DSH_SOURCE}"
+          corepack enable
+          corepack prepare "$(node -p "require(process.env.DSH_SOURCE + '/package.json').packageManager")" --activate
+      - name: Validate current sources and packed entrypoints
+        id: validation
+        run: npm run validate
       - name: Publish package
         if: steps.registry.outputs.exists != 'true'
         env:
+          VERIFIED_TARBALL: ${{ steps.validation.outputs.tarball }}
+          VERIFIED_PROVENANCE: ${{ steps.validation.outputs.provenance }}
           RELEASE_IS_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || inputs.prerelease }}
         run: |
+          npm run verify:artifact -- "${VERIFIED_PROVENANCE}"
           npm_dist_tag="latest"
           if [[ "${RELEASE_IS_PRERELEASE}" == "true" ]]; then
             npm_dist_tag="next"
           fi
-          npm publish --access public --tag "${npm_dist_tag}"
+          npm publish "${VERIFIED_TARBALL}" --access public --tag "${npm_dist_tag}"
       - name: Upload release asset
         env:
+          VERIFIED_TARBALL: ${{ steps.validation.outputs.tarball }}
+          VERIFIED_PROVENANCE: ${{ steps.validation.outputs.provenance }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          tarball="$(npm pack)"
-          gh release upload "${RELEASE_TAG}" "${tarball}" --clobber
+          npm run verify:artifact -- "${VERIFIED_PROVENANCE}"
+          gh release upload "${RELEASE_TAG}" "${VERIFIED_TARBALL}" "${VERIFIED_PROVENANCE}" --clobber
 
 

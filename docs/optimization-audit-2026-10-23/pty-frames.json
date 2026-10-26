@@ -1,0 +1,13 @@
+{
+  "source": "/tmp/dsh-tui-audit-20261023-pty/capture.ansi",
+  "columns": 80,
+  "rows": 24,
+  "frames": 656,
+  "snapshotComparedFrames": 655,
+  "comparedRows": 11135,
+  "suppressedGeometryFrames": 0,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

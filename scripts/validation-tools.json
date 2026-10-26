@@ -1,0 +1,20 @@
+{
+  "name": "@dsh-tui/validation-tools",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "tsx": "4.23.13",
+    "js-yaml": "4.3.2",
+    "vite-tsconfig-paths": "6.1.1"
+  },
+  "dshValidation": {
+    "version": "0.2.1-rc.3",
+    "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
+    "upstreamLockSha256": "911b049924e8256d8d6e684235cf935ca75b28fd0dd46f0c3b316a51c2cf5dc1",
+    "installedLockSha256": "4a76d0b4e108e6eb5c83c12b9816ef28f460a2339eb02a6fb1b69af6423ba3df",
+    "patchSha256": "cc3ca6f92d0e567e3a67021b88800ea1ccbd7a8cb2c9c181fae09196cd39c607"
+  }
+}

@@ -11,8 +11,9 @@ test("CI checks supported Node versions and the packed package", () => {
   assert.match(workflow, /pull_request:/u);
   assert.match(workflow, /push:\n\s+branches: \[main\]/u);
   assert.match(workflow, /node-version: \["22\.19\.0", "24"\]/u);
-  assert.match(workflow, /npm test/u);
-  assert.match(workflow, /npm run pack:check/u);
+  assert.match(workflow, /npm run validate/u);
+  assert.match(workflow, /npm run verify:artifact/u);
+  assert.doesNotMatch(workflow, /vitest\.mjs.*run packages\/tui/u);
 });
 
 test("release publishing uses GitHub OIDC and validates the release tag", () => {
@@ -27,6 +28,10 @@ test("release publishing uses GitHub OIDC and validates the release tag", () => 
   assert.match(workflow, /published_git_head.*checkout_git_head/su);
   assert.match(workflow, /github\.event\.release\.prerelease/u);
   assert.match(workflow, /if: steps\.registry\.outputs\.exists != 'true'/u);
-  assert.match(workflow, /npm publish --access public --tag "\$\{npm_dist_tag\}"/u);
+  assert.match(workflow, /npm run validate/u);
+  assert.match(workflow, /npm run verify:artifact/u);
+  assert.match(workflow, /npm publish "\$\{VERIFIED_TARBALL\}" --access public --tag "\$\{npm_dist_tag\}"/u);
+  assert.match(workflow, /gh release upload.*VERIFIED_TARBALL/u);
+  assert.doesNotMatch(workflow, /tarball="\$\(npm pack\)"/u);
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/u);
 });

@@ -57,6 +57,8 @@ import {
 } from './frame-snapshot.ts'
 import type { VisibleFrameSnapshot } from './frame-snapshot.ts'
 import type { PhysicalLine } from './physical-line.ts'
+import { TerminalChunks, terminalBackground } from './terminal-chunks.ts'
+import { deferTerminalPaint, registerTerminalOutput, TerminalOutput, type OutputSource } from './terminal-output.ts'
 
 /** Resets the active background to the terminal default. */
 const BG_OFF = '\x1b[49m'
@@ -85,6 +87,9 @@ const HIDE_CURSOR = '\x1b[?25l'
 
 /** Raw overlay writer installed on the wrapped stdout. */
 const WRITE_FRAME_OVERLAY = Symbol('dsh.tui.write-frame-overlay')
+const DISPOSE_FRAME_OUTPUT = Symbol('dsh.tui.dispose-frame-output')
+export const MAX_PENDING_CONTROL_BYTES = 64 * 1024
+export const MAX_PENDING_CONTROLS = 64
 
 /**
  * The composer's absolute one-based terminal position. `'hide'` parks the
@@ -416,6 +421,7 @@ export function writePublishedFrameRail(
   stdout: NodeJS.WriteStream,
   tier: ColorTier = currentTier(),
 ): void {
+  if (deferTerminalPaint(stdout, 'rail', () => writePublishedFrameRail(stdout, tier))) return
   if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return
   const overlay = railOverlay(tier, true)
   if (overlay === '') return
@@ -439,6 +445,7 @@ export function writePublishedFrameSnapshot(
   stdout: NodeJS.WriteStream,
   tier: ColorTier = currentTier(),
 ): void {
+  if (deferTerminalPaint(stdout, 'transcript', () => writePublishedFrameSnapshot(stdout, tier))) return
   if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return
   const transcript = transcriptOverlay(tier, true)
   const rail = railOverlay(tier, false)
@@ -513,6 +520,19 @@ type WriteCall = (chunk: unknown, ...args: unknown[]) => boolean
 /** Wrapped stdout with a raw path for an already transformed rail overlay. */
 type FrameOverlayStream = NodeJS.WriteStream & {
   [WRITE_FRAME_OVERLAY]?: (chunk: string, scrollRevision?: number) => boolean
+  [DISPOSE_FRAME_OUTPUT]?: () => void
+}
+
+/** Release stream-local parser state when Ink relinquishes the terminal. */
+export function disposeFrameOutput(stdout: NodeJS.WriteStream): void {
+  (stdout as FrameOverlayStream)[DISPOSE_FRAME_OUTPUT]?.()
+}
+
+function invalidateFramePaint(): void {
+  paintedVisibleFrame = undefined
+  paintedTranscriptRepaintKey = undefined
+  paintedFrameRail = undefined
+  transcriptInvalidated = true
 }
 
 /** Ink 7 appends EL at the last column; terminals erase that just-painted glyph. */
@@ -541,10 +561,41 @@ export function wrapStdoutForFrameBg(
   let synchronizedFrameOpen = false
   let inkBottomRow = stdout.rows
   let inkCursorRow = 1
-  const transformingWrite: WriteCall = (chunk, ...args) => {
-    if (typeof chunk !== 'string') return writeMeasured(chunk, args)
-    if (chunk.includes(START_SYNC)) synchronizedFrameOpen = true
-    if (chunk.includes(END_SYNC)) synchronizedFrameOpen = false
+  const parser = new TerminalChunks()
+  const output = new TerminalOutput(stdout, invalidateFramePaint, () => ({ columns: stdout.columns, rows: stdout.rows,
+    parserPendingBytes: parser.pendingBytes, sequenceOpen: parser.incomplete, caret: frameCaret }))
+  const controls: { bytes: string; source: OutputSource }[] = []
+  const deferredPaints = new Map<string, () => void>()
+  let controlBytes = 0
+  let background = ''
+  let disposed = false
+  const control = (bytes: string, source: OutputSource): boolean => {
+    if (disposed) return false
+    if (parser.incomplete || synchronizedFrameOpen) {
+      if (controlBytes + Buffer.byteLength(bytes) > MAX_PENDING_CONTROL_BYTES || controls.length >= MAX_PENDING_CONTROLS) throw new Error('TUI deferred control budget exceeded')
+      controls.push({ bytes, source })
+      controlBytes += Buffer.byteLength(bytes)
+      return false
+    }
+    return output.write(bytes + caretSuffix(), source)
+  }
+  const flushControls = (): void => {
+    if (parser.incomplete || synchronizedFrameOpen) return
+    for (const item of controls.splice(0)) output.write(item.bytes + caretSuffix(), item.source)
+    controlBytes = 0
+    const paints = [...deferredPaints]
+    deferredPaints.clear()
+    for (const [key, paint] of paints) output.latest(key, paint)
+  }
+  const unregister = registerTerminalOutput(wrapped, { control, output, defer: (key, paint) => {
+    if (!parser.incomplete && !synchronizedFrameOpen) return false
+    deferredPaints.set(key, paint)
+    return true
+  } })
+  const transformComplete = (chunk: string): { text: string; painted?: () => void } => {
+    const syncStart = chunk.lastIndexOf(START_SYNC)
+    const syncEnd = chunk.lastIndexOf(END_SYNC)
+    if (syncStart >= 0 || syncEnd >= 0) synchronizedFrameOpen = syncStart > syncEnd
     const source = stdout.isTTY ? preserveFullWidthRows(chunk, stdout.columns) : chunk
     // Ink erases and diffs upward from the bottom of its fullscreen output.
     // Its cursor bookkeeping does not include the composer's absolute suffix.
@@ -569,23 +620,52 @@ export function wrapStdoutForFrameBg(
       : inkChunk.includes(START_SYNC) ? inkChunk.replace(START_SYNC, START_SYNC + released)
         : synchronizedFrameOpen ? released + inkChunk : START_SYNC + released + END_SYNC + inkChunk
     let onScrollPaint: (() => void) | undefined
-    const transformed = transformFrameChunk(frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
+    const inherited = background
+    background = terminalBackground(chunk, background)
+    const transformed = transformFrameChunk(inherited + frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
       const revision = visibleFrameSnapshot()?.scrollRevision
       if (frameMetrics !== undefined && revision !== undefined) {
         onScrollPaint = takeScrollPaintCompletion(frameMetrics, revision)
       }
     })
-    return writeMeasured(transformed, args, onScrollPaint)
+    return { text: transformed, ...(onScrollPaint === undefined ? {} : { painted: onScrollPaint }) }
   }
-  const writeMeasured = (transformed: unknown, args: unknown[], onScrollPaint?: () => void): boolean => {
-    if (frameMetrics !== undefined && typeof transformed === 'string') {
-      frameMetrics.addWrittenCells(countWrittenCells(transformed))
+  const transformingWrite: WriteCall = (chunk, ...args) => {
+    if (disposed) {
+      const error = new Error('TUI output has been disposed')
+      const callback = args.at(-1)
+      if (typeof callback === 'function') { callback(error); return false }
+      throw error
+    }
+    if (typeof chunk !== 'string' && !(chunk instanceof Uint8Array)) return writeMeasured(chunk, args)
+    const parts = parser.push(chunk)
+    const painted: (() => void)[] = []
+    const transformed = parts.map(part => {
+      if (!part.decorate) return part.text
+      const next = transformComplete(part.text)
+      if (next.painted !== undefined) painted.push(next.painted)
+      return next.text
+    }).join('')
+    if (transformed === '') {
+      const callback = args.at(-1)
+      if (typeof callback === 'function') queueMicrotask(() => callback())
+      return true
+    }
+    const accepted = writeMeasured(transformed, args, () => { for (const complete of painted) complete() })
+    flushControls()
+    return accepted
+  }
+  const writeMeasured = (transformed: unknown, args: unknown[], onScrollPaint?: () => void, source: OutputSource = 'ink'): boolean => {
+    if (typeof transformed === 'string') {
+      frameMetrics?.addWrittenCells(countWrittenCells(transformed))
       const last = args.at(-1)
       const onDrain = (error?: unknown): void => {
-        if (error !== undefined && error !== null) return
+        if (error !== undefined && error !== null) { invalidateFramePaint(); return }
         onScrollPaint?.()
-        completeDeltaStdoutDrain(frameMetrics)
-        if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented()
+        if (frameMetrics !== undefined) {
+          completeDeltaStdoutDrain(frameMetrics)
+          if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented()
+        }
       }
       if (typeof last === 'function') {
         const original = last as (...callbackArgs: unknown[]) => void
@@ -597,14 +677,34 @@ export function wrapStdoutForFrameBg(
         args.push(onDrain)
       }
     }
-    return write(transformed, ...args)
+    try {
+      if (typeof transformed === 'string') return output.write(transformed, source, args.at(-1) as (error?: Error | null) => void)
+      return write(transformed, ...args)
+    } catch (error) { invalidateFramePaint(); throw error }
   }
   wrapped.write = transformingWrite
   const overlayStream = wrapped as FrameOverlayStream
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk, revision) => writeMeasured(chunk, [],
-    frameMetrics !== undefined && revision !== undefined
-      ? takeScrollPaintCompletion(frameMetrics, revision)
-      : undefined)
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk, revision) => {
+    if (parser.incomplete || synchronizedFrameOpen) return control(chunk, 'transcript')
+    const painted = frameMetrics !== undefined && revision !== undefined ? takeScrollPaintCompletion(frameMetrics, revision) : undefined
+    return writeMeasured(chunk, [], painted, 'transcript')
+  }
+  overlayStream[DISPOSE_FRAME_OUTPUT] = () => {
+    if (disposed) return
+    disposed = true
+    const cancel = parser.dispose() + (synchronizedFrameOpen ? END_SYNC : '')
+    if (cancel !== '') output.write(cancel, 'lifecycle')
+    background = ''
+    synchronizedFrameOpen = false
+    for (const item of controls.splice(0)) output.write(item.bytes, item.source)
+    deferredPaints.clear()
+    controlBytes = 0
+    unregister()
+    output.dispose()
+    invalidateFramePaint()
+    frameCaret = undefined
+    frameRail = undefined
+  }
   return wrapped
 }
 

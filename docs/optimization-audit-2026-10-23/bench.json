@@ -1,0 +1,38 @@
+{
+  "node": "v22.23.1",
+  "results": [
+    {
+      "case": "bounded-wrap",
+      "codeUnits": 7000,
+      "iterations": 10,
+      "ms": 4.143462999999997
+    },
+    {
+      "case": "bounded-wrap",
+      "codeUnits": 35000,
+      "iterations": 10,
+      "ms": 2.502440999999976
+    },
+    {
+      "case": "bounded-wrap",
+      "codeUnits": 70000,
+      "iterations": 10,
+      "ms": 2.625152000000071
+    },
+    {
+      "case": "history-initial-projection",
+      "count": 200,
+      "ms": 239.94759399999998
+    },
+    {
+      "case": "history-initial-projection",
+      "count": 1000,
+      "ms": 700.4368309999999
+    },
+    {
+      "case": "history-initial-projection",
+      "count": 2000,
+      "ms": 1105.8445600000002
+    }
+  ]
+}

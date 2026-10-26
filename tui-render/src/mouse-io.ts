@@ -19,6 +19,8 @@ import {
 } from './sgr-mouse.ts'
 import { copyText } from './clipboard.ts'
 import { openUrl } from './open-url.ts'
+import { writeTerminalControl } from './terminal-output.ts'
+import { TerminalChunks } from './terminal-chunks.ts'
 
 /** Scroll callback the loop registers for wheel and edge auto-scroll. */
 export type MouseScrollListener = (delta: number) => void
@@ -106,6 +108,7 @@ export class MouseSession {
   readonly atlas: ScreenAtlas
   private lastFrameRevision: string | undefined
   private stdoutSynchronized = false
+  private outputBoundary = new TerminalChunks()
   private drag:
     | { start: ScreenPoint; moved: boolean }
     | undefined
@@ -245,9 +248,10 @@ export class MouseSession {
    * @returns chunk plus overlay and caret restore.
    */
   feedStdout(chunk: string): string {
+    const complete = this.outputBoundary.push(chunk)
     const snapshot = visibleFrameSnapshot()
     if (snapshot === undefined) {
-      this.atlas.feed(chunk)
+      for (const part of complete) if (part.decorate) this.atlas.feed(part.text)
     } else if (snapshot.revision !== this.lastFrameRevision) {
       this.atlas.applyFrameSnapshot(snapshot)
       this.lastFrameRevision = snapshot.revision
@@ -255,7 +259,7 @@ export class MouseSession {
     const syncStart = chunk.lastIndexOf(START_SYNC)
     const syncEnd = chunk.lastIndexOf(END_SYNC)
     if (syncStart >= 0 || syncEnd >= 0) this.stdoutSynchronized = syncStart > syncEnd
-    if (this.selection === undefined || this.drag?.moved !== true || chunk === '' || this.stdoutSynchronized) return chunk
+    if (this.selection === undefined || this.drag?.moved !== true || chunk === '' || this.stdoutSynchronized || this.outputBoundary.incomplete) return chunk
     const overlay = this.atlas.selectionOverlay(this.selection.start, this.selection.end)
     if (overlay === '') return chunk
     this.paintedSelection = this.selection
@@ -276,6 +280,7 @@ export class MouseSession {
   /** Clear timers. */
   dispose(): void {
     this.stopEdge()
+    this.outputBoundary.dispose()
     this.railDrag = undefined
   }
 
@@ -389,7 +394,7 @@ export function attachMouseIo(options: {
     rows: options.stdout.rows,
     copyText: (text) => {
       copyText(text, (chunk) => {
-        options.stdout.write(chunk)
+          writeTerminalControl(options.stdout, chunk, 'clipboard')
       })
     },
     onScroll: notifyMouseScroll,
@@ -409,7 +414,7 @@ export function attachMouseIo(options: {
   options.stdout.write(ENABLE_SGR_MOUSE)
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
     const repaint = session.handle(event)
-    if (repaint !== '') write(repaint)
+    if (repaint !== '') writeTerminalControl(options.stdout, repaint, 'selection')
   }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS)
   const wrappedStdout = Object.create(options.stdout) as NodeJS.WriteStream
   const transformingWrite: WriteCall = (chunk, ...args) => {
@@ -429,7 +434,7 @@ export function attachMouseIo(options: {
       options.stdout.off('resize', onResize)
       wrappedStdin.dispose()
       session.dispose()
-      options.stdout.write(DISABLE_SGR_MOUSE)
+      writeTerminalControl(options.stdout, DISABLE_SGR_MOUSE, 'lifecycle')
     },
   }
 }

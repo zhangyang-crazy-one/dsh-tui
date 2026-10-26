@@ -59,7 +59,7 @@ function settings(overrides = {}) {
   return {
     runtimeDirectory: RUNTIME,
     sourceUrl: 'https://github.com/deepseek-ai/deepseek-harness.git',
-    sourceRef: 'dsh-v0.2.1-rc.2',
+    sourceRef: 'dsh-v0.2.1-rc.3',
     packageManager: 'pnpm',
     homeDirectory: '/home/test',
     ...overrides,
@@ -192,7 +192,7 @@ test('update clones an absent runtime and installs frozen dependencies', () => {
     {
       operation: 'run',
       command: 'git',
-      args: ['clone', '--branch', 'dsh-v0.2.1-rc.2', '--single-branch', '--', settings().sourceUrl, RUNTIME],
+      args: ['clone', '--branch', 'dsh-v0.2.1-rc.3', '--single-branch', '--', settings().sourceUrl, RUNTIME],
       options: { capture: true },
     },
     {
@@ -270,7 +270,7 @@ test('update fast-forwards a clean runtime and refreshes dependencies', () => {
   assert.deepEqual(fixture.calls.filter(call => call.operation === 'run').map(call => [call.command, call.args]), [
     ['git', ['status', '--porcelain']],
     ['git', ['rev-parse', 'HEAD']],
-    ['git', ['fetch', '--no-tags', '--', settings().sourceUrl, 'dsh-v0.2.1-rc.2']],
+    ['git', ['fetch', '--no-tags', '--', settings().sourceUrl, 'dsh-v0.2.1-rc.3']],
     ['git', ['rev-parse', 'FETCH_HEAD']],
     ['git', ['merge-base', '--is-ancestor', 'oldsha', 'newsha']],
     ['git', ['merge', '--ff-only', 'newsha']],
@@ -672,11 +672,12 @@ test('an installed tui bundle is not reinstalled and PATH success stops package 
 test('engineCompatibility admits the bundle release line and rejects other lines with an install hint', () => {
   assert.deepEqual(engineCompatibility('0.2.0-rc.2\n'), { ok: true })
   assert.deepEqual(engineCompatibility('0.2.1-rc.2'), { ok: true })
+  assert.deepEqual(engineCompatibility('0.2.1-rc.3'), { ok: true })
   assert.deepEqual(engineCompatibility('0.2.1-alpha.2'), { ok: true })
   assert.deepEqual(engineCompatibility('unknown'), { ok: true })
   const rejected = engineCompatibility('0.1.6-alpha.2')
   assert.equal(rejected.ok, false)
-  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.1-rc\.2/)
+  assert.match(rejected.reason, /npm install --global @deepseek-ai\/dsh@0\.2\.1-rc\.3/)
   assert.deepEqual(engineCompatibility('0.1.6-alpha.2', { DSH_TUI_SKIP_ENGINE_CHECK: '1' }), { ok: true })
 })
 

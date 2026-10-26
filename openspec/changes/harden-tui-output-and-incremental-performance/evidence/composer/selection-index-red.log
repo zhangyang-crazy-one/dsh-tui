@@ -1,0 +1,38 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+ ❯ tui-render/tests/input-selection.spec.ts (10 tests | 3 failed) 7055ms
+     × does not segment the full prefix for repeated 700-unit tail selections 57ms
+     × does not segment the full prefix for repeated 7000-unit tail selections 418ms
+     × does not segment the full prefix for repeated 70000-unit tail selections 6544ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tui-render/tests/input-selection.spec.ts > indexed selection boundary reuse > does not segment the full prefix for repeated 700-unit tail selections
+ FAIL  tui-render/tests/input-selection.spec.ts > indexed selection boundary reuse > does not segment the full prefix for repeated 7000-unit tail selections
+ FAIL  tui-render/tests/input-selection.spec.ts > indexed selection boundary reuse > does not segment the full prefix for repeated 70000-unit tail selections
+AssertionError: expected [ …(318) ] to have a length of +0 but got 318
+
+- Expected
++ Received
+
+- 0
++ 318
+
+ ❯ tui-render/tests/input-selection.spec.ts:81:34
+     79|         expect(selectedInputText(state)).toBe(text.slice(state.caretIn…
+     80|       }
+     81|       expect(segment.mock.calls).toHaveLength(0)
+       |                                  ^
+     82|       expect(replaceInputSelection(state, '替换\n[图片 #2]').text)
+     83|         .toBe(text.slice(0, state.caretIndex) + '替换\n[图片 #2]')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 7 passed (10)
+   Start at  19:14:31
+   Duration  7.34s (transform 108ms, setup 0ms, import 151ms, tests 7.05s, environment 0ms)
+

@@ -1,0 +1,14 @@
+{
+  "scoped-baseline": {
+    "src/loop.tsx": "b86c728be70f6d9b5288862bb2463fac2abcb3be3658028ff6d44b5c3f1a574b",
+    "src/stream-view.tsx": "e8ce2ad95db9601d6c8a2c3ddf3dbe4381226be78c7804476b5eef38533384f1",
+    "src/input-bar.tsx": "fda9de5356354d1cbf057dfd82acde53674567f198d742b4c6ba25d36687a44f",
+    "tests/loop-input.spec.tsx": "e3fb4d39733ec6ea55d4e82b6fefc9689d815ddecf2fd68e69ed2333957b9b85"
+  },
+  "scoped-after": {
+    "src/loop.tsx": "edd3e4706cfcab16dfdf30197f3acae28adec526a86ac8aa7b35412f0ef7e9ef",
+    "src/stream-view.tsx": "e8ce2ad95db9601d6c8a2c3ddf3dbe4381226be78c7804476b5eef38533384f1",
+    "src/input-bar.tsx": "fda9de5356354d1cbf057dfd82acde53674567f198d742b4c6ba25d36687a44f",
+    "tests/loop-input.spec.tsx": "e3fb4d39733ec6ea55d4e82b6fefc9689d815ddecf2fd68e69ed2333957b9b85"
+  }
+}

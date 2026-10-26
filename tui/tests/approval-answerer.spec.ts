@@ -141,6 +141,34 @@ describe('live-agent approval answerer', () => {
     expect(controller.getApprovalPane().open).toBe(false)
   })
 
+  it('publishes a consistent generating/approval cut and restores dialog ownership without animation ticks', async () => {
+    const { ctx, controller, liveAgent } = await bench()
+    fibers.push(ctx)
+    const seen: { status: string; open: boolean }[] = []
+    const unsubscribe = controller.subscribe(() => {
+      seen.push({ status: controller.getModel().status, open: controller.getApprovalPane().open })
+    })
+    liveAgent.session.append('turn/start', { turn: 1 })
+    const allowed = ctx.approval.request({ agent: liveAgent, toolName: 'bash', reason: 'cross-domain' })
+    try {
+      await whenOpen(controller)
+      await vi.waitFor(() => expect(seen).toContainEqual({ status: 'generating', open: true }))
+      const model = controller.getModel()
+      const pane = controller.getApprovalPane()
+      // Other panels cannot take keyboard ownership from the pending dialog.
+      controller.dispatch({ kind: 'command', query: 'settings' })
+      expect(controller.getSettingsPane().open).toBe(false)
+      controller.dispatch({ kind: 'approval-detail' })
+      expect(controller.getApprovalPane()).not.toBe(pane)
+      expect(controller.getApprovalPane().detailsOpen).toBe(true)
+      expect(controller.getModel()).toBe(model)
+      controller.dispatch({ kind: 'approval-allow' })
+      await expect(allowed).resolves.toBe('allowed-once')
+      await vi.waitFor(() => expect(seen.at(-1)).toEqual({ status: 'generating', open: false }))
+      expect(seen.every(cut => cut.status === 'generating')).toBe(true)
+    } finally { unsubscribe(); await controller.dispose() }
+  })
+
   it('calls next() for another agent and leaves the pane closed', async () => {
     const { ctx, controller } = await bench()
     fibers.push(ctx)

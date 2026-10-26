@@ -1,0 +1,46 @@
+{
+  "status": "已验证",
+  "tests": {
+    "filesPassed": 8,
+    "testsPassed": 239,
+    "testsSkipped": 1,
+    "skipped": "DSH_SCOPED_BENCH optional benchmark",
+    "log": "selection-integration-final.log"
+  },
+  "selectionBoundary": {
+    "warmRepeatedMoves": 40,
+    "sizesUtf16": [
+      700,
+      7000,
+      70000
+    ],
+    "beforeSegmentationCallsPerSize": 318,
+    "afterSegmentationCallsPerSize": 0,
+    "scope": "moveInputSelection + inputSelectionRange + selectedInputText; replacement/delete also assert no re-segmentation",
+    "red": "selection-index-red.log",
+    "green": "selection-integration-final.log"
+  },
+  "fixtureTypecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit -p tui-render/tests/tsconfig.json",
+    "exitCode": 0,
+    "diagnostics": [],
+    "fixtureIncluded": true,
+    "fileListCommand": "node node_modules/typescript/bin/tsc --listFilesOnly -p tui-render/tests/tsconfig.json",
+    "log": "fixture-standard-tsconfig.log"
+  },
+  "caretWriter": {
+    "source": "caret",
+    "writer": "writeTerminalControl",
+    "registeredQueueRegressionPassed": true,
+    "unregisteredFallbackRegressionPassed": true
+  },
+  "notVerified": [
+    "full application PTY latency",
+    "physical terminal latency",
+    "real external editor executable",
+    "live auth/model calls"
+  ],
+  "integrationOwner": {
+    "loop.tsx composerHeight": "Franklin"
+  }
+}

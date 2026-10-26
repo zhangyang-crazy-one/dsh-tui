@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.0-alpha.55 — 2026-10-26
+
+Prerelease for DSH `0.2.1-rc.3`; npm channel: `next`.
+
+### Changed
+
+- Follow the official rc.3 release: pin runtime dependencies, source-launch defaults and the isolated validation lock to commit `1f81c047fc48fa190a683e469daa699857e9afe8`. The model picker continues to consume DSH's model registry, including the official API-key route's dynamic catalog. Official presets are unchanged.
+- Preserve split ANSI/UTF-8 sequences across writes; coordinate transcript, caret, selection and notifications through a bounded output queue with slow-sink and failure recovery.
+- Limit long-draft rendering to the visible window while retaining the entire draft. Reuse grapheme/line indexes, localize generation animation and invalidate runtime snapshots by dependency.
+- Prepare exact history tails before background indexing, merge active presentation requests before expensive projection, and retire obsolete derived caches.
+- CI and publishing now validate current sources in an isolated DSH clone, reject empty/incomplete test collection, and bind the packed artifact to source, dependency, toolchain and bundle hashes.
+
+### Verification and upgrade
+
+See [rc.3 verification](docs/upstream-rc3-2026-10-26.md) for the current checks and [output/performance evidence](openspec/changes/harden-tui-output-and-incremental-performance/verification.md) for the earlier implementation acceptance. Offline tests and synthetic PTYs do not establish live authentication or the original user's terminal-specific root cause.
+
+Update with `npm install --global @deepseek-ai/dsh@0.2.1-rc.3 @crazyhappyone/dsh-tui@next`, then restart. Source mode uses `dsh-tui update`. The official profile, settings and credential services remain authoritative; no migration is required.
+
+### 中文变更说明
+
+- 跟进 DSH rc.3，统一运行时依赖、源码启动默认 tag 和隔离验证锁；模型列表继续通过官方服务读取，四份官方预设保持一致。
+- 修复 ANSI/UTF-8 跨块输出，协调正文、光标、选区和通知写入，增加有界背压与失败恢复。
+- 长草稿仅绘制可见窗口，保留完整发送内容；复用字素/行索引，局部更新生成动画，按依赖失效快照。
+- 历史优先准备精确尾部，再分批索引；合并活动展示请求，回收过期派生缓存。
+- CI 与发布使用同一完整验证链及产物来源证明。升级引擎与插件后重启；无需迁移配置。
+
+[Full comparison](https://github.com/zhangyang-crazy-one/dsh-tui/compare/v0.1.0-alpha.54...v0.1.0-alpha.55)
+
 ## 0.1.0-alpha.53 — 2026-10-22
 
 Prerelease for DSH `0.2.1-rc.2`; npm channel: `next`.

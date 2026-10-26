@@ -29,6 +29,7 @@ import {
 import type { ReactNode } from 'react'
 import type { DOMElement, Key } from 'ink'
 import { AppShell } from './app-shell.tsx'
+import { GeneratingSpinner } from './generating-spinner.tsx'
 import { StreamView } from './stream-view.tsx'
 import { SessionPane } from './session-pane.tsx'
 import type { SessionPaneState } from './session-pane.tsx'
@@ -62,6 +63,7 @@ import { CommandMenu, completeFirst, completeSelected, filterCommands, moveSelec
 import type { CommandItem } from './command-menu.tsx'
 import { Mention, normalizeMentionInsertion } from './mention.tsx'
 import type { ListMentions, MentionCandidate, MentionPhase } from './mention.tsx'
+import { composerHeight } from './composer-index.ts'
 import { clampCaretIndex, moveCaretByGrapheme, moveCaretUpLine, moveCaretDownLine } from './composer-cursor.ts'
 import { setMouseRailListener, setMouseScrollListener } from './mouse-io.ts'
 import { escapeContent, displayWidth } from './content.ts'
@@ -104,7 +106,7 @@ import type { ToolDetailsPaneState, ToolDetailsInput } from './tool-details-pane
 import { toolPolicyDefaults } from './render-policy.ts'
 import { QueueChip } from './queue-chip.tsx'
 import { conversationWidth } from './conversation-layout.ts'
-import { getBrailleSpinnerFrame, tuiCopy, type TuiLocale } from './ui-copy.ts'
+import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type TranscriptViewportCommandInput = WithoutSequence<TranscriptViewportCommand>
@@ -2199,19 +2201,6 @@ export function TuiLoop({
   useEffect(() => {
     if (model.status === 'generating') frameProbe?.beginMeasurement()
   }, [frameProbe, model.status])
-  const [, setGeneratingTick] = useState(0)
-  useEffect(() => {
-    if (model.status !== 'generating') return
-    const timer = setInterval(() => {
-      setGeneratingTick(t => (t + 1) % 10000)
-    }, 100)
-    return () => {
-      clearInterval(timer)
-    }
-  }, [model.status])
-  const footerSpinner = model.status === 'generating'
-    ? getBrailleSpinnerFrame(Date.now())
-    : undefined
   const interaction = useSyncExternalStore(
     callback => controller.subscribe(callback),
     () => controller.getInteraction(),
@@ -3133,7 +3122,7 @@ export function TuiLoop({
   const detailsTip = statusLabel === ''
     ? `/ 命令 · @ 提及 · Ctrl+O ${tuiCopy('reasoning', locale)} · /status ${tuiCopy('statusDetails', locale)}`
     : `${scrollHint} · Ctrl+O ${tuiCopy('reasoning', locale)} · /status ${tuiCopy('statusDetails', locale)}`
-  const adaptiveRows = adaptiveInfoFooter === undefined
+  const adaptiveRowsFor = (footerSpinner: string | undefined) => adaptiveInfoFooter === undefined
     ? []
     : footerRowBudget === 1
       ? [formatQuietStatusRow({
@@ -3152,6 +3141,7 @@ export function TuiLoop({
         environment: shortenHomePath(controller.getCwd(), homedir()),
         tip: detailsTip,
       }, columns, footerRowBudget)
+  const adaptiveRows = adaptiveRowsFor(model.status === 'generating' ? '⠋' : undefined)
   let status: ReactNode
   let statusRowCount: number
   if (feedback !== undefined) {
@@ -3184,53 +3174,56 @@ export function TuiLoop({
     const goalLine = goalRuns === undefined
       ? undefined
       : `${goalRuns.head} · ${goalRuns.objective}`
-    const visibleRows = adaptiveRows.map((row, index) => {
-      if (index !== 0 || goalLine === undefined) return row
-      if (footerRowBudget === 1 && adaptiveInfoFooter !== undefined) {
-        return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, spinner: footerSpinner, tip: goalLine }, columns)
-      }
-      const baseText = row.runs.map(run => run.text).join('')
-      if (displayWidth(`${goalLine} · ${baseText}`) > columns) {
-        const statusRun = row.runs.find(run => run.text.startsWith(`${tuiCopy('status', locale)} `))
-        if (statusRun === undefined) return row
-        const statusWidth = displayWidth(` · ${statusRun.text}`)
-        const fittedGoal = truncateDisplay(goalLine, Math.max(1, columns - statusWidth))
+    const renderStatus = (footerSpinner: string | undefined) => {
+      const visibleRows = adaptiveRowsFor(footerSpinner).map((row, index) => {
+        if (index !== 0 || goalLine === undefined) return row
+        if (footerRowBudget === 1 && adaptiveInfoFooter !== undefined) {
+          return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, spinner: footerSpinner, tip: goalLine }, columns)
+        }
+        const baseText = row.runs.map(run => run.text).join('')
+        if (displayWidth(`${goalLine} · ${baseText}`) > columns) {
+          const statusRun = row.runs.find(run => run.text.startsWith(`${tuiCopy('status', locale)} `))
+          if (statusRun === undefined) return row
+          const statusWidth = displayWidth(` · ${statusRun.text}`)
+          const fittedGoal = truncateDisplay(goalLine, Math.max(1, columns - statusWidth))
+          return {
+            ...row,
+            runs: [
+              { text: fittedGoal, token: 'fgDim' as const },
+              { text: ' · ', token: 'fgDim' as const },
+              statusRun,
+            ],
+          }
+        }
         return {
           ...row,
           runs: [
-            { text: fittedGoal, token: 'fgDim' as const },
+            { text: goalLine, token: 'fgDim' as const },
             { text: ' · ', token: 'fgDim' as const },
-            statusRun,
+            ...row.runs,
           ],
         }
-      }
-      return {
-        ...row,
-        runs: [
-          { text: goalLine, token: 'fgDim' as const },
-          { text: ' · ', token: 'fgDim' as const },
-          ...row.runs,
-        ],
-      }
-    })
-    statusRowCount = visibleRows.length
-    status = createElement(
-      Box,
-      {
-        flexDirection: 'column',
-        width: '100%',
-        backgroundColor: inkColor('bg'),
-      },
-      ...visibleRows.map((row, index) => createElement(
-        Text,
-        { key: `adaptive-footer-${String(index)}` },
-        paintBackgroundRow(
-          row.runs.map(run => styled(run.text, run.token)),
-          'bg',
-          columns,
-        ),
-      )),
-    )
+      })
+      return createElement(
+        Box,
+        {
+          flexDirection: 'column',
+          width: '100%',
+          backgroundColor: inkColor('bg'),
+        },
+        ...visibleRows.map((row, index) => createElement(
+          Text,
+          { key: `adaptive-footer-${String(index)}` },
+          paintBackgroundRow(
+            row.runs.map(run => styled(run.text, run.token)),
+            'bg',
+            columns,
+          ),
+        )),
+      )
+    }
+    statusRowCount = adaptiveRows.length
+    status = createElement(GeneratingSpinner, { active: model.status === 'generating', children: renderStatus })
   } else {
     const goal = goalRuns === undefined
       ? undefined
@@ -3321,7 +3314,7 @@ export function TuiLoop({
   })
   const inputRows = inputMeasure?.key === inputMeasureKey ? inputMeasure.height
     : approvalPane.open || askUserPane.open || planReviewPane.open || commandMode || mentionMode
-      ? rows : state.text.split('\n').length + 1
+      ? rows : composerHeight(state.text, rows, statusRowCount + 1)
   const streamLayoutKey = useMemo(() => ({}), [
     statusRowCount,
     inputMeasure,
@@ -3424,7 +3417,7 @@ export function TuiLoop({
       switchError: permissionPane.switchError,
     })
   } else if (settingsPane.open) {
-    const settingsEditingRows = settingsPane.editing ? state.text.split('\n').length + 1 : 0
+    const settingsEditingRows = settingsPane.editing ? composerHeight(state.text, rows, statusRowCount + 1) : 0
     const settingsMaxRows = Math.max(4, rows - 3 - statusRowCount - settingsEditingRows)
     content = createElement(SettingsPane, {
       locale,
@@ -3471,7 +3464,7 @@ export function TuiLoop({
       confirmDelete: pane.confirmDelete,
       deleteUnavailable: pane.deleteUnavailable,
       columns,
-      maxRows: rows - 3 - statusRowCount - (state.renaming ? state.text.split('\n').length + 1 : 0),
+      maxRows: rows - 3 - statusRowCount - (state.renaming ? composerHeight(state.text, rows, statusRowCount + 1) : 0),
     })
   } else if (search.open) {
     content = createElement(SearchPane, {

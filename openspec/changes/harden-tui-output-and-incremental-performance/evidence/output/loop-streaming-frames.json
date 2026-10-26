@@ -1,0 +1,13 @@
+{
+  "source": "/tmp/dsh-loop-integration/capture.ansi",
+  "columns": 120,
+  "rows": 40,
+  "frames": 436,
+  "snapshotComparedFrames": 435,
+  "comparedRows": 14355,
+  "suppressedGeometryFrames": 0,
+  "badFrames": 0,
+  "examples": [],
+  "mismatchedFrames": 0,
+  "mismatchExamples": []
+}

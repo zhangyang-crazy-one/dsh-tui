@@ -1,0 +1,23 @@
+{
+  "capturedAt": "2026-10-23T12:10:13.042416+00:00",
+  "head": "1d25152831ede97cd2f706967020dd23f1053f1d",
+  "node": "v22.23.1",
+  "sourceRoot": "/home/zhangyangrui/my_programes/dsh-tui",
+  "upstreamRoot": "/home/zhangyangrui/my_programes/deepseek-harness",
+  "sha256": {
+    "tui-render/src/composer-index.ts": "f85c908d9bf318d4c9b6e4e613dd04e30934d909749acd8e2a1e6db674c2557a",
+    "tui-render/src/composer-cursor.ts": "c4f2506042e5cd52d0aa905b2c1ef2d5163d473e38a70b2ac8506559852a6b52",
+    "tui-render/src/input-bar.tsx": "8b42868e67be9bf8e204e4aa3ccc8fabab9afc6df29284bacde5258e0100c3e2",
+    "tui-render/src/input-selection.ts": "a788862b32e1ec1305e562a5b15799b4785afde28adc085112f67c39ba76f2b0",
+    "tui-render/src/loop.tsx": "edd3e4706cfcab16dfdf30197f3acae28adec526a86ac8aa7b35412f0ef7e9ef",
+    "tui-render/src/generating-spinner.tsx": "62e4719b5a9954462803049a77aac5c53ce73c457c3fd66b4b6ec2a4a27aa578",
+    "tui/src/index.ts": "1c4881aba024eae1a0e85d3adc7d4c1a0b3c3babe3b5c7ed1708669b4f3a0483",
+    "tui-render/tests/input-selection.spec.ts": "3dcf8052d11fd1752bdce8334c95dc968dce27646ec4ab0935d9112798d13002",
+    "tui-render/tests/input-bar-window.spec.tsx": "316c90edd73d2a9567e5a1d65fa8994c52933c800156d96d4c8d34954be3766c",
+    "tui-render/tests/loop-input.spec.tsx": "e3fb4d39733ec6ea55d4e82b6fefc9689d815ddecf2fd68e69ed2333957b9b85",
+    "tui/tests/snapshot-identity.spec.ts": "5b1d896b68bf239b77a48dc5e248bc4d67f93d36041cc47fe531b7020adb5ce0",
+    "tui-render/tests/composer-benchmark.mjs": "5c7fdbba7e0d844260a426d99abf8bf7ebe7ac17c523cb237187ba2205a07e82",
+    "tui-render/tests/composer-pty-fixture.tsx": "24dd960ce4b70b64562c88611bbbd7533e7f41f4df776e1ed7de1e059e6573d5"
+  },
+  "note": "Regression tests added immediately before freeze; two production fixes remain pending freeze release."
+}

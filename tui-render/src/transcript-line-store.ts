@@ -74,6 +74,13 @@ export interface TranscriptRenderStoreStats {
   readonly cachedRows: number
   /** Total bytes currently cached. */
   readonly cachedBytes: number
+  /** Valid source/revision metadata, including evicted physical rows. */
+  readonly sourceEntries: number
+  readonly pinnedBlocks: number
+  readonly pinnedRows: number
+  readonly pinnedBytes: number
+  readonly overBudgetRows: number
+  readonly overBudgetBytes: number
 }
 
 /** Pin set: block ids the LRU must not evict. */
@@ -185,6 +192,10 @@ export interface TranscriptRenderStore {
   setPins(pins: TranscriptRenderStorePins): void
   /** Clear every pin. Triggers eviction when over budget. */
   clearPins(): void
+  /** Remove obsolete owners, including source, pins and any active revision. */
+  retain(blockIds: ReadonlySet<string>): void
+  /** Retire one changed active owner without enumerating settled history. */
+  remove(blockId: string): void
   /** Drop every retained snapshot, source, pin, and counter. */
   reset(): void
   /**
@@ -471,6 +482,20 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
     this.enforceBudget()
   }
 
+  retain(blockIds: ReadonlySet<string>): void {
+    for (const id of this.entries.keys()) if (!blockIds.has(id)) this.remove(id)
+  }
+
+  remove(blockId: string): void {
+    const entry = this.entries.get(blockId)
+    if (entry === undefined) return
+    entry.activeRevision?.discard()
+    this.settledEntries.delete(entry)
+    this.pins.delete(blockId)
+    this.updateResident(entry, 0, 0, false)
+    this.entries.delete(blockId)
+  }
+
   reset(): void {
     this.entries.clear()
     this.settledEntries.clear()
@@ -512,6 +537,13 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
   }
 
   stats(): TranscriptRenderStoreStats {
+    let pinnedRows = 0
+    let pinnedBytes = 0
+    for (const id of this.pins) {
+      const entry = this.entries.get(id)
+      pinnedRows += entry?.cachedRows ?? 0
+      pinnedBytes += entry?.cachedBytes ?? 0
+    }
     return {
       hits: this.counters.hits,
       evictions: this.counters.evictions,
@@ -521,6 +553,12 @@ class TranscriptRenderStoreImpl implements TranscriptRenderStore {
       cachedBlocks: this.cachedBlocks,
       cachedRows: this.cachedRows,
       cachedBytes: this.cachedBytes,
+      sourceEntries: this.entries.size,
+      pinnedBlocks: this.pins.size,
+      pinnedRows,
+      pinnedBytes,
+      overBudgetRows: Math.max(0, this.cachedRows - this.config.maxRows),
+      overBudgetBytes: Math.max(0, this.cachedBytes - this.config.maxBytes),
     }
   }
 

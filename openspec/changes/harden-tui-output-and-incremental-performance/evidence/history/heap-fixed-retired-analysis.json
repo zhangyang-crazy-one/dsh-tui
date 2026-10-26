@@ -1,0 +1,42 @@
+{
+  "snapshot": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-fixed/history-retired.heapsnapshot",
+  "totalNodes": 285063,
+  "totalShallowBytes": 51889916,
+  "classes": {
+    "HistoryRowCache": {
+      "instances": 1,
+      "shallowBytes": 176
+    },
+    "HistoryOverlay": {
+      "instances": 6,
+      "shallowBytes": 240
+    },
+    "ExactHistoryWindow": {
+      "instances": 1,
+      "shallowBytes": 56
+    },
+    "TranscriptRenderStoreImpl": {
+      "instances": 1,
+      "shallowBytes": 160
+    },
+    "MarkdownProjectorState": {
+      "instances": 0,
+      "shallowBytes": 0
+    },
+    "MutableRevisionImpl": {
+      "instances": 1,
+      "shallowBytes": 72
+    },
+    "Object": {
+      "instances": 38532,
+      "shallowBytes": 1729984
+    },
+    "Array": {
+      "instances": 10978,
+      "shallowBytes": 351584
+    }
+  },
+  "oldestCanonicalObjects": 0,
+  "oldestStrongRootPaths": [],
+  "method": "V8 class/shallow counts and shortest root paths excluding weak edges; not dominator retained-size measurement"
+}

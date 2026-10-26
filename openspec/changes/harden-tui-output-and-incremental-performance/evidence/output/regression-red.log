@@ -1,0 +1,71 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+ ❯ tui-render/tests/output-integrity.spec.ts (3 tests | 2 failed) 127ms
+     × keeps the three-way regression: whole wrapped, split direct, split wrapped 25ms
+     × preserves every CSI/OSC boundary and background across separate writes 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tui-render/tests/output-integrity.spec.ts > terminal output chunk boundaries > keeps the three-way regression: whole wrapped, split direct, split wrapped
+AssertionError: expected { text: '1;22;24mOK', …(2) } to deeply equal { text: 'OK', …(2) }
+
+- Expected
++ Received
+
+  {
+    "background": 1381912,
+    "cursor": [
+-     2,
++     10,
+      0,
+    ],
+-   "text": "OK",
++   "text": "1;22;24mOK",
+  }
+
+ ❯ tui-render/tests/output-integrity.spec.ts:48:84
+     46|     expect(whole.text).toBe('OK')
+     47|     expect(await replay([color.slice(0, split), color.slice(split) + '…
+     48|     expect(await replay([color.slice(0, split), color.slice(split) + '…
+       |                                                                                    ^
+     49|   })
+     50|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tui-render/tests/output-integrity.spec.ts > terminal output chunk boundaries > preserves every CSI/OSC boundary and background across separate writes
+AssertionError: split 1: expected { text: '[48;2;91;92;93mOK', …(2) } to deeply equal { text: 'OK', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "background": 5987421,
++   "background": 1381912,
+    "cursor": [
+-     2,
++     17,
+      0,
+    ],
+-   "text": "OK",
++   "text": "[48;2;91;92;93mOK",
+  }
+
+ ❯ tui-render/tests/output-integrity.spec.ts:55:95
+     53|     const whole = await replay([text], true)
+     54|     for (let index = 1; index < text.length; index++) {
+     55|       expect(await replay([text.slice(0, index), text.slice(index)], t…
+       |                                                                                               ^
+     56|     }
+     57|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  19:01:26
+   Duration  361ms (transform 83ms, setup 0ms, import 136ms, tests 127ms, environment 0ms)
+

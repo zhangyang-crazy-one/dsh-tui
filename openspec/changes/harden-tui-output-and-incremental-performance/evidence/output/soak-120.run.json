@@ -1,0 +1,11 @@
+{
+  "source": {
+    "commit": "1d25152831ede97cd2f706967020dd23f1053f1d",
+    "sha256": "5010b18c48ffc21b0ef2e788e5da92035ae3e4a44a006a946e4d0ab42a960aae"
+  },
+  "columns": 120,
+  "rows": 40,
+  "requestedSeconds": 300.0,
+  "node": "v22.23.1",
+  "elapsedSeconds": 300.371382371
+}

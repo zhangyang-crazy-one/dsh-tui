@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-10-23T12:18:06.846361+00:00",
+  "status": "已验证",
+  "productionFilesChangedThisTurn": [
+    "tui-render/src/input-bar.tsx",
+    "tui-render/src/input-selection.ts"
+  ],
+  "testFilesChangedThisTurn": [
+    "tui-render/tests/input-bar-window.spec.tsx",
+    "tui-render/tests/input-selection.spec.ts"
+  ],
+  "tests": {
+    "node24OriginalIsolatedRed": {
+      "filesFailed": 2,
+      "failed": 4,
+      "passed": 21,
+      "exitCode": 1,
+      "log": "boundary-node24-original-red.log"
+    },
+    "node24CurrentGreen": {
+      "filesPassed": 2,
+      "passed": 25,
+      "exitCode": 0,
+      "log": "boundary-node24-current-green.log"
+    },
+    "node24FinalTargeted": {
+      "filesPassed": 23,
+      "passed": 448,
+      "skipped": 1,
+      "exitCode": 0,
+      "durationSeconds": 25.55,
+      "log": "targets-node24-final.log"
+    }
+  },
+  "typecheck": {
+    "rendererTests": {
+      "exitCode": 0,
+      "log": "render-types-node24-final.log"
+    },
+    "runtimeWithCurrentSourceAlias": {
+      "exitCode": 0,
+      "log": "../scoped-updates/runtime-types-node24-final.log"
+    }
+  },
+  "benchmark": {
+    "node": "v22.23.1",
+    "baseline": "benchmark-baseline.json",
+    "final": "benchmark-current-final.json",
+    "sizesUtf16": [
+      700,
+      7000,
+      70000
+    ],
+    "geometry": [
+      [
+        80,
+        24
+      ],
+      [
+        120,
+        40
+      ]
+    ],
+    "warmMovesPerSize": 40,
+    "segmentCalls": 0,
+    "fullApplicationLatencyVerified": false
+  },
+  "segmenterDifferenceCause": false,
+  "commit": false,
+  "tasksModified": false,
+  "sourceFrozen": true,
+  "notVerified": [
+    "完整工程最终门禁/产物由主代理重跑",
+    "完整应用PTY/物理屏幕时延",
+    "真实外部editor/剪贴板/图片服务",
+    "用户现场根因闭环"
+  ],
+  "blockers": []
+}

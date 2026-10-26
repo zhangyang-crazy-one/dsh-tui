@@ -7,11 +7,11 @@
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 
 const DEFAULT_SOURCE_URL = 'https://github.com/deepseek-ai/deepseek-harness.git'
-const DEFAULT_SOURCE_REF = 'dsh-v0.2.1-rc.2'
+const DEFAULT_SOURCE_REF = 'dsh-v0.2.1-rc.3'
 // Bounds a hung probe; a cold first start of `dsh --version` can exceed 3s.
 const PROBE_TIMEOUT_MS = 10_000
 /** dsh release the bundle patch and dist were composed against. */
-export const COMPATIBLE_DSH_VERSION = '0.2.1-rc.2'
+export const COMPATIBLE_DSH_VERSION = '0.2.1-rc.3'
 /** Engine release line (major.minor) whose plugin APIs the bundle targets. */
 const COMPATIBLE_DSH_LINE = COMPATIBLE_DSH_VERSION.split('.').slice(0, 2).join('.')
 

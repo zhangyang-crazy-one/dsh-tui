@@ -1561,6 +1561,7 @@ var require_react = __commonJS({
 // node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js
 var require_signals = __commonJS({
   "node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/signals.js"(exports, module) {
+    "use strict";
     module.exports = [
       "SIGABRT",
       "SIGALRM",
@@ -1598,6 +1599,7 @@ var require_signals = __commonJS({
 // node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS({
   "node_modules/.pnpm/signal-exit@3.0.7/node_modules/signal-exit/index.js"(exports, module) {
+    "use strict";
     var process15 = global.process;
     var processOk = function(process16) {
       return process16 && typeof process16 === "object" && typeof process16.removeListener === "function" && typeof process16.emit === "function" && typeof process16.reallyExit === "function" && typeof process16.listeners === "function" && typeof process16.kill === "function" && typeof process16.pid === "number" && typeof process16.on === "function";
@@ -9724,14 +9726,14 @@ var require_react_reconciler_production = __commonJS({
       }
       var exports2 = {};
       "use strict";
-      var React12 = require_react(), Scheduler2 = require_scheduler(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy");
+      var React13 = require_react(), Scheduler2 = require_scheduler(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy");
       /* @__PURE__ */ Symbol.for("react.scope");
       var REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity");
       /* @__PURE__ */ Symbol.for("react.legacy_hidden");
       /* @__PURE__ */ Symbol.for("react.tracing_marker");
       var REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel");
       /* @__PURE__ */ Symbol.for("react.view_transition");
-      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React12.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, rendererVersion = $$$config.rendererVersion, rendererPackageName = $$$config.rendererPackageName, extraDevToolsConfig = $$$config.extraDevToolsConfig, getPublicInstance = $$$config.getPublicInstance, getRootHostContext = $$$config.getRootHostContext, getChildHostContext = $$$config.getChildHostContext, prepareForCommit = $$$config.prepareForCommit, resetAfterCommit = $$$config.resetAfterCommit, createInstance = $$$config.createInstance;
+      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React13.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, rendererVersion = $$$config.rendererVersion, rendererPackageName = $$$config.rendererPackageName, extraDevToolsConfig = $$$config.extraDevToolsConfig, getPublicInstance = $$$config.getPublicInstance, getRootHostContext = $$$config.getRootHostContext, getChildHostContext = $$$config.getChildHostContext, prepareForCommit = $$$config.prepareForCommit, resetAfterCommit = $$$config.resetAfterCommit, createInstance = $$$config.createInstance;
       $$$config.cloneMutableInstance;
       var appendInitialChild = $$$config.appendInitialChild, finalizeInitialChildren = $$$config.finalizeInitialChildren, shouldSetTextContent = $$$config.shouldSetTextContent, createTextInstance = $$$config.createTextInstance;
       $$$config.cloneMutableTextInstance;
@@ -22324,14 +22326,14 @@ var require_react_reconciler_development = __commonJS({
       }
       var exports2 = {};
       "use strict";
-      var React12 = require_react(), Scheduler2 = require_scheduler(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy");
+      var React13 = require_react(), Scheduler2 = require_scheduler(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy");
       /* @__PURE__ */ Symbol.for("react.scope");
       var REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity");
       /* @__PURE__ */ Symbol.for("react.legacy_hidden");
       /* @__PURE__ */ Symbol.for("react.tracing_marker");
       var REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel");
       /* @__PURE__ */ Symbol.for("react.view_transition");
-      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React12.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, rendererVersion = $$$config.rendererVersion, rendererPackageName = $$$config.rendererPackageName, extraDevToolsConfig = $$$config.extraDevToolsConfig, getPublicInstance = $$$config.getPublicInstance, getRootHostContext = $$$config.getRootHostContext, getChildHostContext = $$$config.getChildHostContext, prepareForCommit = $$$config.prepareForCommit, resetAfterCommit = $$$config.resetAfterCommit, createInstance = $$$config.createInstance;
+      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React13.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, rendererVersion = $$$config.rendererVersion, rendererPackageName = $$$config.rendererPackageName, extraDevToolsConfig = $$$config.extraDevToolsConfig, getPublicInstance = $$$config.getPublicInstance, getRootHostContext = $$$config.getRootHostContext, getChildHostContext = $$$config.getChildHostContext, prepareForCommit = $$$config.prepareForCommit, resetAfterCommit = $$$config.resetAfterCommit, createInstance = $$$config.createInstance;
       $$$config.cloneMutableInstance;
       var appendInitialChild = $$$config.appendInitialChild, finalizeInitialChildren = $$$config.finalizeInitialChildren, shouldSetTextContent = $$$config.shouldSetTextContent, createTextInstance = $$$config.createTextInstance;
       $$$config.cloneMutableTextInstance;
@@ -27970,6 +27972,7 @@ var require_websocket_server = __commonJS({
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server, wrapper_default;
 var init_wrapper = __esm({
   "node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs"() {
+    "use strict";
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -27986,6 +27989,7 @@ var init_wrapper = __esm({
 var customGlobal;
 var init_devtools_window_polyfill = __esm({
   "node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools-window-polyfill.js"() {
+    "use strict";
     init_wrapper();
     customGlobal = globalThis;
     customGlobal.WebSocket ||= wrapper_default;
@@ -28045,10 +28049,11 @@ var init_devtools_window_polyfill = __esm({
   }
 });
 
-// node_modules/.cache/react-devtools-core-stub.js
+// ../react-devtools-core-stub.js
 var react_devtools_core_stub_default;
 var init_react_devtools_core_stub = __esm({
-  "node_modules/.cache/react-devtools-core-stub.js"() {
+  "../react-devtools-core-stub.js"() {
+    "use strict";
     react_devtools_core_stub_default = { initialize() {
     }, connectToDevTools() {
     } };
@@ -28060,6 +28065,7 @@ var devtools_exports = {};
 var isDevToolsReachable;
 var init_devtools = __esm({
   async "node_modules/.pnpm/ink@7.1.1_@types+react@19.2.18_react@19.2.8/node_modules/ink/build/devtools.js"() {
+    "use strict";
     init_devtools_window_polyfill();
     init_wrapper();
     init_react_devtools_core_stub();
@@ -28407,305 +28413,6 @@ var require_stack_utils = __commonJS({
     );
     var methodRe = /^(.*?) \[as (.*?)\]$/;
     module.exports = StackUtils2;
-  }
-});
-
-// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js
-var require_react_jsx_runtime_production = __commonJS({
-  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
-    "use strict";
-    var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
-    var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
-    function jsxProd(type, config2, maybeKey) {
-      var key = null;
-      void 0 !== maybeKey && (key = "" + maybeKey);
-      void 0 !== config2.key && (key = "" + config2.key);
-      if ("key" in config2) {
-        maybeKey = {};
-        for (var propName in config2)
-          "key" !== propName && (maybeKey[propName] = config2[propName]);
-      } else maybeKey = config2;
-      config2 = maybeKey.ref;
-      return {
-        $$typeof: REACT_ELEMENT_TYPE,
-        type,
-        key,
-        ref: void 0 !== config2 ? config2 : null,
-        props: maybeKey
-      };
-    }
-    exports.Fragment = REACT_FRAGMENT_TYPE;
-    exports.jsx = jsxProd;
-    exports.jsxs = jsxProd;
-  }
-});
-
-// node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js
-var require_react_jsx_runtime_development = __commonJS({
-  "node_modules/.pnpm/react@19.2.8/node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
-    "use strict";
-    "production" !== process.env.NODE_ENV && (function() {
-      function getComponentNameFromType(type) {
-        if (null == type) return null;
-        if ("function" === typeof type)
-          return type.$$typeof === REACT_CLIENT_REFERENCE ? null : type.displayName || type.name || null;
-        if ("string" === typeof type) return type;
-        switch (type) {
-          case REACT_FRAGMENT_TYPE:
-            return "Fragment";
-          case REACT_PROFILER_TYPE:
-            return "Profiler";
-          case REACT_STRICT_MODE_TYPE:
-            return "StrictMode";
-          case REACT_SUSPENSE_TYPE:
-            return "Suspense";
-          case REACT_SUSPENSE_LIST_TYPE:
-            return "SuspenseList";
-          case REACT_ACTIVITY_TYPE:
-            return "Activity";
-        }
-        if ("object" === typeof type)
-          switch ("number" === typeof type.tag && console.error(
-            "Received an unexpected object in getComponentNameFromType(). This is likely a bug in React. Please file an issue."
-          ), type.$$typeof) {
-            case REACT_PORTAL_TYPE:
-              return "Portal";
-            case REACT_CONTEXT_TYPE:
-              return type.displayName || "Context";
-            case REACT_CONSUMER_TYPE:
-              return (type._context.displayName || "Context") + ".Consumer";
-            case REACT_FORWARD_REF_TYPE:
-              var innerType = type.render;
-              type = type.displayName;
-              type || (type = innerType.displayName || innerType.name || "", type = "" !== type ? "ForwardRef(" + type + ")" : "ForwardRef");
-              return type;
-            case REACT_MEMO_TYPE:
-              return innerType = type.displayName || null, null !== innerType ? innerType : getComponentNameFromType(type.type) || "Memo";
-            case REACT_LAZY_TYPE:
-              innerType = type._payload;
-              type = type._init;
-              try {
-                return getComponentNameFromType(type(innerType));
-              } catch (x2) {
-              }
-          }
-        return null;
-      }
-      function testStringCoercion(value) {
-        return "" + value;
-      }
-      function checkKeyStringCoercion(value) {
-        try {
-          testStringCoercion(value);
-          var JSCompiler_inline_result = false;
-        } catch (e2) {
-          JSCompiler_inline_result = true;
-        }
-        if (JSCompiler_inline_result) {
-          JSCompiler_inline_result = console;
-          var JSCompiler_temp_const = JSCompiler_inline_result.error;
-          var JSCompiler_inline_result$jscomp$0 = "function" === typeof Symbol && Symbol.toStringTag && value[Symbol.toStringTag] || value.constructor.name || "Object";
-          JSCompiler_temp_const.call(
-            JSCompiler_inline_result,
-            "The provided key is an unsupported type %s. This value must be coerced to a string before using it here.",
-            JSCompiler_inline_result$jscomp$0
-          );
-          return testStringCoercion(value);
-        }
-      }
-      function getTaskName(type) {
-        if (type === REACT_FRAGMENT_TYPE) return "<>";
-        if ("object" === typeof type && null !== type && type.$$typeof === REACT_LAZY_TYPE)
-          return "<...>";
-        try {
-          var name2 = getComponentNameFromType(type);
-          return name2 ? "<" + name2 + ">" : "<...>";
-        } catch (x2) {
-          return "<...>";
-        }
-      }
-      function getOwner() {
-        var dispatcher = ReactSharedInternals.A;
-        return null === dispatcher ? null : dispatcher.getOwner();
-      }
-      function UnknownOwner() {
-        return Error("react-stack-top-frame");
-      }
-      function hasValidKey(config2) {
-        if (hasOwnProperty2.call(config2, "key")) {
-          var getter = Object.getOwnPropertyDescriptor(config2, "key").get;
-          if (getter && getter.isReactWarning) return false;
-        }
-        return void 0 !== config2.key;
-      }
-      function defineKeyPropWarningGetter(props, displayName) {
-        function warnAboutAccessingKey() {
-          specialPropKeyWarningShown || (specialPropKeyWarningShown = true, console.error(
-            "%s: `key` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://react.dev/link/special-props)",
-            displayName
-          ));
-        }
-        warnAboutAccessingKey.isReactWarning = true;
-        Object.defineProperty(props, "key", {
-          get: warnAboutAccessingKey,
-          configurable: true
-        });
-      }
-      function elementRefGetterWithDeprecationWarning() {
-        var componentName = getComponentNameFromType(this.type);
-        didWarnAboutElementRef[componentName] || (didWarnAboutElementRef[componentName] = true, console.error(
-          "Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release."
-        ));
-        componentName = this.props.ref;
-        return void 0 !== componentName ? componentName : null;
-      }
-      function ReactElement(type, key, props, owner, debugStack, debugTask) {
-        var refProp = props.ref;
-        type = {
-          $$typeof: REACT_ELEMENT_TYPE,
-          type,
-          key,
-          props,
-          _owner: owner
-        };
-        null !== (void 0 !== refProp ? refProp : null) ? Object.defineProperty(type, "ref", {
-          enumerable: false,
-          get: elementRefGetterWithDeprecationWarning
-        }) : Object.defineProperty(type, "ref", { enumerable: false, value: null });
-        type._store = {};
-        Object.defineProperty(type._store, "validated", {
-          configurable: false,
-          enumerable: false,
-          writable: true,
-          value: 0
-        });
-        Object.defineProperty(type, "_debugInfo", {
-          configurable: false,
-          enumerable: false,
-          writable: true,
-          value: null
-        });
-        Object.defineProperty(type, "_debugStack", {
-          configurable: false,
-          enumerable: false,
-          writable: true,
-          value: debugStack
-        });
-        Object.defineProperty(type, "_debugTask", {
-          configurable: false,
-          enumerable: false,
-          writable: true,
-          value: debugTask
-        });
-        Object.freeze && (Object.freeze(type.props), Object.freeze(type));
-        return type;
-      }
-      function jsxDEVImpl(type, config2, maybeKey, isStaticChildren, debugStack, debugTask) {
-        var children = config2.children;
-        if (void 0 !== children)
-          if (isStaticChildren)
-            if (isArrayImpl(children)) {
-              for (isStaticChildren = 0; isStaticChildren < children.length; isStaticChildren++)
-                validateChildKeys(children[isStaticChildren]);
-              Object.freeze && Object.freeze(children);
-            } else
-              console.error(
-                "React.jsx: Static children should always be an array. You are likely explicitly calling React.jsxs or React.jsxDEV. Use the Babel transform instead."
-              );
-          else validateChildKeys(children);
-        if (hasOwnProperty2.call(config2, "key")) {
-          children = getComponentNameFromType(type);
-          var keys = Object.keys(config2).filter(function(k2) {
-            return "key" !== k2;
-          });
-          isStaticChildren = 0 < keys.length ? "{key: someKey, " + keys.join(": ..., ") + ": ...}" : "{key: someKey}";
-          didWarnAboutKeySpread[children + isStaticChildren] || (keys = 0 < keys.length ? "{" + keys.join(": ..., ") + ": ...}" : "{}", console.error(
-            'A props object containing a "key" prop is being spread into JSX:\n  let props = %s;\n  <%s {...props} />\nReact keys must be passed directly to JSX without using spread:\n  let props = %s;\n  <%s key={someKey} {...props} />',
-            isStaticChildren,
-            children,
-            keys,
-            children
-          ), didWarnAboutKeySpread[children + isStaticChildren] = true);
-        }
-        children = null;
-        void 0 !== maybeKey && (checkKeyStringCoercion(maybeKey), children = "" + maybeKey);
-        hasValidKey(config2) && (checkKeyStringCoercion(config2.key), children = "" + config2.key);
-        if ("key" in config2) {
-          maybeKey = {};
-          for (var propName in config2)
-            "key" !== propName && (maybeKey[propName] = config2[propName]);
-        } else maybeKey = config2;
-        children && defineKeyPropWarningGetter(
-          maybeKey,
-          "function" === typeof type ? type.displayName || type.name || "Unknown" : type
-        );
-        return ReactElement(
-          type,
-          children,
-          maybeKey,
-          getOwner(),
-          debugStack,
-          debugTask
-        );
-      }
-      function validateChildKeys(node2) {
-        isValidElement(node2) ? node2._store && (node2._store.validated = 1) : "object" === typeof node2 && null !== node2 && node2.$$typeof === REACT_LAZY_TYPE && ("fulfilled" === node2._payload.status ? isValidElement(node2._payload.value) && node2._payload.value._store && (node2._payload.value._store.validated = 1) : node2._store && (node2._store.validated = 1));
-      }
-      function isValidElement(object2) {
-        return "object" === typeof object2 && null !== object2 && object2.$$typeof === REACT_ELEMENT_TYPE;
-      }
-      var React12 = require_react(), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), ReactSharedInternals = React12.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty2 = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
-        return null;
-      };
-      React12 = {
-        react_stack_bottom_frame: function(callStackForError) {
-          return callStackForError();
-        }
-      };
-      var specialPropKeyWarningShown;
-      var didWarnAboutElementRef = {};
-      var unknownOwnerDebugStack = React12.react_stack_bottom_frame.bind(
-        React12,
-        UnknownOwner
-      )();
-      var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
-      var didWarnAboutKeySpread = {};
-      exports.Fragment = REACT_FRAGMENT_TYPE;
-      exports.jsx = function(type, config2, maybeKey) {
-        var trackActualOwner = 1e4 > ReactSharedInternals.recentlyCreatedOwnerStacks++;
-        return jsxDEVImpl(
-          type,
-          config2,
-          maybeKey,
-          false,
-          trackActualOwner ? Error("react-stack-top-frame") : unknownOwnerDebugStack,
-          trackActualOwner ? createTask(getTaskName(type)) : unknownOwnerDebugTask
-        );
-      };
-      exports.jsxs = function(type, config2, maybeKey) {
-        var trackActualOwner = 1e4 > ReactSharedInternals.recentlyCreatedOwnerStacks++;
-        return jsxDEVImpl(
-          type,
-          config2,
-          maybeKey,
-          true,
-          trackActualOwner ? Error("react-stack-top-frame") : unknownOwnerDebugStack,
-          trackActualOwner ? createTask(getTaskName(type)) : unknownOwnerDebugTask
-        );
-      };
-    })();
-  }
-});
-
-// node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js
-var require_jsx_runtime = __commonJS({
-  "node_modules/.pnpm/react@19.2.8/node_modules/react/jsx-runtime.js"(exports, module) {
-    "use strict";
-    if (process.env.NODE_ENV === "production") {
-      module.exports = require_react_jsx_runtime_production();
-    } else {
-      module.exports = require_react_jsx_runtime_development();
-    }
   }
 });
 
@@ -39389,7 +39096,7 @@ var measureElement = (node2) => {
 var measure_element_default = measureElement;
 
 // packages/tui/tui-render/src/index.ts
-var import_react48 = __toESM(require_react(), 1);
+var import_react49 = __toESM(require_react(), 1);
 
 // packages/tui/tui-render/src/content.ts
 var GRAPHEME = new Intl.Segmenter(void 0, { granularity: "grapheme" });
@@ -40104,7 +39811,6 @@ var BRAND_HOME_LINE = "\u6709\u4EC0\u4E48\u53EF\u4EE5\u5E2E\u5FD9\u7684";
 var BRAND_APP_TITLE = "DeepSeek \xB7 deepseek-tui";
 
 // packages/tui/tui-render/src/app-shell.tsx
-var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
 var TITLE_BAR_ELLIPSIS = "\u2026";
 function fitDisplayWidth(text4, maxCols) {
   if (maxCols <= 0) return "";
@@ -40190,14 +39896,7 @@ function AppShell({ title, badge, children, status, input, topDividerLabel }) {
   const titleParts = titleRun(fitted.title);
   if (fitted.gap > 0) titleParts.push(styled(" ".repeat(fitted.gap), "bg"));
   if (fitted.badge !== "") titleParts.push(styled(fitted.badge, "fgDim"));
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Box_default, { flexDirection: "column", width: "100%", height: rows, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow(titleParts) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { wrap: "truncate", children: topDividerLine(columns, topDividerLabel) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "column", flexGrow: 1, width: "100%", overflow: "hidden", children }),
-    input !== void 0 && input !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: input }) : null,
-    status !== void 0 && status !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { width: "100%", flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]) }) }) : null,
-    status !== void 0 && status !== null ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0, children: status }) : null
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", height: rows }, /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, null, paintRow(titleParts))), /* @__PURE__ */ React.createElement(Box_default, { width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, topDividerLine(columns, topDividerLabel))), /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", flexGrow: 1, width: "100%", overflow: "hidden" }, children), input !== void 0 && input !== null ? /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0 }, input) : null, status !== void 0 && status !== null ? /* @__PURE__ */ React.createElement(Box_default, { width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent("\u2500".repeat(columns)), "line")]))) : null, status !== void 0 && status !== null ? /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "row", width: "100%", flexShrink: 0 }, status) : null);
 }
 
 // packages/tui/tui-render/src/stream-view.tsx
@@ -51018,7 +50717,6 @@ function isDelimiterRow(cells) {
 }
 
 // packages/tui/tui-render/src/markdown.tsx
-var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
 var MARKDOWN_CACHE_LIMIT = 2e3;
 var tokenCache = /* @__PURE__ */ new Map();
 var tokenHits = 0;
@@ -51060,16 +50758,12 @@ function paintedLineFromRenderLine(line5, hyperlinks2) {
 }
 function linesToJsx(lines, affixes, hyperlinks2) {
   if (lines.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { flexDirection: "column", width: "100%", children: lines.map((line5, index2) => {
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, lines.map((line5, index2) => {
     const painted = paintedLineFromRenderLine(line5, hyperlinks2);
     const prefix = index2 === 0 ? affixes.lead : affixes.rest;
     const tail = index2 === lines.length - 1 ? affixes.tail : void 0;
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Text, { wrap: "truncate", children: [
-      prefix,
-      painted,
-      tail
-    ] }, index2);
-  }) });
+    return /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, prefix, painted, tail);
+  }));
 }
 function buildRenderer(width, hyperlinks2) {
   return createStyledMarkdownBlockRenderer({ width, hyperlinks: hyperlinks2 });
@@ -51078,12 +50772,12 @@ function computeScopeKey2(width, theme, fold, renderMode) {
   return `${width}|${theme}|${fold}|${renderMode}`;
 }
 function MarkdownBlock(props) {
-  if (props.maxCols === void 0) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ResponsiveMarkdownBlock, { ...props });
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MarkdownContent, { ...props, maxCols: props.maxCols });
+  if (props.maxCols === void 0) return /* @__PURE__ */ React.createElement(ResponsiveMarkdownBlock, { ...props });
+  return /* @__PURE__ */ React.createElement(MarkdownContent, { ...props, maxCols: props.maxCols });
 }
 function ResponsiveMarkdownBlock(props) {
   const { columns } = use_window_size_default();
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MarkdownContent, { ...props, maxCols: columns });
+  return /* @__PURE__ */ React.createElement(MarkdownContent, { ...props, maxCols: columns });
 }
 function MarkdownContent({
   source,
@@ -51188,10 +50882,10 @@ function MarkdownContent({
     };
     if (out.length > 0 && block.lines.length > 0) {
       out.push(
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Text, { wrap: "truncate", children: " " }) }, `b-gap-${blockIndex}`)
+        /* @__PURE__ */ React.createElement(Box_default, { key: `b-gap-${blockIndex}` }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, " "))
       );
     }
-    out.push(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react34.Fragment, { children: renderBlockEntry(block, blockAffixes, state, renderScope) }, `b-${blockIndex}`));
+    out.push(/* @__PURE__ */ React.createElement(import_react34.Fragment, { key: `b-${blockIndex}` }, renderBlockEntry(block, blockAffixes, state, renderScope)));
     blockIndex += 1;
   }
   if (scannerSnap.state.kind === "confirmed-table" && scannerSnap.rows.length > 0) {
@@ -51204,11 +50898,11 @@ function MarkdownContent({
       ...scannerSnap.rows.filter((row) => !row.isDelimiter),
       ...activeTableTailCells === void 0 ? [] : [{ cells: activeTableTailCells }]
     ];
-    out.push(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react34.Fragment, { children: renderActiveTable(tableRows, bodyWidth, tableAffixes, false) }, "active-table"));
+    out.push(/* @__PURE__ */ React.createElement(import_react34.Fragment, { key: "active-table" }, renderActiveTable(tableRows, bodyWidth, tableAffixes, false)));
   }
   if (projection.tail !== void 0 && activeTableTailCells === void 0) {
     out.push(
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react34.Fragment, { children: renderFullSource(
+      /* @__PURE__ */ React.createElement(import_react34.Fragment, { key: "tail" }, renderFullSource(
         projection.tail.text,
         bodyWidth,
         {
@@ -51217,7 +50911,7 @@ function MarkdownContent({
         },
         affixes.tail,
         false
-      ) }, "tail")
+      ))
     );
   }
   return wrapMarkdownOutput(out, tail, prefix);
@@ -51283,11 +50977,11 @@ function renderFullSource(source, bodyWidth, prefix, tail, settled) {
     }, blockIndex);
     if (out.length > 0 && lines.length > 0) {
       out.push(
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Text, { wrap: "truncate", children: " " }) }, `full-b-gap-${blockIndex}`)
+        /* @__PURE__ */ React.createElement(Box_default, { key: `full-b-gap-${blockIndex}` }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, " "))
       );
     }
     out.push(
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react34.Fragment, { children: linesToJsx(lines, blockAffixes, hyperlinks2) }, `full-b-${blockIndex}`)
+      /* @__PURE__ */ React.createElement(import_react34.Fragment, { key: `full-b-${blockIndex}` }, linesToJsx(lines, blockAffixes, hyperlinks2))
     );
     blockIndex += 1;
   }
@@ -51297,21 +50991,18 @@ function renderFullSource(source, bodyWidth, prefix, tail, settled) {
       rest: affixes.rest,
       tail: blocks.length === 0 ? affixes.tail : void 0
     };
-    out.push(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react34.Fragment, { children: renderActiveTable(snap.rows, bodyWidth, tableAffixes, hyperlinks2) }, "full-active-table"));
+    out.push(/* @__PURE__ */ React.createElement(import_react34.Fragment, { key: "full-active-table" }, renderActiveTable(snap.rows, bodyWidth, tableAffixes, hyperlinks2)));
   }
   return wrapMarkdownOutput(out, tail, prefix);
 }
 function wrapMarkdownOutput(out, tail, prefix) {
   if (out.length === 0 && tail === void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { flexDirection: "column", width: "100%" });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" });
   }
   if (out.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { flexDirection: "column", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Text, { children: [
-      prefix?.first,
-      tail
-    ] }) });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, null, prefix?.first, tail));
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Box_default, { flexDirection: "column", width: "100%", children: out });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, out);
 }
 function blockPositionRange(node2) {
   const position2 = node2.position;
@@ -51713,7 +51404,6 @@ function getBilingualTip(liveMs, locale = "zh-CN") {
 }
 
 // packages/tui/tui-render/src/reasoning.tsx
-var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
 function formatSeconds(ms) {
   return (ms / 1e3).toFixed(1);
 }
@@ -51728,16 +51418,16 @@ function thinkingHeader(durationMs, expanded, live = false, width) {
   return paintBackgroundRow(parts, "toolBg", width !== void 0 && width > 0 ? width : 0);
 }
 function bodyRow(line5, key, width) {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([styled("\u2502 ", "accentText"), styled(escapeContent(line5), "fgDim")], "toolBg", width !== void 0 && width > 0 ? width : 0) }, key);
+  return /* @__PURE__ */ React.createElement(Text, { key, wrap: "truncate" }, paintBackgroundRow([styled("\u2502 ", "accentText"), styled(escapeContent(line5), "fgDim")], "toolBg", width !== void 0 && width > 0 ? width : 0));
 }
 function ReasoningBlock(props) {
   if (props.collapsed || props.text === "") return null;
-  if (props.maxCols === void 0) return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ResponsiveReasoningBlock, { ...props });
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReasoningContent, { ...props, maxCols: props.maxCols });
+  if (props.maxCols === void 0) return /* @__PURE__ */ React.createElement(ResponsiveReasoningBlock, { ...props });
+  return /* @__PURE__ */ React.createElement(ReasoningContent, { ...props, maxCols: props.maxCols });
 }
 function ResponsiveReasoningBlock(props) {
   const { columns } = use_window_size_default();
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReasoningContent, { ...props, maxCols: columns });
+  return /* @__PURE__ */ React.createElement(ReasoningContent, { ...props, maxCols: columns });
 }
 function ReasoningContent({
   text: text4,
@@ -51747,10 +51437,7 @@ function ReasoningContent({
 }) {
   const escaped = escapeContent(text4);
   const body = wrapDisplayLines(escaped, Math.max(1, width - 4));
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Text, { wrap: "truncate", children: thinkingHeader(durationMs, !live, live, width) }),
-    body.map((line5, index2) => bodyRow(line5, index2, width))
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg") }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, thinkingHeader(durationMs, !live, live, width)), body.map((line5, index2) => bodyRow(line5, index2, width)));
 }
 
 // packages/tui/tui-render/src/row-source.ts
@@ -52656,11 +52343,10 @@ function renderPolicyDefaults() {
 }
 
 // packages/tui/tui-render/src/tool-card.tsx
-var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
 function ToolCard({ card, expanded = false, maxCols = 80, locale = "zh-CN", policy = toolPolicyDefaults() }) {
   const cache4 = new ToolRowCache(policy);
   const rows = cache4.rows(card.callId, card, maxCols, expanded, locale).slice();
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg"), children: rows.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Text, { wrap: "truncate", children: paintLineFromRenderLine(line5, hyperlinksEnabled()) }, index2)) });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", backgroundColor: inkColor("toolBg") }, rows.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintLineFromRenderLine(line5, hyperlinksEnabled()))));
 }
 
 // packages/tui/tui-render/src/tool-presenter-cache.ts
@@ -52713,6 +52399,159 @@ var DisplayRevisionIndex = class {
     const version3 = String(++this.next);
     this.entries.set(owner, { fields: [...fields], version: version3 });
     return version3;
+  }
+};
+
+// packages/tui/tui-render/src/history-data.ts
+function overlayMap(settled, active) {
+  return new HistoryOverlay(settled, active);
+}
+var HistoryOverlay = class {
+  constructor(settled, active) {
+    this.settled = settled;
+    this.active = active;
+  }
+  settled;
+  active;
+  get size() {
+    let size = this.settled.size;
+    for (const key of this.active.keys()) if (!this.settled.has(key)) size++;
+    return size;
+  }
+  has(key) {
+    return this.active.has(key) || this.settled.has(key);
+  }
+  get(key) {
+    return this.active.has(key) ? this.active.get(key) : this.settled.get(key);
+  }
+  *entries() {
+    for (const pair of this.settled) if (!this.active.has(pair[0])) yield pair;
+    yield* this.active;
+  }
+  *keys() {
+    for (const [key] of this.entries()) yield key;
+  }
+  *values() {
+    for (const [, value] of this.entries()) yield value;
+  }
+  [Symbol.iterator]() {
+    return this.entries();
+  }
+  forEach(callback, thisArg) {
+    for (const [key, value] of this.entries()) callback.call(thisArg, value, key, this);
+  }
+};
+var ExactHistoryWindow = class {
+  source;
+  scope = "";
+  start = 0;
+  generation = 0;
+  get complete() {
+    return this.start === 0;
+  }
+  /** Replace the source/scope and invalidate every callback from the previous revision. */
+  update(source, scope, initialEntries) {
+    if (this.source === source && this.scope === scope) return;
+    const appended = this.scope === scope && this.source !== void 0 && source.length >= this.source.length && this.source.length > 0 && this.source.every((entry, index2) => entry === source[index2]);
+    this.start = appended ? this.start : Math.max(0, source.length - initialEntries);
+    this.source = source;
+    this.scope = scope;
+    this.generation++;
+  }
+  /** Advance only the admitted revision; old work cannot repopulate a replaced scope. */
+  advance(generation, entries) {
+    if (generation !== this.generation || this.complete) return false;
+    this.start = Math.max(0, this.start - entries);
+    return true;
+  }
+};
+var HistoryRowCache = class {
+  constructor(maxRows, maxBytes) {
+    this.maxRows = maxRows;
+    this.maxBytes = maxBytes;
+  }
+  maxRows;
+  maxBytes;
+  entries = /* @__PURE__ */ new Map();
+  pins = /* @__PURE__ */ new Set();
+  next = 0;
+  rows = 0;
+  bytes = 0;
+  transient;
+  rebuilds = 0;
+  /** Retain exact height independently of evictable materialization and its parser state. */
+  wrap(owner, block, rows, rebuild) {
+    const key = ++this.next;
+    const length = rows.length;
+    this.put(key, owner, block, rows);
+    return indexedRows(length, (index2) => {
+      let cached2 = this.entries.get(key);
+      if (cached2 === void 0) {
+        const rebuilt = rebuild();
+        if (rebuilt.length !== length) throw new Error(`HistoryRowCache: inexact rebuild for ${block}`);
+        this.transient = key;
+        this.put(key, owner, block, rebuilt);
+        cached2 = this.entries.get(key);
+        this.rebuilds++;
+      } else {
+        this.entries.delete(key);
+        this.entries.set(key, cached2);
+      }
+      return cached2.rows.at(index2);
+    });
+  }
+  put(key, owner, block, rows) {
+    let bytes = 128;
+    if (Array.isArray(rows)) {
+      for (const line5 of rows) bytes += line5.text.length * 2 + line5.spans.length * 48 + 128;
+    } else bytes += rows.length * 256;
+    this.entries.set(key, { owner, block, rows, bytes });
+    this.rows += rows.length;
+    this.bytes += bytes;
+    this.enforce();
+  }
+  drop(key, cached2) {
+    this.entries.delete(key);
+    this.rows -= cached2.rows.length;
+    this.bytes -= cached2.bytes;
+  }
+  enforce() {
+    if (this.rows <= this.maxRows && this.bytes <= this.maxBytes) return;
+    for (const [key, cached2] of this.entries) {
+      if (this.rows <= this.maxRows && this.bytes <= this.maxBytes) break;
+      if (key === this.transient || this.pins.has(cached2.owner)) continue;
+      this.drop(key, cached2);
+    }
+  }
+  setPins(owners) {
+    this.pins.clear();
+    for (const owner of owners) this.pins.add(owner);
+    this.transient = void 0;
+    this.enforce();
+  }
+  retainOwners(owners) {
+    for (const [key, cached2] of this.entries) if (!owners.has(cached2.owner)) this.drop(key, cached2);
+    for (const owner of this.pins) if (!owners.has(owner)) this.pins.delete(owner);
+  }
+  clear() {
+    this.entries.clear();
+    this.pins.clear();
+    this.rows = 0;
+    this.bytes = 0;
+    this.transient = void 0;
+  }
+  stats() {
+    let pinnedRows = 0;
+    for (const [key, cached2] of this.entries) if (key === this.transient || this.pins.has(cached2.owner)) pinnedRows += cached2.rows.length;
+    return {
+      entries: this.entries.size,
+      rows: this.rows,
+      estimatedBytes: this.bytes,
+      pinnedRows,
+      overBudgetRows: Math.max(0, this.rows - this.maxRows),
+      overBudgetBytes: Math.max(0, this.bytes - this.maxBytes),
+      rebuilds: this.rebuilds
+    };
   }
 };
 
@@ -52930,7 +52769,6 @@ function profilerOnRender(probe) {
 }
 
 // packages/tui/tui-render/src/pixel-fish-home.tsx
-var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
 var BRAND_FRAME_MS = 320;
 var BRAND_ART_ROWS = BRAND_HALF_BLOCK.length;
 var BRAND_MIN_HOME_ROWS = BRAND_ART_ROWS + 2;
@@ -52999,27 +52837,22 @@ function PixelFishHome({
     revealStartedRef.current = true;
     let nextFrame = 1;
     setFrameIndex(0);
-    const advance = () => {
+    const advance2 = () => {
       if (nextFrame >= BRAND_HALF_BLOCK_FRAMES.length) {
         setFrameIndex(void 0);
         return;
       }
       setFrameIndex(nextFrame);
       nextFrame += 1;
-      armTimer(advance);
+      armTimer(advance2);
     };
-    armTimer(advance);
+    armTimer(advance2);
     return clearTimer;
   }, [animate, selected, visible]);
   const rows = selected === "plain" ? void 0 : selected === "half-block" && frameIndex !== void 0 ? BRAND_HALF_BLOCK_FRAMES[frameIndex] : rowsForTier(selected);
   const artWidth = rows === void 0 ? 0 : Math.max(0, ...rows.map(displayWidth));
-  const home = /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: [
-    rows === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Box_default, { flexDirection: "column", width: artWidth, children: rows.map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(row, "accent")]) }, `fish-${String(index2)}`)) }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(BRAND_PLAIN_WORDMARK, "accent", void 0, true)]) }),
-    maxRows >= BRAND_HOME_ROWS ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(" ", "bg")]) }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Text, { children: paintRow([styled(BRAND_HOME_LINE, "fg")]) })
-  ] });
-  return frameProbe === void 0 ? home : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(FrameProbe, { probe: frameProbe, children: home });
+  const home = /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", alignItems: "center", width: "100%" }, rows === void 0 ? null : /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: artWidth }, rows.map((row, index2) => /* @__PURE__ */ React.createElement(Text, { key: `fish-${String(index2)}` }, paintRow([styled(row, "accent")])))), /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(BRAND_PLAIN_WORDMARK, "accent", void 0, true)])), maxRows >= BRAND_HOME_ROWS ? /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(" ", "bg")])) : null, /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(BRAND_HOME_LINE, "fg")])));
+  return frameProbe === void 0 ? home : /* @__PURE__ */ React.createElement(FrameProbe, { probe: frameProbe }, home);
 }
 
 // packages/tui/tui-render/src/conversation-layout.ts
@@ -53592,6 +53425,272 @@ function diffVisibleFrameSnapshots(previous3, next) {
   return { forced, changes, unchangedRows };
 }
 
+// packages/tui/tui-render/src/terminal-chunks.ts
+import { StringDecoder } from "node:string_decoder";
+var MAX_PENDING_TERMINAL_BYTES = 64 * 1024;
+function advance(state, char) {
+  if (char === "" || char === "") return "text";
+  if (state === "osc" || state === "string") {
+    if (char === "\x1B") return state === "osc" ? "osc-escape" : "string-escape";
+    return char === "\x9C" || state === "osc" && char === "\x07" ? "text" : state;
+  }
+  if (state === "osc-escape" || state === "string-escape") {
+    if (char === "\\") return "text";
+    return advance("escape", char);
+  }
+  if (char === "\x1B") return "escape";
+  if (state === "text") {
+    if (char === "\x9B") return "csi";
+    if (char === "\x9D") return "osc";
+    if ("\x90\x98\x9E\x9F".includes(char)) return "string";
+    return "text";
+  }
+  if (state === "escape") {
+    if (char === "[") return "csi";
+    if (char === "]") return "osc";
+    if ("PX^_".includes(char)) return "string";
+    if (char >= " " && char <= "/") return "intermediate";
+    return char >= "0" && char <= "~" ? "text" : "escape";
+  }
+  if (state === "csi") return char >= "@" && char <= "~" ? "text" : "csi";
+  return char >= "0" && char <= "~" ? "text" : "intermediate";
+}
+var TerminalChunks = class {
+  decoder = new StringDecoder("utf8");
+  pending = "";
+  surrogate = "";
+  overflow = "text";
+  decoderPending = 0;
+  get pendingBytes() {
+    return Buffer.byteLength(this.pending + this.surrogate);
+  }
+  get incomplete() {
+    return this.pending !== "" || this.surrogate !== "" || this.overflow !== "text" || this.decoderPending > 0;
+  }
+  push(chunk2) {
+    let text4 = typeof chunk2 === "string" ? this.decoder.end() + chunk2 : this.decoder.write(Buffer.from(chunk2));
+    this.decoderPending = typeof chunk2 === "string" ? 0 : Math.max(0, this.decoderPending + chunk2.byteLength - Buffer.byteLength(text4));
+    text4 = this.surrogate + text4;
+    this.surrogate = "";
+    const last = text4.charCodeAt(text4.length - 1);
+    if (last >= 55296 && last <= 56319) {
+      this.surrogate = text4.slice(-1);
+      text4 = text4.slice(0, -1);
+    }
+    const chunks = [];
+    if (this.overflow !== "text") {
+      let index2 = 0;
+      while (index2 < text4.length && this.overflow !== "text") this.overflow = advance(this.overflow, text4[index2++]);
+      if (index2 > 0) chunks.push({ text: text4.slice(0, index2), decorate: false });
+      text4 = text4.slice(index2);
+      if (this.overflow !== "text") return chunks;
+    }
+    text4 = this.pending + text4;
+    this.pending = "";
+    let state = "text";
+    let complete = 0;
+    for (let index2 = 0; index2 < text4.length; index2++) {
+      state = advance(state, text4[index2]);
+      if (state === "text") complete = index2 + 1;
+    }
+    if (complete > 0) chunks.push({ text: text4.slice(0, complete), decorate: true });
+    const rest = text4.slice(complete);
+    if (Buffer.byteLength(rest) > MAX_PENDING_TERMINAL_BYTES) {
+      this.overflow = state;
+      chunks.push({ text: rest, decorate: false });
+    } else this.pending = rest;
+    return chunks;
+  }
+  /** Cancel only a control already streamed to the terminal; buffered suffixes were never sent. */
+  dispose() {
+    const cancel = this.overflow === "text" ? "" : "";
+    this.pending = "";
+    this.surrogate = "";
+    this.overflow = "text";
+    this.decoder = new StringDecoder("utf8");
+    this.decoderPending = 0;
+    return cancel;
+  }
+};
+function terminalBackground(text4, previous3) {
+  let background = previous3;
+  for (const match of text4.matchAll(/\x1b\[([\d;:]*)m/gu)) {
+    const parameters = (match[1] ?? "").split(";");
+    for (let index2 = 0; index2 < parameters.length; index2++) {
+      const value = parameters[index2];
+      const code2 = Number(value.split(":")[0]);
+      if (code2 === 0 || code2 === 49) background = "";
+      else if (code2 >= 40 && code2 <= 47 || code2 >= 100 && code2 <= 107) background = `\x1B[${value}m`;
+      else if (code2 === 38 || code2 === 48 || code2 === 58) {
+        if (value.includes(":")) {
+          if (code2 === 48) background = `\x1B[${value}m`;
+          continue;
+        }
+        const count = parameters[index2 + 1] === "2" ? 4 : parameters[index2 + 1] === "5" ? 2 : 0;
+        if (count > 0 && index2 + count < parameters.length && code2 === 48) background = `\x1B[${parameters.slice(index2, index2 + count + 1).join(";")}m`;
+        index2 += count;
+      }
+    }
+  }
+  return background;
+}
+
+// packages/tui/tui-render/src/terminal-output.ts
+var MAX_PENDING_OUTPUT_BYTES = 4 * 1024 * 1024;
+var MAX_PENDING_OUTPUT_WRITES = 256;
+var OUTPUT_TRACE_CAPACITY = 128;
+var TerminalOutput = class {
+  constructor(stream, onError, context = () => ({})) {
+    this.stream = stream;
+    this.onError = onError;
+    this.context = context;
+    stream.on?.("drain", this.drain);
+    stream.on?.("error", this.failure);
+  }
+  stream;
+  onError;
+  context;
+  queue = [];
+  queuedBytes = 0;
+  blocked = false;
+  closed = false;
+  sequence = 0;
+  traces = [];
+  afterDrain = /* @__PURE__ */ new Map();
+  drain = () => {
+    this.blocked = false;
+    this.flush();
+  };
+  failure = (error51) => {
+    this.onError();
+    const pending = this.queue;
+    this.queue = [];
+    this.queuedBytes = 0;
+    this.afterDrain.clear();
+    for (const job of pending) {
+      this.record(job, "failed");
+      job.callback?.(error51);
+    }
+    if (this.closed) this.detach();
+  };
+  get pressured() {
+    return this.blocked;
+  }
+  get pendingBytes() {
+    return this.queuedBytes;
+  }
+  snapshot() {
+    return { pendingBytes: this.queuedBytes, pendingWrites: this.queue.length, pressured: this.blocked, bundle: import.meta.url, trace: [...this.traces] };
+  }
+  /** Lazy absolute overlays can be replaced before they ever mutate paint state. */
+  latest(key, paint) {
+    if (this.closed) return;
+    if (!this.blocked && this.queue.length === 0) {
+      paint();
+      return;
+    }
+    if (!this.afterDrain.has(key) && this.afterDrain.size >= 16) throw new Error("TUI deferred paint budget exceeded");
+    this.afterDrain.set(key, paint);
+  }
+  write(bytes, source, callback) {
+    if (this.closed) {
+      const error51 = new Error("TUI terminal output is closed");
+      callback?.(error51);
+      return false;
+    }
+    const job = { bytes, source, ...callback === void 0 ? {} : { callback } };
+    if (!this.blocked && this.queue.length === 0) return this.send(job);
+    const size = Buffer.byteLength(bytes);
+    if (size + this.queuedBytes > MAX_PENDING_OUTPUT_BYTES || this.queue.length >= MAX_PENDING_OUTPUT_WRITES) {
+      const error51 = new Error("TUI terminal output backlog exceeded its finite budget");
+      this.record(job, "failed");
+      this.onError();
+      callback?.(error51);
+      throw error51;
+    }
+    this.queue.push(job);
+    this.queuedBytes += size;
+    this.record(job, "accepted");
+    return false;
+  }
+  record(job, state) {
+    this.traces.push({
+      ...this.context(),
+      sequence: ++this.sequence,
+      source: job.source,
+      bytes: Buffer.byteLength(job.bytes),
+      pendingBytes: this.queuedBytes,
+      state,
+      synchronized: job.bytes.includes("\x1B[?2026h") || job.bytes.includes("\x1B[?2026l"),
+      at: performance.now()
+    });
+    if (this.traces.length > OUTPUT_TRACE_CAPACITY) this.traces.shift();
+  }
+  send(job) {
+    try {
+      const accepted = this.stream.write(job.bytes, (error51) => {
+        if (error51) this.onError();
+        this.record(job, error51 ? "failed" : "written");
+        job.callback?.(error51);
+      });
+      if (!accepted) this.blocked = true;
+      return accepted;
+    } catch (error51) {
+      this.record(job, "failed");
+      this.onError();
+      throw error51;
+    }
+  }
+  flush() {
+    while (!this.blocked && this.queue.length > 0) {
+      const job = this.queue.shift();
+      this.queuedBytes -= Buffer.byteLength(job.bytes);
+      this.send(job);
+    }
+    if (!this.blocked && this.queue.length === 0) {
+      for (const [key, paint] of this.afterDrain) {
+        this.afterDrain.delete(key);
+        paint();
+        if (this.blocked) break;
+      }
+    }
+    if (this.closed && this.queue.length === 0) this.detach();
+  }
+  dispose() {
+    this.closed = true;
+    this.afterDrain.clear();
+    if (this.queue.length === 0) this.detach();
+  }
+  detach() {
+    this.stream.off?.("drain", this.drain);
+    this.stream.off?.("error", this.failure);
+  }
+};
+var outputs = /* @__PURE__ */ new WeakMap();
+function registerTerminalOutput(stream, value) {
+  outputs.set(stream, value);
+  return () => {
+    if (outputs.get(stream) === value) outputs.delete(stream);
+  };
+}
+function writeTerminalControl(stream, bytes, source) {
+  const output = outputs.get(stream);
+  return output === void 0 ? stream.write(bytes) : output.control(bytes, source);
+}
+function aliasTerminalOutput(source, alias) {
+  const output = outputs.get(source);
+  return output === void 0 ? () => {
+  } : registerTerminalOutput(alias, output);
+}
+function deferTerminalPaint(stream, key, paint) {
+  const registered = outputs.get(stream);
+  if (registered?.defer?.(key, paint)) return true;
+  const output = registered?.output;
+  if (output === void 0 || !output.pressured) return false;
+  output.latest(key, paint);
+  return true;
+}
+
 // packages/tui/tui-render/src/frame-fill.ts
 var BG_OFF = "\x1B[49m";
 var SGR_RESET = "\x1B[0m";
@@ -53603,6 +53702,9 @@ var START_SYNC = "\x1B[?2026h";
 var SHOW_CURSOR = "\x1B[?25h";
 var HIDE_CURSOR = "\x1B[?25l";
 var WRITE_FRAME_OVERLAY = /* @__PURE__ */ Symbol("dsh.tui.write-frame-overlay");
+var DISPOSE_FRAME_OUTPUT = /* @__PURE__ */ Symbol("dsh.tui.dispose-frame-output");
+var MAX_PENDING_CONTROL_BYTES = 64 * 1024;
+var MAX_PENDING_CONTROLS = 64;
 var frameCaret;
 var frameRail;
 var paintedFrameRail;
@@ -53789,6 +53891,7 @@ function snapshotFitsStdout(stdout) {
   return snapshot2.geometry.columns === stdout.columns && snapshot2.geometry.rows === stdout.rows;
 }
 function writePublishedFrameSnapshot(stdout, tier = currentTier()) {
+  if (deferTerminalPaint(stdout, "transcript", () => writePublishedFrameSnapshot(stdout, tier))) return;
   if (!snapshotFitsStdout(stdout) || transcriptSlotChanged()) return;
   const transcript = transcriptOverlay(tier, true);
   const rail = railOverlay(tier, false);
@@ -53830,6 +53933,15 @@ function transformFrameChunk(chunk2, tier = currentTier(), publishFrame = true, 
   }
   return out;
 }
+function disposeFrameOutput(stdout) {
+  stdout[DISPOSE_FRAME_OUTPUT]?.();
+}
+function invalidateFramePaint() {
+  paintedVisibleFrame = void 0;
+  paintedTranscriptRepaintKey = void 0;
+  paintedFrameRail = void 0;
+  transcriptInvalidated = true;
+}
 function preserveFullWidthRows(chunk2, columns) {
   if (columns < 1 || !chunk2.includes("\x1B[K")) return chunk2;
   return chunk2.replace(/(\x1b\[(?:1)?G)([^\n]*?)\x1b\[K/gu, (match, home, body) => displayWidth(body) === columns ? home + body : match);
@@ -53840,10 +53952,46 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
   let synchronizedFrameOpen = false;
   let inkBottomRow = stdout.rows;
   let inkCursorRow = 1;
-  const transformingWrite = (chunk2, ...args) => {
-    if (typeof chunk2 !== "string") return writeMeasured(chunk2, args);
-    if (chunk2.includes(START_SYNC)) synchronizedFrameOpen = true;
-    if (chunk2.includes(END_SYNC)) synchronizedFrameOpen = false;
+  const parser = new TerminalChunks();
+  const output = new TerminalOutput(stdout, invalidateFramePaint, () => ({
+    columns: stdout.columns,
+    rows: stdout.rows,
+    parserPendingBytes: parser.pendingBytes,
+    sequenceOpen: parser.incomplete,
+    caret: frameCaret
+  }));
+  const controls = [];
+  const deferredPaints = /* @__PURE__ */ new Map();
+  let controlBytes = 0;
+  let background = "";
+  let disposed = false;
+  const control = (bytes, source) => {
+    if (disposed) return false;
+    if (parser.incomplete || synchronizedFrameOpen) {
+      if (controlBytes + Buffer.byteLength(bytes) > MAX_PENDING_CONTROL_BYTES || controls.length >= MAX_PENDING_CONTROLS) throw new Error("TUI deferred control budget exceeded");
+      controls.push({ bytes, source });
+      controlBytes += Buffer.byteLength(bytes);
+      return false;
+    }
+    return output.write(bytes + caretSuffix(), source);
+  };
+  const flushControls = () => {
+    if (parser.incomplete || synchronizedFrameOpen) return;
+    for (const item of controls.splice(0)) output.write(item.bytes + caretSuffix(), item.source);
+    controlBytes = 0;
+    const paints = [...deferredPaints];
+    deferredPaints.clear();
+    for (const [key, paint] of paints) output.latest(key, paint);
+  };
+  const unregister = registerTerminalOutput(wrapped, { control, output, defer: (key, paint) => {
+    if (!parser.incomplete && !synchronizedFrameOpen) return false;
+    deferredPaints.set(key, paint);
+    return true;
+  } });
+  const transformComplete = (chunk2) => {
+    const syncStart = chunk2.lastIndexOf(START_SYNC);
+    const syncEnd = chunk2.lastIndexOf(END_SYNC);
+    if (syncStart >= 0 || syncEnd >= 0) synchronizedFrameOpen = syncStart > syncEnd;
     const source = stdout.isTTY ? preserveFullWidthRows(chunk2, stdout.columns) : chunk2;
     const inkChunk = stdout.isTTY && frameCaret !== void 0 && /\x1b\[\d*A|\x1b\[2K/u.test(source) ? `\x1B[${Math.min(inkBottomRow, stdout.rows)};1H${source}` : source;
     if (stdout.isTTY) {
@@ -53857,23 +54005,60 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
     const released = stdout.isTTY ? prepareTranscriptOverlay(stdout.columns, stdout.rows, tier, source.includes(START_SYNC)) : "";
     const frameChunk = released === "" ? inkChunk : inkChunk.includes(START_SYNC) ? inkChunk.replace(START_SYNC, START_SYNC + released) : synchronizedFrameOpen ? released + inkChunk : START_SYNC + released + END_SYNC + inkChunk;
     let onScrollPaint;
-    const transformed = transformFrameChunk(frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
+    const inherited = background;
+    background = terminalBackground(chunk2, background);
+    const transformed = transformFrameChunk(inherited + frameChunk, tier, !synchronizedFrameOpen && snapshotFitsStdout(stdout), () => {
       const revision = visibleFrameSnapshot()?.scrollRevision;
       if (frameMetrics !== void 0 && revision !== void 0) {
         onScrollPaint = takeScrollPaintCompletion(frameMetrics, revision);
       }
     });
-    return writeMeasured(transformed, args, onScrollPaint);
+    return { text: transformed, ...onScrollPaint === void 0 ? {} : { painted: onScrollPaint } };
   };
-  const writeMeasured = (transformed, args, onScrollPaint) => {
-    if (frameMetrics !== void 0 && typeof transformed === "string") {
-      frameMetrics.addWrittenCells(countWrittenCells(transformed));
+  const transformingWrite = (chunk2, ...args) => {
+    if (disposed) {
+      const error51 = new Error("TUI output has been disposed");
+      const callback = args.at(-1);
+      if (typeof callback === "function") {
+        callback(error51);
+        return false;
+      }
+      throw error51;
+    }
+    if (typeof chunk2 !== "string" && !(chunk2 instanceof Uint8Array)) return writeMeasured(chunk2, args);
+    const parts = parser.push(chunk2);
+    const painted = [];
+    const transformed = parts.map((part) => {
+      if (!part.decorate) return part.text;
+      const next = transformComplete(part.text);
+      if (next.painted !== void 0) painted.push(next.painted);
+      return next.text;
+    }).join("");
+    if (transformed === "") {
+      const callback = args.at(-1);
+      if (typeof callback === "function") queueMicrotask(() => callback());
+      return true;
+    }
+    const accepted = writeMeasured(transformed, args, () => {
+      for (const complete of painted) complete();
+    });
+    flushControls();
+    return accepted;
+  };
+  const writeMeasured = (transformed, args, onScrollPaint, source = "ink") => {
+    if (typeof transformed === "string") {
+      frameMetrics?.addWrittenCells(countWrittenCells(transformed));
       const last = args.at(-1);
       const onDrain = (error51) => {
-        if (error51 !== void 0 && error51 !== null) return;
+        if (error51 !== void 0 && error51 !== null) {
+          invalidateFramePaint();
+          return;
+        }
         onScrollPaint?.();
-        completeDeltaStdoutDrain(frameMetrics);
-        if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented();
+        if (frameMetrics !== void 0) {
+          completeDeltaStdoutDrain(frameMetrics);
+          if (transformed.includes(END_SYNC)) frameMetrics.recordFramePresented();
+        }
       };
       if (typeof last === "function") {
         const original = last;
@@ -53885,15 +54070,37 @@ function wrapStdoutForFrameBg(stdout, getTier = currentTier, frameMetrics) {
         args.push(onDrain);
       }
     }
-    return write2(transformed, ...args);
+    try {
+      if (typeof transformed === "string") return output.write(transformed, source, args.at(-1));
+      return write2(transformed, ...args);
+    } catch (error51) {
+      invalidateFramePaint();
+      throw error51;
+    }
   };
   wrapped.write = transformingWrite;
   const overlayStream = wrapped;
-  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2, revision) => writeMeasured(
-    chunk2,
-    [],
-    frameMetrics !== void 0 && revision !== void 0 ? takeScrollPaintCompletion(frameMetrics, revision) : void 0
-  );
+  overlayStream[WRITE_FRAME_OVERLAY] = (chunk2, revision) => {
+    if (parser.incomplete || synchronizedFrameOpen) return control(chunk2, "transcript");
+    const painted = frameMetrics !== void 0 && revision !== void 0 ? takeScrollPaintCompletion(frameMetrics, revision) : void 0;
+    return writeMeasured(chunk2, [], painted, "transcript");
+  };
+  overlayStream[DISPOSE_FRAME_OUTPUT] = () => {
+    if (disposed) return;
+    disposed = true;
+    const cancel = parser.dispose() + (synchronizedFrameOpen ? END_SYNC : "");
+    if (cancel !== "") output.write(cancel, "lifecycle");
+    background = "";
+    synchronizedFrameOpen = false;
+    for (const item of controls.splice(0)) output.write(item.bytes, item.source);
+    deferredPaints.clear();
+    controlBytes = 0;
+    unregister();
+    output.dispose();
+    invalidateFramePaint();
+    frameCaret = void 0;
+    frameRail = void 0;
+  };
   return wrapped;
 }
 var TERMINAL_CONTROL_PATTERN = /\x1b\](?:[^\x07\x1b]|\x1b(?!\\))*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b./gu;
@@ -54377,7 +54584,8 @@ var ScreenAtlas = class {
         out += `\x1B[${row};${runCol}H\x1B[7m${run2}\x1B[27m`;
       });
     });
-    return out;
+    const background = bgSequence(currentTier());
+    return out === "" || background === "" ? out : `${background}${out}\x1B[49m`;
   }
   /**
    * Repaint the written cells in a former selection with the normal page
@@ -54699,6 +54907,7 @@ var MouseSession = class {
   atlas;
   lastFrameRevision;
   stdoutSynchronized = false;
+  outputBoundary = new TerminalChunks();
   drag;
   selection;
   paintedSelection;
@@ -54818,9 +55027,10 @@ var MouseSession = class {
    * @returns chunk plus overlay and caret restore.
    */
   feedStdout(chunk2) {
+    const complete = this.outputBoundary.push(chunk2);
     const snapshot2 = visibleFrameSnapshot();
     if (snapshot2 === void 0) {
-      this.atlas.feed(chunk2);
+      for (const part of complete) if (part.decorate) this.atlas.feed(part.text);
     } else if (snapshot2.revision !== this.lastFrameRevision) {
       this.atlas.applyFrameSnapshot(snapshot2);
       this.lastFrameRevision = snapshot2.revision;
@@ -54828,7 +55038,7 @@ var MouseSession = class {
     const syncStart = chunk2.lastIndexOf(START_SYNC2);
     const syncEnd = chunk2.lastIndexOf(END_SYNC2);
     if (syncStart >= 0 || syncEnd >= 0) this.stdoutSynchronized = syncStart > syncEnd;
-    if (this.selection === void 0 || this.drag?.moved !== true || chunk2 === "" || this.stdoutSynchronized) return chunk2;
+    if (this.selection === void 0 || this.drag?.moved !== true || chunk2 === "" || this.stdoutSynchronized || this.outputBoundary.incomplete) return chunk2;
     const overlay = this.atlas.selectionOverlay(this.selection.start, this.selection.end);
     if (overlay === "") return chunk2;
     this.paintedSelection = this.selection;
@@ -54847,6 +55057,7 @@ var MouseSession = class {
   /** Clear timers. */
   dispose() {
     this.stopEdge();
+    this.outputBoundary.dispose();
     this.railDrag = void 0;
   }
   syncEdge(row) {
@@ -54928,7 +55139,7 @@ function attachMouseIo(options) {
     rows: options.stdout.rows,
     copyText: (text4) => {
       copyText(text4, (chunk2) => {
-        options.stdout.write(chunk2);
+        writeTerminalControl(options.stdout, chunk2, "clipboard");
       });
     },
     onScroll: notifyMouseScroll
@@ -54948,7 +55159,7 @@ function attachMouseIo(options) {
   options.stdout.write(ENABLE_SGR_MOUSE);
   const wrappedStdin = wrapStdin(options.stdin, (event) => {
     const repaint = session.handle(event);
-    if (repaint !== "") write2(repaint);
+    if (repaint !== "") writeTerminalControl(options.stdout, repaint, "selection");
   }, options.wheelRows ?? RENDER_POLICY_DEFAULT_SCROLL_WHEEL_ROWS);
   const wrappedStdout = Object.create(options.stdout);
   const transformingWrite = (chunk2, ...args) => {
@@ -54968,7 +55179,7 @@ function attachMouseIo(options) {
       options.stdout.off("resize", onResize);
       wrappedStdin.dispose();
       session.dispose();
-      options.stdout.write(DISABLE_SGR_MOUSE);
+      writeTerminalControl(options.stdout, DISABLE_SGR_MOUSE, "lifecycle");
     }
   };
 }
@@ -55834,6 +56045,18 @@ var TranscriptRenderStoreImpl = class {
     this.pins.clear();
     this.enforceBudget();
   }
+  retain(blockIds) {
+    for (const id of this.entries.keys()) if (!blockIds.has(id)) this.remove(id);
+  }
+  remove(blockId) {
+    const entry = this.entries.get(blockId);
+    if (entry === void 0) return;
+    entry.activeRevision?.discard();
+    this.settledEntries.delete(entry);
+    this.pins.delete(blockId);
+    this.updateResident(entry, 0, 0, false);
+    this.entries.delete(blockId);
+  }
   reset() {
     this.entries.clear();
     this.settledEntries.clear();
@@ -55868,6 +56091,13 @@ var TranscriptRenderStoreImpl = class {
     return this.cachedRows;
   }
   stats() {
+    let pinnedRows = 0;
+    let pinnedBytes = 0;
+    for (const id of this.pins) {
+      const entry = this.entries.get(id);
+      pinnedRows += entry?.cachedRows ?? 0;
+      pinnedBytes += entry?.cachedBytes ?? 0;
+    }
     return {
       hits: this.counters.hits,
       evictions: this.counters.evictions,
@@ -55876,7 +56106,13 @@ var TranscriptRenderStoreImpl = class {
       tailRowsRerendered: this.counters.tailRowsRerendered,
       cachedBlocks: this.cachedBlocks,
       cachedRows: this.cachedRows,
-      cachedBytes: this.cachedBytes
+      cachedBytes: this.cachedBytes,
+      sourceEntries: this.entries.size,
+      pinnedBlocks: this.pins.size,
+      pinnedRows,
+      pinnedBytes,
+      overBudgetRows: Math.max(0, this.cachedRows - this.config.maxRows),
+      overBudgetBytes: Math.max(0, this.cachedBytes - this.config.maxBytes)
     };
   }
   /** Internal: called by MutableRevisionImpl on settle. */
@@ -56282,7 +56518,27 @@ function createFrameArbiter(options) {
 }
 
 // packages/tui/tui-render/src/stream-view.tsx
-var import_jsx_runtime6 = __toESM(require_jsx_runtime(), 1);
+function useCurrentHistoryCallback(callback) {
+  const current = (0, import_react37.useRef)(callback);
+  current.current = callback;
+  return (0, import_react37.useCallback)((...args) => current.current(...args), []);
+}
+function clearHistoryFrame() {
+  setVisibleFrameSnapshot(void 0);
+  releaseFrameRail();
+  setMouseRailRegion(void 0);
+}
+var historyNow = () => performance.now();
+function historySchedulerDisposer(unsubscribe, arbiter, scroll, stream, refs, metrics) {
+  return () => {
+    if (metrics !== void 0) clearScrollInputs(metrics);
+    unsubscribe();
+    arbiter.dispose();
+    if (refs.scroll.current === scroll) refs.scroll.current = void 0;
+    if (refs.stream.current === stream) refs.stream.current = void 0;
+    if (refs.arbiter.current === arbiter) refs.arbiter.current = void 0;
+  };
+}
 var ASSISTANT_PROSE_PREFIX_COLUMNS = displayWidth("\u25CF ");
 var LIVE_DURATION_TICK_MS = 100;
 function assistantProseScope(scope) {
@@ -56577,7 +56833,7 @@ function restIndent() {
   return paintRow([styled("  ", "bg")]);
 }
 var SettledMarkdownBlock = (0, import_react37.memo)(function SettledMarkdownBlock2(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  return /* @__PURE__ */ React.createElement(
     MarkdownBlock,
     {
       source: props.source,
@@ -56720,9 +56976,10 @@ function framePhysicalLine(blockId, line5, lead, active, prompt) {
   const spans = overlayPromptOnSpans(initialSpans, prompt);
   return clonePhysicalLineWithSpans(base, blockId, spans);
 }
+var MAX_HISTORY_PROJECTOR_STATES = 64;
 var projectorSourceIndexes = /* @__PURE__ */ new WeakMap();
-function projectorStateFor(cache4, blockId, scope, aliases2 = [], source) {
-  const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)$/u, "");
+function projectorStateFor(cache4, blockId, scope, aliases2 = [], source, touched) {
+  const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, "");
   const key = `${blockId}|${projectorScope}`;
   let index2 = projectorSourceIndexes.get(cache4);
   if (index2 === void 0) {
@@ -56748,6 +57005,7 @@ function projectorStateFor(cache4, blockId, scope, aliases2 = [], source) {
   if (state === void 0) {
     state = createMarkdownProjectorState(blockId, scope);
   }
+  cache4.delete(key);
   cache4.set(key, state);
   if (source !== void 0) {
     const previous3 = index2.previousSource.get(state);
@@ -56755,6 +57013,19 @@ function projectorStateFor(cache4, blockId, scope, aliases2 = [], source) {
     bySource.set(source, state);
     index2.previousSource.set(state, source);
   }
+  while (cache4.size > MAX_HISTORY_PROJECTOR_STATES) {
+    const oldest = cache4.entries().next().value;
+    cache4.delete(oldest[0]);
+    if ([...cache4.values()].includes(oldest[1])) continue;
+    const previous3 = index2.previousSource.get(oldest[1]);
+    if (previous3 !== void 0) {
+      for (const [scopeKey, sources] of index2.byScope) {
+        if (sources.get(previous3) === oldest[1]) sources.delete(previous3);
+        if (sources.size === 0) index2.byScope.delete(scopeKey);
+      }
+    }
+  }
+  touched?.add(state);
   return state;
 }
 function stickyToolTitle(card) {
@@ -56848,8 +57119,18 @@ function projectBlockEntry(deps, ownerId, entry, scope, state, active) {
   });
   return projection;
 }
-function makeBlockProjector(deps, storeBlocks) {
-  return (ownerId, entry, scope, state, active) => projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active);
+function makeBlockProjector(deps, storeBlocks, historyRows) {
+  return (ownerId, entry, scope, state, active) => {
+    const projection = projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active);
+    if (historyRows === void 0) return projection;
+    const lines = historyRows.wrap(ownerId, entry.id, projection.lines, () => {
+      const fresh = entry.kind === "assistant-prose" || entry.kind === "markdown" ? createMarkdownProjectorState(entry.id, scope) : void 0;
+      return projectBlockEntry({ ...deps, storeBlocks: /* @__PURE__ */ new Map() }, ownerId, entry, scope, fresh, false).lines;
+    });
+    const descriptor = storeBlocks.get(entry.id);
+    if (descriptor !== void 0) storeBlocks.set(entry.id, { ...descriptor, lines });
+    return { lines };
+  };
 }
 function makeToolSummaryBlockEntry(id, summary2, contentWidth) {
   return {
@@ -56880,6 +57161,7 @@ function makeToolCardBlockEntry(id, card) {
 }
 function StreamView({
   model,
+  onHistoryWork,
   viewportColumns,
   presenters,
   brandTier = "plain",
@@ -56906,15 +57188,13 @@ function StreamView({
   ]);
   const presenterCache = (0, import_react37.useMemo)(() => new ToolPresenterCache(policy.tools.cacheEntries), [policy.tools.cacheEntries]);
   const plainRows = (0, import_react37.useMemo)(() => new PlainTextRowCache(policy.cache), [policy.cache.maxRows, policy.cache.maxBytes]);
-  (0, import_react37.useEffect)(() => () => {
-    plainRows.clear();
-  }, [plainRows]);
-  (0, import_react37.useEffect)(() => () => {
-    presenterCache.clear();
-  }, [presenterCache]);
-  (0, import_react37.useEffect)(() => () => {
-    toolRows.clear();
-  }, [toolRows]);
+  (0, import_react37.useEffect)(() => plainRows.clear.bind(plainRows), [plainRows]);
+  (0, import_react37.useEffect)(() => presenterCache.clear.bind(presenterCache), [presenterCache]);
+  (0, import_react37.useEffect)(() => toolRows.clear.bind(toolRows), [toolRows]);
+  const historyRows = (0, import_react37.useMemo)(
+    () => new HistoryRowCache(policy.cache.maxRows, policy.cache.maxBytes),
+    [policy.cache.maxRows, policy.cache.maxBytes]
+  );
   const transcriptOverscan = policy.transcriptOverscan;
   const windowSize = use_window_size_default();
   const columns = viewportColumns ?? windowSize.columns;
@@ -56927,25 +57207,30 @@ function StreamView({
   const layoutCache = (0, import_react37.useRef)(new TranscriptLayoutCache());
   const projectorStates = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
   const settledProjectionCache = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
+  const historyCounters = (0, import_react37.useRef)({ settledSignatures: 0, descriptorVisits: 0, projectedActiveRequests: 0 });
+  const touchedProjectors = (0, import_react37.useRef)(/* @__PURE__ */ new Set());
+  const settledDirectory = (0, import_react37.useRef)(void 0);
   const settledProjectionScope = (0, import_react37.useRef)("");
   const settledProjectionPresenters = (0, import_react37.useRef)(void 0);
   const rebuildBlocks = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
+  const rebuildHistoryBlock = useCurrentHistoryCallback(({ blockId }) => {
+    const descriptor = rebuildBlocks.current.get(blockId);
+    if (descriptor === void 0) {
+      throw new Error(`TranscriptRenderStore: missing source descriptor for ${blockId}`);
+    }
+    const state = descriptor.entry.kind === "markdown" || descriptor.entry.kind === "assistant-prose" ? createMarkdownProjectorState(blockId, descriptor.scope) : void 0;
+    return projectBlockRows(descriptor.entry, descriptor.scope, state).lines.map((line5) => markdownLineToPhysicalLine(blockId, line5));
+  });
   const lineStore = (0, import_react37.useRef)(void 0);
   if (lineStore.current === void 0) {
     lineStore.current = createTranscriptRenderStore({
       maxRows: policy.cache.maxRows,
       maxBytes: policy.cache.maxBytes,
-      rebuild: ({ blockId }) => {
-        const descriptor = rebuildBlocks.current.get(blockId);
-        if (descriptor === void 0) {
-          throw new Error(`TranscriptRenderStore: missing source descriptor for ${blockId}`);
-        }
-        const state = descriptor.entry.kind === "markdown" || descriptor.entry.kind === "assistant-prose" ? createMarkdownProjectorState(blockId, descriptor.scope) : void 0;
-        return projectBlockRows(descriptor.entry, descriptor.scope, state).lines.map((line5) => markdownLineToPhysicalLine(blockId, line5));
-      }
+      rebuild: rebuildHistoryBlock
     });
   }
   const lastCommandSequence = (0, import_react37.useRef)(-1);
+  const pendingHistoryCommand = (0, import_react37.useRef)(void 0);
   const layoutRevision = 0;
   const [viewport, dispatchViewport] = (0, import_react37.useReducer)(
     reduceTranscriptViewport,
@@ -56957,6 +57242,21 @@ function StreamView({
   const presentationQueue = (0, import_react37.useRef)(void 0);
   const frameArbiter = (0, import_react37.useRef)(void 0);
   const lastDispatchedOffset = (0, import_react37.useRef)(viewport.offsetFromBottom);
+  const publishHistoryFrame = useCurrentHistoryCallback((snapshot2) => {
+    const presented = snapshot2.stream.at(-1);
+    presented?.();
+    if (snapshot2.scroll.presented !== lastDispatchedOffset.current) {
+      lastDispatchedOffset.current = snapshot2.scroll.presented;
+      dispatchViewport({
+        kind: "offset",
+        offsetFromBottom: snapshot2.scroll.presented
+      });
+    }
+    if (frameMetrics !== void 0) {
+      const queue = presentationQueue.current.getStats(snapshot2.nowMs);
+      frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs);
+    }
+  });
   (0, import_react37.useLayoutEffect)(() => {
     const scroll = createScrollScheduler({
       frameIntervalMs: policy.scroll.frameIntervalMs,
@@ -56985,35 +57285,18 @@ function StreamView({
       scroll,
       stream,
       drivesScrollScheduler: true,
-      now: () => performance.now(),
+      now: historyNow,
       demandDriven: true
     });
-    const unsubscribe = arbiter.onPublish((snapshot2) => {
-      const presented = snapshot2.stream.at(-1);
-      if (presented !== void 0) setPresentedEntryRows(presented);
-      if (snapshot2.scroll.presented !== lastDispatchedOffset.current) {
-        lastDispatchedOffset.current = snapshot2.scroll.presented;
-        dispatchViewport({
-          kind: "offset",
-          offsetFromBottom: snapshot2.scroll.presented
-        });
-      }
-      if (frameMetrics !== void 0) {
-        const queue = stream.getStats(snapshot2.nowMs);
-        frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs);
-      }
-    });
+    const unsubscribe = arbiter.onPublish(publishHistoryFrame);
     scrollScheduler.current = scroll;
     presentationQueue.current = stream;
     frameArbiter.current = arbiter;
-    return () => {
-      if (frameMetrics !== void 0) clearScrollInputs(frameMetrics);
-      unsubscribe();
-      arbiter.dispose();
-      if (scrollScheduler.current === scroll) scrollScheduler.current = void 0;
-      if (presentationQueue.current === stream) presentationQueue.current = void 0;
-      if (frameArbiter.current === arbiter) frameArbiter.current = void 0;
-    };
+    return historySchedulerDisposer(unsubscribe, arbiter, scroll, stream, {
+      arbiter: frameArbiter,
+      scroll: scrollScheduler,
+      stream: presentationQueue
+    }, frameMetrics);
   }, [
     frameMetrics,
     policy.scroll.catchUpThreshold,
@@ -57037,8 +57320,30 @@ function StreamView({
     reasoningExpanded,
     toolCardsExpanded
   } = model;
-  const liveDurationMs = useLiveDuration(liveDurationTarget(activeTurn, status));
   const revisions = (0, import_react37.useRef)(new DisplayRevisionIndex()).current;
+  const ingressVersion = activeTurn === void 0 ? "" : activeTurnVersion(activeTurn, revisions);
+  const [presentation, setPresentation] = (0, import_react37.useState)({ turn: activeTurn, version: ingressVersion, history });
+  const presentedTurn = status === "generating" && presentation.history === history ? presentation.turn : activeTurn;
+  const presentedVersion = status === "generating" && presentation.history === history ? presentation.version : ingressVersion;
+  (0, import_react37.useLayoutEffect)(() => {
+    const queue = presentationQueue.current;
+    const arbiter = frameArbiter.current;
+    const next = { turn: activeTurn, version: ingressVersion, history };
+    if (queue === void 0 || arbiter === void 0 || status !== "generating") {
+      queue?.flush();
+      setPresentation((previous3) => previous3.turn === next.turn && previous3.version === next.version && previous3.history === history ? previous3 : next);
+      return;
+    }
+    if (presentation.turn === activeTurn && presentation.version === ingressVersion && presentation.history === history) return;
+    queue.flush();
+    const now = performance.now();
+    queue.push([() => setPresentation(next)], now);
+    const stats = queue.getStats(now);
+    frameMetrics?.recordRenderQueue(stats.depth, stats.oldestAgeMs);
+    if (frameMetrics !== void 0) queue.noteDrain(frameMetrics.snapshot().deltaIngressToStdoutDrainMs.max);
+    arbiter.requestStream();
+  }, [activeTurn, ingressVersion, presentation, status, frameMetrics, history]);
+  const liveDurationMs = useLiveDuration(liveDurationTarget(presentedTurn, status));
   const compactionVersion = compactionDividers.map((divider) => revisions.revision(divider)).join("\0");
   const transcript = (0, import_react37.useMemo)(() => [
     ...history.map((message) => ({ kind: "message", id: message.id, message })),
@@ -57054,7 +57359,7 @@ function StreamView({
     history,
     history.length
   ]);
-  const activeVersion = activeTurn === void 0 ? "" : activeTurnVersion(activeTurn, revisions);
+  const activeVersion = presentedVersion;
   (0, import_react37.useLayoutEffect)(() => {
     if (frameMetrics !== void 0 && activeTurn !== void 0) {
       markDeltaIngress(frameMetrics);
@@ -57107,6 +57412,20 @@ function StreamView({
     [settledBlockRowsScope]
   );
   const hasActiveTurn = activeTurn !== void 0;
+  const historyWindow = (0, import_react37.useRef)(new ExactHistoryWindow()).current;
+  const [, advanceHistory] = (0, import_react37.useReducer)((value) => value + 1, 0);
+  const historyScope = [settledBlockRowsScope.scopeKey, mode, locale].join("\0");
+  historyWindow.update(transcript, historyScope, physicalViewport && viewport.follow ? Math.max(64, rows * 2 + transcriptOverscan) : transcript.length);
+  const historyStart = historyWindow.start;
+  const historyGeneration = historyWindow.generation;
+  const readyTranscript = (0, import_react37.useMemo)(() => transcript.slice(historyStart), [transcript, historyStart]);
+  (0, import_react37.useEffect)(() => {
+    if (historyWindow.complete) return;
+    const timer = setTimeout(() => {
+      if (historyWindow.advance(historyGeneration, 256)) advanceHistory();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [historyWindow, historyGeneration, historyStart]);
   const settledEntryRows = (0, import_react37.useMemo)(() => {
     const projectionScope = [
       settledBlockRowsScope.scopeKey,
@@ -57118,6 +57437,10 @@ function StreamView({
     ].join("\0");
     if (settledProjectionScope.current !== projectionScope) {
       settledProjectionCache.current = /* @__PURE__ */ new Map();
+      historyRows.clear();
+      toolRows.clear();
+      plainRows.clear();
+      presenterCache.clear();
       settledProjectionScope.current = projectionScope;
     }
     if (settledProjectionPresenters.current !== presenters) {
@@ -57125,24 +57448,35 @@ function StreamView({
       settledProjectionPresenters.current = presenters;
     }
     const previousCache = settledProjectionCache.current;
-    const nextCache = /* @__PURE__ */ new Map();
+    const directory = settledDirectory.current;
+    if (directory !== void 0 && directory.transcript !== transcript) {
+      toolRows.clear();
+      plainRows.clear();
+      presenterCache.clear();
+    }
+    const prepending = directory !== void 0 && directory.transcript === transcript && directory.scope === projectionScope && directory.presenters === presenters && directory.expanded === expandedCompactionId && directory.hasActive === hasActiveTurn && historyStart < directory.start;
+    const nextCache = prepending ? previousCache : /* @__PURE__ */ new Map();
     const definitions = /* @__PURE__ */ new Map();
     const batchPresenters = presenters === void 0 ? void 0 : { get(name2) {
       if (!definitions.has(name2)) definitions.set(name2, presenters.get(name2));
       return definitions.get(name2);
     } };
-    const map2 = /* @__PURE__ */ new Map();
-    const textRanges = /* @__PURE__ */ new Map();
-    const storeBlocks = /* @__PURE__ */ new Map();
-    const reasoningSticky = /* @__PURE__ */ new Map();
-    const toolSticky = /* @__PURE__ */ new Map();
-    const userSticky = /* @__PURE__ */ new Map();
+    const map2 = prepending ? directory.data.rows : /* @__PURE__ */ new Map();
+    const textRanges = prepending ? directory.data.textRanges : /* @__PURE__ */ new Map();
+    const storeBlocks = prepending ? directory.data.storeBlocks : /* @__PURE__ */ new Map();
+    const reasoningSticky = prepending ? directory.data.reasoningSticky : /* @__PURE__ */ new Map();
+    const toolSticky = prepending ? directory.data.toolSticky : /* @__PURE__ */ new Map();
+    const userSticky = prepending ? directory.data.userSticky : /* @__PURE__ */ new Map();
+    const dirtyBlocks = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
     const latestAssistant = hasActiveTurn ? void 0 : latestAssistantId(history, void 0);
-    for (const [index2, row] of transcript.entries()) {
+    const pendingRows = prepending ? readyTranscript.slice(0, directory.start - historyStart) : readyTranscript;
+    for (const [localIndex, row] of pendingRows.entries()) {
+      const index2 = historyStart + localIndex;
       const id = transcriptBlockId(row);
       const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
       const cached2 = previousCache.get(id);
+      historyCounters.current.settledSignatures++;
       const signature = settledProjectionSignature(row, revisions, {
         hasSubsequent,
         isLatestAssistant: row.kind === "message" && row.message.id === latestAssistant,
@@ -57159,10 +57493,13 @@ function StreamView({
         continue;
       }
       const rowBlocks = /* @__PURE__ */ new Map();
-      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks);
+      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks, historyRows);
       const collectBlocks = () => {
         const blocks = [...rowBlocks.values()];
-        for (const block of blocks) storeBlocks.set(block.entry.id, block);
+        for (const block of blocks) {
+          storeBlocks.set(block.entry.id, block);
+          dirtyBlocks.set(block.entry.id, block);
+        }
         return blocks;
       };
       if (row.kind === "compaction") {
@@ -57278,7 +57615,8 @@ function StreamView({
           partId,
           settledAssistantBlockRowsScope,
           row.message.turnOrdinal === void 0 ? [] : [`assistant-turn-${String(row.message.turnOrdinal)}-t-${String(textIndex - 1)}`],
-          part.text
+          part.text,
+          touchedProjectors.current
         ), false).lines);
         ranges.push({ start, end: rows2.length });
       }
@@ -57326,7 +57664,17 @@ function StreamView({
       });
     }
     settledProjectionCache.current = nextCache;
-    return { rows: map2, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky };
+    const data = { rows: map2, textRanges, storeBlocks, dirtyBlocks, reasoningSticky, toolSticky, userSticky };
+    settledDirectory.current = {
+      transcript,
+      scope: projectionScope,
+      presenters,
+      expanded: expandedCompactionId,
+      hasActive: hasActiveTurn,
+      start: historyStart,
+      data
+    };
+    return data;
   }, [
     contentWidth,
     expandedCompactionId,
@@ -57342,10 +57690,14 @@ function StreamView({
     settledBlockRowsScope,
     toolCardsExpanded,
     toolRows,
-    transcript
+    transcript,
+    readyTranscript,
+    historyStart,
+    historyRows
   ]);
   const activeTurnRows = (0, import_react37.useMemo)(() => {
-    if (activeTurn === void 0) return void 0;
+    if (presentedTurn === void 0) return void 0;
+    historyCounters.current.projectedActiveRequests++;
     const definitions = /* @__PURE__ */ new Map();
     const batchPresenters = presenters === void 0 ? void 0 : { get(name2) {
       if (!definitions.has(name2)) definitions.set(name2, presenters.get(name2));
@@ -57354,11 +57706,11 @@ function StreamView({
     const storeBlocks = /* @__PURE__ */ new Map();
     const projectorCache = projectorStates.current;
     const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks);
-    const id = `assistant-turn-${String(activeTurn.turn)}`;
-    const rawParts = partsFromTurn(activeTurn);
+    const id = `assistant-turn-${String(presentedTurn.turn)}`;
+    const rawParts = partsFromTurn(presentedTurn);
     const visibleParts = displayedParts(rawParts, reasoningExpanded);
     if (status === "generating" && visibleParts.length === 0) {
-      const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
+      const liveMs = liveDurationMs ?? presentedTurn.reasoningDurationMs;
       const spinner = getBrailleSpinnerFrame(liveMs);
       const label = rawParts.some((p2) => p2.kind === "reasoning") ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
       const lines = project(id, {
@@ -57403,7 +57755,7 @@ function StreamView({
           sticky.push({
             start: stickyStart,
             end: rows2.length,
-            turnOrdinal: activeTurn.turn,
+            turnOrdinal: presentedTurn.turn,
             durationMs
           });
         }
@@ -57448,7 +57800,8 @@ function StreamView({
         partId,
         assistantBlockRowsScope,
         [],
-        part.text
+        part.text,
+        touchedProjectors.current
       ), status === "generating").lines);
       ranges.push({ start, end: rows2.length });
     }
@@ -57457,7 +57810,7 @@ function StreamView({
       const isReasoningActive = lastRaw?.kind === "reasoning";
       const isToolCompleted = lastVisible?.kind === "card" && lastVisible.card.status !== "running" || lastVisible?.kind === "tool-summary" && lastVisible.summary.runningCount === 0;
       if (isToolCompleted || isReasoningActive && !reasoningExpanded) {
-        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs;
+        const liveMs = liveDurationMs ?? presentedTurn.reasoningDurationMs;
         const spinner = getBrailleSpinnerFrame(liveMs);
         const label = isReasoningActive ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
         rows2.push(GAP_LINE);
@@ -57473,7 +57826,7 @@ function StreamView({
     }
     return { id, lines: rows2.build(), ranges, storeBlocks, reasoningSticky: sticky, toolSticky };
   }, [
-    activeTurn,
+    presentedTurn,
     activeVersion,
     assistantBlockRowsScope,
     blockRowsScope,
@@ -57491,82 +57844,53 @@ function StreamView({
   ]);
   const entryRows = (0, import_react37.useMemo)(() => {
     if (activeTurnRows === void 0) return settledEntryRows;
-    const map2 = new Map(settledEntryRows.rows);
-    map2.set(activeTurnRows.id, activeTurnRows.lines);
-    const textRanges = new Map(settledEntryRows.textRanges);
-    if (activeTurnRows.ranges.length > 0) {
-      textRanges.set(activeTurnRows.id, activeTurnRows.ranges);
-    }
-    const storeBlocks = new Map(settledEntryRows.storeBlocks);
-    for (const [key, val] of activeTurnRows.storeBlocks) {
-      storeBlocks.set(key, val);
-    }
-    const reasoningSticky = new Map(settledEntryRows.reasoningSticky);
-    if (activeTurnRows.reasoningSticky.length > 0) {
-      reasoningSticky.set(activeTurnRows.id, activeTurnRows.reasoningSticky);
-    }
-    const toolSticky = new Map(settledEntryRows.toolSticky);
-    if (activeTurnRows.toolSticky.length > 0) {
-      toolSticky.set(activeTurnRows.id, activeTurnRows.toolSticky);
-    }
-    return { rows: map2, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky: settledEntryRows.userSticky };
+    const id = activeTurnRows.id;
+    return {
+      rows: overlayMap(settledEntryRows.rows, /* @__PURE__ */ new Map([[id, activeTurnRows.lines]])),
+      textRanges: overlayMap(settledEntryRows.textRanges, /* @__PURE__ */ new Map([[id, activeTurnRows.ranges]])),
+      storeBlocks: overlayMap(settledEntryRows.storeBlocks, activeTurnRows.storeBlocks),
+      dirtyBlocks: overlayMap(settledEntryRows.dirtyBlocks, activeTurnRows.storeBlocks),
+      reasoningSticky: overlayMap(settledEntryRows.reasoningSticky, /* @__PURE__ */ new Map([[id, activeTurnRows.reasoningSticky]])),
+      toolSticky: overlayMap(settledEntryRows.toolSticky, /* @__PURE__ */ new Map([[id, activeTurnRows.toolSticky]])),
+      userSticky: settledEntryRows.userSticky
+    };
   }, [settledEntryRows, activeTurnRows]);
-  const [presentedEntryRows, setPresentedEntryRows] = (0, import_react37.useState)(entryRows);
-  const activeEntryRows = status === "generating" ? presentedEntryRows : entryRows;
-  (0, import_react37.useLayoutEffect)(() => {
-    const queue = presentationQueue.current;
-    const arbiter = frameArbiter.current;
-    if (queue === void 0 || arbiter === void 0) {
-      setPresentedEntryRows(entryRows);
-      return;
-    }
-    if (status !== "generating") {
-      queue.flush();
-      setPresentedEntryRows(entryRows);
-      if (frameMetrics !== void 0) frameMetrics.recordRenderQueue(0, 0);
-      return;
-    }
-    const now = performance.now();
-    if (frameMetrics !== void 0) {
-      queue.noteDrain(frameMetrics.snapshot().deltaIngressToStdoutDrainMs.max);
-    }
-    queue.flush();
-    queue.push([entryRows], now);
-    const stats = queue.getStats(now);
-    frameMetrics?.recordRenderQueue(stats.depth, stats.oldestAgeMs);
-    arbiter.requestStream();
-  }, [entryRows, frameMetrics, status]);
+  const activeEntryRows = entryRows;
   const activeLineRevisions = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
-  const storedLineSignatures = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
-  const lineRevisionOwners = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
+  const previousSettledRows = (0, import_react37.useRef)(void 0);
+  const previousActiveBlocks = (0, import_react37.useRef)(/* @__PURE__ */ new Map());
   const physicalLineCache = (0, import_react37.useRef)(/* @__PURE__ */ new WeakMap());
   const lastLineStoreMetrics = (0, import_react37.useRef)({ bytes: 0, evictions: 0 });
-  (0, import_react37.useEffect)(() => () => {
+  const disposeHistory = useCurrentHistoryCallback(() => {
     for (const active of activeLineRevisions.current.values()) {
       active.handle.settle();
     }
     activeLineRevisions.current.clear();
-    lineStore.current?.clearPins();
-  }, []);
+    previousActiveBlocks.current = /* @__PURE__ */ new Map();
+    lineStore.current?.reset();
+    rebuildBlocks.current.clear();
+    projectorStates.current.clear();
+    projectorSourceIndexes.delete(projectorStates.current);
+    settledProjectionCache.current.clear();
+    settledDirectory.current = void 0;
+    historyRows.clear();
+    layoutCache.current.clear();
+  });
+  (0, import_react37.useEffect)(() => disposeHistory, [disposeHistory]);
   (0, import_react37.useLayoutEffect)(() => {
     const store = lineStore.current;
     if (store === void 0) return;
     const currentActive = /* @__PURE__ */ new Set();
-    for (const descriptor of entryRows.storeBlocks.values()) {
+    const settledChanged = previousSettledRows.current !== settledEntryRows;
+    const dirty = settledChanged ? overlayMap(settledEntryRows.dirtyBlocks, activeTurnRows?.storeBlocks ?? /* @__PURE__ */ new Map()) : activeTurnRows?.storeBlocks ?? /* @__PURE__ */ new Map();
+    previousSettledRows.current = settledEntryRows;
+    for (const descriptor of dirty.values()) {
+      historyCounters.current.descriptorVisits++;
+      const previousDescriptor = rebuildBlocks.current.get(descriptor.entry.id);
       rebuildBlocks.current.set(descriptor.entry.id, descriptor);
-      let revisionOwner = lineRevisionOwners.current.get(descriptor.entry.id);
-      if (revisionOwner === void 0) {
-        revisionOwner = {};
-        lineRevisionOwners.current.set(descriptor.entry.id, revisionOwner);
-      }
-      const signature = revisions.revision(revisionOwner, [
-        descriptor.scope.scopeKey,
-        descriptor.entry.source,
-        JSON.stringify(descriptor.entry.meta ?? {}),
-        String(descriptor.lines.length)
-      ]);
-      if (!descriptor.active && !activeLineRevisions.current.has(descriptor.entry.id) && storedLineSignatures.current.get(descriptor.entry.id) === signature) continue;
-      const physical = descriptor.lines.map((line5) => {
+      const signature = descriptor;
+      if (!descriptor.active && !activeLineRevisions.current.has(descriptor.entry.id) && previousDescriptor === descriptor) continue;
+      const physical = descriptor.lines.slice().map((line5) => {
         let byBlock = physicalLineCache.current.get(line5);
         if (byBlock === void 0) {
           byBlock = /* @__PURE__ */ new Map();
@@ -57610,7 +57934,7 @@ function StreamView({
         active.handle.settle();
         activeLineRevisions.current.delete(descriptor.entry.id);
       }
-      if (storedLineSignatures.current.get(descriptor.entry.id) === signature) continue;
+      if (previousDescriptor === signature) continue;
       store.upsertSource({
         blockId: descriptor.entry.id,
         source: descriptor.entry.source,
@@ -57623,13 +57947,25 @@ function StreamView({
       });
       handle.replace({ source: descriptor.entry.source, lines: physical });
       handle.settle();
-      storedLineSignatures.current.set(descriptor.entry.id, signature);
     }
     for (const [blockId, active] of activeLineRevisions.current) {
       if (currentActive.has(blockId)) continue;
       active.handle.settle();
       activeLineRevisions.current.delete(blockId);
     }
+    for (const [blockId, old] of previousActiveBlocks.current) {
+      if (activeTurnRows?.storeBlocks.has(blockId) === true || settledEntryRows.storeBlocks.has(blockId)) continue;
+      rebuildBlocks.current.delete(blockId);
+      store.remove(blockId);
+      const scope = old.scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, "");
+      projectorStates.current.delete(`${blockId}|${scope}`);
+      const sources = projectorSourceIndexes.get(projectorStates.current)?.byScope.get(scope);
+      if (sources !== void 0) {
+        sources.delete(old.entry.source);
+        if (sources.size === 0) projectorSourceIndexes.get(projectorStates.current)?.byScope.delete(scope);
+      }
+    }
+    previousActiveBlocks.current = activeTurnRows?.storeBlocks ?? /* @__PURE__ */ new Map();
     const stats = store.stats();
     if (frameMetrics !== void 0) {
       frameMetrics.addCacheBytes(stats.cachedBytes - lastLineStoreMetrics.current.bytes);
@@ -57643,45 +57979,43 @@ function StreamView({
       evictions: stats.evictions
     };
   }, [entryRows, frameMetrics]);
-  const lastProjectorMetrics = (0, import_react37.useRef)({
-    parsedBytes: 0,
-    stableRowsReused: 0,
-    tailRowsRerendered: 0,
-    cacheEvictions: 0
-  });
   (0, import_react37.useLayoutEffect)(() => {
-    if (frameMetrics === void 0) return;
-    const totals = {
-      parsedBytes: 0,
-      stableRowsReused: 0,
-      tailRowsRerendered: 0,
-      cacheEvictions: 0
-    };
-    for (const state of projectorStates.current.values()) {
-      const stats = state.stats();
-      totals.parsedBytes += stats.parsedBytes;
-      totals.stableRowsReused += stats.stableRowsReused;
-      totals.tailRowsRerendered += stats.tailLinesPainted;
-      totals.cacheEvictions += stats.cacheEvictions;
+    const valid = new Set(settledEntryRows.storeBlocks.keys());
+    for (const id of activeTurnRows?.storeBlocks.keys() ?? []) valid.add(id);
+    for (const [id, active] of activeLineRevisions.current) {
+      if (valid.has(id)) continue;
+      active.handle.discard();
+      activeLineRevisions.current.delete(id);
     }
-    const previous3 = lastProjectorMetrics.current;
-    frameMetrics.addMarkdownParseBytes(Math.max(0, totals.parsedBytes - previous3.parsedBytes));
-    frameMetrics.addStableRowsReused(Math.max(
-      0,
-      totals.stableRowsReused - previous3.stableRowsReused
-    ));
-    frameMetrics.addTailRowsRerendered(Math.max(
-      0,
-      totals.tailRowsRerendered - previous3.tailRowsRerendered
-    ));
-    frameMetrics.addCacheEvictions(Math.max(
-      0,
-      totals.cacheEvictions - previous3.cacheEvictions
-    ));
-    lastProjectorMetrics.current = totals;
+    for (const id of rebuildBlocks.current.keys()) if (!valid.has(id)) rebuildBlocks.current.delete(id);
+    lineStore.current?.retain(valid);
+    historyRows.retainOwners(new Set(settledEntryRows.rows.keys()));
+    const states = projectorStates.current;
+    for (const [key] of states) {
+      const separator = key.indexOf("|");
+      const id = key.slice(0, separator);
+      const scope = key.slice(separator + 1);
+      const descriptor = rebuildBlocks.current.get(id);
+      if (descriptor === void 0 || scope !== descriptor.scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, "")) states.delete(key);
+    }
+    projectorSourceIndexes.delete(states);
+    layoutCache.current.clear();
+  }, [settledEntryRows]);
+  const lastProjectorMetrics = (0, import_react37.useRef)(/* @__PURE__ */ new WeakMap());
+  (0, import_react37.useLayoutEffect)(() => {
+    for (const state of touchedProjectors.current) {
+      const stats = state.stats();
+      const previous3 = lastProjectorMetrics.current.get(state);
+      frameMetrics?.addMarkdownParseBytes(Math.max(0, stats.parsedBytes - (previous3?.parsedBytes ?? 0)));
+      frameMetrics?.addStableRowsReused(Math.max(0, stats.stableRowsReused - (previous3?.stableRowsReused ?? 0)));
+      frameMetrics?.addTailRowsRerendered(Math.max(0, stats.tailLinesPainted - (previous3?.tailLinesPainted ?? 0)));
+      frameMetrics?.addCacheEvictions(Math.max(0, stats.cacheEvictions - (previous3?.cacheEvictions ?? 0)));
+      lastProjectorMetrics.current.set(state, stats);
+    }
+    touchedProjectors.current.clear();
   }, [entryRows, frameMetrics]);
-  const settledRenderEntries = (0, import_react37.useMemo)(() => transcript.flatMap((row, index2) => {
-    const hasSubsequent = index2 < transcript.length - 1 || hasActiveTurn;
+  const settledRenderEntries = (0, import_react37.useMemo)(() => readyTranscript.flatMap((row, index2) => {
+    const hasSubsequent = index2 < readyTranscript.length - 1 || hasActiveTurn;
     const isUserWithGap = row.kind === "message" && row.message.kind === "user" && hasSubsequent;
     const gapRows = isUserWithGap ? 0 : hasSubsequent ? 2 : 0;
     const id = transcriptBlockId(row);
@@ -57695,20 +58029,20 @@ function StreamView({
       lines,
       row
     }];
-  }), [hasActiveTurn, revisions, settledEntryRows, transcript]);
+  }), [hasActiveTurn, revisions, settledEntryRows, readyTranscript]);
   const renderEntries = (0, import_react37.useMemo)(() => [
-    ...settledRenderEntries.filter((entry) => activeTurn === void 0 || entry.id !== `assistant-turn-${String(activeTurn.turn)}`),
-    ...activeTurn === void 0 ? [] : [{
+    ...settledRenderEntries.filter((entry) => presentedTurn === void 0 || entry.id !== `assistant-turn-${String(presentedTurn.turn)}`),
+    ...presentedTurn === void 0 ? [] : [{
       kind: "active",
-      id: `assistant-turn-${String(activeTurn.turn)}`,
+      id: `assistant-turn-${String(presentedTurn.turn)}`,
       version: activeVersion,
       gapRows: 0,
-      estimatedRows: activeEntryRows.rows.get(`assistant-turn-${String(activeTurn.turn)}`)?.length ?? 0,
-      lines: activeEntryRows.rows.get(`assistant-turn-${String(activeTurn.turn)}`) ?? [],
-      turn: activeTurn
+      estimatedRows: activeEntryRows.rows.get(`assistant-turn-${String(presentedTurn.turn)}`)?.length ?? 0,
+      lines: activeEntryRows.rows.get(`assistant-turn-${String(presentedTurn.turn)}`) ?? [],
+      turn: presentedTurn
     }]
   ], [
-    activeTurn,
+    presentedTurn,
     activeVersion,
     activeEntryRows,
     settledRenderEntries
@@ -57731,6 +58065,7 @@ function StreamView({
   );
   const contentRevision = renderEntries.length === 0 ? "empty" : `${String(renderEntries.length)}:${renderEntries.at(-1)?.id ?? ""}:${renderEntries.at(-1)?.version ?? ""}`;
   const lastContentRevision = (0, import_react37.useRef)(contentRevision);
+  const lastHistoryStart = (0, import_react37.useRef)(historyStart);
   const virtualLayouts = (0, import_react37.useMemo)(
     () => layoutCache.current.layouts(layoutScope, layoutInputs),
     [layoutInputs, layoutRevision, layoutScope]
@@ -57796,9 +58131,7 @@ function StreamView({
   const stickyLabel = resolveStickyTranscriptHeader(visibleTop, stickyRanges);
   (0, import_react37.useLayoutEffect)(() => {
     onStickyHeaderChange?.(stickyLabel);
-    return () => {
-      onStickyHeaderChange?.(void 0);
-    };
+    return onStickyHeaderChange?.bind(void 0, void 0);
   }, [onStickyHeaderChange, stickyLabel]);
   const configuredOverscanRows = Math.max(
     0,
@@ -57831,7 +58164,7 @@ function StreamView({
   const pinIndex = (0, import_react37.useMemo)(() => {
     const byOwner = /* @__PURE__ */ new Map();
     const active = [];
-    for (const descriptor of entryRows.storeBlocks.values()) {
+    for (const descriptor of settledEntryRows.storeBlocks.values()) {
       let blockIds = byOwner.get(descriptor.ownerId);
       if (blockIds === void 0) {
         blockIds = [];
@@ -57841,18 +58174,24 @@ function StreamView({
       if (descriptor.active) active.push(descriptor.entry.id);
     }
     return { byOwner, active };
-  }, [entryRows]);
+  }, [settledEntryRows]);
   (0, import_react37.useLayoutEffect)(() => {
     const store = lineStore.current;
     if (store === void 0) return;
     const owners = new Set(visibleEntries.map((entry) => entry.id));
     if (viewport.anchor !== void 0) owners.add(viewport.anchor.blockId);
+    historyRows.setPins(owners);
     const pinned = [...pinIndex.active];
+    for (const descriptor of activeTurnRows?.storeBlocks.values() ?? []) {
+      if (descriptor.active || owners.has(descriptor.ownerId)) pinned.push(descriptor.entry.id);
+    }
     for (const ownerId of owners) {
       pinned.push(...pinIndex.byOwner.get(ownerId) ?? []);
     }
     store.setPins({ pinned });
-  }, [pinIndex, viewport.anchor, visibleEntries]);
+  }, [activeTurnRows, pinIndex, viewport.anchor, visibleEntries, historyRows]);
+  let sourceIndexCount = 0;
+  for (const sources of projectorSourceIndexes.get(projectorStates.current)?.byScope.values() ?? []) sourceIndexCount += sources.size;
   const idleHome = transcript.length === 0 && activeTurn === void 0;
   const generating = status === "generating";
   const latestSettledAssistantId = activeTurn === void 0 ? history.findLast((message) => message.kind === "assistant")?.id : void 0;
@@ -57868,6 +58207,19 @@ function StreamView({
       return;
     }
     const vp = viewportStateRef.current;
+    const available = Math.max(0, virtualContentRowsRef.current - effectiveViewportRowsRef.current);
+    const needsPrefix = !historyWindow.complete && (command.kind === "position" || command.kind === "edge" && command.edge === "oldest" || command.kind === "scroll" && vp.offsetFromBottom + command.delta + transcriptOverscan >= available || command.kind === "page" && command.delta > 0 && vp.offsetFromBottom + vp.viewportRows * 2 >= available);
+    if (needsPrefix) {
+      pendingHistoryCommand.current = command;
+      historyWindow.advance(historyWindow.generation, command.kind === "position" || command.kind === "edge" ? Infinity : 256);
+      advanceHistory();
+      return;
+    }
+    if (command.kind !== "reset" && vp.contentRows !== virtualContentRowsRef.current) {
+      pendingHistoryCommand.current = command;
+      return;
+    }
+    pendingHistoryCommand.current = void 0;
     if (command.kind !== "reset" && (vp.viewportRows === 0 || vp.contentRows === 0)) return;
     const scheduler = scrollScheduler.current;
     const arbiter = frameArbiter.current;
@@ -57877,7 +58229,7 @@ function StreamView({
     const effectiveContentRows = Math.max(vp.contentRows, virtualContentRowsRef.current);
     const maximum = Math.max(0, effectiveContentRows - effectiveViewportRowsRef.current);
     const clamp = (value) => Math.max(0, Math.min(maximum, value));
-    const advance = (delta) => {
+    const advance2 = (delta) => {
       const presented = scheduler.getPresented();
       const target = scheduler.getTarget();
       const reversing = delta * (target - presented) < 0;
@@ -57891,10 +58243,10 @@ function StreamView({
           const target = scheduler.getTarget();
           const reversing = command.delta * (target - presented) < 0;
           scheduler.snapTo(clamp((reversing ? presented : target) + command.delta));
-        } else advance(command.delta);
+        } else advance2(command.delta);
         break;
       case "page":
-        advance(command.delta * Math.max(1, vp.viewportRows - 1));
+        advance2(command.delta * Math.max(1, vp.viewportRows - 1));
         break;
       case "position":
         scheduler.snapTo(clamp(Math.round(
@@ -57920,7 +58272,11 @@ function StreamView({
       offsetFromBottom: presentedOffset
     });
     arbiter.requestScroll();
-  }, [frameMetrics, onViewportCommandConsumed]);
+  }, [frameMetrics, onViewportCommandConsumed, historyWindow, transcriptOverscan, history]);
+  (0, import_react37.useLayoutEffect)(() => {
+    const command = pendingHistoryCommand.current;
+    if (command !== void 0) executeViewportCommand(command);
+  }, [historyStart, virtualContentRows, viewport.contentRows, executeViewportCommand]);
   (0, import_react37.useLayoutEffect)(() => {
     if (viewportCommandRef === void 0 || viewport.viewportRows === 0 || viewport.contentRows === 0) return;
     viewportCommandRef.current = executeViewportCommand;
@@ -57976,6 +58332,8 @@ function StreamView({
     setMeasuredGeometry((previous3) => previous3?.columns === columns && previous3.rows === rows && previous3.height === viewportBox.height && previous3.key === layoutKey ? previous3 : { columns, rows, height: viewportBox.height, key: layoutKey });
     const layouts = layoutCache.current.layouts(layoutScope, layoutInputs);
     const contentRows = layouts.at(-1) === void 0 ? 0 : layouts.at(-1).top + layouts.at(-1).rows;
+    const historyPrepended = historyStart < lastHistoryStart.current;
+    lastHistoryStart.current = historyStart;
     const contentChanged = contentRevision !== lastContentRevision.current;
     lastContentRevision.current = contentRevision;
     if (contentChanged || viewport.viewportRows !== viewportBox.height || viewport.contentRows !== contentRows) {
@@ -57984,7 +58342,7 @@ function StreamView({
         contentRows,
         viewportRows: viewportBox.height,
         blocks: layouts,
-        unseenRowsAdded: contentChanged ? Math.max(0, contentRows - viewport.contentRows) : 0
+        unseenRowsAdded: contentChanged && !historyPrepended ? Math.max(0, contentRows - viewport.contentRows) : 0
       });
     }
   }, [
@@ -58110,7 +58468,6 @@ function StreamView({
     effectiveViewportRows,
     generating,
     latestSettledAssistantId,
-    presentedEntryRows,
     publishedRail,
     renderEntries,
     rows,
@@ -58139,12 +58496,38 @@ function StreamView({
     visibleFrame,
     stdout
   ]);
-  (0, import_react37.useLayoutEffect)(() => () => {
-    setVisibleFrameSnapshot(void 0);
-    releaseFrameRail();
-    setMouseRailRegion(void 0);
-  }, []);
-  const renderReasoning = (part, key, gap, live) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: gap, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  (0, import_react37.useLayoutEffect)(() => {
+    const stats = lineStore.current?.stats();
+    if (stats === void 0) return;
+    onHistoryWork?.({
+      generation: historyGeneration,
+      canonicalEntries: transcript.length,
+      projectionCache: historyRows.stats(),
+      indexedEntries: readyTranscript.length,
+      pendingEntries: historyStart,
+      ...historyCounters.current,
+      settledMapCopies: 0,
+      projectionOwners: settledProjectionCache.current.size,
+      rebuildDescriptors: rebuildBlocks.current.size,
+      revisionOwners: 0,
+      signatures: settledProjectionCache.current.size,
+      projectorStates: projectorStates.current.size,
+      projectorSources: sourceIndexCount,
+      lineEntries: stats.sourceEntries,
+      cachedRows: stats.cachedRows,
+      cachedBytes: stats.cachedBytes,
+      pinnedBlocks: stats.pinnedBlocks,
+      pinnedRows: stats.pinnedRows,
+      pinnedBytes: stats.pinnedBytes,
+      overBudgetRows: stats.overBudgetRows,
+      overBudgetBytes: stats.overBudgetBytes,
+      toolCache: toolRows.stats(),
+      pendingPresentations: presentationQueue.current?.getStats(performance.now()).depth ?? 0,
+      firstInteractive: publishTranscript
+    });
+  });
+  (0, import_react37.useLayoutEffect)(() => clearHistoryFrame, []);
+  const renderReasoning = (part, key, gap, live) => /* @__PURE__ */ React.createElement(Box_default, { key, marginTop: gap, width: "100%" }, /* @__PURE__ */ React.createElement(
     ReasoningBlock,
     {
       text: part.text,
@@ -58153,15 +58536,15 @@ function StreamView({
       live,
       maxCols: contentWidth
     }
-  ) }, key);
-  const renderCard = (part, key, gap) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: gap, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  ));
+  const renderCard = (part, key, gap) => /* @__PURE__ */ React.createElement(Box_default, { key, marginTop: gap, width: "100%" }, /* @__PURE__ */ React.createElement(
     ToolCard,
     {
       card: part.card,
       expanded: toolCardsExpanded,
       maxCols: contentWidth
     }
-  ) }, key);
+  ));
   const renderToolSummary = (part, key, gap) => {
     const status2 = toolSummaryStatus(part.summary);
     const token = status2 === "error" ? "error" : status2 === "running" ? "accentText" : "fgDim";
@@ -58172,15 +58555,15 @@ function StreamView({
       styled(match[2], "fgSoft"),
       styled(escapeContent(match[3]), token)
     ];
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+    return /* @__PURE__ */ React.createElement(
       Box_default,
       {
+        key,
         marginTop: gap,
         width: "100%",
-        backgroundColor: inkColor("toolBg"),
-        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(parts, "toolBg", contentWidth) })
+        backgroundColor: inkColor("toolBg")
       },
-      key
+      /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintBackgroundRow(parts, "toolBg", contentWidth))
     );
   };
   const renderFrozenTail = (message) => {
@@ -58220,13 +58603,7 @@ function StreamView({
       pathsInRow += 1;
     }
     if (pathsInRow > 0) producedRows.push(rowRuns);
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { marginTop: 1, flexDirection: "column", width: "100%", children: [
-      deliveries.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([line5.href !== void 0 && hyperlinksEnabled() ? wrapOsc8(styled(line5.text, "fg"), line5.href) : styled(line5.text, "fg")]) }, `delivery-${index2}`)),
-      (changeLines ?? []).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(line5), "fg")]) }, `changes-${String(index2)}`)),
-      producedRows.map((runs, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow(runs) }, `produced-${String(index2)}`)),
-      stats === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(stats), "fgDim")]) }),
-      showCompletionBoundary ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled("\u2500\u2500 \u5DF2\u5B8C\u6210 \u2500\u2500", "fgDim")]) }) : null
-    ] }, "turn-tail");
+    return /* @__PURE__ */ React.createElement(Box_default, { key: "turn-tail", marginTop: 1, flexDirection: "column", width: "100%" }, deliveries.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: `delivery-${index2}` }, paintRow([line5.href !== void 0 && hyperlinksEnabled() ? wrapOsc8(styled(line5.text, "fg"), line5.href) : styled(line5.text, "fg")]))), (changeLines ?? []).map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: `changes-${String(index2)}` }, paintRow([styled(escapeContent(line5), "fg")]))), producedRows.map((runs, index2) => /* @__PURE__ */ React.createElement(Text, { key: `produced-${String(index2)}` }, paintRow(runs))), stats === void 0 ? null : /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(stats), "fgDim")])), showCompletionBoundary ? /* @__PURE__ */ React.createElement(Text, null, paintRow([styled("\u2500\u2500 \u5DF2\u5B8C\u6210 \u2500\u2500", "fgDim")])) : null);
   };
   const renderFrozenMessage = (message) => {
     const parts = displayedParts(
@@ -58236,7 +58613,7 @@ function StreamView({
     const blocks = parts.map((part, index2) => {
       const gap = turnPartGap(parts, index2);
       if (part.kind === "reasoning") {
-        return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: gap, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        return /* @__PURE__ */ React.createElement(Box_default, { key: index2, marginTop: gap, width: "100%" }, /* @__PURE__ */ React.createElement(
           ReasoningBlock,
           {
             text: part.text,
@@ -58244,18 +58621,18 @@ function StreamView({
             durationMs: part.durationMs,
             maxCols: contentWidth
           }
-        ) }, index2);
+        ));
       }
       if (part.kind === "tool-summary") return renderToolSummary(part, index2, gap);
       if (part.kind === "card") return renderCard(part, index2, gap);
-      return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: gap, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+      return /* @__PURE__ */ React.createElement(Box_default, { key: index2, marginTop: gap, width: "100%" }, /* @__PURE__ */ React.createElement(
         SettledMarkdownBlock,
         {
           source: part.text,
           maxCols: Math.max(1, contentWidth - ASSISTANT_PROSE_PREFIX_COLUMNS),
           themeTier: currentTier()
         }
-      ) }, index2);
+      ));
     });
     const tail = renderFrozenTail(message);
     const rows2 = [];
@@ -58265,13 +58642,10 @@ function StreamView({
   };
   const renderCompaction = (divider) => {
     const expanded = divider.compactionId === expandedCompactionId;
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([styled(escapeContent(compactionDividerLabel(divider, expanded)), "fgDim")]) }),
-      expanded && divider.summary !== "" ? wrapDisplayLines(escapeContent(divider.summary), Math.max(1, contentWidth - 4)).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
-        styled("\u2502 ", "accentText"),
-        styled(row, "fg")
-      ], "toolBg", contentWidth) }, index2)) : null
-    ] });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(compactionDividerLabel(divider, expanded)), "fgDim")])), expanded && divider.summary !== "" ? wrapDisplayLines(escapeContent(divider.summary), Math.max(1, contentWidth - 4)).map((row, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintBackgroundRow([
+      styled("\u2502 ", "accentText"),
+      styled(row, "fg")
+    ], "toolBg", contentWidth))) : null);
   };
   const renderActiveTurn = (turn) => {
     const rawParts = partsFromTurn(turn);
@@ -58281,19 +58655,16 @@ function StreamView({
       const spinner = getBrailleSpinnerFrame(liveMs);
       const tip = getBilingualTip(liveMs, locale);
       const label = rawParts.some((p2) => p2.kind === "reasoning") ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
-      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
-          styled(spinner, "accentText", void 0, true),
-          styled(" \u25CF ", "accentText", void 0, true),
-          styled(
-            `${label} (${formatSeconds(liveMs)}s)`,
-            "fg"
-          )
-        ]) }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
-          styled(`  \u2514 ${tip}`, "fgDim")
-        ]) })
-      ] });
+      return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, null, paintRow([
+        styled(spinner, "accentText", void 0, true),
+        styled(" \u25CF ", "accentText", void 0, true),
+        styled(
+          `${label} (${formatSeconds(liveMs)}s)`,
+          "fg"
+        )
+      ])), /* @__PURE__ */ React.createElement(Text, null, paintRow([
+        styled(`  \u2514 ${tip}`, "fgDim")
+      ])));
     }
     const parts = displayedParts(compactToolParts(rawParts, toolCardsExpanded, presenters, mode, presenterCache), reasoningExpanded);
     const lastRaw = rawParts.findLast(isVisiblePart);
@@ -58304,35 +58675,32 @@ function StreamView({
     const tailLiveMs = liveDurationMs ?? turn.reasoningDurationMs;
     const tailSpinner = getBrailleSpinnerFrame(tailLiveMs);
     const tailLabel = isReasoningActive ? tuiCopy("thinking", locale) : tuiCopy("processing", locale);
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      parts.map((part, index2) => {
-        const gap = turnPartGap(parts, index2);
-        if (part.kind === "reasoning") {
-          const live = generating && part === lastRaw;
-          return renderReasoning(part, index2, gap, live);
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, parts.map((part, index2) => {
+      const gap = turnPartGap(parts, index2);
+      if (part.kind === "reasoning") {
+        const live = generating && part === lastRaw;
+        return renderReasoning(part, index2, gap, live);
+      }
+      if (part.kind === "tool-summary") return renderToolSummary(part, index2, gap);
+      if (part.kind === "card") return renderCard(part, index2, gap);
+      return /* @__PURE__ */ React.createElement(Box_default, { key: index2, marginTop: gap, width: "100%" }, /* @__PURE__ */ React.createElement(
+        MarkdownBlock,
+        {
+          source: part.text,
+          maxCols: Math.max(1, contentWidth - ASSISTANT_PROSE_PREFIX_COLUMNS),
+          prefix: { first: activeMarker(), rest: restIndent() }
         }
-        if (part.kind === "tool-summary") return renderToolSummary(part, index2, gap);
-        if (part.kind === "card") return renderCard(part, index2, gap);
-        return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: gap, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          MarkdownBlock,
-          {
-            source: part.text,
-            maxCols: Math.max(1, contentWidth - ASSISTANT_PROSE_PREFIX_COLUMNS),
-            prefix: { first: activeMarker(), rest: restIndent() }
-          }
-        ) }, index2);
-      }),
-      showTail && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { marginTop: 1, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: paintRow([
-        styled(tailSpinner, "accentText", void 0, true),
-        styled(" \u25CF ", "accentText", void 0, true),
-        styled(
-          `${tailLabel} (${formatSeconds(tailLiveMs)}s)`,
-          "fg"
-        )
-      ]) }) })
-    ] });
+      ));
+    }), showTail && /* @__PURE__ */ React.createElement(Box_default, { marginTop: 1 }, /* @__PURE__ */ React.createElement(Text, null, paintRow([
+      styled(tailSpinner, "accentText", void 0, true),
+      styled(" \u25CF ", "accentText", void 0, true),
+      styled(
+        `${tailLabel} (${formatSeconds(tailLiveMs)}s)`,
+        "fg"
+      )
+    ]))));
   };
-  const transcriptViewport = /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+  const transcriptViewport = /* @__PURE__ */ React.createElement(
     Box_default,
     {
       ref: viewportRef,
@@ -58342,97 +58710,234 @@ function StreamView({
       flexGrow: 1,
       overflow: "hidden",
       justifyContent: idleHome ? "center" : "flex-start",
-      alignItems: idleHome ? "center" : "flex-start",
-      children: [
-        idleHome ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          PixelFishHome,
-          {
-            tier: brandTier,
-            animate: brandAnimation,
-            visible: true,
-            maxColumns: contentWidth,
-            maxRows: viewport.viewportRows > 0 ? viewport.viewportRows : Math.max(0, rows - 7),
-            frameProbe: brandFrameProbe
-          }
-        ) : physicalViewport ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+      alignItems: idleHome ? "center" : "flex-start"
+    },
+    idleHome ? /* @__PURE__ */ React.createElement(
+      PixelFishHome,
+      {
+        tier: brandTier,
+        animate: brandAnimation,
+        visible: true,
+        maxColumns: contentWidth,
+        maxRows: viewport.viewportRows > 0 ? viewport.viewportRows : Math.max(0, rows - 7),
+        frameProbe: brandFrameProbe
+      }
+    ) : physicalViewport ? null : /* @__PURE__ */ React.createElement(
+      Box_default,
+      {
+        flexDirection: "column",
+        marginLeft: contentLeft,
+        width: contentWidth,
+        flexShrink: 0
+      },
+      visibleEntryPairs.map(({ entry, index: layoutIndex }) => {
+        const blockId = entry.id;
+        if (entry.kind === "active") {
+          return /* @__PURE__ */ React.createElement(Box_default, { key: blockId, flexDirection: "column", width: "100%", flexShrink: 0 }, renderActiveTurn(entry.turn));
+        }
+        const row = entry.row;
+        let rowNode;
+        if (row.kind === "compaction") {
+          rowNode = renderCompaction(row.divider);
+        } else if (row.message.kind === "user") {
+          const hasSubsequent = layoutIndex < renderEntries.length - 1 || activeTurn !== void 0;
+          rowNode = /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Box_default, { width: "100%", backgroundColor: inkColor("messageBg") }, /* @__PURE__ */ React.createElement(Text, { wrap: "wrap" }, userRun(row.message.text, contentWidth))), hasSubsequent ? /* @__PURE__ */ React.createElement(Text, null, styled("\u2500".repeat(contentWidth), "line")) : null);
+        } else {
+          rowNode = renderFrozenMessage(row.message);
+        }
+        const isUserWithGap = row.kind === "message" && row.message.kind === "user" && (layoutIndex < renderEntries.length - 1 || activeTurn !== void 0);
+        return /* @__PURE__ */ React.createElement(
           Box_default,
           {
+            key: blockId,
             flexDirection: "column",
-            marginLeft: contentLeft,
-            width: contentWidth,
-            flexShrink: 0,
-            children: visibleEntryPairs.map(({ entry, index: layoutIndex }) => {
-              const blockId = entry.id;
-              if (entry.kind === "active") {
-                return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: renderActiveTurn(entry.turn) }, blockId);
-              }
-              const row = entry.row;
-              let rowNode;
-              if (row.kind === "compaction") {
-                rowNode = renderCompaction(row.divider);
-              } else if (row.message.kind === "user") {
-                const hasSubsequent = layoutIndex < renderEntries.length - 1 || activeTurn !== void 0;
-                rowNode = /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { width: "100%", backgroundColor: inkColor("messageBg"), children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { wrap: "wrap", children: userRun(row.message.text, contentWidth) }) }),
-                  hasSubsequent ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled("\u2500".repeat(contentWidth), "line") }) : null
-                ] });
-              } else {
-                rowNode = renderFrozenMessage(row.message);
-              }
-              const isUserWithGap = row.kind === "message" && row.message.kind === "user" && (layoutIndex < renderEntries.length - 1 || activeTurn !== void 0);
-              return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-                Box_default,
-                {
-                  flexDirection: "column",
-                  width: "100%",
-                  paddingBottom: isUserWithGap ? 1 : entry.gapRows,
-                  flexShrink: 0,
-                  children: rowNode
-                },
-                blockId
-              );
-            })
-          }
-        ),
-        physicalViewport || viewport.follow ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Box_default, { position: "absolute", right: 2, bottom: 0, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Text, { children: styled(
-          viewport.unseenRows > 0 ? `\u2193 \u6700\u65B0\u6D88\u606F \xB7 ${String(viewport.unseenRows)} \xB7 End/G \u5230\u5E95\u90E8` : "\u2193 \u5E95\u90E8 \xB7 End/G",
-          "accentText"
-        ) }) })
-      ]
-    }
+            width: "100%",
+            paddingBottom: isUserWithGap ? 1 : entry.gapRows,
+            flexShrink: 0
+          },
+          rowNode
+        );
+      })
+    ),
+    physicalViewport || viewport.follow ? null : /* @__PURE__ */ React.createElement(Box_default, { position: "absolute", right: 2, bottom: 0 }, /* @__PURE__ */ React.createElement(Text, null, styled(
+      viewport.unseenRows > 0 ? `\u2193 \u6700\u65B0\u6D88\u606F \xB7 ${String(viewport.unseenRows)} \xB7 End/G \u5230\u5E95\u90E8` : "\u2193 \u5E95\u90E8 \xB7 End/G",
+      "accentText"
+    )))
   );
   return transcriptViewport;
 }
 
-// packages/tui/tui-render/src/composer-cursor.ts
-var GRAPHEME3 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-function composerCursorPosition(text4, caretIndex) {
-  const clamped = Math.max(0, Math.min(caretIndex, text4.length));
-  const before = text4.slice(0, clamped);
-  const lines = before.split("\n");
-  const lastLine = lines[lines.length - 1] ?? "";
-  return { row: lines.length - 1, col: displayWidth(lastLine) };
+// packages/tui/tui-render/src/composer-tokens.ts
+var IMAGE_TOKEN = /^\[图片 #[1-9]\d*\]/u;
+var COMMAND_TOKEN = /^\/[\p{L}\p{N}][\p{L}\p{N}._-]*/u;
+var MENTION_TOKEN = /^@\S+/u;
+function tokenAt(text4, index2) {
+  const rest = text4.slice(index2);
+  const image2 = IMAGE_TOKEN.exec(rest)?.[0];
+  if (image2 !== void 0) return Object.freeze({ kind: "image", text: image2 });
+  const boundary2 = index2 === 0 || /\s/u.test(text4[index2 - 1] ?? "");
+  if (!boundary2) return void 0;
+  const command = COMMAND_TOKEN.exec(rest)?.[0];
+  if (command !== void 0) return Object.freeze({ kind: "command", text: command });
+  const mention = MENTION_TOKEN.exec(rest)?.[0];
+  if (mention !== void 0) return Object.freeze({ kind: "mention", text: mention });
+  return void 0;
 }
-function composerLineWindow(text4, caretIndex, columns) {
-  const safe = (value) => escapeContent(value).replace(/\t/gu, "\\t");
-  const escaped = safe(text4);
-  const caret = caretIndex === void 0 ? 0 : displayWidth(safe(text4.slice(0, caretIndex)));
-  const hiddenPrefix = caret >= columns;
-  const budget = Math.max(1, columns - 1 - (hiddenPrefix ? 1 : 0));
-  const desiredStart = Math.max(0, caret - budget);
-  let startColumn = 0;
-  let startOffset = 0;
-  if (desiredStart > 0) for (const part of GRAPHEME3.segment(escaped)) {
-    if (startColumn >= desiredStart) break;
-    startColumn += displayWidth(part.segment);
-    startOffset += part.segment.length;
+function tokenizeComposer(text4) {
+  if (text4 === "") return Object.freeze([]);
+  const tokens = [];
+  let ordinaryStart = 0;
+  let index2 = 0;
+  while (index2 < text4.length) {
+    const token = tokenAt(text4, index2);
+    if (token === void 0) {
+      index2 += 1;
+      continue;
+    }
+    if (ordinaryStart < index2) {
+      tokens.push(Object.freeze({ kind: "text", text: text4.slice(ordinaryStart, index2) }));
+    }
+    tokens.push(token);
+    index2 += token.text.length;
+    ordinaryStart = index2;
   }
-  return {
-    text: wcwidthSafeSlice(escaped.slice(startOffset), budget),
-    startColumn,
-    caretColumn: caret - startColumn + (hiddenPrefix ? 1 : 0),
-    hiddenPrefix
-  };
+  if (ordinaryStart < text4.length) {
+    tokens.push(Object.freeze({ kind: "text", text: text4.slice(ordinaryStart) }));
+  }
+  return Object.freeze(tokens);
+}
+
+// packages/tui/tui-render/src/composer-index.ts
+var GRAPHEME3 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+var safeText = (text4) => escapeContent(text4).replace(/\t/gu, "\\t");
+function upperBound(values, value) {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const mid = low + high >>> 1;
+    if (values[mid] <= value) low = mid + 1;
+    else high = mid;
+  }
+  return low;
+}
+var ComposerLineIndex = class {
+  constructor(text4) {
+    this.text = text4;
+    const tokens = tokenizeComposer(text4);
+    let tokenIndex = 0;
+    let tokenEnd = tokens[0]?.text.length ?? 0;
+    let column = 0;
+    let rawColumn = 0;
+    for (const { segment: segment2, index: index2 } of GRAPHEME3.segment(text4)) {
+      while (index2 >= tokenEnd && tokenIndex + 1 < tokens.length) {
+        tokenIndex += 1;
+        tokenEnd += tokens[tokenIndex].text.length;
+      }
+      const safe = safeText(segment2);
+      column += displayWidth(safe);
+      rawColumn += displayWidth(segment2);
+      this.glyphs.push({
+        start: index2,
+        end: index2 + segment2.length,
+        text: safe,
+        kind: tokens[tokenIndex]?.kind ?? "text"
+      });
+      this.offsets.push(index2 + segment2.length);
+      this.columns.push(column);
+      this.rawColumns.push(rawColumn);
+    }
+  }
+  text;
+  offsets = [0];
+  columns = [0];
+  rawColumns = [0];
+  glyphs = [];
+  columnAt(caret, raw = false) {
+    const clamped = Math.max(0, Math.min(caret, this.text.length));
+    const slot = upperBound(this.offsets, clamped) - 1;
+    const offset = this.offsets[slot];
+    const columns = raw ? this.rawColumns : this.columns;
+    return columns[slot] + (offset === clamped ? 0 : displayWidth(raw ? this.text.slice(offset, clamped) : safeText(this.text.slice(offset, clamped))));
+  }
+  offsetAtColumn(column) {
+    return this.offsets[Math.max(0, upperBound(this.columns, column) - 1)];
+  }
+  window(caretIndex, columns) {
+    const caret = this.columnAt(caretIndex ?? 0);
+    const hiddenPrefix = columns > 1 && caret >= columns;
+    const budget = Math.max(0, columns - 1 - Number(hiddenPrefix));
+    const desiredStart = Math.max(0, caret - budget);
+    let first = Math.max(0, upperBound(this.columns, desiredStart - 1));
+    while (first > 0 && this.columns[first - 1] === this.columns[first]) first -= 1;
+    const startColumn = this.columns[first] ?? 0;
+    const end = Math.max(first, upperBound(this.columns, startColumn + budget) - 1);
+    const glyphs = this.glyphs.slice(first, end);
+    return {
+      text: glyphs.map((glyph) => glyph.text).join(""),
+      startColumn,
+      caretColumn: Math.max(0, caret - startColumn + Number(hiddenPrefix)),
+      hiddenPrefix,
+      glyphs
+    };
+  }
+};
+var ComposerIndex = class {
+  constructor(text4) {
+    this.text = text4;
+    for (let at2 = text4.indexOf("\n"); at2 !== -1; at2 = text4.indexOf("\n", at2 + 1)) this.lineStarts.push(at2 + 1);
+  }
+  text;
+  lineStarts = [0];
+  lines = /* @__PURE__ */ new Map();
+  rowAt(caret) {
+    return upperBound(this.lineStarts, Math.max(0, Math.min(caret, this.text.length))) - 1;
+  }
+  /** Clamp stale external/selection endpoints to a whole source grapheme. */
+  snapCaret(caret) {
+    if (this.text[caret] === "\n" && this.text[caret - 1] === "\r") caret -= 1;
+    const row = this.rowAt(caret);
+    const start = this.lineStarts[row];
+    const line5 = this.line(row);
+    const local = Math.max(0, Math.min(caret - start, line5.text.length));
+    return start + line5.offsets[upperBound(line5.offsets, local) - 1];
+  }
+  line(row) {
+    let line5 = this.lines.get(row);
+    if (line5 === void 0) {
+      const start = this.lineStarts[row];
+      const end = row + 1 < this.lineStarts.length ? this.lineStarts[row + 1] - 1 : this.text.length;
+      line5 = new ComposerLineIndex(this.text.slice(start, end));
+      this.lines.set(row, line5);
+    }
+    return line5;
+  }
+};
+var currentIndex;
+function composerIndex(text4) {
+  if (currentIndex?.text !== text4) currentIndex = new ComposerIndex(text4);
+  return currentIndex;
+}
+function composerRowBudget(rows, rowsBelow = 0) {
+  return Math.max(1, Math.floor((rows - Math.max(0, rowsBelow)) / 3));
+}
+function composerHeight(text4, rows, rowsBelow = 0) {
+  return 1 + Math.min(composerIndex(text4).lineStarts.length, composerRowBudget(rows, rowsBelow));
+}
+function composerRowWindow(index2, caret, rows, rowsBelow = 0) {
+  const total = index2.lineStarts.length;
+  const budget = composerRowBudget(rows, rowsBelow);
+  const count = Math.min(total, total > budget ? Math.max(1, budget - 1) : budget);
+  const row = index2.rowAt(caret);
+  const start = Math.max(0, Math.min(row - Math.floor(count / 2), total - count));
+  return { start, end: start + count, hiddenAbove: start, hiddenBelow: total - start - count };
+}
+
+// packages/tui/tui-render/src/composer-cursor.ts
+function composerCursorPosition(text4, caretIndex) {
+  const index2 = composerIndex(text4);
+  const clamped = clampCaretIndex(text4, caretIndex);
+  const row = index2.rowAt(clamped);
+  return { row, col: index2.line(row).columnAt(clamped - index2.lineStarts[row], true) };
 }
 function clampCaretIndex(text4, caretIndex) {
   if (caretIndex === void 0) return text4.length;
@@ -58440,46 +58945,41 @@ function clampCaretIndex(text4, caretIndex) {
 }
 function moveCaretByGrapheme(text4, caretIndex, direction) {
   const caret = clampCaretIndex(text4, caretIndex);
-  if (direction < 0) {
-    if (caret <= 0) return 0;
-    let last = 0;
-    let offset = 0;
-    for (const part of GRAPHEME3.segment(text4.slice(0, caret))) {
-      last = offset;
-      offset += part.segment.length;
-    }
-    return last;
+  const index2 = composerIndex(text4);
+  const row = index2.rowAt(caret);
+  const start = index2.lineStarts[row];
+  const line5 = index2.line(row);
+  const local = caret - start;
+  if (direction < 0 && local === 0) return Math.max(0, caret - (text4[caret - 2] === "\r" ? 2 : 1));
+  if (direction > 0 && text4[caret] === "\r" && text4[caret + 1] === "\n") return caret + 2;
+  if (direction > 0 && local === line5.text.length) return Math.min(text4.length, caret + 1);
+  let low = 0;
+  let high = line5.offsets.length;
+  while (low < high) {
+    const mid = low + high >>> 1;
+    if (line5.offsets[mid] < local || direction > 0 && line5.offsets[mid] === local) low = mid + 1;
+    else high = mid;
   }
-  if (caret >= text4.length) return text4.length;
-  for (const part of GRAPHEME3.segment(text4.slice(caret))) {
-    return caret + part.segment.length;
-  }
-  return text4.length;
+  return start + (line5.offsets[direction < 0 ? Math.max(0, low - 1) : low] ?? line5.text.length);
 }
 function moveCaretUpLine(text4, caretIndex) {
-  const caret = clampCaretIndex(text4, caretIndex);
-  const prevNewline = text4.lastIndexOf("\n", caret - 1);
-  if (prevNewline === -1) return void 0;
-  const currentLineStart = prevNewline + 1;
-  const col = caret - currentLineStart;
-  const lineBeforeStart = text4.lastIndexOf("\n", prevNewline - 1) + 1;
-  const lineBeforeLength = prevNewline - lineBeforeStart;
-  return lineBeforeStart + Math.min(col, lineBeforeLength);
+  return moveCaretVertical(text4, caretIndex, -1);
 }
 function moveCaretDownLine(text4, caretIndex) {
+  return moveCaretVertical(text4, caretIndex, 1);
+}
+function moveCaretVertical(text4, caretIndex, direction) {
+  const index2 = composerIndex(text4);
   const caret = clampCaretIndex(text4, caretIndex);
-  const nextNewline = text4.indexOf("\n", caret);
-  if (nextNewline === -1) return void 0;
-  const currentLineStart = text4.lastIndexOf("\n", caret - 1) + 1;
-  const col = caret - currentLineStart;
-  let nextLineEnd = text4.indexOf("\n", nextNewline + 1);
-  if (nextLineEnd === -1) nextLineEnd = text4.length;
-  const nextLineLength = nextLineEnd - (nextNewline + 1);
-  return nextNewline + 1 + Math.min(col, nextLineLength);
+  const row = index2.rowAt(caret);
+  const targetRow = row + direction;
+  if (targetRow < 0 || targetRow >= index2.lineStarts.length) return void 0;
+  const column = index2.line(row).columnAt(caret - index2.lineStarts[row]);
+  return index2.lineStarts[targetRow] + index2.line(targetRow).offsetAtColumn(column);
 }
 function composerFrameAnchor(text4, caretIndex, options) {
   const caret = composerCursorPosition(text4, caretIndex);
-  const lineCount = Math.max(1, text4.split("\n").length);
+  const lineCount = options.lineWindow?.end ?? composerIndex(text4).lineStarts.length;
   const rowsBelow = Math.max(0, options.rowsBelow ?? 0);
   const lastLineUp = lineCount - 1 - caret.row + rowsBelow;
   const upFromCursor = options.fullscreen ? lastLineUp : lastLineUp + 1;
@@ -58518,13 +59018,8 @@ function maskComposerInput(text4, caretIndex, secret = false) {
 }
 
 // packages/tui/tui-render/src/input-selection.ts
-var graphemes4 = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 function boundary(text4, index2) {
-  const clamped = Math.max(0, Math.min(index2, text4.length));
-  for (const part of graphemes4.segment(text4)) {
-    if (part.index + part.segment.length > clamped) return part.index;
-  }
-  return text4.length;
+  return composerIndex(text4).snapCaret(index2);
 }
 function inputSelectionRange(state) {
   if (state.selectionAnchor === void 0) return void 0;
@@ -58542,7 +59037,7 @@ function moveInputSelection(state, options) {
     next = state.text.slice(0, caret).lastIndexOf("\n") + 1;
   } else if (options.direction === "end") {
     const newline = state.text.indexOf("\n", caret);
-    next = newline < 0 ? state.text.length : newline;
+    next = boundary(state.text, newline < 0 ? state.text.length : newline);
   } else {
     next = moveCaretByGrapheme(state.text, caret, options.direction === "left" ? -1 : 1);
   }
@@ -58635,7 +59130,6 @@ function shortcutCatalog(overrides) {
 
 // packages/tui/tui-render/src/browser-pane.tsx
 var import_react38 = __toESM(require_react(), 1);
-var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_BROWSER_PANE = {
   open: false,
   id: "",
@@ -58655,21 +59149,26 @@ function BrowserPane({ state, maxRows, maxCols, onOffsetChange }) {
   }, [state.detail, state.offset, offset, onOffsetChange]);
   const start = Math.max(0, Math.min(state.rows.length - capacity, state.selectedIndex - Math.floor(capacity / 2)));
   const lines = state.detail === void 0 ? state.rows.slice(start, start + capacity).map((row, index2) => `${start + index2 === state.selectedIndex ? "\u203A" : " "} ${escapeContent(row.title)}${row.hint === void 0 ? "" : ` \xB7 ${escapeContent(row.hint)}`}`) : detail.slice(offset, offset + capacity);
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`${escapeContent(state.title)} \xB7 ${state.rows.length}${state.detail === void 0 ? "" : ` \xB7 ${offset + 1}\u2013${offset + lines.length}/${detail.length}`}`, "fg", void 0, true)]) }),
-    lines.length > 0 ? lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5 || " ", "fg")]) }, index2)) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(state.busy ? "\u6B63\u5728\u8BFB\u53D6\u2026" : "\u6682\u65E0\u8BB0\u5F55", "fgDim")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(state.error === void 0 ? state.busy ? "\u5904\u7406\u4E2D\u2026" : " " : `\u2717 ${escapeContent(state.error)}`, state.error === void 0 ? "fgDim" : "error")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(state.detail === void 0 ? "\u2191\u2193/PgUp/PgDn \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 r \u5237\u65B0 \xB7 Esc \u8FD4\u56DE" : "\u2191\u2193/PgUp/PgDn \u9605\u8BFB \xB7 Home/End \u9996\u5C3E \xB7 Esc \u5217\u8868", "fgDim")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Text, { wrap: "truncate", children: paintRow([styled(state.actions.map((action) => `${action.key} ${action.label}`).join(" \xB7 ") || " ", "fgDim")]) })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(`${escapeContent(state.title)} \xB7 ${state.rows.length}${state.detail === void 0 ? "" : ` \xB7 ${offset + 1}\u2013${offset + lines.length}/${detail.length}`}`, "fg", void 0, true)])), lines.length > 0 ? lines.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintRow([styled(line5 || " ", "fg")]))) : /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(state.busy ? "\u6B63\u5728\u8BFB\u53D6\u2026" : "\u6682\u65E0\u8BB0\u5F55", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(state.error === void 0 ? state.busy ? "\u5904\u7406\u4E2D\u2026" : " " : `\u2717 ${escapeContent(state.error)}`, state.error === void 0 ? "fgDim" : "error")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(state.detail === void 0 ? "\u2191\u2193/PgUp/PgDn \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 r \u5237\u65B0 \xB7 Esc \u8FD4\u56DE" : "\u2191\u2193/PgUp/PgDn \u9605\u8BFB \xB7 Home/End \u9996\u5C3E \xB7 Esc \u5217\u8868", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(state.actions.map((action) => `${action.key} ${action.label}`).join(" \xB7 ") || " ", "fgDim")])));
 }
 
 // packages/tui/tui-render/src/loop.tsx
 import { homedir } from "node:os";
-var import_react47 = __toESM(require_react(), 1);
+var import_react48 = __toESM(require_react(), 1);
+
+// packages/tui/tui-render/src/generating-spinner.tsx
+var import_react39 = __toESM(require_react(), 1);
+function GeneratingSpinner({ active, children }) {
+  const [, setTick] = (0, import_react39.useState)(0);
+  (0, import_react39.useEffect)(() => {
+    if (!active) return;
+    const timer = setInterval(() => setTick((tick) => (tick + 1) % 1e4), 100);
+    return () => clearInterval(timer);
+  }, [active]);
+  return children(active ? getBrailleSpinnerFrame(Date.now()) : void 0);
+}
 
 // packages/tui/tui-render/src/session-pane.tsx
-var import_jsx_runtime8 = __toESM(require_jsx_runtime(), 1);
 var SESSION_ID_HINT_MIN_LENGTH = 8;
 function compactSessionId(id) {
   return id.startsWith("session-") ? id.slice("session-".length) : id;
@@ -58735,47 +59234,26 @@ function SessionPane({
   const titleHints = duplicateTitleHints(rows);
   const localSelectedIndex = clampedSelectedIndex - start;
   const selected = rows[clampedSelectedIndex];
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Box_default, { flexDirection: "column", width, children: [
-    rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Text, { dimColor: true, children: "\u65E0\u4F1A\u8BDD" }) : visible.map((row, index2) => {
-      const highlighted = index2 === localSelectedIndex;
-      const titleHint = titleHints.get(row.id);
-      const hint = titleHint === void 0 ? "" : ` \xB7 ${escapeContent(titleHint)}`;
-      const marker = row.id === currentId ? " \xB7 \u5F53\u524D" : "";
-      const age = relativeTime(row.updatedAt, clock);
-      const title = truncateDisplay(
-        escapeContent(row.title).replace(/\n/gu, " "),
-        width - 3 - displayWidth(hint + age + marker)
-      );
-      const displayTitle = title + hint;
-      const gap = Math.max(1, width - 2 - displayWidth(displayTitle + age + marker));
-      return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Box_default, { width: "100%", flexDirection: "column", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Text, { wrap: "truncate", children: [
-          highlighted ? styled("\u203A ", "accent", void 0, true) : "  ",
-          styled(displayTitle, highlighted ? "fg" : "fgSoft", void 0, highlighted),
-          " ".repeat(gap),
-          styled(age, "fgDim"),
-          styled(marker, "accentDim")
-        ] }),
-        showIdentity && row.id === currentId ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Text, { dimColor: true, wrap: "truncate", children: `  ${escapeContent(`\u4F1A\u8BDD ID \xB7 ${row.id}`)}` }) : null
-      ] }, row.id);
-    }),
-    showOverflow ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Text, { dimColor: true, wrap: "truncate", children: [
-      "\u2026 \u8FD8\u6709 ",
-      rows.length - size,
-      " \u4E2A\u4F1A\u8BDD"
-    ] }) : null,
-    !showControls ? null : confirmDelete ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Text, { wrap: "truncate", children: styled(
-      `\u518D\u6309 d \u786E\u8BA4\u5220\u9664\u300C${escapeContent(selected?.title ?? "")}\u300D`,
-      "error"
-    ) }) : deleteUnavailable ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Text, { wrap: "truncate", children: [
-      styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 g s \u5173\u95ED \xB7 "), "fgDim"),
-      styled(escapeContent("\u5220\u9664\u4E0D\u53EF\u7528\uFF08\u540E\u7AEF\u80FD\u529B\u7F3A\u5931\uFF09"), "error")
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Text, { wrap: "truncate", children: styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 d \u5220\u9664 \xB7 g s \u5173\u95ED"), "fgDim") })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width }, rows.length === 0 ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u65E0\u4F1A\u8BDD") : visible.map((row, index2) => {
+    const highlighted = index2 === localSelectedIndex;
+    const titleHint = titleHints.get(row.id);
+    const hint = titleHint === void 0 ? "" : ` \xB7 ${escapeContent(titleHint)}`;
+    const marker = row.id === currentId ? " \xB7 \u5F53\u524D" : "";
+    const age = relativeTime(row.updatedAt, clock);
+    const title = truncateDisplay(
+      escapeContent(row.title).replace(/\n/gu, " "),
+      width - 3 - displayWidth(hint + age + marker)
+    );
+    const displayTitle = title + hint;
+    const gap = Math.max(1, width - 2 - displayWidth(displayTitle + age + marker));
+    return /* @__PURE__ */ React.createElement(Box_default, { key: row.id, width: "100%", flexDirection: "column" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, highlighted ? styled("\u203A ", "accent", void 0, true) : "  ", styled(displayTitle, highlighted ? "fg" : "fgSoft", void 0, highlighted), " ".repeat(gap), styled(age, "fgDim"), styled(marker, "accentDim")), showIdentity && row.id === currentId ? /* @__PURE__ */ React.createElement(Text, { dimColor: true, wrap: "truncate" }, `  ${escapeContent(`\u4F1A\u8BDD ID \xB7 ${row.id}`)}`) : null);
+  }), showOverflow ? /* @__PURE__ */ React.createElement(Text, { dimColor: true, wrap: "truncate" }, "\u2026 \u8FD8\u6709 ", rows.length - size, " \u4E2A\u4F1A\u8BDD") : null, !showControls ? null : confirmDelete ? /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(
+    `\u518D\u6309 d \u786E\u8BA4\u5220\u9664\u300C${escapeContent(selected?.title ?? "")}\u300D`,
+    "error"
+  )) : deleteUnavailable ? /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 g s \u5173\u95ED \xB7 "), "fgDim"), styled(escapeContent("\u5220\u9664\u4E0D\u53EF\u7528\uFF08\u540E\u7AEF\u80FD\u529B\u7F3A\u5931\uFF09"), "error")) : /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 r \u91CD\u547D\u540D \xB7 d \u5220\u9664 \xB7 g s \u5173\u95ED"), "fgDim")));
 }
 
 // packages/tui/tui-render/src/search-pane.tsx
-var import_jsx_runtime9 = __toESM(require_jsx_runtime(), 1);
 var SEARCH_WINDOW = 30;
 function SearchPane({
   query,
@@ -58790,39 +59268,22 @@ function SearchPane({
   const visible = results.slice(windowStart, windowStart + SEARCH_WINDOW);
   let bodyNode;
   if (status === "searching") {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: true, children: "\u641C\u7D22\u4E2D\u2026" });
+    bodyNode = /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u641C\u7D22\u4E2D\u2026");
   } else if (status === "error") {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent("\u641C\u7D22\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"), "error") });
+    bodyNode = /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u641C\u7D22\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"), "error"));
   } else if (results.length === 0) {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { dimColor: true, children: query === "" ? "\u8F93\u5165\u5173\u952E\u8BCD\u641C\u7D22\u4F1A\u8BDD" : "\u65E0\u5339\u914D\u4F1A\u8BDD" });
+    bodyNode = /* @__PURE__ */ React.createElement(Text, { dimColor: true }, query === "" ? "\u8F93\u5165\u5173\u952E\u8BCD\u641C\u7D22\u4F1A\u8BDD" : "\u65E0\u5339\u914D\u4F1A\u8BDD");
   } else {
     bodyNode = visible.map((row, index2) => {
       const highlighted = windowStart + index2 === selectedIndex;
       const cleanSnippet = escapeContent(row.snippet).replace(/\s+/gu, " ");
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Text, { wrap: "truncate", children: [
-        highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
-        styled(escapeContent(row.title), highlighted ? "fg" : "fgSoft", void 0, highlighted),
-        styled(` \u2014 ${cleanSnippet}`, highlighted ? "accentText" : "fgDim")
-      ] }, row.id);
+      return /* @__PURE__ */ React.createElement(Text, { key: row.id, wrap: "truncate" }, highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ", styled(escapeContent(row.title), highlighted ? "fg" : "fgSoft", void 0, highlighted), styled(` \u2014 ${cleanSnippet}`, highlighted ? "accentText" : "fgDim"));
     });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Text, { wrap: "truncate", children: [
-      styled(`\u641C\u7D22: ${escapeContent(query)}`, "fg", void 0, true),
-      status === "idle" && results.length > 0 ? styled(`  \xB7  ${String(Math.min(results.length, Math.max(1, selectedIndex + 1)))}/${String(results.length)}`, "fgDim") : ""
-    ] }),
-    bodyNode,
-    status !== "searching" && results.length > SEARCH_WINDOW ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Text, { dimColor: true, children: [
-      "\u2026 \u8FD8\u6709 ",
-      results.length - SEARCH_WINDOW,
-      " \u6761\u7ED3\u679C"
-    ] }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u6062\u590D \xB7 Esc \u5173\u95ED"), "fgDim") })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(`\u641C\u7D22: ${escapeContent(query)}`, "fg", void 0, true), status === "idle" && results.length > 0 ? styled(`  \xB7  ${String(Math.min(results.length, Math.max(1, selectedIndex + 1)))}/${String(results.length)}`, "fgDim") : ""), bodyNode, status !== "searching" && results.length > SEARCH_WINDOW ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u2026 \u8FD8\u6709 ", results.length - SEARCH_WINDOW, " \u6761\u7ED3\u679C") : null, /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u6062\u590D \xB7 Esc \u5173\u95ED"), "fgDim")));
 }
 
 // packages/tui/tui-render/src/model-pane.tsx
-var import_jsx_runtime10 = __toESM(require_jsx_runtime(), 1);
 var MODEL_WINDOW = 30;
 function ModelPane({
   filter,
@@ -58847,39 +59308,24 @@ function ModelPane({
   }
   let bodyNode;
   if (status === "loading") {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: styled(escapeContent("\u52A0\u8F7D\u4E2D\u2026"), "fgDim") });
+    bodyNode = /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u52A0\u8F7D\u4E2D\u2026"), "fgDim"));
   } else if (status === "error") {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: styled(
+    bodyNode = /* @__PURE__ */ React.createElement(Text, null, styled(
       escapeContent(`\u2717 \u52A0\u8F7D\u5931\u8D25\uFF1A${error51 === void 0 || error51 === "" ? "\u6A21\u578B\u76EE\u5F55\u4E0D\u53EF\u7528" : error51}`),
       "error"
-    ) });
+    ));
   } else if (rows.length === 0) {
-    bodyNode = /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { children: styled(escapeContent("\u65E0\u53EF\u7528\u6A21\u578B"), "fgDim") });
+    bodyNode = /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u65E0\u53EF\u7528\u6A21\u578B"), "fgDim"));
   } else {
     bodyNode = visible.map((row, index2) => {
       const highlighted = windowStart + index2 === selectedIndex;
-      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { wrap: "truncate", children: [
-        highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
-        styled(`${escapeContent(row.name)} `, highlighted ? "fg" : "fgSoft", void 0, highlighted),
-        styled(escapeContent(row.provider), "fgDim"),
-        row.current ? styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") : "",
-        row.unavailable === void 0 ? "" : styled(escapeContent(` \xB7 ${row.unavailable}`), "warning")
-      ] }, row.id);
+      return /* @__PURE__ */ React.createElement(Text, { key: row.id, wrap: "truncate" }, highlighted ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ", styled(`${escapeContent(row.name)} `, highlighted ? "fg" : "fgSoft", void 0, highlighted), styled(escapeContent(row.provider), "fgDim"), row.current ? styled(escapeContent(" \xB7 \u5F53\u524D"), "accentDim") : "", row.unavailable === void 0 ? "" : styled(escapeContent(` \xB7 ${row.unavailable}`), "warning"));
     });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Text, { wrap: "truncate", children: [
-      styled(`\u6A21\u578B: ${escapeContent(filter)}`, "fg", void 0, true),
-      status === "idle" && rows.length > 0 ? styled(`  \xB7  ${String(Math.min(rows.length, Math.max(1, selectedIndex + 1)))}/${String(rows.length)}`, "fgDim") : ""
-    ] }),
-    bodyNode,
-    status !== "loading" && status !== "error" && rows.length > windowSize ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { dimColor: true, wrap: "truncate", children: windowHint }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Text, { wrap: "truncate", children: styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED"), "fgDim") })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(`\u6A21\u578B: ${escapeContent(filter)}`, "fg", void 0, true), status === "idle" && rows.length > 0 ? styled(`  \xB7  ${String(Math.min(rows.length, Math.max(1, selectedIndex + 1)))}/${String(rows.length)}`, "fgDim") : ""), bodyNode, status !== "loading" && status !== "error" && rows.length > windowSize ? /* @__PURE__ */ React.createElement(Text, { dimColor: true, wrap: "truncate" }, windowHint) : null, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, styled(escapeContent("\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED"), "fgDim")));
 }
 
 // packages/tui/tui-render/src/help-pane.tsx
-var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
 var HELP_WINDOW = 20;
 function styleHelpLine(line5) {
   if (line5 === "") return " ";
@@ -58897,45 +59343,31 @@ function HelpPane({ lines, offset }) {
   const safeOffset = Math.min(offset, maxOffset2);
   const visible = lines.slice(safeOffset, safeOffset + HELP_WINDOW);
   const below = Math.max(0, lines.length - safeOffset - HELP_WINDOW);
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    safeOffset > 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Text, { dimColor: true, children: [
-      "\u2026 \u8FD8\u6709 ",
-      safeOffset,
-      " \u884C"
-    ] }) : null,
-    visible.map((line5, index2) => (
-      // An empty Text collapses to zero rows; a space keeps section gaps.
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { wrap: "truncate", children: styleHelpLine(line5) }, safeOffset + index2)
-    )),
-    below > 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Text, { dimColor: true, children: [
-      "\u2026 \u4E0B\u65B9\u8FD8\u6709 ",
-      below,
-      " \u884C"
-    ] }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc/Enter \u5173\u95ED"), "fgDim") })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, safeOffset > 0 ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u2026 \u8FD8\u6709 ", safeOffset, " \u884C") : null, visible.map((line5, index2) => (
+    // An empty Text collapses to zero rows; a space keeps section gaps.
+    /* @__PURE__ */ React.createElement(Text, { key: safeOffset + index2, wrap: "truncate" }, styleHelpLine(line5))
+  )), below > 0 ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u2026 \u4E0B\u65B9\u8FD8\u6709 ", below, " \u884C") : null, /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc/Enter \u5173\u95ED"), "fgDim")));
 }
 
 // packages/tui/tui-render/src/approval-pane.tsx
-var import_react40 = __toESM(require_react(), 1);
+var import_react41 = __toESM(require_react(), 1);
 
 // packages/tui/tui-render/src/dialog-window.ts
-var import_react39 = __toESM(require_react(), 1);
+var import_react40 = __toESM(require_react(), 1);
 function useDialogTextRows(source, columns) {
-  return (0, import_react39.useMemo)(() => source === "" ? [] : wrapDisplayLines(escapeContent(source), Math.max(1, columns)), [source, columns]);
+  return (0, import_react40.useMemo)(() => source === "" ? [] : wrapDisplayLines(escapeContent(source), Math.max(1, columns)), [source, columns]);
 }
 function useDialogWindow(rows, offset, limit, onOffsetChange) {
   const count = Math.max(0, limit);
   const maximum = Math.max(0, rows.length - Math.max(1, count));
   const start = Math.max(0, Math.min(offset, maximum));
-  (0, import_react39.useEffect)(() => {
+  (0, import_react40.useEffect)(() => {
     if (start !== offset) onOffsetChange?.(start);
   }, [start, offset, onOffsetChange]);
   return { visible: rows.slice(start, start + count), start, total: rows.length };
 }
 
 // packages/tui/tui-render/src/approval-pane.tsx
-var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
 var DELIVERY_NEXT = "\u5F53\u524D\u5DE5\u5177\u672A\u6267\u884C \xB7 \u53EF\u91CD\u8BD5\u8BE5\u8F6E";
 var EMPTY_APPROVAL_PANE = {
   open: false,
@@ -58959,7 +59391,7 @@ ${parsed.command}` : `${JSON.stringify(key)}: ${JSON.stringify(value, null, 2)}`
   }
 }
 function line(text4, token, bold = false) {
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(text4), token, void 0, bold)]) });
+  return /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(text4), token, void 0, bold)]));
 }
 function ApprovalPane({
   toolName,
@@ -58975,9 +59407,9 @@ function ApprovalPane({
   const size = use_window_size_default();
   const width = Math.max(1, maxCols ?? (size.columns || 80));
   const height = Math.max(4, maxRows ?? (size.rows || 24) - 6);
-  const argumentsView = (0, import_react40.useMemo)(() => approvalArguments(rawArguments), [rawArguments]);
+  const argumentsView = (0, import_react41.useMemo)(() => approvalArguments(rawArguments), [rawArguments]);
   const extra2 = argumentsView.command;
-  const detailSource = (0, import_react40.useMemo)(() => {
+  const detailSource = (0, import_react41.useMemo)(() => {
     if (deliveryError !== void 0) return deliveryError;
     if (!detailsOpen) return "";
     return [...new Set([reason, argumentsView.details].filter((value) => value !== ""))].join("\n\n");
@@ -58986,30 +59418,17 @@ function ApprovalPane({
   const window2 = useDialogWindow(rows, offset, height - (deliveryError === void 0 ? 4 : 2), onOffsetChange);
   const position2 = window2.total > 0 ? ` ${window2.start + 1}\u2013${window2.start + window2.visible.length}/${window2.total}` : "";
   if (deliveryError !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      line("\u2717 \u5BA1\u6279\u672A\u80FD\u9001\u8FBE", "error", true),
-      window2.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "error")]) }, window2.start + index2)),
-      line(DELIVERY_NEXT, "fgDim")
-    ] });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, line("\u2717 \u5BA1\u6279\u672A\u80FD\u9001\u8FBE", "error", true), window2.visible.map((text4, index2) => /* @__PURE__ */ React.createElement(Text, { key: window2.start + index2, wrap: "truncate" }, paintRow([styled(text4 || " ", "error")]))), line(DELIVERY_NEXT, "fgDim"));
   }
   const target = extra2 === void 0 ? toolName : `${toolName} "${extra2}"`;
   const heading = truncateDisplay(escapeContent(`\u5141\u8BB8\u6267\u884C ${target} \u5417\uFF1F`).replace(/\n/g, " \u21B5 "), width);
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled(heading, "fg", void 0, true)]) }),
-    window2.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "fg")]) }, window2.start + index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [Y] ", "success", void 0, true), styled("\u5141\u8BB8", "fg", void 0, true), styled(" (\u6267\u884C\u4E00\u6B21)", "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [n] ", "error", void 0, true), styled("\u62D2\u7EDD", "fg", void 0, true), styled(" (Esc \u53D6\u6D88)", "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [i] ", "accent", void 0, true), styled(detailsOpen ? `\u6536\u8D77 \xB7 \u2191\u2193/PgUp/PgDn${position2}` : "\u8BE6\u60C5 (\u67E5\u770B\u5B8C\u6574\u53C2\u6570)", "fgDim")]) })
-    ] })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(heading, "fg", void 0, true)])), window2.visible.map((text4, index2) => /* @__PURE__ */ React.createElement(Text, { key: window2.start + index2, wrap: "truncate" }, paintRow([styled(text4 || " ", "fg")]))), /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("  [Y] ", "success", void 0, true), styled("\u5141\u8BB8", "fg", void 0, true), styled(" (\u6267\u884C\u4E00\u6B21)", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("  [n] ", "error", void 0, true), styled("\u62D2\u7EDD", "fg", void 0, true), styled(" (Esc \u53D6\u6D88)", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("  [i] ", "accent", void 0, true), styled(detailsOpen ? `\u6536\u8D77 \xB7 \u2191\u2193/PgUp/PgDn${position2}` : "\u8BE6\u60C5 (\u67E5\u770B\u5B8C\u6574\u53C2\u6570)", "fgDim")]))));
 }
 
 // packages/tui/tui-render/src/overlay-shell.tsx
-var import_jsx_runtime13 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_OVERLAY_PANE = { open: false };
 function renderPaneLine(text4, token, bold = false) {
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Text, { children: paintRow([styled(escapeContent(text4), token, void 0, bold)]) });
+  return /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(text4), token, void 0, bold)]));
 }
 var line2 = renderPaneLine;
 function OverlayShell({
@@ -59020,18 +59439,10 @@ function OverlayShell({
   errorNext,
   children
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    line2(title, "fg", true),
-    body !== void 0 && body !== "" ? line2(body, "fg") : null,
-    children,
-    error51 !== void 0 && error51 !== "" ? line2(`\u2717 ${error51}`, "error") : null,
-    error51 !== void 0 && error51 !== "" && errorNext !== void 0 && errorNext !== "" ? line2(errorNext, "fgDim") : null,
-    line2(footnote, "fgDim")
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, line2(title, "fg", true), body !== void 0 && body !== "" ? line2(body, "fg") : null, children, error51 !== void 0 && error51 !== "" ? line2(`\u2717 ${error51}`, "error") : null, error51 !== void 0 && error51 !== "" && errorNext !== void 0 && errorNext !== "" ? line2(errorNext, "fgDim") : null, line2(footnote, "fgDim"));
 }
 
 // packages/tui/tui-render/src/permission-pane.tsx
-var import_jsx_runtime14 = __toESM(require_jsx_runtime(), 1);
 var TITLE = "\u6743\u9650\u9884\u8BBE";
 var FOOTNOTE = "\u2191\u2193/jk \u9009\u62E9 \xB7 1-3 \u76F4\u8FBE \xB7 Enter \u5E94\u7528 \xB7 Esc \u5173\u95ED";
 var CONFIRM = "\u786E\u8BA4\u5207\u6362\u5230 danger-full-access\uFF1F";
@@ -59054,36 +59465,19 @@ function PermissionPane({
   switchError
 }) {
   if (confirmDanger) {
-    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-      renderPaneLine(CONFIRM, "fg", true),
-      renderPaneLine(CONFIRM_FOOTNOTE, "fgDim")
-    ] });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, renderPaneLine(CONFIRM, "fg", true), renderPaneLine(CONFIRM_FOOTNOTE, "fgDim"));
   }
   const errorReason2 = switchError ?? (names.length === 0 ? EMPTY_TABLE_REASON : void 0);
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    renderPaneLine(TITLE, "fg", true),
-    names.map((name2, index2) => {
-      const selected = index2 === selectedIndex;
-      const current = name2 === currentName;
-      const description = descriptions?.[index2];
-      const label = current ? `${name2} \xB7 \u5F53\u524D` : name2;
-      return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Text, { wrap: "truncate", children: [
-          selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
-          paintRow([
-            styled(escapeContent(`[${String(index2 + 1)}] `), selected ? "accentText" : "fgDim"),
-            styled(escapeContent(label), selected ? "fg" : "fgSoft", void 0, selected)
-          ])
-        ] }),
-        description !== void 0 && description !== "" ? renderPaneLine(`    ${description}`, "fgDim") : null
-      ] }, name2);
-    }),
-    errorReason2 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-      renderPaneLine(`\u2717 \u5207\u6362\u6743\u9650\u5931\u8D25\uFF1A${errorReason2}`, "error"),
-      renderPaneLine(FAIL_NEXT, "fgDim")
-    ] }),
-    renderPaneLine(FOOTNOTE, "fgDim")
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, renderPaneLine(TITLE, "fg", true), names.map((name2, index2) => {
+    const selected = index2 === selectedIndex;
+    const current = name2 === currentName;
+    const description = descriptions?.[index2];
+    const label = current ? `${name2} \xB7 \u5F53\u524D` : name2;
+    return /* @__PURE__ */ React.createElement(Box_default, { key: name2, flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ", paintRow([
+      styled(escapeContent(`[${String(index2 + 1)}] `), selected ? "accentText" : "fgDim"),
+      styled(escapeContent(label), selected ? "fg" : "fgSoft", void 0, selected)
+    ])), description !== void 0 && description !== "" ? renderPaneLine(`    ${description}`, "fgDim") : null);
+  }), errorReason2 === void 0 ? null : /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, renderPaneLine(`\u2717 \u5207\u6362\u6743\u9650\u5931\u8D25\uFF1A${errorReason2}`, "error"), renderPaneLine(FAIL_NEXT, "fgDim")), renderPaneLine(FOOTNOTE, "fgDim"));
 }
 
 // packages/tui/tui-render/src/settings-groups.ts
@@ -59110,7 +59504,6 @@ var SETTINGS_GROUP_LABELS = {
 };
 
 // packages/tui/tui-render/src/settings-browser.tsx
-var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
 function fit(text4, width) {
   const safe = escapeContent(text4).replace(/\n/gu, " \u21B5 ");
   const prefix = wcwidthSafeSlice(safe, width);
@@ -59215,11 +59608,10 @@ function SettingsBrowser(props) {
   for (const text4 of detail) add(text4, "fgDim");
   if (status !== void 0) add(status, updateError === void 0 ? "fgDim" : "error");
   for (const text4 of footer) add(text4, "fgDim");
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: lines.slice(0, budget).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Box_default, { height: 1, flexShrink: 0, width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(line5.parts, line5.bg, width) }) }, index2)) });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, lines.slice(0, budget).map((line5, index2) => /* @__PURE__ */ React.createElement(Box_default, { key: index2, height: 1, flexShrink: 0, width: "100%" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate-end" }, paintBackgroundRow(line5.parts, line5.bg, width)))));
 }
 
 // packages/tui/tui-render/src/settings-pane.tsx
-var import_jsx_runtime16 = __toESM(require_jsx_runtime(), 1);
 var TITLE2 = "\u8BBE\u7F6E";
 var ONBOARDING_TITLE = "\u9996\u6B21\u8BBE\u7F6E";
 var EDIT_FOOTNOTE = "Enter \u5E94\u7528 \xB7 Esc \u53D6\u6D88";
@@ -59320,7 +59712,7 @@ function SettingsPane({
 }) {
   const { columns } = use_window_size_default();
   const width = columns > 0 ? columns : 80;
-  if (breadcrumb !== void 0 && onboarding !== true) return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+  if (breadcrumb !== void 0 && onboarding !== true) return /* @__PURE__ */ React.createElement(
     SettingsBrowser,
     {
       rows,
@@ -59344,7 +59736,7 @@ function SettingsPane({
   const footer = onboarding === true ? [editing ? ONBOARDING_FOOTNOTE : "\u2191\u2193 \u9009\u62E9\u5BC6\u94A5 \xB7 Enter \u8F93\u5165 \xB7 Esc \u5173\u95ED"] : [editing ? EDIT_FOOTNOTE : "\u2191\u2193/jk \u9009\u62E9 \xB7 Enter \u7F16\u8F91 \xB7 e \u5BFC\u51FA \xB7 r \u91CD\u8F7D \xB7 Esc \u5173\u95ED"];
   const size = Math.min(rows.length, computeSettingsWindow(maxRows, rows.length, errorReason2, busy === true));
   const start = Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, rows.length - size));
-  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow([styled(fitValue(escapeContent(text4), width), token, void 0, bold)], "settingsCardBg", width) }) });
+  const renderLine = (text4, token, bold = false) => /* @__PURE__ */ React.createElement(Box_default, { width: "100%", height: 1, flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate-end" }, paintBackgroundRow([styled(fitValue(escapeContent(text4), width), token, void 0, bold)], "settingsCardBg", width)));
   let heading = active === void 0 ? TITLE2 : `${TITLE2} \xB7 ${SETTINGS_GROUP_LABELS[settingsGroup(active)]}`;
   if (onboarding === true) heading = rows.length > 1 ? "API \u5BC6\u94A5" : ONBOARDING_TITLE;
   const counter = rows.length === 0 ? "" : `${active !== void 0 ? `${active.namespace} \xB7 ` : ""}${String(selected + 1)}/${String(rows.length)}`;
@@ -59355,66 +59747,14 @@ function SettingsPane({
     const label = row.namespace === "tui" && (row.field === "reasoning" || row.field === "scrollbar" || row.field === "statusDetails" || row.field === "locale") ? `${row.field} \xB7 ${tuiCopy(row.field, locale)}` : row.namespace === "tui" && row.field in TUI_EXTRA_LABELS ? `${row.field} \xB7 ${TUI_EXTRA_LABELS[row.field][resolved === "en-US" ? "en-US" : "zh-CN"]}` : row.field === "apiKeyEnv" ? `${row.field} \xB7 \u73AF\u5883\u53D8\u91CF\u540D` : row.field;
     return `${row.namespace} \xB7 ${label}`;
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    renderLine(heading, "fg", true),
-    start > 0 ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null,
-    rows.slice(start, start + size).map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Text, { wrap: "truncate-end", children: paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? "\u203A " : ""}${row.value}`, start + index2 === selected, width, row.required === true), "settingsCardBg", width) }) }, `${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index2)}`)),
-    rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null,
-    errorReason2 === void 0 ? null : renderLine(errorReason2 === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason2}`, "error"),
-    errorReason2 === void 0 || errorReason2 === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim"),
-    busy === true ? renderLine(DISCOVERY_BUSY, "fgDim") : null,
-    footer.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Box_default, { width: "100%", height: 1, flexShrink: 0, children: renderLine(line5, "fgDim") }, index2))
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, renderLine(heading, "fg", true), start > 0 ? renderLine(`\u2191 \u4E0A\u65B9\u8FD8\u6709 ${String(start)} \u9879 (\u2026 \u8FD8\u6709 ${String(start)} \u9879)`, "fgDim") : null, rows.slice(start, start + size).map((row, index2) => /* @__PURE__ */ React.createElement(Box_default, { key: `${row.namespace}:${JSON.stringify(row.sourcePath ?? row.field)}:${String(start + index2)}`, width: "100%", height: 1, flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate-end" }, paintBackgroundRow(fieldRow(localizedLabel(row), `${row.navigable === true ? "\u203A " : ""}${row.value}`, start + index2 === selected, width, row.required === true), "settingsCardBg", width)))), rows.length > start + size ? renderLine(`\u2026 \u8FD8\u6709 ${String(rows.length - start - size)} \u9879`, "fgDim") : null, errorReason2 === void 0 ? null : renderLine(errorReason2 === EMPTY_TABLE_REASON2 ? EMPTY_TABLE_REASON2 : `\u2717 \u66F4\u65B0\u5931\u8D25\uFF1A${errorReason2}`, "error"), errorReason2 === void 0 || errorReason2 === EMPTY_TABLE_REASON2 ? null : renderLine(FAIL_NEXT2, "fgDim"), busy === true ? renderLine(DISCOVERY_BUSY, "fgDim") : null, footer.map((line5, index2) => /* @__PURE__ */ React.createElement(Box_default, { key: index2, width: "100%", height: 1, flexShrink: 0 }, renderLine(line5, "fgDim"))));
 }
 
 // packages/tui/tui-render/src/agent-hub-pane.tsx
+var import_react43 = __toESM(require_react(), 1);
+
+// packages/tui/tui-render/src/input-bar.tsx
 var import_react42 = __toESM(require_react(), 1);
-
-// packages/tui/tui-render/src/input-bar.tsx
-var import_react41 = __toESM(require_react(), 1);
-
-// packages/tui/tui-render/src/composer-tokens.ts
-var IMAGE_TOKEN = /^\[图片 #[1-9]\d*\]/u;
-var COMMAND_TOKEN = /^\/[\p{L}\p{N}][\p{L}\p{N}._-]*/u;
-var MENTION_TOKEN = /^@\S+/u;
-function tokenAt(text4, index2) {
-  const rest = text4.slice(index2);
-  const image2 = IMAGE_TOKEN.exec(rest)?.[0];
-  if (image2 !== void 0) return Object.freeze({ kind: "image", text: image2 });
-  const boundary2 = index2 === 0 || /\s/u.test(text4[index2 - 1] ?? "");
-  if (!boundary2) return void 0;
-  const command = COMMAND_TOKEN.exec(rest)?.[0];
-  if (command !== void 0) return Object.freeze({ kind: "command", text: command });
-  const mention = MENTION_TOKEN.exec(rest)?.[0];
-  if (mention !== void 0) return Object.freeze({ kind: "mention", text: mention });
-  return void 0;
-}
-function tokenizeComposer(text4) {
-  if (text4 === "") return Object.freeze([]);
-  const tokens = [];
-  let ordinaryStart = 0;
-  let index2 = 0;
-  while (index2 < text4.length) {
-    const token = tokenAt(text4, index2);
-    if (token === void 0) {
-      index2 += 1;
-      continue;
-    }
-    if (ordinaryStart < index2) {
-      tokens.push(Object.freeze({ kind: "text", text: text4.slice(ordinaryStart, index2) }));
-    }
-    tokens.push(token);
-    index2 += token.text.length;
-    ordinaryStart = index2;
-  }
-  if (ordinaryStart < text4.length) {
-    tokens.push(Object.freeze({ kind: "text", text: text4.slice(ordinaryStart) }));
-  }
-  return Object.freeze(tokens);
-}
-
-// packages/tui/tui-render/src/input-bar.tsx
-var import_jsx_runtime17 = __toESM(require_jsx_runtime(), 1);
 var PROMPT_WIDTH = 2;
 var COMPOSER_PLACEHOLDER = tuiCopy("inputHint");
 function InputBar({
@@ -59432,35 +59772,42 @@ function InputBar({
 }) {
   const { text: text4, caretIndex } = maskComposerInput(sourceText, sourceCaretIndex ?? sourceText.length, secret);
   const selectionAnchor = sourceSelectionAnchor === void 0 ? void 0 : maskComposerInput(sourceText, sourceSelectionAnchor, secret).caretIndex;
-  const selection = inputSelectionRange({ text: text4, caretIndex, selectionAnchor });
   const { stdout } = use_stdout_default();
   const { columns, rows } = use_window_size_default();
-  const lines = text4.split("\n");
-  const caret = Math.max(0, Math.min(caretIndex ?? text4.length, text4.length));
-  const caretLine = text4.slice(0, caret).split("\n").length - 1;
-  const caretLineStart = caret === 0 ? 0 : text4.lastIndexOf("\n", caret - 1) + 1;
-  const windows = lines.map((line5, index2) => composerLineWindow(
-    line5,
-    index2 === caretLine ? caret - caretLineStart : void 0,
-    Math.max(1, columns - 4)
-  ));
-  const anchor = composerFrameAnchor(text4, caretIndex ?? text4.length, {
+  const index2 = (0, import_react42.useMemo)(() => composerIndex(text4), [text4]);
+  const caret = index2.snapCaret(caretIndex ?? text4.length);
+  const selectionCaret = selectionAnchor === void 0 ? void 0 : caret;
+  const selectionStart = selectionAnchor === void 0 ? void 0 : index2.snapCaret(selectionAnchor);
+  const selection = selectionCaret === void 0 || selectionStart === void 0 || selectionCaret === selectionStart ? void 0 : { start: Math.min(selectionCaret, selectionStart), end: Math.max(selectionCaret, selectionStart) };
+  const caretLine = index2.rowAt(caret);
+  const rowWindow = composerRowWindow(index2, caret, rows, rowsBelow);
+  const visibleLines = Array.from({ length: rowWindow.end - rowWindow.start }, (_2, offset) => {
+    const row = rowWindow.start + offset;
+    return { row, window: index2.line(row).window(
+      row === caretLine ? caret - index2.lineStarts[row] : void 0,
+      Math.max(1, columns - 4)
+    ) };
+  });
+  const hiddenHint = rowWindow.hiddenAbove + rowWindow.hiddenBelow > 0 ? `\u2191${rowWindow.hiddenAbove} \u2193${rowWindow.hiddenBelow}` : "";
+  const inlineHint = composerRowBudget(rows, rowsBelow) === 1;
+  const anchor = composerFrameAnchor(text4, caret, {
     promptWidth: 2 + PROMPT_WIDTH,
     columns,
     rows,
     fullscreen: stdout.isTTY,
-    rowsBelow
+    rowsBelow,
+    lineWindow: rowWindow
   });
   const caretRow = Math.max(1, rows - anchor.up);
-  const caretWindow = windows[caretLine];
+  const caretWindow = visibleLines[caretLine - rowWindow.start].window;
   const caretCol = Math.min(columns, 5 + caretWindow.caretColumn);
   setFrameCaret({ row: caretRow, col: caretCol });
-  (0, import_react41.useLayoutEffect)(() => {
+  (0, import_react42.useLayoutEffect)(() => {
     if (!stdout.isTTY) return;
     setFrameCaret({ row: caretRow, col: caretCol });
-    stdout.write(`\x1B[${caretRow};${caretCol}H\x1B[?25h`);
+    writeTerminalControl(stdout, `\x1B[${caretRow};${caretCol}H\x1B[?25h`, "caret");
   }, [caretRow, caretCol, stdout]);
-  (0, import_react41.useLayoutEffect)(() => {
+  (0, import_react42.useLayoutEffect)(() => {
     return () => {
       hideFrameCaret();
     };
@@ -59485,51 +59832,39 @@ function InputBar({
       styled(escapeContent(chipText), "fgDim")
     ] : []
   ];
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
+  return /* @__PURE__ */ React.createElement(
     Box_default,
     {
       flexDirection: "column",
       width: "100%",
-      backgroundColor: inkColor("inputBg"),
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(headerParts, "inputBg", columns) }),
-        lines.map((line5, lineIndex) => {
-          const window2 = windows[lineIndex];
-          let sourceColumn = 0;
-          let sourceOffset = lines.slice(0, lineIndex).reduce((offset, item) => offset + item.length + 1, 0);
-          const endColumn = window2.startColumn + displayWidth(window2.text);
-          const tokenParts = tokenizeComposer(line5).flatMap((token) => {
-            const start = sourceOffset;
-            sourceOffset += token.text.length;
-            const cuts = [0, ...selection === void 0 ? [] : [selection.start - start, selection.end - start].filter((offset) => offset > 0 && offset < token.text.length), token.text.length].sort((a2, b2) => a2 - b2);
-            return cuts.slice(1).map((end, index2) => {
-              const begin = cuts[index2];
-              const safe = escapeContent(token.text.slice(begin, end)).replace(/\t/gu, "\\t");
-              const width = displayWidth(safe);
-              const visible = displayColumnSlice(
-                safe,
-                Math.max(0, window2.startColumn - sourceColumn),
-                Math.min(width, endColumn - sourceColumn)
-              );
-              sourceColumn += width;
-              const painted = styled(visible, token.kind === "command" || token.kind === "mention" ? "accent" : token.kind === "image" ? "fgDim" : "fg");
-              return selection !== void 0 && start + begin >= selection.start && start + begin < selection.end && visible !== "" && currentTier() !== "none" ? `\x1B[7m${painted}\x1B[27m` : painted;
-            });
-          });
-          return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow([
-            styled(escapeContent("\u2502 "), "accentText"),
-            styled(escapeContent(lineIndex === 0 ? "> " : "  "), "accentText"),
-            ...window2.hiddenPrefix ? [styled("\u2039", "fgDim")] : [],
-            ...tokenParts
-          ], "inputBg", columns) }, lineIndex);
-        })
-      ]
-    }
+      backgroundColor: inkColor("inputBg")
+    },
+    /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintBackgroundRow(inlineHint && hiddenHint !== "" ? [styled(hiddenHint, "fgDim")] : headerParts, "inputBg", columns)),
+    !inlineHint && hiddenHint !== "" && /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintBackgroundRow([styled(`\u2502 ${hiddenHint}`, "fgDim")], "inputBg", columns)),
+    visibleLines.map(({ row: lineIndex, window: window2 }) => {
+      const lineStart = index2.lineStarts[lineIndex];
+      const parts = [];
+      for (const glyph of window2.glyphs) {
+        const selected = selection !== void 0 && lineStart + glyph.start >= selection.start && lineStart + glyph.start < selection.end;
+        const previous3 = parts.at(-1);
+        if (previous3?.kind === glyph.kind && previous3.selected === selected) previous3.text += glyph.text;
+        else parts.push({ text: glyph.text, kind: glyph.kind, selected });
+      }
+      const tokenParts = parts.map((part) => {
+        const painted = styled(part.text, part.kind === "command" || part.kind === "mention" ? "accent" : part.kind === "image" ? "fgDim" : "fg");
+        return part.selected && currentTier() !== "none" ? `\x1B[7m${painted}\x1B[27m` : painted;
+      });
+      return /* @__PURE__ */ React.createElement(Text, { key: lineIndex, wrap: "truncate" }, paintBackgroundRow([
+        styled(escapeContent("\u2502 "), "accentText"),
+        styled(escapeContent(lineIndex === 0 ? "> " : "  "), "accentText"),
+        ...window2.hiddenPrefix ? [styled("\u2039", "fgDim")] : [],
+        ...tokenParts
+      ], "inputBg", columns));
+    })
   );
 }
 
 // packages/tui/tui-render/src/agent-hub-pane.tsx
-var import_jsx_runtime18 = __toESM(require_jsx_runtime(), 1);
 function formatTokens(value) {
   const scaled = (next) => next >= 100 ? String(Math.round(next)) : String(Math.round(next * 10) / 10);
   if (value < 1e3) return String(value);
@@ -59566,15 +59901,7 @@ function aggregateLine(rows) {
 }
 function hubRow(row, selected) {
   const label = [row.label, row.execution ?? (row.activity === "" ? void 0 : row.activity), ...metricSegments(row)].filter((value) => value !== void 0).join(" \xB7 ");
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", flexDirection: "column", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Text, { wrap: "truncate", children: [
-      selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
-      paintRow([styled(escapeContent(label), selected ? "fg" : "fgSoft", void 0, selected)])
-    ] }),
-    row.task !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u4EFB\u52A1 \xB7 ${escapeContent(row.task)}`, "fgSoft")]) }),
-    row.summary !== void 0 && row.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  \u5F53\u524D \xB7 ${escapeContent(row.summary)}`, "accent")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`  ${escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${row.id}`)}`, "fgDim")]) })
-  ] }, row.id);
+  return /* @__PURE__ */ React.createElement(Box_default, { key: row.id, width: "100%", flexDirection: "column" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ", paintRow([styled(escapeContent(label), selected ? "fg" : "fgSoft", void 0, selected)])), row.task !== void 0 && /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(`  \u4EFB\u52A1 \xB7 ${escapeContent(row.task)}`, "fgSoft")])), row.summary !== void 0 && row.summary !== "" && /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(`  \u5F53\u524D \xB7 ${escapeContent(row.summary)}`, "accent")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(`  ${escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${row.id}`)}`, "fgDim")])));
 }
 function hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth) {
   if (maxActiveSubagents === void 0 && maxDepth === void 0) {
@@ -59611,15 +59938,15 @@ function AgentHubBody({
   const columns = Math.max(1, maxCols ?? size.columns ?? 80);
   const height = Math.max(1, maxRows ?? (size.rows > 0 ? size.rows : 24));
   const limits = hubLimitsFootnote(liveContinuable, maxActiveSubagents, maxDepth);
-  const lines = (0, import_react42.useMemo)(() => view === "transcript" ? wrapDisplayLines(escapeContent(transcript ?? ""), Math.max(1, (columns || 80) - 4)).filter((line5) => line5 !== "") : [], [view, transcript, columns]);
+  const lines = (0, import_react43.useMemo)(() => view === "transcript" ? wrapDisplayLines(escapeContent(transcript ?? ""), Math.max(1, (columns || 80) - 4)).filter((line5) => line5 !== "") : [], [view, transcript, columns]);
   const pageSize = Math.max(1, height - (prompt === void 0 ? 14 : 18));
   const maximum = Math.max(0, lines.length - pageSize);
   const start = Math.max(0, Math.min(scrollOffset ?? 0, maximum));
-  (0, import_react42.useLayoutEffect)(() => {
+  (0, import_react43.useLayoutEffect)(() => {
     if (view === "transcript") onViewportChange?.({ offset: start, maxOffset: maximum, pageRows: pageSize });
   }, [view, start, maximum, pageSize, onViewportChange]);
   if (missing) {
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59632,13 +59959,10 @@ function AgentHubBody({
   const selected = rows[clamped];
   const addressable = selected?.parentSessionId !== void 0 && selected.parentSessionId !== selected.id && selected.mode !== void 0;
   const controls = prompt === void 0 ? [addressable && selected.mode === "continuable" ? "c \u7EED\u804A" : "", addressable ? "s \u8BF7\u6C42\u505C\u6B62" : "", "v \u5E76\u6392"].filter(Boolean).join(" \xB7 ") : `Enter \u6392\u961F \xB7 Ctrl+Enter \u5F15\u5BFC \xB7 Esc \u53D6\u6D88${busy ? " \xB7 \u53D1\u9001\u4E2D" : ""}`;
-  const editor = /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(import_jsx_runtime18.Fragment, { children: [
-    notice !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(notice), "fgDim")]) }),
-    renderEditor && prompt !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(InputBar, { text: prompt, caretIndex, commandMode: false, mentionMode: false })
-  ] });
+  const editor = /* @__PURE__ */ React.createElement(React.Fragment, null, notice !== void 0 && /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(notice), "fgDim")])), renderEditor && prompt !== void 0 && /* @__PURE__ */ React.createElement(InputBar, { text: prompt, caretIndex, commandMode: false, mentionMode: false }));
   if (view === "transcript") {
     if (error51 !== void 0 && error51 !== "" && prompt === void 0) {
-      return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+      return /* @__PURE__ */ React.createElement(
         OverlayShell,
         {
           title: "\u5B50\u4EE3\u7406",
@@ -59656,7 +59980,7 @@ function AgentHubBody({
     const total = lines.length;
     const slice = lines.slice(start, start + pageSize);
     const scrollInfo = total > pageSize ? ` (${String(start + 1)}-${String(Math.min(start + slice.length, total))}/${String(total)})` : "";
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59664,31 +59988,25 @@ function AgentHubBody({
         footnote: `\u2191\u2193/jk \xB7 PgUp/PgDn \xB7 Home/End
 ${controls}
 Esc \u8FD4\u56DE \xB7 ${scrollOffset === Number.MAX_SAFE_INTEGER ? "\u8DDF\u968F\u6700\u65B0" : "\u9605\u8BFB\u4E2D"}${scrollInfo}
-${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u4F1A\u8BDD\u7EE7\u7EED\u8FD0\u884C`,
-        children: [
-          headerSegments.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(Box_default, { width: "100%", flexDirection: "column", marginY: 0, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(headerSegments.join(" \xB7 ")), "accent", void 0, true)]) }),
-            selectedRow?.id && /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${selectedRow.id}`), "fgDim")]) }),
-            /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent("\u2500\u2500\u2500 \u6267\u884C\u60C5\u51B5 \u2500\u2500\u2500"), "fgDim")]) })
-          ] }),
-          slice.map((lineText, index2) => {
-            const isUser = lineText.startsWith("> ");
-            const isTool = lineText.startsWith("\u25B8 ");
-            const isResult = lineText.startsWith("  \u2514\u2500 ") || lineText.startsWith("\u2514\u2500 ");
-            const isTurn = lineText.startsWith("\u2500\u2500 ");
-            let token = "fg";
-            if (isUser) token = "accent";
-            else if (isTool) token = "codeKeyword";
-            else if (isResult || isTurn) token = "fgDim";
-            return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { children: paintRow([styled(escapeContent(lineText), token)]) }, start + index2);
-          }),
-          editor
-        ]
-      }
+${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u4F1A\u8BDD\u7EE7\u7EED\u8FD0\u884C`
+      },
+      headerSegments.length > 0 && /* @__PURE__ */ React.createElement(Box_default, { width: "100%", flexDirection: "column", marginY: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(headerSegments.join(" \xB7 ")), "accent", void 0, true)])), selectedRow?.id && /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(`\u5B50\u4F1A\u8BDD ID \xB7 ${selectedRow.id}`), "fgDim")])), /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent("\u2500\u2500\u2500 \u6267\u884C\u60C5\u51B5 \u2500\u2500\u2500"), "fgDim")]))),
+      slice.map((lineText, index2) => {
+        const isUser = lineText.startsWith("> ");
+        const isTool = lineText.startsWith("\u25B8 ");
+        const isResult = lineText.startsWith("  \u2514\u2500 ") || lineText.startsWith("\u2514\u2500 ");
+        const isTurn = lineText.startsWith("\u2500\u2500 ");
+        let token = "fg";
+        if (isUser) token = "accent";
+        else if (isTool) token = "codeKeyword";
+        else if (isResult || isTurn) token = "fgDim";
+        return /* @__PURE__ */ React.createElement(Text, { key: start + index2 }, paintRow([styled(escapeContent(lineText), token)]));
+      }),
+      editor
     );
   }
   if (error51 !== void 0 && error51 !== "" && prompt === void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59698,7 +60016,7 @@ ${split ? "\u5E76\u6392\u67E5\u770B" : "\u53EA\u8BFB\u67E5\u770B"}\uFF0C\u4E3B\u
     );
   }
   if (rows.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: "\u5B50\u4EE3\u7406",
@@ -59715,26 +60033,23 @@ ${controls}`;
   const footerRows = wrapDisplayLines(footnote, columns || 80).length;
   const windowSize = Math.max(1, Math.floor((height - 9 - footerRows) / 4));
   const rowStart = Math.max(0, Math.min(rows.length - windowSize, clamped - Math.floor(windowSize / 2)));
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
+  return /* @__PURE__ */ React.createElement(
     OverlayShell,
     {
       title: "\u5B50\u4EE3\u7406",
       error: error51,
-      footnote,
-      children: [
-        rows.slice(rowStart, rowStart + windowSize).map((row) => hubRow(row, row.id === rows[clamped]?.id)),
-        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(aggregateLine(rows)), "fgDim")]) }),
-        editor
-      ]
-    }
+      footnote
+    },
+    rows.slice(rowStart, rowStart + windowSize).map((row) => hubRow(row, row.id === rows[clamped]?.id)),
+    /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(aggregateLine(rows)), "fgDim")])),
+    editor
   );
 }
 function AgentHubPane(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(Box_default, { width: props.maxCols ?? "100%", flexDirection: "column", children: /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(AgentHubBody, { ...props }) });
+  return /* @__PURE__ */ React.createElement(Box_default, { width: props.maxCols ?? "100%", flexDirection: "column" }, /* @__PURE__ */ React.createElement(AgentHubBody, { ...props }));
 }
 
 // packages/tui/tui-render/src/plan-directory-pane.tsx
-var import_jsx_runtime19 = __toESM(require_jsx_runtime(), 1);
 var TITLE3 = "\u8BA1\u5212";
 var FOOTNOTE2 = "j/k \u9009\u62E9 \xB7 Enter \u5207\u6362 \xB7 Esc \u5173\u95ED";
 var SWITCH_NEXT = "\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8 \xB7 \u53EF\u91CD\u8BD5";
@@ -59747,13 +60062,10 @@ var EMPTY_PLAN_DIRECTORY_PANE = {
 };
 function directoryRow(label, selected, current) {
   const text4 = current ? `${label} \xB7 \u5F53\u524D` : label;
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(Box_default, { width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  " }),
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: paintRow([styled(escapeContent(text4), selected ? "fg" : "fgDim")]) })
-  ] }, label);
+  return /* @__PURE__ */ React.createElement(Box_default, { key: label, width: "100%" }, /* @__PURE__ */ React.createElement(Text, null, selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  "), /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(text4), selected ? "fg" : "fgDim")])));
 }
 function line3(text4, token) {
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(Text, { children: paintRow([styled(escapeContent(text4), token)]) });
+  return /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(text4), token)]));
 }
 function PlanDirectoryPane({
   selectedIndex = 0,
@@ -59762,7 +60074,7 @@ function PlanDirectoryPane({
   statusError
 }) {
   if (statusError !== void 0 && statusError !== "") {
-    return /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: TITLE3,
@@ -59771,24 +60083,17 @@ function PlanDirectoryPane({
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(OverlayShell, { title: TITLE3, footnote: FOOTNOTE2, children: [
-    ROWS.map(
-      (label, index2) => directoryRow(
-        label,
-        index2 === selectedIndex,
-        label === "\u5F00\u542F" ? currentActive : !currentActive
-      )
-    ),
-    switchError !== void 0 && switchError !== "" ? /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-      line3(`\u2717 \u5207\u6362\u8BA1\u5212\u5931\u8D25\uFF1A${switchError}`, "error"),
-      line3(SWITCH_NEXT, "fgDim")
-    ] }) : null
-  ] });
+  return /* @__PURE__ */ React.createElement(OverlayShell, { title: TITLE3, footnote: FOOTNOTE2 }, ROWS.map(
+    (label, index2) => directoryRow(
+      label,
+      index2 === selectedIndex,
+      label === "\u5F00\u542F" ? currentActive : !currentActive
+    )
+  ), switchError !== void 0 && switchError !== "" ? /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, line3(`\u2717 \u5207\u6362\u8BA1\u5212\u5931\u8D25\uFF1A${switchError}`, "error"), line3(SWITCH_NEXT, "fgDim")) : null);
 }
 
 // packages/tui/tui-render/src/plan-review-pane.tsx
-var import_react43 = __toESM(require_react(), 1);
-var import_jsx_runtime20 = __toESM(require_jsx_runtime(), 1);
+var import_react44 = __toESM(require_react(), 1);
 var TITLE4 = "\u8BA1\u5212\u8BC4\u5BA1";
 var FOOTNOTE3 = "y \u6279\u51C6 \xB7 n \u7EE7\u7EED\u89C4\u5212 \xB7 Esc \u53D6\u6D88";
 var EMPTY_BODY = "\u8BA1\u5212\u6B63\u6587\u4E3A\u7A7A";
@@ -59798,7 +60103,7 @@ var EMPTY_PLAN_REVIEW_PANE = {
   open: false
 };
 function line4(text4, token, bold = false) {
-  return /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(escapeContent(text4), token, void 0, bold)]) });
+  return /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(escapeContent(text4), token, void 0, bold)]));
 }
 function PlanReviewPane({
   plan = "",
@@ -59813,7 +60118,7 @@ function PlanReviewPane({
   const height = Math.max(4, maxRows ?? (size.rows || 24) - 6);
   const limit = Math.max(0, Math.min(PLAN_REVIEW_WINDOW, height - 4));
   const links = hyperlinksEnabled();
-  const physicalRows = (0, import_react43.useMemo)(() => {
+  const physicalRows = (0, import_react44.useMemo)(() => {
     const scope = { width, theme: "truecolor", fold: "expanded", renderMode: "settled" };
     const renderer2 = createStyledMarkdownBlockRenderer({ width, hyperlinks: links });
     const rows = [];
@@ -59832,20 +60137,13 @@ ${DELIVERY_NEXT2}` : "", width);
   const view = failed ? errorView : planView;
   const position2 = view.total > 0 ? ` ${view.start + 1}\u2013${view.start + view.visible.length}/${view.total}` : "";
   let body;
-  if (failed) body = errorView.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "error")]) }, errorView.start + index2));
+  if (failed) body = errorView.visible.map((text4, index2) => /* @__PURE__ */ React.createElement(Text, { key: errorView.start + index2, wrap: "truncate" }, paintRow([styled(text4 || " ", "error")])));
   else if (plan.trim() === "") body = line4(EMPTY_BODY, "fg");
-  else body = planView.visible.map((row, index2) => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: row.spans.length === 0 ? " " : paintLineFromRenderLine(row, links) }, planView.start + index2));
-  return /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled(TITLE4, "fg", void 0, true), styled(position2, "fgDim")]) }),
-    body,
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [y] ", "success", void 0, true), styled("\u6279\u51C6", "fg", void 0, true), styled(" (\u5F00\u59CB\u6267\u884C\u8BA1\u5212)", "fgDim")]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(Text, { wrap: "truncate", children: paintRow([styled("  [n] ", "warning", void 0, true), styled("\u7EE7\u7EED\u89C4\u5212", "fg", void 0, true), styled(" (\u8FD4\u56DE\u8C03\u6574\u65B9\u6848)", "fgDim")]) }),
-    line4(width < 70 ? "\u2191\u2193/PgUp/PgDn \xB7 Home/End \xB7 Esc \u53D6\u6D88" : `${FOOTNOTE3} \xB7 \u2191\u2193/PgUp/PgDn \u6D4F\u89C8`, "fgDim")
-  ] });
+  else body = planView.visible.map((row, index2) => /* @__PURE__ */ React.createElement(Text, { key: planView.start + index2, wrap: "truncate" }, row.spans.length === 0 ? " " : paintLineFromRenderLine(row, links)));
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(TITLE4, "fg", void 0, true), styled(position2, "fgDim")])), body, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("  [y] ", "success", void 0, true), styled("\u6279\u51C6", "fg", void 0, true), styled(" (\u5F00\u59CB\u6267\u884C\u8BA1\u5212)", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("  [n] ", "warning", void 0, true), styled("\u7EE7\u7EED\u89C4\u5212", "fg", void 0, true), styled(" (\u8FD4\u56DE\u8C03\u6574\u65B9\u6848)", "fgDim")])), line4(width < 70 ? "\u2191\u2193/PgUp/PgDn \xB7 Home/End \xB7 Esc \u53D6\u6D88" : `${FOOTNOTE3} \xB7 \u2191\u2193/PgUp/PgDn \u6D4F\u89C8`, "fgDim"));
 }
 
 // packages/tui/tui-render/src/ask-user-pane.tsx
-var import_jsx_runtime21 = __toESM(require_jsx_runtime(), 1);
 var FOOTNOTE4 = "Enter \u4F5C\u7B54 \xB7 Esc \u53D6\u6D88\u63D0\u95EE";
 var INVALID_TITLE = "\u2717 \u63D0\u95EE\u65E0\u6548";
 var INVALID_NEXT = "Esc \u53D6\u6D88";
@@ -59890,51 +60188,35 @@ function AskUserPane({
   const detailRows = useDialogTextRows(source, width);
   const view = useDialogWindow(detailRows, offset, limit, detailsOpen ? onOffsetChange : void 0);
   const progress = questionCount === void 0 ? "" : ` (${questionNumber}/${questionCount})`;
-  if (editingCustom && !detailsOpen) return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(`${escapeContent(header)}${progress}`, "fg", void 0, true)]) }),
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(
-      InputBar,
-      {
-        text: (customText ?? "").replace(/[\r\n]/gu, "\u21B5"),
-        commandMode: false,
-        mentionMode: false,
-        caretIndex: customCaretIndex,
-        rowsBelow: customRowsBelow ?? 2
-      }
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled("Enter \u786E\u8BA4 \xB7 Tab \u5168\u6587 \xB7 Esc \u53D6\u6D88", "fgDim")]) })
-  ] });
+  if (editingCustom && !detailsOpen) return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(`${escapeContent(header)}${progress}`, "fg", void 0, true)])), /* @__PURE__ */ React.createElement(
+    InputBar,
+    {
+      text: (customText ?? "").replace(/[\r\n]/gu, "\u21B5"),
+      commandMode: false,
+      mentionMode: false,
+      caretIndex: customCaretIndex,
+      rowsBelow: customRowsBelow ?? 2
+    }
+  ), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled("Enter \u786E\u8BA4 \xB7 Tab \u5168\u6587 \xB7 Esc \u53D6\u6D88", "fgDim")])));
   if (options.length === 0 && !editingCustom) {
-    return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      renderPaneLine(INVALID_TITLE, "error", true),
-      renderPaneLine(INVALID_NEXT, "fgDim")
-    ] });
+    return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, renderPaneLine(INVALID_TITLE, "error", true), renderPaneLine(INVALID_NEXT, "fgDim"));
   }
   const start = Math.max(0, Math.min(options.length - limit, selected - Math.floor(limit / 2)));
   const position2 = detailsOpen ? ` ${view.start + 1}\u2013${view.start + view.visible.length}/${view.total}` : "";
   const heading = detailsOpen ? `\u63D0\u95EE\u5168\u6587${options.length === 0 ? progress : ` \xB7 \u9009\u9879 ${selected + 1}/${options.length}`}${position2}` : `${escapeContent(header || "\u8BF7\u9009\u62E9").replace(/\n/g, " \u21B5 ")}${progress}`;
-  return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(heading, "fg", void 0, true)]) }),
-    detailsOpen ? view.visible.map((text4, index2) => /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(text4 || " ", "fg")]) }, view.start + index2)) : options.slice(start, start + limit).map((label, index2) => {
-      const actualIndex = start + index2;
-      const active = actualIndex === selected;
-      const marker = multiSelect ? selectedIndices?.includes(actualIndex) ? "[x] " : "[ ] " : "";
-      const numbered = escapeContent(`${actualIndex + 1} ${marker}${label}`).replace(/\n/g, " \u21B5 ");
-      return /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([
-        styled(active ? "\u203A " : "  ", "accent", void 0, active),
-        styled(numbered, active ? "fg" : "fgDim", void 0, active)
-      ]) }, actualIndex);
-    }),
-    /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE4, "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "\u2191\u2193/jk \u6EDA\u52A8 \xB7 Home/End \u9996\u5C3E" : multiSelect ? "\u2191\u2193 \u79FB\u52A8 \xB7 Space \u591A\u9009 \xB7 c \u81EA\u5B9A\u4E49" : "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 c \u81EA\u5B9A\u4E49", "fgDim")]) }),
-      /* @__PURE__ */ (0, import_jsx_runtime21.jsx)(Text, { wrap: "truncate", children: paintRow([styled(editingCustom ? "PgUp/PgDn \u7FFB\u9875" : customText === void 0 ? "[i] \u5168\u6587 \xB7 PgUp/PgDn \u7FFB\u9875" : "\u5DF2\u6709\u81EA\u5B9A\u4E49\u56DE\u7B54 \xB7 [i] \u5168\u6587", "fgDim")]) })
-    ] })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(heading, "fg", void 0, true)])), detailsOpen ? view.visible.map((text4, index2) => /* @__PURE__ */ React.createElement(Text, { key: view.start + index2, wrap: "truncate" }, paintRow([styled(text4 || " ", "fg")]))) : options.slice(start, start + limit).map((label, index2) => {
+    const actualIndex = start + index2;
+    const active = actualIndex === selected;
+    const marker = multiSelect ? selectedIndices?.includes(actualIndex) ? "[x] " : "[ ] " : "";
+    const numbered = escapeContent(`${actualIndex + 1} ${marker}${label}`).replace(/\n/g, " \u21B5 ");
+    return /* @__PURE__ */ React.createElement(Text, { key: actualIndex, wrap: "truncate" }, paintRow([
+      styled(active ? "\u203A " : "  ", "accent", void 0, active),
+      styled(numbered, active ? "fg" : "fgDim", void 0, active)
+    ]));
+  }), /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%", flexShrink: 0 }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(editingCustom ? "Tab/Esc \u8FD4\u56DE\u8F93\u5165" : FOOTNOTE4, "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(editingCustom ? "\u2191\u2193/jk \u6EDA\u52A8 \xB7 Home/End \u9996\u5C3E" : multiSelect ? "\u2191\u2193 \u79FB\u52A8 \xB7 Space \u591A\u9009 \xB7 c \u81EA\u5B9A\u4E49" : "\u2191\u2193/jk \u79FB\u52A8 \xB7 1-9 \u9009\u62E9 \xB7 c \u81EA\u5B9A\u4E49", "fgDim")])), /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(editingCustom ? "PgUp/PgDn \u7FFB\u9875" : customText === void 0 ? "[i] \u5168\u6587 \xB7 PgUp/PgDn \u7FFB\u9875" : "\u5DF2\u6709\u81EA\u5B9A\u4E49\u56DE\u7B54 \xB7 [i] \u5168\u6587", "fgDim")]))));
 }
 
 // packages/tui/tui-render/src/timeline-view.tsx
-var import_jsx_runtime22 = __toESM(require_jsx_runtime(), 1);
 var FIRST_LINE_MAX = 120;
 var TIMELINE_WINDOW = 60;
 function TimelineView({
@@ -59949,20 +60231,7 @@ function TimelineView({
   const start = Math.max(0, end - TIMELINE_WINDOW);
   const visible = history.slice(start, end);
   const current = end >= history.length ? visible.length - 1 : -1;
-  return /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    history.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Text, { dimColor: true, children: "\uFF08\u65E0\u5386\u53F2\u6D88\u606F\uFF09" }) : null,
-    start > 0 ? /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Text, { dimColor: true, children: [
-      "\u2026 \u8FD8\u6709 ",
-      start,
-      " \u6761"
-    ] }) : null,
-    visible.map((message, index2) => /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(Text, { children: [
-      styled(relativeTime(message.timestamp, clock), "fgDim"),
-      ` ${message.kind === "user" ? "> " : "\u25CF "}`,
-      index2 === current ? styled(escapeContent(firstLine(message.text)), "accent") : escapeContent(firstLine(message.text))
-    ] }, start + index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Text, { children: styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc \u5173\u95ED"), "fgDim") })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, history.length === 0 ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\uFF08\u65E0\u5386\u53F2\u6D88\u606F\uFF09") : null, start > 0 ? /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u2026 \u8FD8\u6709 ", start, " \u6761") : null, visible.map((message, index2) => /* @__PURE__ */ React.createElement(Text, { key: start + index2 }, styled(relativeTime(message.timestamp, clock), "fgDim"), ` ${message.kind === "user" ? "> " : "\u25CF "}`, index2 === current ? styled(escapeContent(firstLine(message.text)), "accent") : escapeContent(firstLine(message.text)))), /* @__PURE__ */ React.createElement(Text, null, styled(escapeContent("\u2191\u2193/jk \u6EDA\u52A8 \xB7 Esc \u5173\u95ED"), "fgDim")));
 }
 function firstLine(text4) {
   const line5 = text4.split("\n")[0];
@@ -59970,7 +60239,6 @@ function firstLine(text4) {
 }
 
 // packages/tui/tui-render/src/command-menu.tsx
-var import_jsx_runtime23 = __toESM(require_jsx_runtime(), 1);
 var COMMAND_MENU_WINDOW = 8;
 var MARKER_COLS2 = 2;
 var NAME_GAP = 2;
@@ -60037,11 +60305,10 @@ function CommandMenu({
     const widthName = displayWidth(`/${item.name}`);
     if (widthName > nameCols) nameCols = widthName;
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { flexDirection: "column", width, children: matches.map((item, index2) => /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Box_default, { width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(Text, { children: paintRow(paletteRow(item, offset + index2 === clampedIndex, nameCols, width)) }) }, item.name)) }) });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", alignItems: "center", width: "100%" }, /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width }, matches.map((item, index2) => /* @__PURE__ */ React.createElement(Box_default, { key: item.name, width: "100%" }, /* @__PURE__ */ React.createElement(Text, null, paintRow(paletteRow(item, offset + index2 === clampedIndex, nameCols, width)))))));
 }
 
 // packages/tui/tui-render/src/mention.tsx
-var import_jsx_runtime24 = __toESM(require_jsx_runtime(), 1);
 var KIND_LABELS = {
   file: "\u6587\u4EF6",
   directory: "\u76EE\u5F55",
@@ -60059,10 +60326,10 @@ function Mention({
   const { columns } = use_window_size_default();
   const width = conversationWidth(columns > 0 ? columns : 80);
   if (phase === "loading") {
-    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { dimColor: true, children: "\u52A0\u8F7D\u4E2D\u2026" }) }) });
+    return /* @__PURE__ */ React.createElement(Box_default, { width: "100%", alignItems: "center" }, /* @__PURE__ */ React.createElement(Box_default, { width }, /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u52A0\u8F7D\u4E2D\u2026")));
   }
   if (candidates.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width: "100%", alignItems: "center", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { width, children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { dimColor: true, children: "\u65E0\u5339\u914D" }) }) });
+    return /* @__PURE__ */ React.createElement(Box_default, { width: "100%", alignItems: "center" }, /* @__PURE__ */ React.createElement(Box_default, { width }, /* @__PURE__ */ React.createElement(Text, { dimColor: true }, "\u65E0\u5339\u914D")));
   }
   const clampedIndex = Math.max(0, Math.min(selectedIndex, candidates.length - 1));
   const sections = /* @__PURE__ */ new Map();
@@ -60078,21 +60345,17 @@ function Mention({
   let rowIndex = 0;
   for (const [kind, group] of sections) {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Text, { wrap: "truncate", children: styled(KIND_LABELS[kind], "accentText", void 0, true) }, kind)
+      /* @__PURE__ */ React.createElement(Text, { key: kind, wrap: "truncate" }, styled(KIND_LABELS[kind], "accentText", void 0, true))
     );
     for (const candidate of group) {
       const selected = rowIndex === clampedIndex;
       rows.push(
-        /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)(Text, { wrap: "truncate", children: [
-          selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ",
-          styled(`@ ${escapeContent(candidate.name)}`, selected ? "fg" : "fgSoft", void 0, selected),
-          candidate.description !== void 0 ? styled(` \u2014 ${escapeContent(candidate.description)}`, "fgDim") : ""
-        ] }, `${kind}:${candidate.name}`)
+        /* @__PURE__ */ React.createElement(Text, { key: `${kind}:${candidate.name}`, wrap: "truncate" }, selected ? styled(escapeContent("\u203A "), "accent", void 0, true) : "  ", styled(`@ ${escapeContent(candidate.name)}`, selected ? "fg" : "fgSoft", void 0, selected), candidate.description !== void 0 ? styled(` \u2014 ${escapeContent(candidate.description)}`, "fgDim") : "")
       );
       rowIndex += 1;
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { flexDirection: "column", alignItems: "center", width: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Box_default, { flexDirection: "column", width, children: rows }) });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", alignItems: "center", width: "100%" }, /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width }, rows));
 }
 
 // packages/tui/tui-render/src/goal-footer.ts
@@ -60476,7 +60739,6 @@ function layoutHud(input) {
 }
 
 // packages/tui/tui-render/src/workflow-overlay.tsx
-var import_jsx_runtime25 = __toESM(require_jsx_runtime(), 1);
 var WORKFLOW_OVERLAY_WINDOW = 8;
 var EMPTY_WORKFLOW_OVERLAY = { open: false, offset: 0 };
 function WorkflowOverlay({
@@ -60484,15 +60746,15 @@ function WorkflowOverlay({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ React.createElement(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (state.run === void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", body: "\u5F53\u524D\u65E0\u5DE5\u4F5C\u6D41\u8FD0\u884C", footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ React.createElement(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", body: "\u5F53\u524D\u65E0\u5DE5\u4F5C\u6D41\u8FD0\u884C", footnote: "Esc \u5173\u95ED" });
   }
   const rows = [];
   if (state.run.phase !== void 0 && state.run.phase !== "") {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { children: paintRow([styled(escapeContent(`\u9636\u6BB5 ${state.run.phase}`), "fg")]) }, "phase")
+      /* @__PURE__ */ React.createElement(Text, { key: "phase" }, paintRow([styled(escapeContent(`\u9636\u6BB5 ${state.run.phase}`), "fg")]))
     );
   }
   const windowed = state.run.members.slice(
@@ -60502,17 +60764,16 @@ function WorkflowOverlay({
   for (const member of windowed) {
     const outcomeSuffix = member.outcome === void 0 ? "" : ` \xB7 ${member.outcome}`;
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(Text, { children: paintRow([
+      /* @__PURE__ */ React.createElement(Text, { key: member.seq }, paintRow([
         styled(escapeContent(`${member.seq} \xB7 ${member.label}${outcomeSuffix}`), "fgDim")
-      ]) }, member.seq)
+      ]))
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime25.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", footnote: "j/k \u6EDA\u52A8 \xB7 Esc \u5173\u95ED", children: rows });
+  return /* @__PURE__ */ React.createElement(OverlayShell, { title: "\u5DE5\u4F5C\u6D41", footnote: "j/k \u6EDA\u52A8 \xB7 Esc \u5173\u95ED" }, rows);
 }
 
 // packages/tui/tui-render/src/workspace-pane.tsx
-var import_react44 = __toESM(require_react(), 1);
-var import_jsx_runtime26 = __toESM(require_jsx_runtime(), 1);
+var import_react45 = __toESM(require_react(), 1);
 var EMPTY_WORKSPACE_PANE = {
   open: false,
   root: "",
@@ -60536,7 +60797,7 @@ function WorkspacePreview({ preview, columns, maxRows, onLayout, systemOpen }) {
   const digits = Math.max(3, String(lines.length).length);
   const gutterWidth = columns >= digits + 5 ? digits + 3 : 0;
   const bodyWidth = Math.max(1, columns - gutterWidth);
-  const { document: document4, checkpoints, totalRows } = (0, import_react44.useMemo)(() => {
+  const { document: document4, checkpoints, totalRows } = (0, import_react45.useMemo)(() => {
     const document5 = lines.map((text4) => ({ text: previewText(text4), token: "codeBg" }));
     let cursor2 = { line: 0, offset: 0 };
     let checkpoints2 = [{ row: 0, cursor: cursor2 }];
@@ -60559,7 +60820,7 @@ function WorkspacePreview({ preview, columns, maxRows, onLayout, systemOpen }) {
   const pageRows = Math.max(0, maxRows - 2);
   const maxOffset2 = pageRows === 0 ? 0 : Math.max(0, totalRows - pageRows);
   const offset = Math.min(maxOffset2, Math.max(0, scrollOffset));
-  (0, import_react44.useLayoutEffect)(() => {
+  (0, import_react45.useLayoutEffect)(() => {
     onLayout?.({ lines, pageRows, maxOffset: maxOffset2 });
   }, [onLayout, lines, pageRows, maxOffset2]);
   if (maxRows <= 0) return null;
@@ -60605,13 +60866,9 @@ function WorkspacePreview({ preview, columns, maxRows, onLayout, systemOpen }) {
         if (start >= fragment.end) break;
       }
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintBackgroundRow(parts, "codeBg", columns) }, `${fragment.line}:${fragment.start}`);
+    return /* @__PURE__ */ React.createElement(Text, { key: `${fragment.line}:${fragment.start}`, wrap: "truncate" }, paintBackgroundRow(parts, "codeBg", columns));
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(Box_default, { flexDirection: "column", width: columns, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(title, "fg", void 0, true)]) }),
-    rows,
-    maxRows > 1 ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([styled(footnote, "fgDim")]) }) : null
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: columns }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(title, "fg", void 0, true)])), rows, maxRows > 1 ? /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(footnote, "fgDim")])) : null);
 }
 function WorkspacePane({
   state,
@@ -60622,10 +60879,10 @@ function WorkspacePane({
   const { rows: windowRows, columns: windowColumns } = use_window_size_default();
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverlayShell, { title: "\u5DE5\u4F5C\u533A", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ React.createElement(OverlayShell, { title: "\u5DE5\u4F5C\u533A", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (state.preview !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+    return /* @__PURE__ */ React.createElement(
       WorkspacePreview,
       {
         preview: state.preview,
@@ -60646,7 +60903,7 @@ function WorkspacePane({
     const selected = index2 === state.selectedIndex && !state.editing;
     const head = `${selected ? "\u203A " : "  "}${"  ".repeat(node2.depth)}${glyph} `;
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Text, { wrap: "truncate", children: paintRow([
+      /* @__PURE__ */ React.createElement(Text, { key: node2.path, wrap: "truncate" }, paintRow([
         styled(escapeContent(head), selected ? "accent" : "fgDim"),
         styled(
           truncateDisplay(
@@ -60655,24 +60912,23 @@ function WorkspacePane({
           ),
           selected ? "fg" : "fgDim"
         )
-      ]) }, node2.path)
+      ]))
     );
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
+  return /* @__PURE__ */ React.createElement(
     OverlayShell,
     {
       title: state.mode === "deliveries" ? "\u4EA4\u4ED8\u6587\u4EF6" : "\u5DE5\u4F5C\u533A",
       body: state.nodes.length === 0 ? state.mode === "deliveries" ? "\u5F53\u524D\u4F1A\u8BDD\u6682\u65E0\u663E\u5F0F\u4EA4\u4ED8\u6587\u4EF6" : "\u6B64\u76EE\u5F55\u4E3A\u7A7A" : void 0,
       footnote: state.watchError === void 0 ? footnote : `${state.watchError} \xB7 ${footnote}`,
       error: state.resolveError === void 0 ? void 0 : `\u8DEF\u5F84\u65E0\u6548\uFF1A${state.resolveError}`,
-      errorNext: state.resolveError === void 0 ? void 0 : RESOLVE_FAIL_NEXT,
-      children: rows
-    }
+      errorNext: state.resolveError === void 0 ? void 0 : RESOLVE_FAIL_NEXT
+    },
+    rows
   );
 }
 
 // packages/tui/tui-render/src/plugins-pane.tsx
-var import_jsx_runtime27 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_PLUGINS_PANE = {
   open: false,
   available: false,
@@ -60777,11 +61033,10 @@ function PluginsPane({ state, locale = "zh-CN", maxCols, maxRows }) {
     return { text: text4, token };
   });
   const visible = [...lines.slice(start, start + bodyBudget), ...statusEntries];
-  return /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint), children: visible.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime27.jsx)(Text, { wrap: "truncate", children: paintRow([styled(clean(line5.text), line5.token ?? (line5.selected ? "accent" : "fg"), void 0, line5.bold === true)]) }, index2)) });
+  return /* @__PURE__ */ React.createElement(OverlayShell, { title: clean(copy("pluginsTitle")), body: clean(copy("pluginsScope")), footnote: clean(hint) }, visible.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintRow([styled(clean(line5.text), line5.token ?? (line5.selected ? "accent" : "fg"), void 0, line5.bold === true)]))));
 }
 
 // packages/tui/tui-render/src/account-pane.tsx
-var import_jsx_runtime28 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_ACCOUNT_PANE = {
   open: false,
   available: false,
@@ -60876,11 +61131,10 @@ function AccountPane({ state, locale = "zh-CN", maxCols }) {
     }
     if (state.busy) hint = copy("accountBusyHint");
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error, children: lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime28.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token, void 0, line5.bold === true)]) }, index2)) });
+  return /* @__PURE__ */ React.createElement(OverlayShell, { title: copy("accountTitle"), footnote: truncateDisplay(escapeContent(hint), width), error: state.error }, lines.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintRow([styled(line5.wrap === true ? escapeContent(line5.text) : truncateDisplay(escapeContent(line5.text), width), line5.token, void 0, line5.bold === true)]))));
 }
 
 // packages/tui/tui-render/src/feedback-pane.tsx
-var import_jsx_runtime29 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_FEEDBACK_PANE = {
   open: false,
   hasTarget: false,
@@ -60896,10 +61150,10 @@ function FeedbackPane({
 }) {
   if (!state.open) return null;
   if (state.error !== void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
+    return /* @__PURE__ */ React.createElement(OverlayShell, { title: "\u53CD\u9988", error: state.error, footnote: "Esc \u5173\u95ED" });
   }
   if (!state.hasTarget) {
-    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+    return /* @__PURE__ */ React.createElement(
       OverlayShell,
       {
         title: "\u53CD\u9988",
@@ -60915,7 +61169,7 @@ function FeedbackPane({
     { key: "negative", shortcut: "[d] ", label: "\u8E29", token: "warning" }
   ].map((row) => {
     const isCurrent = state.rating === row.key;
-    return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([
+    return /* @__PURE__ */ React.createElement(Text, { key: row.key, wrap: "truncate" }, paintRow([
       styled(escapeContent(`  ${row.shortcut}`), isCurrent ? row.token : "fgDim", void 0, isCurrent),
       styled(
         escapeContent(`${row.label}${isCurrent ? " \xB7 \u5F53\u524D" : ""}`),
@@ -60923,25 +61177,25 @@ function FeedbackPane({
         void 0,
         isCurrent
       )
-    ]) }, row.key);
+    ]));
   });
   if (state.note !== void 0 && state.note.trim() !== "") {
     rows.push(
-      /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(Text, { wrap: "truncate", children: paintRow([
+      /* @__PURE__ */ React.createElement(Text, { key: "note", wrap: "truncate" }, paintRow([
         styled("  \u5907\u6CE8: ", "fgDim"),
         styled(escapeContent(state.note), "fgSoft")
-      ]) }, "note")
+      ]))
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime29.jsx)(
+  return /* @__PURE__ */ React.createElement(
     OverlayShell,
     {
       title: "\u53CD\u9988",
       footnote: state.editing ? "Enter \u5199\u5165 \xB7 Esc \u53D6\u6D88" : "l \u8D5E \xB7 d \u8E29 \xB7 e \u5907\u6CE8 \xB7 Esc \u5173\u95ED",
       error: errorText,
-      errorNext: writeError === void 0 ? void 0 : WRITE_FAILURE_COPY[writeError].next,
-      children: rows
-    }
+      errorNext: writeError === void 0 ? void 0 : WRITE_FAILURE_COPY[writeError].next
+    },
+    rows
   );
 }
 
@@ -60984,14 +61238,13 @@ function toolDetailsKeyAction(key, info) {
 }
 
 // packages/tui/tui-render/src/todo-pane.tsx
-var import_react45 = __toESM(require_react(), 1);
-var import_jsx_runtime30 = __toESM(require_jsx_runtime(), 1);
+var import_react46 = __toESM(require_react(), 1);
 function TodoPane({ todos, offset, onOffsetChange, locale }) {
   const { columns, rows } = use_window_size_default();
   const width = Math.max(1, (columns || 80) - 4);
   const height = Math.max(1, (rows || 24) - 10);
   const english = locale === "en-US";
-  const { lines, counts } = (0, import_react45.useMemo)(() => {
+  const { lines, counts } = (0, import_react46.useMemo)(() => {
     const counts2 = { pending: 0, in_progress: 0, completed: 0 };
     const lines2 = [];
     for (const [index2, todo] of todos.entries()) {
@@ -61013,28 +61266,25 @@ function TodoPane({ todos, offset, onOffsetChange, locale }) {
   }, [todos, width, english]);
   const maximum = Math.max(0, lines.length - height);
   const start = Math.max(0, Math.min(offset, maximum));
-  (0, import_react45.useEffect)(() => {
+  (0, import_react46.useEffect)(() => {
     if (start !== offset) onOffsetChange?.(start);
   }, [start, offset, onOffsetChange]);
   const summary2 = english ? `${todos.length} tasks \xB7 ${counts.in_progress} active \xB7 ${counts.pending} pending \xB7 ${counts.completed} done` : `\u5171 ${todos.length} \u9879 \xB7 \u8FDB\u884C\u4E2D ${counts.in_progress} \xB7 \u5F85\u529E ${counts.pending} \xB7 \u5DF2\u5B8C\u6210 ${counts.completed}`;
   const position2 = lines.length === 0 ? "" : ` ${start + 1}\u2013${Math.min(start + height, lines.length)}/${lines.length}`;
-  return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(
+  return /* @__PURE__ */ React.createElement(
     OverlayShell,
     {
       title: english ? "TODO list" : "\u5F85\u529E\u6E05\u5355",
-      footnote: `${english ? "\u2191\u2193/jk Scroll \xB7 PgUp/PgDn Page \xB7 Esc Back" : "\u2191\u2193/jk \u6EDA\u52A8 \xB7 PgUp/PgDn \u7FFB\u9875 \xB7 Esc \u8FD4\u56DE"}${position2}`,
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(summary2, "fgDim")]) }),
-        todos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { children: english ? "No TODO list in this turn." : "\u5F53\u524D\u56DE\u5408\u6682\u65E0\u5F85\u529E\u6E05\u5355\u3002" }),
-        lines.slice(start, start + height).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5.text || " ", line5.token)]) }, start + index2))
-      ]
-    }
+      footnote: `${english ? "\u2191\u2193/jk Scroll \xB7 PgUp/PgDn Page \xB7 Esc Back" : "\u2191\u2193/jk \u6EDA\u52A8 \xB7 PgUp/PgDn \u7FFB\u9875 \xB7 Esc \u8FD4\u56DE"}${position2}`
+    },
+    /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(summary2, "fgDim")])),
+    todos.length === 0 && /* @__PURE__ */ React.createElement(Text, null, english ? "No TODO list in this turn." : "\u5F53\u524D\u56DE\u5408\u6682\u65E0\u5F85\u529E\u6E05\u5355\u3002"),
+    lines.slice(start, start + height).map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: start + index2, wrap: "truncate" }, paintRow([styled(line5.text || " ", line5.token)])))
   );
 }
 
 // packages/tui/tui-render/src/schedule-pane.tsx
-var import_react46 = __toESM(require_react(), 1);
-var import_jsx_runtime31 = __toESM(require_jsx_runtime(), 1);
+var import_react47 = __toESM(require_react(), 1);
 var EMPTY_SCHEDULE_PANE = {
   open: false,
   rows: [],
@@ -61050,7 +61300,7 @@ function SchedulePane({ state, onOffsetChange }) {
   const width = Math.max(1, columns - 4);
   const capacity = Math.max(1, rows - 9);
   const selected = state.rows[state.selectedIndex];
-  const detail = (0, import_react46.useMemo)(() => selected === void 0 ? [] : wrapDisplayLines([
+  const detail = (0, import_react47.useMemo)(() => selected === void 0 ? [] : wrapDisplayLines([
     selected.title,
     `\u4EFB\u52A1: ${selected.id}`,
     `\u4F1A\u8BDD: ${selected.sessionId}`,
@@ -61062,7 +61312,7 @@ function SchedulePane({ state, onOffsetChange }) {
     selected.prompt
   ].map(escapeContent).join("\n"), width), [selected, width]);
   const offset = Math.min(Math.max(0, state.offset), Math.max(0, detail.length - capacity));
-  (0, import_react46.useLayoutEffect)(() => {
+  (0, import_react47.useLayoutEffect)(() => {
     if (state.details && state.offset !== offset) onOffsetChange?.(offset);
   }, [state.details, state.offset, offset, onOffsetChange]);
   let lines;
@@ -61081,14 +61331,10 @@ ${escapeContent(selected.id)}
     if (lines.length === 0) lines = [state.loading ? "\u6B63\u5728\u8BFB\u53D6\u4EFB\u52A1\u2026" : "\u6682\u65E0\u4EFB\u52A1\uFF1B\u53EF\u8BA9\u6A21\u578B\u521B\u5EFA\u5B9A\u65F6\u63D0\u9192\u3002"];
   }
   const footnote = state.busy ? "\u6B63\u5728\u53D6\u6D88\u4EFB\u52A1\u2026" : state.confirmDelete ? "y \u786E\u8BA4\u53D6\u6D88 \xB7 n/Esc \u4FDD\u7559" : state.details ? "\u2191\u2193/PgUp/PgDn \u9605\u8BFB \xB7 Enter \u539F\u4F1A\u8BDD \xB7 d \u53D6\u6D88\u4EFB\u52A1 \xB7 Esc \u5217\u8868" : "\u2191\u2193 \u9009\u62E9 \xB7 Enter \u8BE6\u60C5 \xB7 d \u53D6\u6D88\u4EFB\u52A1 \xB7 r \u5237\u65B0 \xB7 Esc \u8FD4\u56DE";
-  return /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(OverlayShell, { title: `\u5B9A\u65F6\u4EFB\u52A1 \xB7 ${state.rows.length}`, footnote, children: [
-    state.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: paintRow([styled(truncateDisplay(escapeContent(state.error), width), "fg")]) }),
-    lines.slice(0, Math.max(0, capacity - (state.error === void 0 ? 0 : 1))).map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(Text, { wrap: "truncate", children: paintRow([styled(line5 || " ", "fg")]) }, index2))
-  ] });
+  return /* @__PURE__ */ React.createElement(OverlayShell, { title: `\u5B9A\u65F6\u4EFB\u52A1 \xB7 ${state.rows.length}`, footnote }, state.error === void 0 ? null : /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, paintRow([styled(truncateDisplay(escapeContent(state.error), width), "fg")])), lines.slice(0, Math.max(0, capacity - (state.error === void 0 ? 0 : 1))).map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, paintRow([styled(line5 || " ", "fg")]))));
 }
 
 // packages/tui/tui-render/src/tool-details-pane.tsx
-var import_jsx_runtime32 = __toESM(require_jsx_runtime(), 1);
 var EMPTY_TOOL_DETAILS_PANE = Object.freeze({
   open: false,
   cards: [],
@@ -61125,21 +61371,16 @@ function ToolDetailsPane({ state, columns, maxRows, pageRows, locale }) {
     }
     lines.push(truncateDisplay(`${state.page + 1} \xB7 ${page.remainingLines} ${tuiCopy("remaining", locale)} \xB7 d ${tuiCopy("diagnostics", locale)} ${tuiCopy(state.diagnostics ? "on" : "off", locale)}`, columns));
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime32.jsxs)(Box_default, { flexDirection: "column", width: "100%", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { wrap: "truncate", children: heading }),
-    lines.map((line5, index2) => /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { wrap: "truncate", children: line5 }, index2)),
-    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(Text, { dimColor: true, wrap: "truncate", children: escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale)) })
-  ] });
+  return /* @__PURE__ */ React.createElement(Box_default, { flexDirection: "column", width: "100%" }, /* @__PURE__ */ React.createElement(Text, { wrap: "truncate" }, heading), lines.map((line5, index2) => /* @__PURE__ */ React.createElement(Text, { key: index2, wrap: "truncate" }, line5)), /* @__PURE__ */ React.createElement(Text, { dimColor: true, wrap: "truncate" }, escapeContent(tuiCopy(state.detail ? "toolPageHint" : "toolListHint", locale))));
 }
 
 // packages/tui/tui-render/src/queue-chip.tsx
-var import_jsx_runtime33 = __toESM(require_jsx_runtime(), 1);
 function queueChipText(count) {
   return count <= 0 ? void 0 : `\u5F85\u53D1 ${String(count)} \xB7 \u2191 \u53D6\u51FA`;
 }
 function QueueChip({ count }) {
   const text4 = queueChipText(count);
-  return text4 === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(Text, { children: paintRow([styled(escapeContent(text4), "fg")]) });
+  return text4 === void 0 ? null : /* @__PURE__ */ React.createElement(Text, null, paintRow([styled(escapeContent(text4), "fg")]));
 }
 
 // packages/tui/tui-render/src/loop.tsx
@@ -62231,8 +62472,8 @@ function mapKeyEvent(state, key, keyInfo, commands, pane, search2, timeline = { 
     }
     if (inputHistory.length > 0) {
       const isBrowsing = state.historyIndex !== void 0;
-      const currentIndex = state.historyIndex ?? inputHistory.length;
-      const nextIndex = Math.max(0, currentIndex - 1);
+      const currentIndex2 = state.historyIndex ?? inputHistory.length;
+      const nextIndex = Math.max(0, currentIndex2 - 1);
       const nextText = inputHistory[nextIndex] ?? "";
       const savedDraft = isBrowsing ? state.historyDraft : state.text;
       return {
@@ -62413,7 +62654,7 @@ function TuiLoop({
   renderPolicy,
   frameMetrics
 }) {
-  const [state, setState] = (0, import_react47.useState)({
+  const [state, setState] = (0, import_react48.useState)({
     text: controller.getComposerDraft?.() ?? "",
     commandQuery: void 0,
     commandSelectedIndex: 0,
@@ -62423,298 +62664,287 @@ function TuiLoop({
     mentionSelectedIndex: 0,
     mentionDismissed: false
   });
-  const [mentionPhase, setMentionPhase] = (0, import_react47.useState)("ready");
-  const [mentionCandidates, setMentionCandidates] = (0, import_react47.useState)([]);
-  const [timelineOffset, setTimelineOffset] = (0, import_react47.useState)(0);
-  const [blockingHelp, setBlockingHelp] = (0, import_react47.useState)(false);
-  const blockingHelpRef = (0, import_react47.useRef)(false);
-  const [blockingHelpOffset, setBlockingHelpOffset] = (0, import_react47.useState)(0);
-  const [helpOffset, setHelpOffset] = (0, import_react47.useState)(0);
-  const [planReviewOffset, setPlanReviewOffset] = (0, import_react47.useState)(0);
-  const [approvalOffset, setApprovalOffset] = (0, import_react47.useState)(0);
-  const [askUserOffset, setAskUserOffset] = (0, import_react47.useState)(0);
-  const [askUserDetails, setAskUserDetails] = (0, import_react47.useState)(false);
-  const askUserDetailsRef = (0, import_react47.useRef)(askUserDetails);
+  const [mentionPhase, setMentionPhase] = (0, import_react48.useState)("ready");
+  const [mentionCandidates, setMentionCandidates] = (0, import_react48.useState)([]);
+  const [timelineOffset, setTimelineOffset] = (0, import_react48.useState)(0);
+  const [blockingHelp, setBlockingHelp] = (0, import_react48.useState)(false);
+  const blockingHelpRef = (0, import_react48.useRef)(false);
+  const [blockingHelpOffset, setBlockingHelpOffset] = (0, import_react48.useState)(0);
+  const [helpOffset, setHelpOffset] = (0, import_react48.useState)(0);
+  const [planReviewOffset, setPlanReviewOffset] = (0, import_react48.useState)(0);
+  const [approvalOffset, setApprovalOffset] = (0, import_react48.useState)(0);
+  const [askUserOffset, setAskUserOffset] = (0, import_react48.useState)(0);
+  const [askUserDetails, setAskUserDetails] = (0, import_react48.useState)(false);
+  const askUserDetailsRef = (0, import_react48.useRef)(askUserDetails);
   askUserDetailsRef.current = askUserDetails;
-  const viewportSequenceRef = (0, import_react47.useRef)(0);
-  const [viewportCommand, setViewportCommand] = (0, import_react47.useState)();
-  const viewportCommandRef = (0, import_react47.useRef)(void 0);
-  const onViewportCommandConsumed = (0, import_react47.useCallback)((sequence) => {
+  const viewportSequenceRef = (0, import_react48.useRef)(0);
+  const [viewportCommand, setViewportCommand] = (0, import_react48.useState)();
+  const viewportCommandRef = (0, import_react48.useRef)(void 0);
+  const onViewportCommandConsumed = (0, import_react48.useCallback)((sequence) => {
     setViewportCommand((current) => current?.sequence === sequence ? void 0 : current);
   }, []);
-  const [topDividerLabel, setTopDividerLabel] = (0, import_react47.useState)();
-  const issueViewportCommand = (0, import_react47.useCallback)((command, inputAt = performance.now()) => {
+  const [topDividerLabel, setTopDividerLabel] = (0, import_react48.useState)();
+  const issueViewportCommand = (0, import_react48.useCallback)((command, inputAt = performance.now()) => {
     frameProbe?.beginMeasurement();
     viewportSequenceRef.current += 1;
     const next = { ...command, sequence: viewportSequenceRef.current, inputAt };
     if (viewportCommandRef.current === void 0) setViewportCommand(next);
     else viewportCommandRef.current(next);
   }, [frameProbe]);
-  const brandRevealStartedRef = (0, import_react47.useRef)(false);
-  const brandRevealStoppedRef = (0, import_react47.useRef)(false);
-  const stateRef = (0, import_react47.useRef)(state);
-  const settingsComposerRef = (0, import_react47.useRef)(void 0);
-  const mentionSeqRef = (0, import_react47.useRef)(0);
-  const mentionAbortRef = (0, import_react47.useRef)(void 0);
+  const brandRevealStartedRef = (0, import_react48.useRef)(false);
+  const brandRevealStoppedRef = (0, import_react48.useRef)(false);
+  const stateRef = (0, import_react48.useRef)(state);
+  const settingsComposerRef = (0, import_react48.useRef)(void 0);
+  const mentionSeqRef = (0, import_react48.useRef)(0);
+  const mentionAbortRef = (0, import_react48.useRef)(void 0);
   stateRef.current = state;
-  const model = (0, import_react47.useSyncExternalStore)(
+  const model = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getModel()
   );
-  (0, import_react47.useEffect)(() => {
+  (0, import_react48.useEffect)(() => {
     if (model.status === "generating") frameProbe?.beginMeasurement();
   }, [frameProbe, model.status]);
-  const [, setGeneratingTick] = (0, import_react47.useState)(0);
-  (0, import_react47.useEffect)(() => {
-    if (model.status !== "generating") return;
-    const timer = setInterval(() => {
-      setGeneratingTick((t2) => (t2 + 1) % 1e4);
-    }, 100);
-    return () => {
-      clearInterval(timer);
-    };
-  }, [model.status]);
-  const footerSpinner = model.status === "generating" ? getBrailleSpinnerFrame(Date.now()) : void 0;
-  const interaction = (0, import_react47.useSyncExternalStore)(
+  const interaction = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getInteraction()
   );
-  const badge = (0, import_react47.useSyncExternalStore)(
+  const badge = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getBadge()
   );
-  const liveTitle = (0, import_react47.useSyncExternalStore)(
+  const liveTitle = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getTitle()
   );
-  const pane = (0, import_react47.useSyncExternalStore)(
+  const pane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getSessionPane()
   );
-  const search2 = (0, import_react47.useSyncExternalStore)(
+  const search2 = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getSearchPane()
   );
-  const browserPane = (0, import_react47.useSyncExternalStore)(
+  const browserPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getBrowserPane?.() ?? EMPTY_BROWSER_PANE
   );
-  const timelineOpen = (0, import_react47.useSyncExternalStore)(
+  const timelineOpen = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getTimelineOpen()
   );
-  const modelPane = (0, import_react47.useSyncExternalStore)(
+  const modelPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getModelPane()
   );
-  const helpPane = (0, import_react47.useSyncExternalStore)(
+  const helpPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getHelpPane()
   );
-  const toolDetailsPane = (0, import_react47.useSyncExternalStore)(
+  const toolDetailsPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getToolDetailsPane?.() ?? EMPTY_TOOL_DETAILS_PANE
   );
-  const approvalPane = (0, import_react47.useSyncExternalStore)(
+  const approvalPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getApprovalPane()
   );
-  const askUserPane = (0, import_react47.useSyncExternalStore)(
+  const askUserPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAskUserPane()
   );
-  const permissionPane = (0, import_react47.useSyncExternalStore)(
+  const permissionPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getPermissionPane()
   );
-  const settingsPane = (0, import_react47.useSyncExternalStore)(
+  const settingsPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getSettingsPane()
   );
-  const pluginsPane = (0, import_react47.useSyncExternalStore)(
+  const pluginsPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getPluginsPane?.() ?? EMPTY_PLUGINS_PANE
   );
-  const accountPane = (0, import_react47.useSyncExternalStore)(
+  const accountPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAccountPane?.() ?? EMPTY_ACCOUNT_PANE
   );
-  const agentHubPane = (0, import_react47.useSyncExternalStore)(
+  const agentHubPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAgentHubPane()
   );
-  const planDirectoryPane = (0, import_react47.useSyncExternalStore)(
+  const planDirectoryPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getPlanDirectoryPane()
   );
-  const workspacePane = (0, import_react47.useSyncExternalStore)(
+  const workspacePane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getWorkspacePane()
   );
-  const feedbackPane = (0, import_react47.useSyncExternalStore)(
+  const feedbackPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getFeedbackPane()
   );
-  const workflowOverlay = (0, import_react47.useSyncExternalStore)(
+  const workflowOverlay = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getWorkflowOverlay()
   );
-  const planReviewPane = (0, import_react47.useSyncExternalStore)(
+  const planReviewPane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getPlanReviewPane()
   );
-  const composerHud = (0, import_react47.useSyncExternalStore)(
+  const composerHud = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getComposerHud()
   );
-  const queuedDraftText = (0, import_react47.useSyncExternalStore)(
+  const queuedDraftText = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getQueuedDraftText?.()
   );
-  const queuedDraftCount = (0, import_react47.useSyncExternalStore)(
+  const queuedDraftCount = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getQueuedDraftCount?.() ?? 0
   );
-  const goalFooter = (0, import_react47.useSyncExternalStore)(
+  const goalFooter = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getGoalFooter?.()
   );
-  const adaptiveInfoFooter = (0, import_react47.useSyncExternalStore)(
+  const adaptiveInfoFooter = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getAdaptiveInfoFooter?.()
   );
-  const todoPaneOpen = (0, import_react47.useSyncExternalStore)(
+  const todoPaneOpen = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getTodoPaneOpen?.() ?? false
   );
-  const [todoOffset, setTodoOffset] = (0, import_react47.useState)(0);
-  const schedulePane = (0, import_react47.useSyncExternalStore)(
+  const [todoOffset, setTodoOffset] = (0, import_react48.useState)(0);
+  const schedulePane = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getSchedulePane?.() ?? EMPTY_SCHEDULE_PANE
   );
-  (0, import_react47.useEffect)(() => {
+  (0, import_react48.useEffect)(() => {
     if (!todoPaneOpen) setTodoOffset(0);
   }, [todoPaneOpen]);
-  const todoHud = (0, import_react47.useSyncExternalStore)(
+  const todoHud = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getTodoHud?.()
   );
-  const jobsHud = (0, import_react47.useSyncExternalStore)(
+  const jobsHud = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getJobsHud?.()
   );
-  const workflowHud = (0, import_react47.useSyncExternalStore)(
+  const workflowHud = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getWorkflowHud?.()
   );
-  const sessionStats = (0, import_react47.useSyncExternalStore)(
+  const sessionStats = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getSessionStats?.()
   );
-  const brandAnimationMode = (0, import_react47.useSyncExternalStore)(
+  const brandAnimationMode = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getBrandAnimation?.() ?? "off"
   );
-  const controllerMode = (0, import_react47.useSyncExternalStore)(
+  const controllerMode = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getMode?.()
   );
-  const scrollbar = (0, import_react47.useSyncExternalStore)(
+  const scrollbar = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getScrollbarVisible?.() ?? true
   );
-  const statusDetails = (0, import_react47.useSyncExternalStore)(
+  const statusDetails = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getStatusDetails?.() ?? false
   );
-  const locale = (0, import_react47.useSyncExternalStore)(
+  const locale = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getLocale?.() ?? "zh-CN"
   );
-  const [localMode, setLocalMode] = (0, import_react47.useState)("agent");
+  const [localMode, setLocalMode] = (0, import_react48.useState)("agent");
   const currentMode = controllerMode ?? localMode;
   const { columns, rows } = use_window_size_default();
-  const dialogRowsRef = (0, import_react47.useRef)(Math.max(4, rows - 6));
-  const onWorkspacePreviewLayout = (0, import_react47.useCallback)((layout) => {
+  const dialogRowsRef = (0, import_react48.useRef)(Math.max(4, rows - 6));
+  const onWorkspacePreviewLayout = (0, import_react48.useCallback)((layout) => {
     controller.dispatch({ kind: "workspace-preview-layout", layout });
   }, [controller]);
-  (0, import_react47.useEffect)(() => {
+  (0, import_react48.useEffect)(() => {
     if (helpPane.open) setHelpOffset(0);
   }, [helpPane.open]);
-  (0, import_react47.useLayoutEffect)(() => {
+  (0, import_react48.useLayoutEffect)(() => {
     setPlanReviewOffset(0);
   }, [planReviewPane.open, planReviewPane.requestId, planReviewPane.plan]);
-  (0, import_react47.useLayoutEffect)(() => {
+  (0, import_react48.useLayoutEffect)(() => {
     setApprovalOffset(0);
   }, [approvalPane.open, approvalPane.requestId, approvalPane.toolName, approvalPane.reason, approvalPane.arguments, approvalPane.detailsOpen]);
-  (0, import_react47.useLayoutEffect)(() => {
+  (0, import_react48.useLayoutEffect)(() => {
     setAskUserOffset(0);
     setAskUserDetails(false);
     askUserDetailsRef.current = false;
   }, [askUserPane.open, askUserPane.requestId, askUserPane.header, askUserPane.questionNumber]);
-  (0, import_react47.useLayoutEffect)(() => {
+  (0, import_react48.useLayoutEffect)(() => {
     setAskUserOffset(0);
   }, [askUserPane.selectedIndex]);
-  (0, import_react47.useLayoutEffect)(() => {
+  (0, import_react48.useLayoutEffect)(() => {
     const draft = settingsComposerRef.current;
     if (draft === void 0 || settingsPane.open && settingsPane.editing) return;
     settingsComposerRef.current = void 0;
     stateRef.current = draft;
     setState(draft);
   });
-  const feedback = (0, import_react47.useSyncExternalStore)(
+  const feedback = (0, import_react48.useSyncExternalStore)(
     (callback) => controller.subscribe(callback),
     () => controller.getFeedback()
   );
-  const feedbackRef = (0, import_react47.useRef)(feedback);
+  const feedbackRef = (0, import_react48.useRef)(feedback);
   feedbackRef.current = feedback;
-  const paneRef = (0, import_react47.useRef)(pane);
+  const paneRef = (0, import_react48.useRef)(pane);
   paneRef.current = pane;
-  const searchRef = (0, import_react47.useRef)(search2);
+  const searchRef = (0, import_react48.useRef)(search2);
   searchRef.current = search2;
-  const timelineOpenRef = (0, import_react47.useRef)(timelineOpen);
+  const timelineOpenRef = (0, import_react48.useRef)(timelineOpen);
   timelineOpenRef.current = timelineOpen;
-  const modelPaneRef = (0, import_react47.useRef)(modelPane);
+  const modelPaneRef = (0, import_react48.useRef)(modelPane);
   modelPaneRef.current = modelPane;
-  const helpPaneRef = (0, import_react47.useRef)(helpPane);
+  const helpPaneRef = (0, import_react48.useRef)(helpPane);
   helpPaneRef.current = helpPane;
-  const toolDetailsPaneRef = (0, import_react47.useRef)(toolDetailsPane);
+  const toolDetailsPaneRef = (0, import_react48.useRef)(toolDetailsPane);
   toolDetailsPaneRef.current = toolDetailsPane;
-  const toolDetailsSizeRef = (0, import_react47.useRef)({ width: columns, pageRows: 1 });
-  const approvalPaneRef = (0, import_react47.useRef)(approvalPane);
+  const toolDetailsSizeRef = (0, import_react48.useRef)({ width: columns, pageRows: 1 });
+  const approvalPaneRef = (0, import_react48.useRef)(approvalPane);
   approvalPaneRef.current = approvalPane;
-  const askUserPaneRef = (0, import_react47.useRef)(askUserPane);
+  const askUserPaneRef = (0, import_react48.useRef)(askUserPane);
   askUserPaneRef.current = askUserPane;
-  const permissionPaneRef = (0, import_react47.useRef)(permissionPane);
+  const permissionPaneRef = (0, import_react48.useRef)(permissionPane);
   permissionPaneRef.current = permissionPane;
-  const settingsPaneRef = (0, import_react47.useRef)(settingsPane);
-  const pluginsPaneRef = (0, import_react47.useRef)(pluginsPane);
+  const settingsPaneRef = (0, import_react48.useRef)(settingsPane);
+  const pluginsPaneRef = (0, import_react48.useRef)(pluginsPane);
   pluginsPaneRef.current = pluginsPane;
-  const accountPaneRef = (0, import_react47.useRef)(accountPane);
+  const accountPaneRef = (0, import_react48.useRef)(accountPane);
   accountPaneRef.current = accountPane;
   settingsPaneRef.current = settingsPane;
-  const agentHubPaneRef = (0, import_react47.useRef)(agentHubPane);
+  const agentHubPaneRef = (0, import_react48.useRef)(agentHubPane);
   agentHubPaneRef.current = agentHubPane;
-  const agentHubViewportRef = (0, import_react47.useRef)({ offset: 0, maxOffset: 0, pageRows: 1 });
-  const onAgentHubViewport = (0, import_react47.useCallback)((viewport) => {
+  const agentHubViewportRef = (0, import_react48.useRef)({ offset: 0, maxOffset: 0, pageRows: 1 });
+  const onAgentHubViewport = (0, import_react48.useCallback)((viewport) => {
     agentHubViewportRef.current = viewport;
   }, []);
-  const planDirectoryPaneRef = (0, import_react47.useRef)(planDirectoryPane);
+  const planDirectoryPaneRef = (0, import_react48.useRef)(planDirectoryPane);
   planDirectoryPaneRef.current = planDirectoryPane;
-  const workspacePaneRef = (0, import_react47.useRef)(workspacePane);
+  const workspacePaneRef = (0, import_react48.useRef)(workspacePane);
   workspacePaneRef.current = workspacePane;
-  const feedbackPaneRef = (0, import_react47.useRef)(feedbackPane);
+  const feedbackPaneRef = (0, import_react48.useRef)(feedbackPane);
   feedbackPaneRef.current = feedbackPane;
-  const workflowOverlayRef = (0, import_react47.useRef)(workflowOverlay);
+  const workflowOverlayRef = (0, import_react48.useRef)(workflowOverlay);
   workflowOverlayRef.current = workflowOverlay;
-  const planReviewPaneRef = (0, import_react47.useRef)(planReviewPane);
+  const planReviewPaneRef = (0, import_react48.useRef)(planReviewPane);
   planReviewPaneRef.current = planReviewPane;
-  const helpLinesRef = (0, import_react47.useRef)(helpPane.lines);
+  const helpLinesRef = (0, import_react48.useRef)(helpPane.lines);
   helpLinesRef.current = helpPane.lines;
-  const historyLengthRef = (0, import_react47.useRef)(model.history.length);
+  const historyLengthRef = (0, import_react48.useRef)(model.history.length);
   historyLengthRef.current = model.history.length;
-  const [sentHistory, setSentHistory] = (0, import_react47.useState)([]);
-  const inputHistory = (0, import_react47.useMemo)(() => {
+  const [sentHistory, setSentHistory] = (0, import_react48.useState)([]);
+  const inputHistory = (0, import_react48.useMemo)(() => {
     const fromModel = model.history.filter((m2) => m2.kind === "user" && typeof m2.text === "string" && m2.text.trim().length > 0).map((m2) => m2.text);
     const combined = [];
     for (const item of [...fromModel, ...sentHistory]) {
@@ -62725,7 +62955,7 @@ function TuiLoop({
     }
     return combined;
   }, [model.history, sentHistory]);
-  const chordTimerRef = (0, import_react47.useRef)(
+  const chordTimerRef = (0, import_react48.useRef)(
     void 0
   );
   const clearChord = () => {
@@ -62734,8 +62964,8 @@ function TuiLoop({
       chordTimerRef.current = void 0;
     }
   };
-  (0, import_react47.useEffect)(() => clearChord, []);
-  (0, import_react47.useEffect)(() => {
+  (0, import_react48.useEffect)(() => clearChord, []);
+  (0, import_react48.useEffect)(() => {
     const listener = (delta) => {
       const inputAt = performance.now();
       frameMetrics?.recordInputEvent();
@@ -63315,7 +63545,7 @@ function TuiLoop({
   const commandMode = (state.commandQuery !== void 0 || state.text.startsWith("/")) && state.commandDismissed !== true;
   const mentionQuery = activeMentionQuery(state.text);
   const mentionMode = mentionQuery !== void 0 && !state.mentionDismissed;
-  (0, import_react47.useEffect)(() => {
+  (0, import_react48.useEffect)(() => {
     mentionAbortRef.current?.abort();
     if (!mentionMode) {
       setMentionCandidates([]);
@@ -63366,7 +63596,7 @@ function TuiLoop({
   }
   const footerRowBudget = statusDetails ? rows >= 32 ? 3 : rows >= 12 ? 2 : 1 : 1;
   const detailsTip = statusLabel === "" ? `/ \u547D\u4EE4 \xB7 @ \u63D0\u53CA \xB7 Ctrl+O ${tuiCopy("reasoning", locale)} \xB7 /status ${tuiCopy("statusDetails", locale)}` : `${scrollHint} \xB7 Ctrl+O ${tuiCopy("reasoning", locale)} \xB7 /status ${tuiCopy("statusDetails", locale)}`;
-  const adaptiveRows = adaptiveInfoFooter === void 0 ? [] : footerRowBudget === 1 ? [formatQuietStatusRow({
+  const adaptiveRowsFor = (footerSpinner) => adaptiveInfoFooter === void 0 ? [] : footerRowBudget === 1 ? [formatQuietStatusRow({
     ...adaptiveInfoFooter,
     locale,
     spinner: footerSpinner,
@@ -63381,6 +63611,7 @@ function TuiLoop({
     environment: shortenHomePath(controller.getCwd(), homedir()),
     tip: detailsTip
   }, columns, footerRowBudget);
+  const adaptiveRows = adaptiveRowsFor(model.status === "generating" ? "\u280B" : void 0);
   let status;
   let statusRowCount;
   if (feedback !== void 0) {
@@ -63391,7 +63622,7 @@ function TuiLoop({
       visibleLines[visibleLines.length - 1] = `${visibleLines[visibleLines.length - 1]} \u2026 (+${rawLines.length - maxBudget} \u884C)`;
     }
     statusRowCount = visibleLines.length;
-    status = (0, import_react47.createElement)(
+    status = (0, import_react48.createElement)(
       Box_default,
       {
         flexDirection: "column",
@@ -63400,7 +63631,7 @@ function TuiLoop({
       },
       ...visibleLines.map((line5, index2) => {
         const painted = index2 === 0 ? feedbackLine(line5) : paintRow([styled(escapeContent(line5), line5.includes("*") || line5.includes("\u6D3B\u8DC3") ? "accentText" : "fg")]);
-        return (0, import_react47.createElement)(
+        return (0, import_react48.createElement)(
           Text,
           { key: index2 },
           paintBackgroundRow([painted], "bg", columns)
@@ -63409,53 +63640,56 @@ function TuiLoop({
     );
   } else if (adaptiveRows.length > 0) {
     const goalLine = goalRuns === void 0 ? void 0 : `${goalRuns.head} \xB7 ${goalRuns.objective}`;
-    const visibleRows = adaptiveRows.map((row, index2) => {
-      if (index2 !== 0 || goalLine === void 0) return row;
-      if (footerRowBudget === 1 && adaptiveInfoFooter !== void 0) {
-        return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, spinner: footerSpinner, tip: goalLine }, columns);
-      }
-      const baseText = row.runs.map((run2) => run2.text).join("");
-      if (displayWidth(`${goalLine} \xB7 ${baseText}`) > columns) {
-        const statusRun = row.runs.find((run2) => run2.text.startsWith(`${tuiCopy("status", locale)} `));
-        if (statusRun === void 0) return row;
-        const statusWidth = displayWidth(` \xB7 ${statusRun.text}`);
-        const fittedGoal = truncateDisplay(goalLine, Math.max(1, columns - statusWidth));
+    const renderStatus = (footerSpinner) => {
+      const visibleRows = adaptiveRowsFor(footerSpinner).map((row, index2) => {
+        if (index2 !== 0 || goalLine === void 0) return row;
+        if (footerRowBudget === 1 && adaptiveInfoFooter !== void 0) {
+          return formatQuietStatusRow({ ...adaptiveInfoFooter, locale, spinner: footerSpinner, tip: goalLine }, columns);
+        }
+        const baseText = row.runs.map((run2) => run2.text).join("");
+        if (displayWidth(`${goalLine} \xB7 ${baseText}`) > columns) {
+          const statusRun = row.runs.find((run2) => run2.text.startsWith(`${tuiCopy("status", locale)} `));
+          if (statusRun === void 0) return row;
+          const statusWidth = displayWidth(` \xB7 ${statusRun.text}`);
+          const fittedGoal = truncateDisplay(goalLine, Math.max(1, columns - statusWidth));
+          return {
+            ...row,
+            runs: [
+              { text: fittedGoal, token: "fgDim" },
+              { text: " \xB7 ", token: "fgDim" },
+              statusRun
+            ]
+          };
+        }
         return {
           ...row,
           runs: [
-            { text: fittedGoal, token: "fgDim" },
+            { text: goalLine, token: "fgDim" },
             { text: " \xB7 ", token: "fgDim" },
-            statusRun
+            ...row.runs
           ]
         };
-      }
-      return {
-        ...row,
-        runs: [
-          { text: goalLine, token: "fgDim" },
-          { text: " \xB7 ", token: "fgDim" },
-          ...row.runs
-        ]
-      };
-    });
-    statusRowCount = visibleRows.length;
-    status = (0, import_react47.createElement)(
-      Box_default,
-      {
-        flexDirection: "column",
-        width: "100%",
-        backgroundColor: inkColor("bg")
-      },
-      ...visibleRows.map((row, index2) => (0, import_react47.createElement)(
-        Text,
-        { key: `adaptive-footer-${String(index2)}` },
-        paintBackgroundRow(
-          row.runs.map((run2) => styled(run2.text, run2.token)),
-          "bg",
-          columns
-        )
-      ))
-    );
+      });
+      return (0, import_react48.createElement)(
+        Box_default,
+        {
+          flexDirection: "column",
+          width: "100%",
+          backgroundColor: inkColor("bg")
+        },
+        ...visibleRows.map((row, index2) => (0, import_react48.createElement)(
+          Text,
+          { key: `adaptive-footer-${String(index2)}` },
+          paintBackgroundRow(
+            row.runs.map((run2) => styled(run2.text, run2.token)),
+            "bg",
+            columns
+          )
+        ))
+      );
+    };
+    statusRowCount = adaptiveRows.length;
+    status = (0, import_react48.createElement)(GeneratingSpinner, { active: model.status === "generating", children: renderStatus });
   } else {
     const goal = goalRuns === void 0 ? void 0 : `${goalRuns.head} \xB7 ${goalRuns.objective}`;
     const workspace = [
@@ -63473,14 +63707,14 @@ function TuiLoop({
       truncateDisplay(identity.join(" \xB7 "), Math.max(1, columns))
     ].filter((line5) => line5 !== "");
     statusRowCount = visibleLines.length;
-    status = (0, import_react47.createElement)(
+    status = (0, import_react48.createElement)(
       Box_default,
       {
         flexDirection: "column",
         width: "100%",
         backgroundColor: inkColor("bg")
       },
-      ...visibleLines.map((line5, index2) => (0, import_react47.createElement)(
+      ...visibleLines.map((line5, index2) => (0, import_react48.createElement)(
         Text,
         { key: `fallback-footer-${String(index2)}` },
         paintBackgroundRow([styled(line5, "fgDim")], "bg", columns)
@@ -63496,12 +63730,12 @@ function TuiLoop({
     brandRevealStartedRef.current = true;
   }
   const brandAnimation = brandLifecycleAllowed && brandRevealStartedRef.current && !brandRevealStoppedRef.current;
-  const presenters = (0, import_react47.useMemo)(
+  const presenters = (0, import_react48.useMemo)(
     () => controller.getToolPresenters?.(),
     [controller]
   );
-  const inputMeasureRef = (0, import_react47.useRef)(null);
-  const inputMeasureKey = (0, import_react47.useMemo)(() => ({}), [
+  const inputMeasureRef = (0, import_react48.useRef)(null);
+  const inputMeasureKey = (0, import_react48.useMemo)(() => ({}), [
     columns,
     state.text,
     commandMode,
@@ -63513,13 +63747,13 @@ function TuiLoop({
     agentHubPane.prompt,
     viewportMotionPaused
   ]);
-  const [inputMeasure, setInputMeasure] = (0, import_react47.useState)();
-  (0, import_react47.useLayoutEffect)(() => {
+  const [inputMeasure, setInputMeasure] = (0, import_react48.useState)();
+  (0, import_react48.useLayoutEffect)(() => {
     const height = inputMeasureRef.current === null ? 0 : measure_element_default(inputMeasureRef.current).height;
     setInputMeasure((previous3) => previous3?.key === inputMeasureKey && previous3.height === height ? previous3 : { key: inputMeasureKey, height });
   });
-  const inputRows = inputMeasure?.key === inputMeasureKey ? inputMeasure.height : approvalPane.open || askUserPane.open || planReviewPane.open || commandMode || mentionMode ? rows : state.text.split("\n").length + 1;
-  const streamLayoutKey = (0, import_react47.useMemo)(() => ({}), [
+  const inputRows = inputMeasure?.key === inputMeasureKey ? inputMeasure.height : approvalPane.open || askUserPane.open || planReviewPane.open || commandMode || mentionMode ? rows : composerHeight(state.text, rows, statusRowCount + 1);
+  const streamLayoutKey = (0, import_react48.useMemo)(() => ({}), [
     statusRowCount,
     inputMeasure,
     state.text.split("\n").length,
@@ -63537,7 +63771,7 @@ function TuiLoop({
   const toolPaneRows = Math.max(4, rows - 3 - statusRowCount);
   const toolPageRows = Math.min((renderPolicy?.tools ?? toolPolicyDefaults()).detailPageRows, toolPaneRows - 3);
   toolDetailsSizeRef.current = { width: columns, pageRows: toolPageRows };
-  const streamView = (0, import_react47.createElement)(StreamView, {
+  const streamView = (0, import_react48.createElement)(StreamView, {
     locale,
     viewportColumns: agentHubPane.split && columns >= 100 ? Math.floor(columns / 2) : columns,
     layoutKey: streamLayoutKey,
@@ -63566,49 +63800,49 @@ function TuiLoop({
     rows: budget,
     columns: conversationColumns,
     locale
-  }).map((row) => (0, import_react47.createElement)(Text, { key: row.key, wrap: "truncate" }, paintRow([styled(row.text, row.token)])));
+  }).map((row) => (0, import_react48.createElement)(Text, { key: row.key, wrap: "truncate" }, paintRow([styled(row.text, row.token)])));
   if (composerHud !== void 0 && composerHud !== "") {
-    hudRows.push((0, import_react47.createElement)(Text, { key: "composer-hud", wrap: "truncate" }, paintRow([styled(fitHudRow(composerHud, conversationColumns), "fg")])));
+    hudRows.push((0, import_react48.createElement)(Text, { key: "composer-hud", wrap: "truncate" }, paintRow([styled(fitHudRow(composerHud, conversationColumns), "fg")])));
   }
   if (queuedDraftCount > 0) {
-    hudRows.push((0, import_react47.createElement)(QueueChip, { key: "queue-hud", count: queuedDraftCount }));
+    hudRows.push((0, import_react48.createElement)(QueueChip, { key: "queue-hud", count: queuedDraftCount }));
   }
   const hasConversation = model.history.length > 0 || model.activeTurn !== void 0;
-  const conversation = !hasConversation && hudRows.length === 0 ? streamView : (0, import_react47.createElement)(
+  const conversation = !hasConversation && hudRows.length === 0 ? streamView : (0, import_react48.createElement)(
     Box_default,
     { flexDirection: "column", width: "100%", flexGrow: 1 },
     streamView,
     ...hudRows.length > 0 ? [
-      (0, import_react47.createElement)(
+      (0, import_react48.createElement)(
         Box_default,
         { key: "hud-rows", flexDirection: "column", alignItems: "center", width: "100%", flexShrink: 0 },
-        (0, import_react47.createElement)(Box_default, { flexDirection: "column", width: conversationColumns }, ...hudRows)
+        (0, import_react48.createElement)(Box_default, { flexDirection: "column", width: conversationColumns }, ...hudRows)
       )
     ] : [],
-    (0, import_react47.createElement)(Box_default, { key: "conversation-gap", width: "100%", height: 1, flexShrink: 0 })
+    (0, import_react48.createElement)(Box_default, { key: "conversation-gap", width: "100%", height: 1, flexShrink: 0 })
   );
   const overlayBrowseOpen = browserPane.open || schedulePane.open || todoPaneOpen || agentHubPane.open || pluginsPane.open || accountPane.open || planDirectoryPane.open || workspacePane.open || feedbackPane.open || workflowOverlay.open;
   let content3;
   if (approvalPane.open || askUserPane.open || planReviewPane.open) {
     content3 = conversation;
   } else if (browserPane.open) {
-    content3 = (0, import_react47.createElement)(BrowserPane, {
+    content3 = (0, import_react48.createElement)(BrowserPane, {
       state: browserPane,
       maxRows: Math.max(5, rows - 3 - statusRowCount),
       maxCols: columns,
       onOffsetChange: (offset) => controller.dispatch({ kind: "browser-offset", offset })
     });
   } else if (accountPane.open) {
-    content3 = (0, import_react47.createElement)(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) });
+    content3 = (0, import_react48.createElement)(AccountPane, { state: accountPane, locale, maxCols: conversationWidth(columns) });
   } else if (pluginsPane.open) {
-    content3 = (0, import_react47.createElement)(PluginsPane, {
+    content3 = (0, import_react48.createElement)(PluginsPane, {
       state: pluginsPane,
       locale,
       maxCols: conversationWidth(columns),
       maxRows: Math.max(3, rows - 3 - statusRowCount)
     });
   } else if (permissionPane.open) {
-    content3 = (0, import_react47.createElement)(PermissionPane, {
+    content3 = (0, import_react48.createElement)(PermissionPane, {
       names: permissionPane.names,
       selectedIndex: permissionPane.selectedIndex,
       currentName: permissionPane.currentName,
@@ -63617,9 +63851,9 @@ function TuiLoop({
       switchError: permissionPane.switchError
     });
   } else if (settingsPane.open) {
-    const settingsEditingRows = settingsPane.editing ? state.text.split("\n").length + 1 : 0;
+    const settingsEditingRows = settingsPane.editing ? composerHeight(state.text, rows, statusRowCount + 1) : 0;
     const settingsMaxRows = Math.max(4, rows - 3 - statusRowCount - settingsEditingRows);
-    content3 = (0, import_react47.createElement)(SettingsPane, {
+    content3 = (0, import_react48.createElement)(SettingsPane, {
       locale,
       rows: settingsPane.rows,
       ...settingsPane.breadcrumb === void 0 ? {} : { breadcrumb: settingsPane.breadcrumb },
@@ -63635,7 +63869,7 @@ function TuiLoop({
       ...settingsPane.busy === void 0 ? {} : { busy: settingsPane.busy }
     });
   } else if (modelPane.open) {
-    content3 = (0, import_react47.createElement)(ModelPane, {
+    content3 = (0, import_react48.createElement)(ModelPane, {
       maxRows: Math.max(4, rows - 3 - statusRowCount - inputRows),
       filter: modelPane.filter,
       rows: modelPane.rows,
@@ -63644,35 +63878,35 @@ function TuiLoop({
       ...modelPane.error === void 0 ? {} : { error: modelPane.error }
     });
   } else if (toolDetailsPane.open) {
-    content3 = (0, import_react47.createElement)(ToolDetailsPane, { state: toolDetailsPane, columns, maxRows: toolPaneRows, pageRows: toolPageRows, locale });
+    content3 = (0, import_react48.createElement)(ToolDetailsPane, { state: toolDetailsPane, columns, maxRows: toolPaneRows, pageRows: toolPageRows, locale });
   } else if (helpPane.open) {
-    content3 = (0, import_react47.createElement)(HelpPane, {
+    content3 = (0, import_react48.createElement)(HelpPane, {
       lines: helpPane.lines,
       offset: helpOffset
     });
   } else if (pane.open) {
-    content3 = (0, import_react47.createElement)(SessionPane, {
+    content3 = (0, import_react48.createElement)(SessionPane, {
       rows: pane.rows,
       selectedIndex: pane.selectedIndex,
       currentId: pane.currentId,
       confirmDelete: pane.confirmDelete,
       deleteUnavailable: pane.deleteUnavailable,
       columns,
-      maxRows: rows - 3 - statusRowCount - (state.renaming ? state.text.split("\n").length + 1 : 0)
+      maxRows: rows - 3 - statusRowCount - (state.renaming ? composerHeight(state.text, rows, statusRowCount + 1) : 0)
     });
   } else if (search2.open) {
-    content3 = (0, import_react47.createElement)(SearchPane, {
+    content3 = (0, import_react48.createElement)(SearchPane, {
       query: search2.query,
       results: search2.results,
       selectedIndex: search2.selectedIndex
     });
   } else if (timelineOpen) {
-    content3 = (0, import_react47.createElement)(TimelineView, {
+    content3 = (0, import_react48.createElement)(TimelineView, {
       history: model.history,
       offset: timelineOffset
     });
   } else if (agentHubPane.open) {
-    content3 = (0, import_react47.createElement)(AgentHubPane, {
+    content3 = (0, import_react48.createElement)(AgentHubPane, {
       ...agentHubPane,
       renderEditor: false,
       maxCols: agentHubPane.split && columns >= 100 ? Math.floor(columns / 2) : columns,
@@ -63689,36 +63923,36 @@ function TuiLoop({
       scrollOffset: agentHubPane.scrollOffset,
       onViewportChange: onAgentHubViewport
     });
-    if (agentHubPane.split && columns >= 100) content3 = (0, import_react47.createElement)(Box_default, { flexDirection: "row", width: "100%" }, (0, import_react47.createElement)(Box_default, { width: "50%", flexDirection: "column", overflow: "hidden" }, streamView), (0, import_react47.createElement)(Box_default, { width: "50%", flexDirection: "column", overflow: "hidden" }, content3));
+    if (agentHubPane.split && columns >= 100) content3 = (0, import_react48.createElement)(Box_default, { flexDirection: "row", width: "100%" }, (0, import_react48.createElement)(Box_default, { width: "50%", flexDirection: "column", overflow: "hidden" }, streamView), (0, import_react48.createElement)(Box_default, { width: "50%", flexDirection: "column", overflow: "hidden" }, content3));
   } else if (planDirectoryPane.open) {
-    content3 = (0, import_react47.createElement)(PlanDirectoryPane, {
+    content3 = (0, import_react48.createElement)(PlanDirectoryPane, {
       selectedIndex: planDirectoryPane.selectedIndex,
       currentActive: planDirectoryPane.currentActive,
       switchError: planDirectoryPane.switchError,
       statusError: planDirectoryPane.statusError
     });
   } else if (workspacePane.open) {
-    content3 = (0, import_react47.createElement)(WorkspacePane, {
+    content3 = (0, import_react48.createElement)(WorkspacePane, {
       state: workspacePane,
       maxCols: columns,
       maxRows: Math.max(0, rows - 3 - statusRowCount),
       onPreviewLayout: onWorkspacePreviewLayout
     });
   } else if (feedbackPane.open) {
-    content3 = (0, import_react47.createElement)(FeedbackPane, { state: feedbackPane });
+    content3 = (0, import_react48.createElement)(FeedbackPane, { state: feedbackPane });
   } else if (workflowOverlay.open) {
-    content3 = (0, import_react47.createElement)(WorkflowOverlay, { state: workflowOverlay });
+    content3 = (0, import_react48.createElement)(WorkflowOverlay, { state: workflowOverlay });
   } else if (todoPaneOpen) {
-    content3 = (0, import_react47.createElement)(TodoPane, { todos: todoHud ?? [], offset: todoOffset, onOffsetChange: setTodoOffset, locale });
+    content3 = (0, import_react48.createElement)(TodoPane, { todos: todoHud ?? [], offset: todoOffset, onOffsetChange: setTodoOffset, locale });
   } else if (schedulePane.open) {
-    content3 = (0, import_react47.createElement)(SchedulePane, {
+    content3 = (0, import_react48.createElement)(SchedulePane, {
       state: schedulePane,
       onOffsetChange: (offset) => controller.dispatch({ kind: "schedule-offset", offset })
     });
   } else {
     content3 = conversation;
   }
-  const inputBar = (props) => (0, import_react47.createElement)(InputBar, {
+  const inputBar = (props) => (0, import_react48.createElement)(InputBar, {
     locale,
     modelChip: adaptiveInfoFooter?.model,
     modeChip: currentMode,
@@ -63730,7 +63964,7 @@ function TuiLoop({
   if (approvalPane.open || askUserPane.open || planReviewPane.open) hideFrameCaret();
   let inputSlot;
   if (approvalPane.open) {
-    inputSlot = (0, import_react47.createElement)(ApprovalPane, {
+    inputSlot = (0, import_react48.createElement)(ApprovalPane, {
       toolName: approvalPane.toolName,
       reason: approvalPane.reason,
       arguments: approvalPane.arguments,
@@ -63742,7 +63976,7 @@ function TuiLoop({
       onOffsetChange: setApprovalOffset
     });
   } else if (askUserPane.open) {
-    inputSlot = (0, import_react47.createElement)(AskUserPane, {
+    inputSlot = (0, import_react48.createElement)(AskUserPane, {
       ...askUserPane,
       header: askUserPane.header,
       options: askUserPane.options,
@@ -63755,7 +63989,7 @@ function TuiLoop({
       customRowsBelow: statusRowCount + 2
     });
   } else if (planReviewPane.open) {
-    inputSlot = (0, import_react47.createElement)(PlanReviewPane, {
+    inputSlot = (0, import_react48.createElement)(PlanReviewPane, {
       plan: planReviewPane.plan,
       offset: planReviewOffset,
       deliveryError: planReviewPane.deliveryError,
@@ -63795,7 +64029,7 @@ function TuiLoop({
       filterCommands(controller.commands, query).length,
       COMMAND_MENU_WINDOW
     );
-    inputSlot = (0, import_react47.createElement)(
+    inputSlot = (0, import_react48.createElement)(
       Box_default,
       { flexDirection: "column", width: "100%" },
       inputBar({
@@ -63806,7 +64040,7 @@ function TuiLoop({
         selectionAnchor: state.selectionAnchor,
         rowsBelow: menuRows
       }),
-      (0, import_react47.createElement)(CommandMenu, {
+      (0, import_react48.createElement)(CommandMenu, {
         items: controller.commands,
         query,
         selectedIndex: state.commandSelectedIndex
@@ -63814,7 +64048,7 @@ function TuiLoop({
     );
   } else if (mentionMode) {
     const mentionRows = mentionPhase === "loading" || mentionCandidates.length === 0 ? 1 : mentionCandidates.length + new Set(mentionCandidates.map((candidate) => candidate.kind)).size;
-    inputSlot = (0, import_react47.createElement)(
+    inputSlot = (0, import_react48.createElement)(
       Box_default,
       { flexDirection: "column", width: "100%" },
       inputBar({
@@ -63825,7 +64059,7 @@ function TuiLoop({
         selectionAnchor: state.selectionAnchor,
         rowsBelow: mentionRows
       }),
-      (0, import_react47.createElement)(Mention, {
+      (0, import_react48.createElement)(Mention, {
         phase: mentionPhase,
         candidates: mentionCandidates,
         selectedIndex: state.mentionSelectedIndex
@@ -63841,19 +64075,19 @@ function TuiLoop({
     });
   }
   if (blockingHelp && (approvalPane.open || askUserPane.open || planReviewPane.open)) {
-    inputSlot = (0, import_react47.createElement)(BrowserPane, { state: { ...EMPTY_BROWSER_PANE, open: true, title: "\u5BF9\u8BDD\u53EA\u8BFB\u5E2E\u52A9 \xB7 Esc \u8FD4\u56DE\u539F\u5BF9\u8BDD", detail: shortcutCatalog(EMPTY_SHORTCUTS).filter((row) => row.id === "blocking" || row.id === "ime").map((row) => `${row.title}
+    inputSlot = (0, import_react48.createElement)(BrowserPane, { state: { ...EMPTY_BROWSER_PANE, open: true, title: "\u5BF9\u8BDD\u53EA\u8BFB\u5E2E\u52A9 \xB7 Esc \u8FD4\u56DE\u539F\u5BF9\u8BDD", detail: shortcutCatalog(EMPTY_SHORTCUTS).filter((row) => row.id === "blocking" || row.id === "ime").map((row) => `${row.title}
 ${row.hint}`).join("\n\n"), offset: blockingHelpOffset }, maxRows: dialogRows, maxCols: columns, onOffsetChange: setBlockingHelpOffset });
   }
-  return (0, import_react47.createElement)(AppShell, {
+  return (0, import_react48.createElement)(AppShell, {
     title: liveTitle === "" ? title : liveTitle,
     badge: adaptiveInfoFooter === void 0 ? badge : shortenHomePath(controller.getCwd(), homedir()),
     status,
     // Plugins retains the measured transcript and its anchor while controller updates continue.
     children: content3 === conversation || pluginsPane.open && !permissionPane.open && !settingsPane.open ? [
-      (0, import_react47.createElement)(import_react47.Activity, { key: "plugins-transcript", mode: content3 === conversation ? "visible" : "hidden", children: conversation }),
-      ...content3 === conversation ? [] : [(0, import_react47.createElement)(Box_default, { key: "plugins-content", flexDirection: "column", width: "100%", flexGrow: 1 }, content3)]
+      (0, import_react48.createElement)(import_react48.Activity, { key: "plugins-transcript", mode: content3 === conversation ? "visible" : "hidden", children: conversation }),
+      ...content3 === conversation ? [] : [(0, import_react48.createElement)(Box_default, { key: "plugins-content", flexDirection: "column", width: "100%", flexGrow: 1 }, content3)]
     ] : content3,
-    input: inputSlot === null || inputSlot === void 0 ? inputSlot : (0, import_react47.createElement)(Box_default, { ref: inputMeasureRef, flexDirection: "column", width: "100%" }, inputSlot),
+    input: inputSlot === null || inputSlot === void 0 ? inputSlot : (0, import_react48.createElement)(Box_default, { ref: inputMeasureRef, flexDirection: "column", width: "100%" }, inputSlot),
     topDividerLabel
   });
 }
@@ -69628,15 +69862,6 @@ ${formattedError}` });
   };
 }
 
-// packages/tui/tui-render/src/todo-hud.tsx
-var import_jsx_runtime34 = __toESM(require_jsx_runtime(), 1);
-
-// packages/tui/tui-render/src/jobs-hud.tsx
-var import_jsx_runtime35 = __toESM(require_jsx_runtime(), 1);
-
-// packages/tui/tui-render/src/workflow-hud.tsx
-var import_jsx_runtime36 = __toESM(require_jsx_runtime(), 1);
-
 // packages/tui/tui-render/src/interaction-state.ts
 function reduceInteraction(state, event) {
   if (event.kind === "turn-started") {
@@ -69683,7 +69908,7 @@ function reduceInteraction(state, event) {
 // packages/tui/tui-render/src/index.ts
 var globalReact = globalThis;
 if (typeof globalReact.React === "undefined") {
-  globalReact.React = import_react48.default;
+  globalReact.React = import_react49.default;
 }
 function mountTuiRender(node2, options = {}) {
   const env3 = options.env ?? process.env;
@@ -69692,7 +69917,7 @@ function mountTuiRender(node2, options = {}) {
   installTheme(env3);
   applyTheme(screenReader ? "none" : options.colorTier ?? currentTier(), options.appearance ?? "dark");
   setHyperlinks(!screenReader && detectHyperlinks(env3));
-  const wrapped = options.frameProbe === void 0 ? node2 : (0, import_react48.createElement)(FrameProbe, { probe: options.frameProbe }, node2);
+  const wrapped = options.frameProbe === void 0 ? node2 : (0, import_react49.createElement)(FrameProbe, { probe: options.frameProbe }, node2);
   const plainIo = { stdin: options.stdin ?? process.stdin, stdout: options.stdout ?? process.stdout, dispose: () => {
   } };
   const mouse = screenReader ? plainIo : attachMouseIo({
@@ -69701,6 +69926,8 @@ function mountTuiRender(node2, options = {}) {
     ...options.renderPolicy === void 0 ? {} : { wheelRows: options.renderPolicy.scroll.wheelRows }
   });
   const releaseTiming = observeReactTiming();
+  const stdout = screenReader ? mouse.stdout : wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics);
+  const releaseAlias = aliasTerminalOutput(stdout, options.stdout ?? process.stdout);
   let instance;
   try {
     instance = render_default(wrapped, {
@@ -69710,12 +69937,14 @@ function mountTuiRender(node2, options = {}) {
       patchConsole: false,
       exitOnCtrlC: options.exitOnCtrlC ?? false,
       maxFps: 1e3 / Math.min(policy.scroll.frameIntervalMs, policy.stream.frameIntervalMs),
-      stdout: screenReader ? mouse.stdout : wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
+      stdout,
       stdin: mouse.stdin
     });
   } catch (error51) {
     releaseTiming();
     mouse.dispose();
+    releaseAlias();
+    disposeFrameOutput(stdout);
     throw error51;
   }
   let disposed = false;
@@ -69727,6 +69956,8 @@ function mountTuiRender(node2, options = {}) {
     } finally {
       releaseTiming();
       mouse.dispose();
+      releaseAlias();
+      disposeFrameOutput(stdout);
     }
   };
 }
@@ -69742,7 +69973,7 @@ function mountTuiLoop(controller, options) {
   const stdout = mountOptions.stdout ?? process.stdout;
   const stdin = mountOptions.stdin ?? process.stdin;
   return mountTuiRender(
-    (0, import_react48.createElement)(TuiLoop, {
+    (0, import_react49.createElement)(TuiLoop, {
       title,
       controller,
       brandTier: detectBrandRenderTier(env3),
@@ -100428,6 +100659,8 @@ var RuntimeController = class _RuntimeController {
         return;
       }
       this.projector.push(event);
+      this.snapshotRevisions.projector++;
+      this.snapshotRevisions.session++;
       if (event.type === "workspace/changes") this.cacheWorkspaceChange(event.seq);
       if (this.agentHubOpen && (event.type === "subagent/catalog" || event.type === "subagent/descriptor")) {
         if (this.agentHubView === "transcript") this.agentHubCatalogDirty = true;
@@ -100459,7 +100692,7 @@ var RuntimeController = class _RuntimeController {
     });
     const inboxDisposers = [
       ctx.on("goal/activation-changed", ({ sessionId }) => {
-        if (sessionId === this.agent?.id) this.emit();
+        if (sessionId === this.agent?.id) this.emit("goal");
       }),
       ctx.on("subagent/start", (info) => {
         const child = ctx.sessions.get(info.id);
@@ -100513,6 +100746,7 @@ var RuntimeController = class _RuntimeController {
           return;
         }
         this.projector.pushStreamFrame(frame);
+        this.snapshotRevisions.projector++;
         this.emit();
       })
     ];
@@ -100553,23 +100787,23 @@ var RuntimeController = class _RuntimeController {
       for (const dispose of pluginDisposers) dispose();
     };
     this.disposeJobsChanged = jobs?.events.subscribe({ owners: "scope" }, (event) => {
-      if (event.type !== "output") this.emit();
+      if (event.type !== "output") this.emit("jobs");
     });
     const workflowDisposers = [
       ctx.on("workflow/start", (info) => {
         this.workflowRun = { id: info.id, phase: void 0, members: /* @__PURE__ */ new Map() };
         this.workflowOverlayOffset = 0;
-        this.emit();
+        this.emit("workflow");
       }),
       ctx.on("workflow/phase", (info, title) => {
         if (this.workflowRun?.id !== info.id) return;
         this.workflowRun.phase = title;
-        this.emit();
+        this.emit("workflow");
       }),
       ctx.on("workflow/agent-start", (info, agent) => {
         if (this.workflowRun?.id !== info.id) return;
         this.workflowRun.members.set(agent.seq, { seq: agent.seq, label: agent.label });
-        this.emit();
+        this.emit("workflow");
       }),
       ctx.on("workflow/agent-end", (info, agent) => {
         if (this.workflowRun?.id !== info.id) return;
@@ -100578,17 +100812,18 @@ var RuntimeController = class _RuntimeController {
           label: agent.label,
           outcome: agent.outcome
         });
-        this.emit();
+        this.emit("workflow");
       }),
       ctx.on("workflow/end", (info) => {
         if (this.workflowRun?.id !== info.id) return;
         this.workflowRun = void 0;
-        this.emit();
+        this.emit("workflow");
       })
     ];
     this.disposeWorkflowEvents = () => {
       for (const dispose of workflowDisposers) dispose();
     };
+    this.invalidateSnapshots();
   }
   ctx;
   io;
@@ -100631,17 +100866,17 @@ var RuntimeController = class _RuntimeController {
   askUserQueue = [];
   /** Shared enqueue counter: the older head of the two queues paints. */
   slotSeq = 0;
-  /** Cached composer-slot snapshot; dropped on emit like the other panes. */
+  /** Cached composer-slot snapshot; invalidated by its declared dependencies. */
   approvalPaneSnapshot;
-  /** Cached ask-user snapshot; dropped on emit like the other panes. */
+  /** Cached ask-user snapshot; invalidated by its declared dependencies. */
   askUserPaneSnapshot;
-  /** Cached plan-review snapshot; dropped on emit like the other panes. */
+  /** Cached plan-review snapshot; invalidated by its declared dependencies. */
   planReviewPaneSnapshot;
-  /** Cached goal-footer view; dropped on emit like the other panes (null = no goal). */
+  /** Cached goal-footer view; invalidated by its declared dependencies (null = no goal). */
   goalFooterSnapshot;
   /** Cached authoritative info-footer view (null = no bound model). */
   adaptiveInfoFooterSnapshot;
-  /** Cached todo HUD rows; dropped on emit like the other panes (null = hidden). */
+  /** Cached todo HUD rows; invalidated by its declared dependencies (null = hidden). */
   todoHudSnapshot;
   /** Delivery-failure reason for the live plan-review head. */
   planReviewDeliveryError;
@@ -100811,7 +101046,7 @@ var RuntimeController = class _RuntimeController {
   feedbackCurrent;
   /** The assistant message the overlay targets, captured at open. */
   feedbackTargetId;
-  /** Cached session-stats splice; dropped on emit like the other panes (null = hidden). */
+  /** Cached session-stats splice; invalidated by its declared dependencies (null = hidden). */
   sessionStatsSnapshot;
   /** Latest finalized assistant message id from the session event stream. */
   lastAssistantMessageId;
@@ -100846,12 +101081,14 @@ var RuntimeController = class _RuntimeController {
   /** Provider/model label displayed in the top bar. */
   badge = "";
   /**
-   * Cached snapshot objects for the object-valued getters. Every state
-   * mutation funnels through emit(), which drops them; each getter rebuilds
-   * on the next read, so a read between emissions returns the same reference
-   * (useSyncExternalStore treats a fresh object as an update and re-renders
-   * forever) while a read after a mutation is never stale.
+   * Cached object-valued getters retain their identity until a declared
+   * dependency changes. emit() applies invalidation before its throttled
+   * listener notification, so reads observe the complete current state.
    */
+  // Mutable external sources have explicit revisions; ordinary pane mutations
+  // are tracked by their scalar/immutable-reference dependency keys below.
+  snapshotRevisions = { projector: 0, session: 0, goal: 0, jobs: 0, workflow: 0, workspace: 0, retry: 0 };
+  snapshotDependencies = /* @__PURE__ */ new Map();
   modelSnapshot;
   sessionPaneSnapshot;
   searchPaneSnapshot;
@@ -100871,9 +101108,9 @@ var RuntimeController = class _RuntimeController {
   workspacePaneSnapshot;
   feedbackPaneSnapshot;
   workflowOverlaySnapshot;
-  /** Cached jobs HUD rows; dropped on emit like the other panes (null = hidden). */
+  /** Cached jobs HUD rows; invalidated by its declared dependencies (null = hidden). */
   jobsHudSnapshot;
-  /** Cached workflow HUD snapshot; dropped on emit like the other panes (null = hidden). */
+  /** Cached workflow HUD snapshot; invalidated by its declared dependencies (null = hidden). */
   workflowHudSnapshot;
   /** Latest live workflow run rebuilt from `workflow/*` events (observe-only). */
   workflowRun;
@@ -101552,6 +101789,7 @@ var RuntimeController = class _RuntimeController {
         if (rootResult?.status === "rejected") throw rootResult.reason;
         for (const [index2, result] of results.entries()) {
           const key = String(targets[index2].targetKey);
+          this.snapshotRevisions.workspace++;
           if (result.status === "fulfilled") this.workspaceChildren.set(key, result.value);
           else {
             this.workspaceExpanded.delete(key);
@@ -101577,6 +101815,7 @@ var RuntimeController = class _RuntimeController {
   async toggleWorkspaceDirectory(target) {
     const key = String(target.targetKey);
     if (this.workspaceExpanded.has(key)) {
+      this.snapshotRevisions.workspace++;
       this.workspaceExpanded.delete(key);
       this.observeWorkspace();
       this.emit();
@@ -101589,6 +101828,7 @@ var RuntimeController = class _RuntimeController {
       try {
         const children = await fs3.listDir(target);
         if (seq !== this.workspaceSeq || !this.workspaceOpen) return;
+        this.snapshotRevisions.workspace++;
         this.workspaceChildren.set(key, children);
       } catch (error51) {
         this.ctx.logger.warn(`workspace expand failed: ${errorReason(error51)}`);
@@ -101596,6 +101836,7 @@ var RuntimeController = class _RuntimeController {
         return;
       }
     }
+    this.snapshotRevisions.workspace++;
     this.workspaceExpanded.add(key);
     this.observeWorkspace();
     this.emit();
@@ -101619,6 +101860,7 @@ var RuntimeController = class _RuntimeController {
   /** Apply one freshly resolved workspace root + children (callers own the seq/workspaceOpen guard). */
   commitResolvedWorkspaceRoot(root, children) {
     this.workspaceRoot = root;
+    this.snapshotRevisions.workspace++;
     this.workspaceChildren.clear();
     this.workspaceChildren.set(String(root.targetKey), children);
     this.workspaceExpanded.clear();
@@ -102242,6 +102484,7 @@ var RuntimeController = class _RuntimeController {
   }
   /** Force subscribers to rebuild every snapshot after a root remount. */
   redraw() {
+    this.snapshotDependencies.clear();
     this.emit();
   }
   /**
@@ -102301,14 +102544,14 @@ var RuntimeController = class _RuntimeController {
   resetSearchState() {
     this.invalidateSearch();
     this.searchQuery = "";
-    this.searchResults = [];
+    if (this.searchResults.length > 0) this.searchResults = [];
     this.searchSelectedIndex = 0;
     this.searchStatus = "idle";
   }
   /** Reset the model panel transients (filter, rows, selection, phase). */
   resetModelState() {
     this.modelFilter = "";
-    this.modelRows = [];
+    if (this.modelRows.length > 0) this.modelRows = [];
     this.modelSelectedIndex = 0;
     this.modelStatus = "idle";
     this.modelError = void 0;
@@ -102945,12 +103188,14 @@ var RuntimeController = class _RuntimeController {
       this.accountWatch = void 0;
       this.accountPane = { ...this.accountPane, open: false, confirmSignOut: false };
     }
-    this.pluginsPane = {
-      ...this.pluginsPane,
-      open: false,
-      confirmNames: [],
-      mode: this.pluginsPane.mode === "remove" || this.pluginsPane.mode === "builds" ? "inventory" : this.pluginsPane.mode
-    };
+    if (this.pluginsPane.open || this.pluginsPane.confirmNames.length > 0 || this.pluginsPane.mode === "remove" || this.pluginsPane.mode === "builds") {
+      this.pluginsPane = {
+        ...this.pluginsPane,
+        open: false,
+        confirmNames: [],
+        mode: this.pluginsPane.mode === "remove" || this.pluginsPane.mode === "builds" ? "inventory" : this.pluginsPane.mode
+      };
+    }
     this.toolDetailsOpen = false;
     this.toolDetailsSelected = 0;
     this.toolDetailsBody = false;
@@ -102983,7 +103228,7 @@ var RuntimeController = class _RuntimeController {
     this.feedbackOpen = false;
     this.workflowOverlayOpen = false;
     this.todoPaneOpen = false;
-    this.schedulePane = { ...this.schedulePane, open: false, confirmDelete: false };
+    if (this.schedulePane.open || this.schedulePane.confirmDelete) this.schedulePane = { ...this.schedulePane, open: false, confirmDelete: false };
     this.scheduleSeq += 1;
     this.confirmDelete = false;
     this.deleteUnavailable = false;
@@ -103077,7 +103322,7 @@ ${line5}`.slice(-64e3);
         this.agentHubTranscript = this.childTranscriptBase + (this.childTranscriptPartial === "" ? "" : `
 \u25CF ${this.childTranscriptPartial}`);
       }
-      this.emit();
+      this.emit("jobs");
     }, 50);
     this.childUiTimer.unref();
   }
@@ -104163,7 +104408,7 @@ ${line5}`.slice(-64e3);
       if (this.closed || this.retryFooter !== retry) return;
       if (Date.now() >= retry.retryUntil) this.retryFooter = void 0;
       else this.armRetryFooterTimer();
-      this.emit();
+      this.emit("retry");
     }, delay);
   }
   /** Remove retry visibility and its single refresh timer. */
@@ -104246,19 +104491,19 @@ ${line5}`.slice(-64e3);
   deliverNotify(decision) {
     if (decision === void 0) return;
     if (!decision.desktop) {
-      this.io.stdout.write(notifyBytes("bell"));
+      writeTerminalControl(this.io.stdout, notifyBytes("bell"), "notify");
       return;
     }
     const transport = detectNotifyCapability(internals.notifyEnvironment);
     if (transport === "bell") {
-      this.io.stdout.write(notifyBytes("bell"));
+      writeTerminalControl(this.io.stdout, notifyBytes("bell"), "notify");
       try {
         internals.notifySpawn("notify-send", ["-u", decision.urgency, decision.title, decision.body]);
       } catch {
       }
       return;
     }
-    this.io.stdout.write(notifyBytes(transport, `${decision.title} ${decision.body}`, decision.titleSuffix));
+    writeTerminalControl(this.io.stdout, notifyBytes(transport, `${decision.title} ${decision.body}`, decision.titleSuffix), "notify");
   }
   /** Resolve the notification settings section, defaulting when no section is stored. */
   notifySettings() {
@@ -105447,8 +105692,8 @@ ${row.hint ?? ""}` });
       this.permissionNames = [...presets.names];
       const session = this.session;
       this.permissionCurrentName = session === void 0 ? "" : presets.current(session);
-      const currentIndex = this.permissionNames.indexOf(this.permissionCurrentName);
-      this.permissionSelectedIndex = Math.max(0, currentIndex);
+      const currentIndex2 = this.permissionNames.indexOf(this.permissionCurrentName);
+      this.permissionSelectedIndex = Math.max(0, currentIndex2);
       this.permissionDescriptions = this.permissionNames.map(
         (name2) => presets.optionOf(name2).description
       );
@@ -107015,6 +107260,7 @@ ${row.hint ?? ""}` });
    */
   scheduleSettingsSelectionEmit() {
     if (this.closed) return;
+    this.invalidateSnapshots();
     this.settingsMovePending = true;
     if (this.settingsMoveEmit !== void 0) return;
     const token = {};
@@ -107027,32 +107273,56 @@ ${row.hint ?? ""}` });
       else this.notifyListeners();
     });
   }
-  emit() {
+  /**
+   * Mutation → snapshot dependency table. Only compare bounded scalar/reference
+   * keys here: never project history, tokenize input, or enumerate job catalogs.
+   * Queue heads are mutable, so their visible fields (not just identity) matter.
+   */
+  invalidateSnapshots() {
+    const revisions = this.snapshotRevisions;
+    const head = this.blockingHead();
+    const approval = head?.kind === "approval" ? head.entry : void 0;
+    const ask = head?.kind === "ask-user" ? head.entry : void 0;
+    const model = [this.projector, revisions.projector, this.statusOf(), this.presentationFlag("reasoning"), this.toolCardsExpanded, this.expandedCompactionId];
+    const session = [this.session, revisions.session];
+    const dependencies = {
+      modelSnapshot: model,
+      sessionPaneSnapshot: [this.session?.id, this.sessionList, this.sessionList[this.selectedIndex], this.selectedIndex, this.listOpen, this.confirmDelete, this.deleteUnavailable],
+      searchPaneSnapshot: [this.searchOpen, this.searchQuery, this.searchResults, this.searchSelectedIndex, this.searchStatus],
+      modelPaneSnapshot: [this.modelOpen, this.modelFilter, this.modelRows, this.modelSelectedIndex, this.modelStatus, this.modelError],
+      helpPaneSnapshot: [this.helpOpen, this.helpLines],
+      toolDetailsSnapshot: [this.toolDetailsOpen, this.toolDetailsSelected, this.toolDetailsBody, this.toolDetailsDiagnostics, this.toolDetailCursors.at(-1), this.toolDetailCursors.length, ...model],
+      approvalPaneSnapshot: [approval, approval?.detailsOpen, approval?.request.callId === void 0 ? void 0 : revisions.projector],
+      askUserPaneSnapshot: [ask, ask?.questionIndex, ask?.selectedIndex, ask?.editingCustom, ask?.customDraft, ask?.customCaretIndex, ask?.customAnswer, ...ask?.selectedIndices ?? []],
+      planReviewPaneSnapshot: [ask, this.planReviewDeliveryError],
+      permissionPaneSnapshot: [this.permissionOpen, this.permissionNames, this.permissionSelectedIndex, this.permissionCurrentName, this.permissionConfirmDanger, this.permissionSwitchError, this.permissionDescriptions],
+      settingsPaneSnapshot: [this.settingsOpen, this.settingsRows, this.settingsSelectedIndex, this.settingsSearching, this.settingsEditing, this.settingsOnboarding, this.settingsBusy, this.settingsUpdateError],
+      agentHubPaneSnapshot: [this.agentHubOpen, this.agentHubRows, this.agentHubSelectedIndex, this.agentHubView, this.agentHubError, this.agentHubTranscript, this.agentHubScrollOffset],
+      planDirectoryPaneSnapshot: [this.planDirectoryOpen, this.planDirectorySelectedIndex, this.planDirectoryCurrentActive, this.planDirectorySwitchError, this.planDirectoryStatusError],
+      workspacePaneSnapshot: [this.workspaceOpen, this.workspaceDeliveries, this.workspaceRoot, revisions.workspace, this.workspaceSelectedIndex, this.workspaceEditing, this.workspaceResolveError, this.workspaceWatchError, this.workspacePreview, this.workspaceDeliveries ? revisions.projector : void 0],
+      feedbackPaneSnapshot: [this.feedbackOpen, this.feedbackEditing, this.feedbackCurrent, this.feedbackWriteError, this.feedbackTargetId],
+      workflowOverlaySnapshot: [this.workflowOverlayOpen, this.workflowOverlayOffset, revisions.workflow, this.agent],
+      goalFooterSnapshot: [...session, revisions.goal, this.agent],
+      adaptiveInfoFooterSnapshot: [...session, this.modelSelectionRef?.current, this.machine, this.retryFooter, revisions.retry],
+      todoHudSnapshot: session,
+      sessionStatsSnapshot: session,
+      jobsHudSnapshot: [this.agent, revisions.jobs],
+      workflowHudSnapshot: [revisions.workflow]
+    };
+    for (const key of Object.keys(dependencies)) {
+      const next = dependencies[key];
+      const previous3 = this.snapshotDependencies.get(key);
+      if (previous3 !== void 0 && previous3.length === next.length && next.every((value, index2) => Object.is(value, previous3[index2]))) continue;
+      this[key] = void 0;
+      this.snapshotDependencies.set(key, next);
+    }
+  }
+  emit(source) {
     if (this.closed) return;
+    if (source !== void 0) this.snapshotRevisions[source]++;
     this.settingsMovePending = false;
     this.settingsMoveEmit = void 0;
-    this.modelSnapshot = void 0;
-    this.sessionPaneSnapshot = void 0;
-    this.searchPaneSnapshot = void 0;
-    this.modelPaneSnapshot = void 0;
-    this.helpPaneSnapshot = void 0;
-    this.toolDetailsSnapshot = void 0;
-    this.approvalPaneSnapshot = void 0;
-    this.askUserPaneSnapshot = void 0;
-    this.planReviewPaneSnapshot = void 0;
-    this.permissionPaneSnapshot = void 0;
-    this.settingsPaneSnapshot = void 0;
-    this.agentHubPaneSnapshot = void 0;
-    this.planDirectoryPaneSnapshot = void 0;
-    this.workspacePaneSnapshot = void 0;
-    this.feedbackPaneSnapshot = void 0;
-    this.workflowOverlaySnapshot = void 0;
-    this.goalFooterSnapshot = void 0;
-    this.adaptiveInfoFooterSnapshot = void 0;
-    this.todoHudSnapshot = void 0;
-    this.sessionStatsSnapshot = void 0;
-    this.jobsHudSnapshot = void 0;
-    this.workflowHudSnapshot = void 0;
+    this.invalidateSnapshots();
     if (this.emitTimer !== void 0) {
       this.emitPending = true;
       return;
@@ -107585,28 +107855,6 @@ react-reconciler/cjs/react-reconciler.development.js:
   (**
    * @license React
    * react-reconciler.development.js
-   *
-   * Copyright (c) Meta Platforms, Inc. and affiliates.
-   *
-   * This source code is licensed under the MIT license found in the
-   * LICENSE file in the root directory of this source tree.
-   *)
-
-react/cjs/react-jsx-runtime.production.js:
-  (**
-   * @license React
-   * react-jsx-runtime.production.js
-   *
-   * Copyright (c) Meta Platforms, Inc. and affiliates.
-   *
-   * This source code is licensed under the MIT license found in the
-   * LICENSE file in the root directory of this source tree.
-   *)
-
-react/cjs/react-jsx-runtime.development.js:
-  (**
-   * @license React
-   * react-jsx-runtime.development.js
    *
    * Copyright (c) Meta Platforms, Inc. and affiliates.
    *

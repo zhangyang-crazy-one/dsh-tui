@@ -316,7 +316,8 @@ it('does not highlight stale terminal padding outside the transcript content', (
     rows: [createFrameSnapshotRow({ id: 'padding:0', row: 1, col: 3, line })],
   })
   const overlay = atlas.selectionOverlay({ col: 1, row: 1 }, { col: 20, row: 1 })
-  expect(overlay).toBe('\x1b[1;3H\x1b[7mbody\x1b[27m')
+  expect(overlay).toContain('\x1b[1;3H\x1b[7mbody\x1b[27m')
+  expect(overlay).not.toContain('\x1b[1;1H')
   expect(atlas.selectionOverlay({ col: 1, row: 1 }, { col: 2, row: 1 })).toBe('')
   expect(atlas.restoreOverlay({ col: 1, row: 1 }, { col: 2, row: 1 })).toBe('')
   expect(atlas.selectionOverlay({ col: 7, row: 1 }, { col: 20, row: 1 })).toBe('')

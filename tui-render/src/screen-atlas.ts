@@ -11,7 +11,7 @@ import { displayWidth } from './content.ts'
 import type { FrameGeometry, FrameSnapshotRow, VisibleFrameSnapshot } from './frame-snapshot.ts'
 import { hyperlinksEnabled, wrapOsc8 } from './hyperlink.ts'
 import type { PhysicalLine } from './physical-line.ts'
-import { paintBackgroundRow, paintRow, styled } from './theme.ts'
+import { bgSequence, currentTier, paintBackgroundRow, paintRow, styled } from './theme.ts'
 
 /** One terminal cell. Empty `ch` marks the trailing half of a wide glyph. */
 export interface ScreenCell {
@@ -503,7 +503,10 @@ export class ScreenAtlas {
         out += `\x1b[${row};${runCol}H\x1b[7m${run}\x1b[27m`
       })
     })
-    return out
+    // Side-channel writes start after the frame's BG_OFF; do not repaint
+    // selected cells using the terminal default background.
+    const background = bgSequence(currentTier())
+    return out === '' || background === '' ? out : `${background}${out}\x1b[49m`
   }
 
   /**

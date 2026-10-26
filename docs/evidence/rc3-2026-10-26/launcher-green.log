@@ -1,0 +1,46 @@
+✔ parses management commands and the pass-through separator (1.278733ms)
+✔ resolves stable deployment defaults and rejects empty overrides (0.434493ms)
+✔ version reports an uninitialized runtime without creating it (0.293238ms)
+✔ version reports the runtime SHA and DSH package version (0.214932ms)
+✔ launch forwards arguments and returns the child status (0.922231ms)
+✔ launch rejects an absent runtime and a symbolic-link runtime (0.17671ms)
+✔ update clones an absent runtime and installs frozen dependencies (0.3058ms)
+✔ update redacts source credentials from clone failures (0.218036ms)
+✔ update rejects a dirty runtime before fetching (0.147742ms)
+✔ update fast-forwards a clean runtime and refreshes dependencies (0.246939ms)
+✔ update rejects divergent history before merge (0.165331ms)
+✔ update reports dependency recovery after a successful fast-forward (0.106856ms)
+✔ parseLauncherInvocation parses probe, --source, and --lightweight options (0.13007ms)
+✔ probeInstalledDsh respects DSH_BIN override and inspects exit code (0.318125ms)
+✔ probeInstalledDsh probes PATH dsh --version (0.194521ms)
+✔ probe command outputs probe details (0.278699ms)
+✔ lightweight launch installs this package as the tui bundle, then boots the profile (0.246091ms)
+✔ lightweight launch reports a failed bundle install without booting (0.105263ms)
+✔ default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime (0.103924ms)
+✔ default auto launch rejects a failed env DSH_BIN despite an initialized source runtime (0.048079ms)
+✔ default auto launch falls back to initialized source with no override (0.248449ms)
+✔ default auto launch falls back to initialized source with blank env override (0.107476ms)
+✔ default auto launch falls back to initialized source with blank settings override masking env (0.107243ms)
+✔ launch with --source forces source mode even if bundled patch and DSH_BIN exist (0.107533ms)
+✔ launch provides friendly installation guidance when dsh is absent and runtime uninitialized (0.068884ms)
+✔ DSH_BIN requires an absolute path and a failed override does not select another installation (0.074897ms)
+✔ discovers npm global package bin from its manifest when PATH is unavailable (0.18469ms)
+✔ discovers pnpm global package bin from its manifest when PATH is unavailable (0.081769ms)
+✔ local package launch reuses the probe and preserves profile, app args, and exit status (0.18963ms)
+✔ unusable package candidates are diagnosed and duplicate global roots are only probed once (0.176639ms)
+✔ an installed tui bundle is not reinstalled and PATH success stops package discovery (0.12922ms)
+✔ engineCompatibility admits the bundle release line and rejects other lines with an install hint (0.075088ms)
+✔ source launch prepares generated contracts, links this bundle into the existing profile, then boots directly (0.159811ms)
+✔ ready source launch does not reinstall dependencies or regenerate contracts (0.114597ms)
+✔ source contract generation failure stops before plugin installation or terminal boot (0.142811ms)
+✔ lightweight mode reuses the same configured profile as source mode (0.139041ms)
+✔ profile selection is explicit and leaves app arguments after the separator alone (0.163767ms)
+✔ both launch modes install and boot the explicitly selected official profile (0.183178ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63.541904

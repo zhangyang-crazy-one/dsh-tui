@@ -50,6 +50,7 @@ import { ToolCard } from './tool-card.tsx'
 import { ToolRowCache } from './tool-rows.ts'
 import { ToolPresenterCache } from './tool-presenter-cache.ts'
 import { DisplayRevisionIndex } from './display-revision.ts'
+import { overlayMap, ExactHistoryWindow, HistoryRowCache, type HistoryWorkStats } from './history-data.ts'
 import { PlainTextRowCache } from './plain-rows.ts'
 import { RowSequence, type RowSource } from './row-source.ts'
 import { getBilingualTip, getBrailleSpinnerFrame, tuiCopy, type TuiLocale } from './ui-copy.ts'
@@ -112,13 +113,51 @@ import type { ScrollScheduler } from './scroll-scheduler.ts'
 import { createStreamQueue } from './stream-queue.ts'
 import type { StreamQueue } from './stream-queue.ts'
 import { createFrameArbiter } from './frame-arbiter.ts'
-import type { FrameArbiter } from './frame-arbiter.ts'
+import type { FrameArbiter, FrameSnapshot } from './frame-arbiter.ts'
 import {
   createFrameSnapshotRow,
   physicalLineIdentity,
   setVisibleFrameSnapshot,
 } from './frame-snapshot.ts'
 import type { VisibleFrameSnapshot } from './frame-snapshot.ts'
+
+/** Long-lived store/listener callbacks retain a ref to the current render, not its first history. */
+function useCurrentHistoryCallback<A extends unknown[], R>(callback: (...args: A) => R): (...args: A) => R {
+  const current = useRef(callback)
+  current.current = callback
+  return useCallback((...args: A) => current.current(...args), [])
+}
+
+function clearHistoryFrame(): void {
+  setVisibleFrameSnapshot(undefined)
+  releaseFrameRail()
+  setMouseRailRegion(undefined)
+}
+
+const historyNow = () => performance.now()
+
+/** The disposer must not close over StreamView's original render environment. */
+function historySchedulerDisposer(
+  unsubscribe: () => void,
+  arbiter: FrameArbiter<() => void>,
+  scroll: ScrollScheduler,
+  stream: StreamQueue<() => void>,
+  refs: {
+    arbiter: { current: FrameArbiter<() => void> | undefined }
+    scroll: { current: ScrollScheduler | undefined }
+    stream: { current: StreamQueue<() => void> | undefined }
+  },
+  metrics: FrameMetricsHandle | undefined,
+): () => void {
+  return () => {
+    if (metrics !== undefined) clearScrollInputs(metrics)
+    unsubscribe()
+    arbiter.dispose()
+    if (refs.scroll.current === scroll) refs.scroll.current = undefined
+    if (refs.stream.current === stream) refs.stream.current = undefined
+    if (refs.arbiter.current === arbiter) refs.arbiter.current = undefined
+  }
+}
 
 /** Speaker inset, mirrored on the right to center the Markdown body. */
 const ASSISTANT_PROSE_PREFIX_COLUMNS = displayWidth('● ')
@@ -159,6 +198,8 @@ export interface StreamViewProps {
   layoutKey?: object
   /** Folded view model containing stable history rows, the active turn, and reasoning-display state. */
   model: ViewModel
+  /** Optional operation/lifecycle probe. Contains counts only, never session text. */
+  onHistoryWork?: ((stats: HistoryWorkStats) => void) | undefined
   /** Optional tools-registry lookup for presenter titles; omitted stays generic. */
   presenters?: ToolPresenterLookup | undefined
   /** Strongest generated FishLogo glyph tier supported by the terminal. */
@@ -900,6 +941,8 @@ function framePhysicalLine(
 }
 
 /** Source lookup allows a live turn to settle under a new durable id in O(1). */
+const MAX_HISTORY_PROJECTOR_STATES = 64
+
 const projectorSourceIndexes = new WeakMap<Map<string, MarkdownProjectorState>, {
   byScope: Map<string, Map<string, MarkdownProjectorState>>
   previousSource: WeakMap<MarkdownProjectorState, string>
@@ -912,8 +955,9 @@ function projectorStateFor(
   scope: BlockRowsScope,
   aliases: readonly string[] = [],
   source?: string,
+  touched?: Set<MarkdownProjectorState>,
 ): MarkdownProjectorState {
-  const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)$/u, '')
+  const projectorScope = scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, '')
   const key = `${blockId}|${projectorScope}`
   let index = projectorSourceIndexes.get(cache)
   if (index === undefined) {
@@ -939,6 +983,7 @@ function projectorStateFor(
   if (state === undefined) {
     state = createMarkdownProjectorState(blockId, scope)
   }
+  cache.delete(key)
   cache.set(key, state)
   if (source !== undefined) {
     const previous = index.previousSource.get(state)
@@ -946,6 +991,19 @@ function projectorStateFor(
     bySource.set(source, state)
     index.previousSource.set(state, source)
   }
+  while (cache.size > MAX_HISTORY_PROJECTOR_STATES) {
+    const oldest = cache.entries().next().value!
+    cache.delete(oldest[0])
+    if ([...cache.values()].includes(oldest[1])) continue
+    const previous = index.previousSource.get(oldest[1])
+    if (previous !== undefined) {
+      for (const [scopeKey, sources] of index.byScope) {
+        if (sources.get(previous) === oldest[1]) sources.delete(previous)
+        if (sources.size === 0) index.byScope.delete(scopeKey)
+      }
+    }
+  }
+  touched?.add(state)
   return state
 }
 
@@ -962,7 +1020,7 @@ interface StoredBlockRows {
   readonly ownerId: string
   readonly entry: Parameters<typeof projectBlockRows>[0]
   readonly scope: BlockRowsScope
-  readonly lines: readonly MarkdownRenderLine[]
+  readonly lines: RowSource<MarkdownRenderLine>
   readonly active: boolean
 }
 
@@ -971,6 +1029,7 @@ interface ProjectedEntryRows {
   readonly rows: ReadonlyMap<string, RowSource<MarkdownRenderLine>>
   readonly textRanges: ReadonlyMap<string, readonly BlockTextRange[]>
   readonly storeBlocks: ReadonlyMap<string, StoredBlockRows>
+  readonly dirtyBlocks: ReadonlyMap<string, StoredBlockRows>
   readonly reasoningSticky: ReadonlyMap<string, readonly StickyReasoningRange[]>
   readonly toolSticky: ReadonlyMap<string, readonly StickyToolRange[]>
   readonly userSticky: ReadonlyMap<string, StickyUserRange>
@@ -1149,6 +1208,7 @@ function makeBlockProjector(
     locale: TuiLocale
   },
   storeBlocks: Map<string, StoredBlockRows>,
+  historyRows?: HistoryRowCache,
 ) {
   return (
     ownerId: string,
@@ -1156,7 +1216,19 @@ function makeBlockProjector(
     scope: BlockRowsScope,
     state: MarkdownProjectorState | undefined,
     active: boolean,
-  ) => projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active)
+  ) => {
+    const projection = projectBlockEntry({ ...deps, storeBlocks }, ownerId, entry, scope, state, active)
+    if (historyRows === undefined) return projection
+    // The rebuild closure captures source and formatting only, never the original rows/parser.
+    const lines = historyRows.wrap(ownerId, entry.id, projection.lines, () => {
+      const fresh = entry.kind === 'assistant-prose' || entry.kind === 'markdown'
+        ? createMarkdownProjectorState(entry.id, scope) : undefined
+      return projectBlockEntry({ ...deps, storeBlocks: new Map() }, ownerId, entry, scope, fresh, false).lines
+    })
+    const descriptor = storeBlocks.get(entry.id)
+    if (descriptor !== undefined) storeBlocks.set(entry.id, { ...descriptor, lines })
+    return { lines }
+  }
 }
 
 /**
@@ -1224,6 +1296,7 @@ function makeToolCardBlockEntry(
  */
 export function StreamView({
   model,
+  onHistoryWork,
   viewportColumns,
   presenters,
   brandTier = 'plain',
@@ -1247,9 +1320,11 @@ export function StreamView({
   ])
   const presenterCache = useMemo(() => new ToolPresenterCache(policy.tools.cacheEntries), [policy.tools.cacheEntries])
   const plainRows = useMemo(() => new PlainTextRowCache(policy.cache), [policy.cache.maxRows, policy.cache.maxBytes])
-  useEffect(() => () =>{  plainRows.clear() }, [plainRows])
-  useEffect(() => () =>{  presenterCache.clear() }, [presenterCache])
-  useEffect(() => () =>{  toolRows.clear() }, [toolRows])
+  useEffect(() => plainRows.clear.bind(plainRows), [plainRows])
+  useEffect(() => presenterCache.clear.bind(presenterCache), [presenterCache])
+  useEffect(() => toolRows.clear.bind(toolRows), [toolRows])
+  const historyRows = useMemo(() => new HistoryRowCache(policy.cache.maxRows, policy.cache.maxBytes),
+    [policy.cache.maxRows, policy.cache.maxBytes])
   const transcriptOverscan = policy.transcriptOverscan
   const windowSize = useWindowSize()
   const columns = viewportColumns ?? windowSize.columns
@@ -1272,6 +1347,17 @@ export function StreamView({
     toolSticky: readonly StickyToolRange[] | undefined
     userSticky: StickyUserRange | undefined
   }>())
+  const historyCounters = useRef({ settledSignatures: 0, descriptorVisits: 0, projectedActiveRequests: 0 })
+  const touchedProjectors = useRef(new Set<MarkdownProjectorState>())
+  const settledDirectory = useRef<{
+    transcript: readonly TranscriptRow[]
+    scope: string
+    presenters: ToolPresenterLookup | undefined
+    expanded: string | undefined
+    hasActive: boolean
+    start: number
+    data: ProjectedEntryRows
+  } | undefined>(undefined)
   const settledProjectionScope = useRef('')
   const settledProjectionPresenters = useRef<ToolPresenterLookup | undefined>(undefined)
   /** Canonical source descriptors used to rebuild an evicted derived block. */
@@ -1283,27 +1369,29 @@ export function StreamView({
    * validated value via `renderPolicy.cache`, but tests skip the host and
    * fall back here so the storage is always available).
    */
+  const rebuildHistoryBlock = useCurrentHistoryCallback(({ blockId }: { blockId: string }) => {
+    const descriptor = rebuildBlocks.current.get(blockId)
+    if (descriptor === undefined) {
+      throw new Error(`TranscriptRenderStore: missing source descriptor for ${blockId}`)
+    }
+    const state = descriptor.entry.kind === 'markdown'
+      || descriptor.entry.kind === 'assistant-prose'
+      ? createMarkdownProjectorState(blockId, descriptor.scope)
+      : undefined
+    return projectBlockRows(descriptor.entry, descriptor.scope, state).lines
+      .map(line => markdownLineToPhysicalLine(blockId, line))
+  })
   const lineStore = useRef<TranscriptRenderStore | undefined>(undefined)
   if (lineStore.current === undefined) {
     lineStore.current = createTranscriptRenderStore({
       maxRows: policy.cache.maxRows,
       maxBytes: policy.cache.maxBytes,
-      rebuild: ({ blockId }) => {
-        const descriptor = rebuildBlocks.current.get(blockId)
-        if (descriptor === undefined) {
-          throw new Error(`TranscriptRenderStore: missing source descriptor for ${blockId}`)
-        }
-        const state = descriptor.entry.kind === 'markdown'
-          || descriptor.entry.kind === 'assistant-prose'
-          ? createMarkdownProjectorState(blockId, descriptor.scope)
-          : undefined
-        return projectBlockRows(descriptor.entry, descriptor.scope, state).lines
-          .map(line => markdownLineToPhysicalLine(blockId, line))
-      },
+      rebuild: rebuildHistoryBlock,
     })
   }
   /** Active block id currently held by the active revision (when there is one). */
   const lastCommandSequence = useRef(-1)
+  const pendingHistoryCommand = useRef<TranscriptViewportCommand | undefined>(undefined)
   const layoutRevision = 0
   const [viewport, dispatchViewport] = useReducer(
     reduceTranscriptViewport,
@@ -1319,9 +1407,24 @@ export function StreamView({
     && measuredGeometry.columns === columns && measuredGeometry.rows === rows
     && measuredGeometry.key === layoutKey
   const scrollScheduler = useRef<ScrollScheduler | undefined>(undefined)
-  const presentationQueue = useRef<StreamQueue<ProjectedEntryRows> | undefined>(undefined)
-  const frameArbiter = useRef<FrameArbiter<ProjectedEntryRows> | undefined>(undefined)
+  const presentationQueue = useRef<StreamQueue<() => void> | undefined>(undefined)
+  const frameArbiter = useRef<FrameArbiter<() => void> | undefined>(undefined)
   const lastDispatchedOffset = useRef(viewport.offsetFromBottom)
+  const publishHistoryFrame = useCurrentHistoryCallback((snapshot: FrameSnapshot<() => void>) => {
+    const presented = snapshot.stream.at(-1)
+    presented?.()
+    if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
+      lastDispatchedOffset.current = snapshot.scroll.presented
+      dispatchViewport({
+        kind: 'offset',
+        offsetFromBottom: snapshot.scroll.presented,
+      })
+    }
+    if (frameMetrics !== undefined) {
+      const queue = presentationQueue.current!.getStats(snapshot.nowMs)
+      frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs)
+    }
+  })
   useLayoutEffect(() => {
     const scroll = createScrollScheduler({
       frameIntervalMs: policy.scroll.frameIntervalMs,
@@ -1331,7 +1434,7 @@ export function StreamView({
       initialPosition: viewport.offsetFromBottom,
       autoSchedule: false,
     })
-    const stream = createStreamQueue<ProjectedEntryRows>({
+    const stream = createStreamQueue<() => void>({
       frameIntervalMs: policy.stream.frameIntervalMs,
       entryDepth: policy.stream.entryDepth,
       exitDepth: policy.stream.exitDepth,
@@ -1350,35 +1453,16 @@ export function StreamView({
       scroll,
       stream,
       drivesScrollScheduler: true,
-      now: () => performance.now(),
+      now: historyNow,
       demandDriven: true,
     })
-    const unsubscribe = arbiter.onPublish((snapshot) => {
-      const presented = snapshot.stream.at(-1)
-      if (presented !== undefined) setPresentedEntryRows(presented)
-      if (snapshot.scroll.presented !== lastDispatchedOffset.current) {
-        lastDispatchedOffset.current = snapshot.scroll.presented
-        dispatchViewport({
-          kind: 'offset',
-          offsetFromBottom: snapshot.scroll.presented,
-        })
-      }
-      if (frameMetrics !== undefined) {
-        const queue = stream.getStats(snapshot.nowMs)
-        frameMetrics.recordRenderQueue(queue.depth, queue.oldestAgeMs)
-      }
-    })
+    const unsubscribe = arbiter.onPublish(publishHistoryFrame)
     scrollScheduler.current = scroll
     presentationQueue.current = stream
     frameArbiter.current = arbiter
-    return () => {
-      if (frameMetrics !== undefined) clearScrollInputs(frameMetrics)
-      unsubscribe()
-      arbiter.dispose()
-      if (scrollScheduler.current === scroll) scrollScheduler.current = undefined
-      if (presentationQueue.current === stream) presentationQueue.current = undefined
-      if (frameArbiter.current === arbiter) frameArbiter.current = undefined
-    }
+    return historySchedulerDisposer(unsubscribe, arbiter, scroll, stream, {
+      arbiter: frameArbiter, scroll: scrollScheduler, stream: presentationQueue,
+    }, frameMetrics)
   }, [
     frameMetrics,
     policy.scroll.catchUpThreshold,
@@ -1402,8 +1486,31 @@ export function StreamView({
     reasoningExpanded,
     toolCardsExpanded,
   } = model
-  const liveDurationMs = useLiveDuration(liveDurationTarget(activeTurn, status))
   const revisions = useRef(new DisplayRevisionIndex()).current
+  const ingressVersion = activeTurn === undefined ? '' : activeTurnVersion(activeTurn, revisions)
+  const [presentation, setPresentation] = useState({ turn: activeTurn, version: ingressVersion, history })
+  const presentedTurn = status === 'generating' && presentation.history === history ? presentation.turn : activeTurn
+  const presentedVersion = status === 'generating' && presentation.history === history ? presentation.version : ingressVersion
+  useLayoutEffect(() => {
+    const queue = presentationQueue.current
+    const arbiter = frameArbiter.current
+    const next = { turn: activeTurn, version: ingressVersion, history }
+    if (queue === undefined || arbiter === undefined || status !== 'generating') {
+      queue?.flush()
+      setPresentation(previous => previous.turn === next.turn && previous.version === next.version && previous.history === history ? previous : next)
+      return
+    }
+    if (presentation.turn === activeTurn && presentation.version === ingressVersion && presentation.history === history) return
+    // Canonical model is untouched. Only an obsolete presentation request is replaced.
+    queue.flush()
+    const now = performance.now()
+    queue.push([() => setPresentation(next)], now)
+    const stats = queue.getStats(now)
+    frameMetrics?.recordRenderQueue(stats.depth, stats.oldestAgeMs)
+    if (frameMetrics !== undefined) queue.noteDrain(frameMetrics.snapshot().deltaIngressToStdoutDrainMs.max)
+    arbiter.requestStream()
+  }, [activeTurn, ingressVersion, presentation, status, frameMetrics, history])
+  const liveDurationMs = useLiveDuration(liveDurationTarget(presentedTurn, status))
   const compactionVersion = compactionDividers.map(divider => (
     revisions.revision(divider)
   )).join('\u0000')
@@ -1421,7 +1528,7 @@ export function StreamView({
     history,
     history.length,
   ])
-  const activeVersion = activeTurn === undefined ? '' : activeTurnVersion(activeTurn, revisions)
+  const activeVersion = presentedVersion
   useLayoutEffect(() => {
     if (frameMetrics !== undefined && activeTurn !== undefined) {
       markDeltaIngress(frameMetrics)
@@ -1483,6 +1590,21 @@ export function StreamView({
    * below is therefore the authoritative height for the layout cache.
    */
   const hasActiveTurn = activeTurn !== undefined
+  const historyWindow = useRef(new ExactHistoryWindow<TranscriptRow>()).current
+  const [, advanceHistory] = useReducer((value: number) => value + 1, 0)
+  const historyScope = [settledBlockRowsScope.scopeKey, mode, locale].join('\u0000')
+  historyWindow.update(transcript, historyScope, physicalViewport && viewport.follow
+    ? Math.max(64, rows * 2 + transcriptOverscan) : transcript.length)
+  const historyStart = historyWindow.start
+  const historyGeneration = historyWindow.generation
+  const readyTranscript = useMemo(() => transcript.slice(historyStart), [transcript, historyStart])
+  useEffect(() => {
+    if (historyWindow.complete) return
+    const timer = setTimeout(() => {
+      if (historyWindow.advance(historyGeneration, 256)) advanceHistory()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [historyWindow, historyGeneration, historyStart])
   /**
    * Compute per-entry rows for settled history via the row projector.
    * Settled history depends only on committed messages and fold state,
@@ -1499,6 +1621,10 @@ export function StreamView({
     ].join('\u0000')
     if (settledProjectionScope.current !== projectionScope) {
       settledProjectionCache.current = new Map()
+      historyRows.clear()
+      toolRows.clear()
+      plainRows.clear()
+      presenterCache.clear()
       settledProjectionScope.current = projectionScope
     }
     if (settledProjectionPresenters.current !== presenters) {
@@ -1506,24 +1632,38 @@ export function StreamView({
       settledProjectionPresenters.current = presenters
     }
     const previousCache = settledProjectionCache.current
-    const nextCache = new Map<string, (typeof previousCache extends Map<string, infer V> ? V : never)>()
+    const directory = settledDirectory.current
+    if (directory !== undefined && directory.transcript !== transcript) {
+      toolRows.clear()
+      plainRows.clear()
+      presenterCache.clear()
+    }
+    const prepending = directory !== undefined && directory.transcript === transcript
+      && directory.scope === projectionScope && directory.presenters === presenters
+      && directory.expanded === expandedCompactionId && directory.hasActive === hasActiveTurn
+      && historyStart < directory.start
+    const nextCache = prepending ? previousCache : new Map<string, (typeof previousCache extends Map<string, infer V> ? V : never)>()
     const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
     const batchPresenters: ToolPresenterLookup | undefined = presenters === undefined ? undefined : { get(name) {
       if (!definitions.has(name)) definitions.set(name, presenters.get(name))
       return definitions.get(name)
     } }
-    const map = new Map<string, RowSource<MarkdownRenderLine>>()
-    const textRanges = new Map<string, readonly BlockTextRange[]>()
-    const storeBlocks = new Map<string, StoredBlockRows>()
-    const reasoningSticky = new Map<string, readonly StickyReasoningRange[]>()
-    const toolSticky = new Map<string, StickyToolRange[]>()
-    const userSticky = new Map<string, StickyUserRange>()
+    const map = prepending ? directory.data.rows as Map<string, RowSource<MarkdownRenderLine>> : new Map<string, RowSource<MarkdownRenderLine>>()
+    const textRanges = prepending ? directory.data.textRanges as Map<string, readonly BlockTextRange[]> : new Map<string, readonly BlockTextRange[]>()
+    const storeBlocks = prepending ? directory.data.storeBlocks as Map<string, StoredBlockRows> : new Map<string, StoredBlockRows>()
+    const reasoningSticky = prepending ? directory.data.reasoningSticky as Map<string, readonly StickyReasoningRange[]> : new Map<string, readonly StickyReasoningRange[]>()
+    const toolSticky = prepending ? directory.data.toolSticky as Map<string, StickyToolRange[]> : new Map<string, StickyToolRange[]>()
+    const userSticky = prepending ? directory.data.userSticky as Map<string, StickyUserRange> : new Map<string, StickyUserRange>()
+    const dirtyBlocks = new Map<string, StoredBlockRows>()
     const projectorCache = projectorStates.current
     const latestAssistant = hasActiveTurn ? undefined : latestAssistantId(history, undefined)
-    for (const [index, row] of transcript.entries()) {
+    const pendingRows = prepending ? readyTranscript.slice(0, directory.start - historyStart) : readyTranscript
+    for (const [localIndex, row] of pendingRows.entries()) {
+      const index = historyStart + localIndex
       const id = transcriptBlockId(row)
       const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
       const cached = previousCache.get(id)
+      historyCounters.current.settledSignatures++
       const signature = settledProjectionSignature(row, revisions, {
         hasSubsequent,
         isLatestAssistant: row.kind === 'message' && row.message.id === latestAssistant,
@@ -1540,10 +1680,13 @@ export function StreamView({
         continue
       }
       const rowBlocks = new Map<string, StoredBlockRows>()
-      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks)
+      const project = makeBlockProjector({ toolRows, plainRows, locale }, rowBlocks, historyRows)
       const collectBlocks = (): StoredBlockRows[] => {
         const blocks = [...rowBlocks.values()]
-        for (const block of blocks) storeBlocks.set(block.entry.id, block)
+        for (const block of blocks) {
+          storeBlocks.set(block.entry.id, block)
+          dirtyBlocks.set(block.entry.id, block)
+        }
         return blocks
       }
       if (row.kind === 'compaction') {
@@ -1658,6 +1801,7 @@ export function StreamView({
             ? []
             : [`assistant-turn-${String(row.message.turnOrdinal)}-t-${String(textIndex - 1)}`],
           part.text,
+          touchedProjectors.current,
         ), false).lines)
         ranges.push({ start, end: rows.length })
       }
@@ -1709,7 +1853,10 @@ export function StreamView({
       })
     }
     settledProjectionCache.current = nextCache
-    return { rows: map, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky }
+    const data = { rows: map, textRanges, storeBlocks, dirtyBlocks, reasoningSticky, toolSticky, userSticky }
+    settledDirectory.current = { transcript, scope: projectionScope, presenters,
+      expanded: expandedCompactionId, hasActive: hasActiveTurn, start: historyStart, data }
+    return data
   }, [
     contentWidth,
     expandedCompactionId,
@@ -1726,6 +1873,9 @@ export function StreamView({
     toolCardsExpanded,
     toolRows,
     transcript,
+    readyTranscript,
+    historyStart,
+    historyRows,
   ])
 
   /**
@@ -1739,7 +1889,8 @@ export function StreamView({
     reasoningSticky: readonly StickyReasoningRange[]
     toolSticky: readonly StickyToolRange[]
   } | undefined>(() => {
-    if (activeTurn === undefined) return undefined
+    if (presentedTurn === undefined) return undefined
+    historyCounters.current.projectedActiveRequests++
     const definitions = new Map<string, ReturnType<ToolPresenterLookup['get']>>()
     const batchPresenters: ToolPresenterLookup | undefined = presenters === undefined ? undefined : { get(name) {
       if (!definitions.has(name)) definitions.set(name, presenters.get(name))
@@ -1748,11 +1899,11 @@ export function StreamView({
     const storeBlocks = new Map<string, StoredBlockRows>()
     const projectorCache = projectorStates.current
     const project = makeBlockProjector({ toolRows, plainRows, locale }, storeBlocks)
-    const id = `assistant-turn-${String(activeTurn.turn)}`
-    const rawParts = partsFromTurn(activeTurn)
+    const id = `assistant-turn-${String(presentedTurn.turn)}`
+    const rawParts = partsFromTurn(presentedTurn)
     const visibleParts = displayedParts(rawParts, reasoningExpanded)
     if (status === 'generating' && visibleParts.length === 0) {
-      const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
+      const liveMs = liveDurationMs ?? presentedTurn.reasoningDurationMs
       const spinner = getBrailleSpinnerFrame(liveMs)
       const label = rawParts.some(p => p.kind === 'reasoning')
         ? tuiCopy('thinking', locale)
@@ -1800,7 +1951,7 @@ export function StreamView({
           sticky.push({
             start: stickyStart,
             end: rows.length,
-            turnOrdinal: activeTurn.turn,
+            turnOrdinal: presentedTurn.turn,
             durationMs,
           })
         }
@@ -1846,6 +1997,7 @@ export function StreamView({
         assistantBlockRowsScope,
         [],
         part.text,
+        touchedProjectors.current,
       ), status === 'generating').lines)
       ranges.push({ start, end: rows.length })
     }
@@ -1855,7 +2007,7 @@ export function StreamView({
       const isToolCompleted = (lastVisible?.kind === 'card' && lastVisible.card.status !== 'running')
         || (lastVisible?.kind === 'tool-summary' && lastVisible.summary.runningCount === 0)
       if (isToolCompleted || (isReasoningActive && !reasoningExpanded)) {
-        const liveMs = liveDurationMs ?? activeTurn.reasoningDurationMs
+        const liveMs = liveDurationMs ?? presentedTurn.reasoningDurationMs
         const spinner = getBrailleSpinnerFrame(liveMs)
         const label = isReasoningActive
           ? tuiCopy('thinking', locale)
@@ -1873,7 +2025,7 @@ export function StreamView({
     }
     return { id, lines: rows.build(), ranges, storeBlocks, reasoningSticky: sticky, toolSticky }
   }, [
-    activeTurn,
+    presentedTurn,
     activeVersion,
     assistantBlockRowsScope,
     blockRowsScope,
@@ -1895,88 +2047,60 @@ export function StreamView({
    */
   const entryRows = useMemo<ProjectedEntryRows>(() => {
     if (activeTurnRows === undefined) return settledEntryRows
-    const map = new Map(settledEntryRows.rows)
-    map.set(activeTurnRows.id, activeTurnRows.lines)
-    const textRanges = new Map(settledEntryRows.textRanges)
-    if (activeTurnRows.ranges.length > 0) {
-      textRanges.set(activeTurnRows.id, activeTurnRows.ranges)
+    const id = activeTurnRows.id
+    return {
+      rows: overlayMap(settledEntryRows.rows, new Map([[id, activeTurnRows.lines]])),
+      textRanges: overlayMap(settledEntryRows.textRanges, new Map([[id, activeTurnRows.ranges]])),
+      storeBlocks: overlayMap(settledEntryRows.storeBlocks, activeTurnRows.storeBlocks),
+      dirtyBlocks: overlayMap(settledEntryRows.dirtyBlocks, activeTurnRows.storeBlocks),
+      reasoningSticky: overlayMap(settledEntryRows.reasoningSticky, new Map([[id, activeTurnRows.reasoningSticky]])),
+      toolSticky: overlayMap(settledEntryRows.toolSticky, new Map([[id, activeTurnRows.toolSticky]])),
+      userSticky: settledEntryRows.userSticky,
     }
-    const storeBlocks = new Map(settledEntryRows.storeBlocks)
-    for (const [key, val] of activeTurnRows.storeBlocks) {
-      storeBlocks.set(key, val)
-    }
-    const reasoningSticky = new Map(settledEntryRows.reasoningSticky)
-    if (activeTurnRows.reasoningSticky.length > 0) {
-      reasoningSticky.set(activeTurnRows.id, activeTurnRows.reasoningSticky)
-    }
-    const toolSticky = new Map(settledEntryRows.toolSticky)
-    if (activeTurnRows.toolSticky.length > 0) {
-      toolSticky.set(activeTurnRows.id, activeTurnRows.toolSticky)
-    }
-    return { rows: map, textRanges, storeBlocks, reasoningSticky, toolSticky, userSticky: settledEntryRows.userSticky }
   }, [settledEntryRows, activeTurnRows])
-  const [presentedEntryRows, setPresentedEntryRows] = useState(entryRows)
-  const activeEntryRows = status === 'generating' ? presentedEntryRows : entryRows
-  useLayoutEffect(() => {
-    const queue = presentationQueue.current
-    const arbiter = frameArbiter.current
-    if (queue === undefined || arbiter === undefined) {
-      setPresentedEntryRows(entryRows)
-      return
-    }
-    if (status !== 'generating') {
-      queue.flush()
-      setPresentedEntryRows(entryRows)
-      if (frameMetrics !== undefined) frameMetrics.recordRenderQueue(0, 0)
-      return
-    }
-    const now = performance.now()
-    if (frameMetrics !== undefined) {
-      queue.noteDrain(frameMetrics.snapshot().deltaIngressToStdoutDrainMs.max)
-    }
-    // Each entry is complete; an unpresented predecessor is already obsolete.
-    queue.flush()
-    queue.push([entryRows], now)
-    const stats = queue.getStats(now)
-    frameMetrics?.recordRenderQueue(stats.depth, stats.oldestAgeMs)
-    arbiter.requestStream()
-  }, [entryRows, frameMetrics, status])
+  const activeEntryRows = entryRows
   const activeLineRevisions = useRef(new Map<string, {
     readonly handle: MutableRevision
-    signature: string
+    signature: StoredBlockRows
     scopeKey: string
   }>())
-  const storedLineSignatures = useRef(new Map<string, string>())
-  const lineRevisionOwners = useRef(new Map<string, object>())
+  const previousSettledRows = useRef<ProjectedEntryRows | undefined>(undefined)
+  const previousActiveBlocks = useRef<ReadonlyMap<string, StoredBlockRows>>(new Map())
   const physicalLineCache = useRef(new WeakMap<MarkdownRenderLine, Map<string, PhysicalLine>>())
   const lastLineStoreMetrics = useRef({ bytes: 0, evictions: 0 })
-  useEffect(() => () => {
+  const disposeHistory = useCurrentHistoryCallback(() => {
     for (const active of activeLineRevisions.current.values()) {
       active.handle.settle()
     }
     activeLineRevisions.current.clear()
-    lineStore.current?.clearPins()
-  }, [])
+    previousActiveBlocks.current = new Map()
+    lineStore.current?.reset()
+    rebuildBlocks.current.clear()
+    projectorStates.current.clear()
+    projectorSourceIndexes.delete(projectorStates.current)
+    settledProjectionCache.current.clear()
+    settledDirectory.current = undefined
+    historyRows.clear()
+    layoutCache.current.clear()
+  })
+  useEffect(() => disposeHistory, [disposeHistory])
   useLayoutEffect(() => {
     const store = lineStore.current
     if (store === undefined) return
     const currentActive = new Set<string>()
-    for (const descriptor of entryRows.storeBlocks.values()) {
+    const settledChanged = previousSettledRows.current !== settledEntryRows
+    const dirty: ReadonlyMap<string, StoredBlockRows> = settledChanged
+      ? overlayMap(settledEntryRows.dirtyBlocks, activeTurnRows?.storeBlocks ?? new Map())
+      : activeTurnRows?.storeBlocks ?? new Map<string, StoredBlockRows>()
+    previousSettledRows.current = settledEntryRows
+    for (const descriptor of dirty.values()) {
+      historyCounters.current.descriptorVisits++
+      const previousDescriptor = rebuildBlocks.current.get(descriptor.entry.id)
       rebuildBlocks.current.set(descriptor.entry.id, descriptor)
-      let revisionOwner = lineRevisionOwners.current.get(descriptor.entry.id)
-      if (revisionOwner === undefined) {
-        revisionOwner = {}
-        lineRevisionOwners.current.set(descriptor.entry.id, revisionOwner)
-      }
-      const signature = revisions.revision(revisionOwner, [
-        descriptor.scope.scopeKey,
-        descriptor.entry.source,
-        JSON.stringify(descriptor.entry.meta ?? {}),
-        String(descriptor.lines.length),
-      ])
+      const signature = descriptor
       if (!descriptor.active && !activeLineRevisions.current.has(descriptor.entry.id)
-        && storedLineSignatures.current.get(descriptor.entry.id) === signature) continue
-      const physical = descriptor.lines.map((line) => {
+        && previousDescriptor === descriptor) continue
+      const physical = descriptor.lines.slice().map((line) => {
         let byBlock = physicalLineCache.current.get(line)
         if (byBlock === undefined) {
           byBlock = new Map<string, PhysicalLine>()
@@ -2020,7 +2144,7 @@ export function StreamView({
         active.handle.settle()
         activeLineRevisions.current.delete(descriptor.entry.id)
       }
-      if (storedLineSignatures.current.get(descriptor.entry.id) === signature) continue
+      if (previousDescriptor === signature) continue
       store.upsertSource({
         blockId: descriptor.entry.id,
         source: descriptor.entry.source,
@@ -2033,13 +2157,25 @@ export function StreamView({
       })
       handle.replace({ source: descriptor.entry.source, lines: physical })
       handle.settle()
-      storedLineSignatures.current.set(descriptor.entry.id, signature)
     }
     for (const [blockId, active] of activeLineRevisions.current) {
       if (currentActive.has(blockId)) continue
       active.handle.settle()
       activeLineRevisions.current.delete(blockId)
     }
+    for (const [blockId, old] of previousActiveBlocks.current) {
+      if (activeTurnRows?.storeBlocks.has(blockId) === true || settledEntryRows.storeBlocks.has(blockId)) continue
+      rebuildBlocks.current.delete(blockId)
+      store.remove(blockId)
+      const scope = old.scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, '')
+      projectorStates.current.delete(`${blockId}|${scope}`)
+      const sources = projectorSourceIndexes.get(projectorStates.current)?.byScope.get(scope)
+      if (sources !== undefined) {
+        sources.delete(old.entry.source)
+        if (sources.size === 0) projectorSourceIndexes.get(projectorStates.current)?.byScope.delete(scope)
+      }
+    }
+    previousActiveBlocks.current = activeTurnRows?.storeBlocks ?? new Map()
     const stats = store.stats()
     if (frameMetrics !== undefined) {
       frameMetrics.addCacheBytes(stats.cachedBytes - lastLineStoreMetrics.current.bytes)
@@ -2053,45 +2189,45 @@ export function StreamView({
       evictions: stats.evictions,
     }
   }, [entryRows, frameMetrics])
-  const lastProjectorMetrics = useRef({
-    parsedBytes: 0,
-    stableRowsReused: 0,
-    tailRowsRerendered: 0,
-    cacheEvictions: 0,
-  })
   useLayoutEffect(() => {
-    if (frameMetrics === undefined) return
-    const totals = {
-      parsedBytes: 0,
-      stableRowsReused: 0,
-      tailRowsRerendered: 0,
-      cacheEvictions: 0,
+    const valid = new Set(settledEntryRows.storeBlocks.keys())
+    for (const id of activeTurnRows?.storeBlocks.keys() ?? []) valid.add(id)
+    for (const [id, active] of activeLineRevisions.current) {
+      if (valid.has(id)) continue
+      active.handle.discard()
+      activeLineRevisions.current.delete(id)
     }
-    for (const state of projectorStates.current.values()) {
+    for (const id of rebuildBlocks.current.keys()) if (!valid.has(id)) rebuildBlocks.current.delete(id)
+    lineStore.current?.retain(valid)
+    historyRows.retainOwners(new Set(settledEntryRows.rows.keys()))
+    // Keep current-scope states only. Rebuild the source alias index from surviving states.
+    const states = projectorStates.current
+    for (const [key] of states) {
+      const separator = key.indexOf('|')
+      const id = key.slice(0, separator)
+      const scope = key.slice(separator + 1)
+      const descriptor = rebuildBlocks.current.get(id)
+      if (descriptor === undefined || scope !== descriptor.scope.scopeKey.replace(/\|(streaming|settled)(?=:|$)/u, '')) states.delete(key)
+    }
+    projectorSourceIndexes.delete(states)
+    // Height measurements are derived; no removed owner may survive in the directory.
+    layoutCache.current.clear()
+  }, [settledEntryRows])
+  const lastProjectorMetrics = useRef(new WeakMap<MarkdownProjectorState, ReturnType<MarkdownProjectorState['stats']>>())
+  useLayoutEffect(() => {
+    for (const state of touchedProjectors.current) {
       const stats = state.stats()
-      totals.parsedBytes += stats.parsedBytes
-      totals.stableRowsReused += stats.stableRowsReused
-      totals.tailRowsRerendered += stats.tailLinesPainted
-      totals.cacheEvictions += stats.cacheEvictions
+      const previous = lastProjectorMetrics.current.get(state)
+      frameMetrics?.addMarkdownParseBytes(Math.max(0, stats.parsedBytes - (previous?.parsedBytes ?? 0)))
+      frameMetrics?.addStableRowsReused(Math.max(0, stats.stableRowsReused - (previous?.stableRowsReused ?? 0)))
+      frameMetrics?.addTailRowsRerendered(Math.max(0, stats.tailLinesPainted - (previous?.tailLinesPainted ?? 0)))
+      frameMetrics?.addCacheEvictions(Math.max(0, stats.cacheEvictions - (previous?.cacheEvictions ?? 0)))
+      lastProjectorMetrics.current.set(state, stats)
     }
-    const previous = lastProjectorMetrics.current
-    frameMetrics.addMarkdownParseBytes(Math.max(0, totals.parsedBytes - previous.parsedBytes))
-    frameMetrics.addStableRowsReused(Math.max(
-      0,
-      totals.stableRowsReused - previous.stableRowsReused,
-    ))
-    frameMetrics.addTailRowsRerendered(Math.max(
-      0,
-      totals.tailRowsRerendered - previous.tailRowsRerendered,
-    ))
-    frameMetrics.addCacheEvictions(Math.max(
-      0,
-      totals.cacheEvictions - previous.cacheEvictions,
-    ))
-    lastProjectorMetrics.current = totals
+    touchedProjectors.current.clear()
   }, [entryRows, frameMetrics])
-  const settledRenderEntries = useMemo(() => transcript.flatMap((row, index) => {
-    const hasSubsequent = index < transcript.length - 1 || hasActiveTurn
+  const settledRenderEntries = useMemo(() => readyTranscript.flatMap((row, index) => {
+    const hasSubsequent = index < readyTranscript.length - 1 || hasActiveTurn
     const isUserWithGap = row.kind === 'message' && row.message.kind === 'user' && hasSubsequent
     const gapRows = isUserWithGap ? 0 : (hasSubsequent ? 2 : 0)
     const id = transcriptBlockId(row)
@@ -2105,24 +2241,24 @@ export function StreamView({
       lines,
       row,
     }]
-  }), [hasActiveTurn, revisions, settledEntryRows, transcript])
+  }), [hasActiveTurn, revisions, settledEntryRows, readyTranscript])
   const renderEntries = useMemo(() => [
     ...settledRenderEntries.filter(entry => (
-      activeTurn === undefined || entry.id !== `assistant-turn-${String(activeTurn.turn)}`
+      presentedTurn === undefined || entry.id !== `assistant-turn-${String(presentedTurn.turn)}`
     )),
-    ...(activeTurn === undefined
+    ...(presentedTurn === undefined
       ? []
       : [{
         kind: 'active' as const,
-        id: `assistant-turn-${String(activeTurn.turn)}`,
+        id: `assistant-turn-${String(presentedTurn.turn)}`,
         version: activeVersion,
         gapRows: 0,
-        estimatedRows: (activeEntryRows.rows.get(`assistant-turn-${String(activeTurn.turn)}`)?.length ?? 0),
-        lines: activeEntryRows.rows.get(`assistant-turn-${String(activeTurn.turn)}`) ?? [],
-        turn: activeTurn,
+        estimatedRows: (activeEntryRows.rows.get(`assistant-turn-${String(presentedTurn.turn)}`)?.length ?? 0),
+        lines: activeEntryRows.rows.get(`assistant-turn-${String(presentedTurn.turn)}`) ?? [],
+        turn: presentedTurn,
       }]),
   ], [
-    activeTurn,
+    presentedTurn,
     activeVersion,
     activeEntryRows,
     settledRenderEntries,
@@ -2147,6 +2283,7 @@ export function StreamView({
     ? 'empty'
     : `${String(renderEntries.length)}:${renderEntries.at(-1)?.id ?? ''}:${renderEntries.at(-1)?.version ?? ''}`
   const lastContentRevision = useRef(contentRevision)
+  const lastHistoryStart = useRef(historyStart)
   const virtualLayouts = useMemo(
     () => layoutCache.current.layouts(layoutScope, layoutInputs),
     [layoutInputs, layoutRevision, layoutScope],
@@ -2217,9 +2354,7 @@ export function StreamView({
   const stickyLabel = resolveStickyTranscriptHeader(visibleTop, stickyRanges)
   useLayoutEffect(() => {
     onStickyHeaderChange?.(stickyLabel)
-    return () => {
-      onStickyHeaderChange?.(undefined)
-    }
+    return onStickyHeaderChange?.bind(undefined, undefined)
   }, [onStickyHeaderChange, stickyLabel])
   /**
    * Follow mode mounts configured overscan while streaming to avoid viewport
@@ -2258,7 +2393,7 @@ export function StreamView({
   const pinIndex = useMemo(() => {
     const byOwner = new Map<string, string[]>()
     const active: string[] = []
-    for (const descriptor of entryRows.storeBlocks.values()) {
+    for (const descriptor of settledEntryRows.storeBlocks.values()) {
       let blockIds = byOwner.get(descriptor.ownerId)
       if (blockIds === undefined) {
         blockIds = []
@@ -2268,18 +2403,24 @@ export function StreamView({
       if (descriptor.active) active.push(descriptor.entry.id)
     }
     return { byOwner, active }
-  }, [entryRows])
+  }, [settledEntryRows])
   useLayoutEffect(() => {
     const store = lineStore.current
     if (store === undefined) return
     const owners = new Set(visibleEntries.map(entry => entry.id))
     if (viewport.anchor !== undefined) owners.add(viewport.anchor.blockId)
+    historyRows.setPins(owners)
     const pinned = [...pinIndex.active]
+    for (const descriptor of activeTurnRows?.storeBlocks.values() ?? []) {
+      if (descriptor.active || owners.has(descriptor.ownerId)) pinned.push(descriptor.entry.id)
+    }
     for (const ownerId of owners) {
       pinned.push(...(pinIndex.byOwner.get(ownerId) ?? []))
     }
     store.setPins({ pinned })
-  }, [pinIndex, viewport.anchor, visibleEntries])
+  }, [activeTurnRows, pinIndex, viewport.anchor, visibleEntries, historyRows])
+  let sourceIndexCount = 0
+  for (const sources of projectorSourceIndexes.get(projectorStates.current)?.byScope.values() ?? []) sourceIndexCount += sources.size
   const idleHome = transcript.length === 0 && activeTurn === undefined
   const generating = status === 'generating'
   const latestSettledAssistantId = activeTurn === undefined
@@ -2299,6 +2440,24 @@ export function StreamView({
       return
     }
     const vp = viewportStateRef.current
+    const available = Math.max(0, virtualContentRowsRef.current - effectiveViewportRowsRef.current)
+    const needsPrefix = !historyWindow.complete && (
+      command.kind === 'position' || (command.kind === 'edge' && command.edge === 'oldest')
+      || (command.kind === 'scroll' && vp.offsetFromBottom + command.delta + transcriptOverscan >= available)
+      || (command.kind === 'page' && command.delta > 0 && vp.offsetFromBottom + vp.viewportRows * 2 >= available)
+    )
+    if (needsPrefix) {
+      pendingHistoryCommand.current = command
+      historyWindow.advance(historyWindow.generation, command.kind === 'position' || command.kind === 'edge'
+        ? Infinity : 256)
+      advanceHistory()
+      return
+    }
+    if (command.kind !== 'reset' && vp.contentRows !== virtualContentRowsRef.current) {
+      pendingHistoryCommand.current = command
+      return
+    }
+    pendingHistoryCommand.current = undefined
     if (command.kind !== 'reset' && (vp.viewportRows === 0 || vp.contentRows === 0)) return
     const scheduler = scrollScheduler.current
     const arbiter = frameArbiter.current
@@ -2351,7 +2510,11 @@ export function StreamView({
       offsetFromBottom: presentedOffset,
     })
     arbiter.requestScroll()
-  }, [frameMetrics, onViewportCommandConsumed])
+  }, [frameMetrics, onViewportCommandConsumed, historyWindow, transcriptOverscan, history])
+  useLayoutEffect(() => {
+    const command = pendingHistoryCommand.current
+    if (command !== undefined) executeViewportCommand(command)
+  }, [historyStart, virtualContentRows, viewport.contentRows, executeViewportCommand])
 
   useLayoutEffect(() => {
     if (viewportCommandRef === undefined || viewport.viewportRows === 0 || viewport.contentRows === 0) return
@@ -2422,6 +2585,8 @@ export function StreamView({
       ? 0
       : (layouts.at(-1) as TranscriptBlockLayout).top
         + (layouts.at(-1) as TranscriptBlockLayout).rows
+    const historyPrepended = historyStart < lastHistoryStart.current
+    lastHistoryStart.current = historyStart
     const contentChanged = contentRevision !== lastContentRevision.current
     lastContentRevision.current = contentRevision
     if (
@@ -2434,7 +2599,7 @@ export function StreamView({
         contentRows,
         viewportRows: viewportBox.height,
         blocks: layouts,
-        unseenRowsAdded: contentChanged
+        unseenRowsAdded: contentChanged && !historyPrepended
           ? Math.max(0, contentRows - viewport.contentRows)
           : 0,
       })
@@ -2578,7 +2743,6 @@ export function StreamView({
     effectiveViewportRows,
     generating,
     latestSettledAssistantId,
-    presentedEntryRows,
     publishedRail,
     renderEntries,
     rows,
@@ -2610,12 +2774,38 @@ export function StreamView({
     visibleFrame,
     stdout,
   ])
+  useLayoutEffect(() => {
+    const stats = lineStore.current?.stats()
+    if (stats === undefined) return
+    onHistoryWork?.({
+      generation: historyGeneration,
+      canonicalEntries: transcript.length,
+      projectionCache: historyRows.stats(),
+      indexedEntries: readyTranscript.length,
+      pendingEntries: historyStart,
+      ...historyCounters.current,
+      settledMapCopies: 0,
+      projectionOwners: settledProjectionCache.current.size,
+      rebuildDescriptors: rebuildBlocks.current.size,
+      revisionOwners: 0,
+      signatures: settledProjectionCache.current.size,
+      projectorStates: projectorStates.current.size,
+      projectorSources: sourceIndexCount,
+      lineEntries: stats.sourceEntries,
+      cachedRows: stats.cachedRows,
+      cachedBytes: stats.cachedBytes,
+      pinnedBlocks: stats.pinnedBlocks,
+      pinnedRows: stats.pinnedRows,
+      pinnedBytes: stats.pinnedBytes,
+      overBudgetRows: stats.overBudgetRows,
+      overBudgetBytes: stats.overBudgetBytes,
+      toolCache: toolRows.stats(),
+      pendingPresentations: presentationQueue.current?.getStats(performance.now()).depth ?? 0,
+      firstInteractive: publishTranscript,
+    })
+  })
   // Ink can paint a replacement pane before passive effect cleanup runs.
-  useLayoutEffect(() => () => {
-    setVisibleFrameSnapshot(undefined)
-    releaseFrameRail()
-    setMouseRailRegion(undefined)
-  }, [])
+  useLayoutEffect(() => clearHistoryFrame, [])
 
   const renderReasoning = (
     part: Extract<TurnPart, { kind: 'reasoning' }>,

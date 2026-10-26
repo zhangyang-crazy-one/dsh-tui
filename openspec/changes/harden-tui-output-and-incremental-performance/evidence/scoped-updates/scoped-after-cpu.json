@@ -1,0 +1,35 @@
+[
+  {
+    "kind": "scoped-animation",
+    "sample": 0,
+    "elapsedMs": 1001.0749300000002,
+    "cpuUserMs": 234.36,
+    "cpuSystemMs": 60.891,
+    "transcriptRenders": 0,
+    "composerTokenizations": 0,
+    "spinnerFrames": 10,
+    "transcriptProjections": 0
+  },
+  {
+    "kind": "scoped-animation",
+    "sample": 1,
+    "elapsedMs": 1000.8276720000003,
+    "cpuUserMs": 195.642,
+    "cpuSystemMs": 53.173,
+    "transcriptRenders": 0,
+    "composerTokenizations": 0,
+    "spinnerFrames": 10,
+    "transcriptProjections": 0
+  },
+  {
+    "kind": "scoped-animation",
+    "sample": 2,
+    "elapsedMs": 1000.419097,
+    "cpuUserMs": 201.252,
+    "cpuSystemMs": 72.065,
+    "transcriptRenders": 0,
+    "composerTokenizations": 0,
+    "spinnerFrames": 10,
+    "transcriptProjections": 0
+  }
+]

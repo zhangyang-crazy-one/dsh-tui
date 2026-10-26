@@ -17,10 +17,15 @@
  */
 
 import { render, renderToString } from 'ink'
+import { writeFileSync } from 'node:fs'
 import { createElement } from 'react'
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TuiLoop } from '../src/loop.tsx'
+import * as streamView from '../src/stream-view.tsx'
+import * as blockRows from '../src/block-rows.ts'
+import * as composerTokens from '../src/composer-tokens.ts'
+import * as uiCopy from '../src/ui-copy.ts'
 import type { TuiController } from '../src/loop.tsx'
 import type { MentionCandidate } from '../src/mention.tsx'
 import type { ViewModel } from '../src/projection.ts'
@@ -1268,4 +1273,89 @@ it.each(['cancel', 'save', 'failed-save'])('preserves the chat draft around cred
     await vi.waitFor(() => expect(dispatch).toHaveBeenCalledWith({ kind: 'send', text: 'Original draft!' }))
     expect(renderPhaseErrors()).toEqual([])
   } finally { await disposeRenderer(instance) }
+})
+
+
+describe('generating animation scope', () => {
+  it('advances the footer without rerendering transcript or retokenizing the draft', async () => {
+    const transcript = vi.spyOn(streamView, 'StreamView')
+    const project = vi.spyOn(blockRows, 'projectBlockRows')
+    const tokenize = vi.spyOn(composerTokens, 'tokenizeComposer')
+    const spinner = vi.spyOn(uiCopy, 'getBrailleSpinnerFrame')
+    const model: ViewModel = { ...IDLE_MODEL, status: 'generating', history: [{ id: 1, kind: 'user', text: 'static transcript', timestamp: 1 }] }
+    const controller = stubController(() => {}, [], EMPTY_SEARCH, 'test', undefined, () => model)
+    const paneRead = vi.spyOn(controller, 'getSettingsPane')
+    controller.getAdaptiveInfoFooter = () => footer
+    const footer = { provider: 'test', model: 'model', status: '生成中' }
+    const { instance, stdin } = mount(controller)
+    try {
+      await press(stdin, '\u001b[200~static draft @agent\u001b[201~')
+      await new Promise(resolve => setTimeout(resolve, 180))
+      expect(tokenize.mock.calls.length).toBeGreaterThan(0)
+      expect(project.mock.calls.length).toBeGreaterThan(0)
+      const before = { panes: paneRead.mock.calls.length, project: project.mock.calls.length, transcript: transcript.mock.calls.length, tokenize: tokenize.mock.calls.length, spinner: spinner.mock.calls.length }
+      await new Promise(resolve => setTimeout(resolve, 350))
+      expect(spinner.mock.calls.length).toBeGreaterThan(before.spinner)
+      expect(paneRead.mock.calls.length - before.panes).toBe(0)
+      expect(project.mock.calls.length - before.project).toBe(0)
+      expect(transcript.mock.calls.length - before.transcript).toBe(0)
+      expect(tokenize.mock.calls.length - before.tokenize).toBe(0)
+    } finally {
+      await disposeRenderer(instance)
+      vi.restoreAllMocks()
+    }
+  })
+})
+
+it.runIf(process.env.DSH_SCOPED_BENCH === '1')('records scoped animation CPU and operation counts', async () => {
+  const transcript = vi.spyOn(streamView, 'StreamView')
+  const project = vi.spyOn(blockRows, 'projectBlockRows')
+  const tokenize = vi.spyOn(composerTokens, 'tokenizeComposer')
+  const spinner = vi.spyOn(uiCopy, 'getBrailleSpinnerFrame')
+  const model: ViewModel = { ...IDLE_MODEL, status: 'generating', history: Array.from({ length: 100 }, (_, id) => ({ id, kind: 'user' as const, text: `message ${id}`, timestamp: id })) }
+  const controller = stubController(() => {}, [], EMPTY_SEARCH, 'test', undefined, () => model)
+  const footer = { provider: 'test', model: 'model', status: '生成中' }
+  controller.getAdaptiveInfoFooter = () => footer
+  const { instance, stdin } = mount(controller)
+  try {
+    await press(stdin, `\u001b[200~${'草稿draft '.repeat(100)}\u001b[201~`)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    const samples: unknown[] = []
+    for (let sample = 0; sample < 3; sample++) {
+      const counts = [transcript.mock.calls.length, tokenize.mock.calls.length, spinner.mock.calls.length, project.mock.calls.length]
+      const cpu = process.cpuUsage()
+      const start = performance.now()
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      const used = process.cpuUsage(cpu)
+      samples.push({ kind: 'scoped-animation', sample, elapsedMs: performance.now() - start, cpuUserMs: used.user / 1000, cpuSystemMs: used.system / 1000, transcriptRenders: transcript.mock.calls.length - counts[0]!, composerTokenizations: tokenize.mock.calls.length - counts[1]!, spinnerFrames: spinner.mock.calls.length - counts[2]!, transcriptProjections: project.mock.calls.length - counts[3]! })
+    }
+    writeFileSync(process.env.DSH_SCOPED_BENCH_OUTPUT ?? '/tmp/dsh-scoped-animation-bench.json', JSON.stringify(samples, null, 2))
+  } finally { await disposeRenderer(instance); vi.restoreAllMocks() }
+})
+
+
+it('stops the local spinner when generation settles and disposes its clock on unmount', async () => {
+  const spinner = vi.spyOn(uiCopy, 'getBrailleSpinnerFrame')
+  let model: ViewModel = { ...IDLE_MODEL, status: 'generating' }
+  const controller = stubController(() => {}, [], EMPTY_SEARCH, 'test', undefined, () => model)
+  const footer = { provider: 'test', model: 'model', status: '生成中' }
+  controller.getAdaptiveInfoFooter = () => footer
+  const { instance } = mount(controller)
+  try {
+    await new Promise(resolve => setTimeout(resolve, 150))
+    model = { ...model, status: 'idle' }
+    controller.dispatch({ kind: 'toggle-reasoning' })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const stopped = spinner.mock.calls.length
+    await new Promise(resolve => setTimeout(resolve, 150))
+    expect(spinner.mock.calls.length).toBe(stopped)
+    model = { ...model, status: 'generating' }
+    controller.dispatch({ kind: 'toggle-reasoning' })
+    await new Promise(resolve => setTimeout(resolve, 150))
+    expect(spinner.mock.calls.length).toBeGreaterThan(stopped)
+  } finally { await disposeRenderer(instance) }
+  const unmounted = spinner.mock.calls.length
+  await new Promise(resolve => setTimeout(resolve, 150))
+  expect(spinner.mock.calls.length).toBe(unmounted)
+  spinner.mockRestore()
 })

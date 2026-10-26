@@ -11,16 +11,16 @@
  */
 
 import { Box, Text, useStdout, useWindowSize } from 'ink'
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { composerFrameAnchor, composerLineWindow } from './composer-cursor.ts'
-import { tokenizeComposer } from './composer-tokens.ts'
-import { displayColumnSlice, displayWidth, escapeContent } from './content.ts'
+import { composerFrameAnchor } from './composer-cursor.ts'
+import { composerIndex, composerRowBudget, composerRowWindow } from './composer-index.ts'
+import { displayWidth, escapeContent } from './content.ts'
 import { hideFrameCaret, setFrameCaret } from './frame-fill.ts'
+import { writeTerminalControl } from './terminal-output.ts'
 import { currentTier, inkColor, paintBackgroundRow, styled } from './theme.ts'
 import { tuiCopy, type TuiLocale } from './ui-copy.ts'
 import { maskComposerInput } from './secret-input.ts'
-import { inputSelectionRange } from './input-selection.ts'
 
 /** Input state handed between the state machine steps. */
 export interface InputState {
@@ -163,25 +163,35 @@ export function InputBar({
   const { text, caretIndex } = maskComposerInput(sourceText, sourceCaretIndex ?? sourceText.length, secret)
   const selectionAnchor = sourceSelectionAnchor === undefined ? undefined
     : maskComposerInput(sourceText, sourceSelectionAnchor, secret).caretIndex
-  const selection = inputSelectionRange({ text, caretIndex, selectionAnchor })
   const { stdout } = useStdout()
   const { columns, rows } = useWindowSize()
-  const lines = text.split('\n')
-  const caret = Math.max(0, Math.min(caretIndex ?? text.length, text.length))
-  const caretLine = text.slice(0, caret).split('\n').length - 1
-  const caretLineStart = caret === 0 ? 0 : text.lastIndexOf('\n', caret - 1) + 1
-  const windows = lines.map((line, index) => composerLineWindow(
-    line, index === caretLine ? caret - caretLineStart : undefined, Math.max(1, columns - 4),
-  ))
-  const anchor = composerFrameAnchor(text, caretIndex ?? text.length, {
+  const index = useMemo(() => composerIndex(text), [text])
+  const caret = index.snapCaret(caretIndex ?? text.length)
+  const selectionCaret = selectionAnchor === undefined ? undefined : caret
+  const selectionStart = selectionAnchor === undefined ? undefined : index.snapCaret(selectionAnchor)
+  const selection = selectionCaret === undefined || selectionStart === undefined || selectionCaret === selectionStart
+    ? undefined : { start: Math.min(selectionCaret, selectionStart), end: Math.max(selectionCaret, selectionStart) }
+  const caretLine = index.rowAt(caret)
+  const rowWindow = composerRowWindow(index, caret, rows, rowsBelow)
+  const visibleLines = Array.from({ length: rowWindow.end - rowWindow.start }, (_, offset) => {
+    const row = rowWindow.start + offset
+    return { row, window: index.line(row).window(
+      row === caretLine ? caret - (index.lineStarts[row] as number) : undefined, Math.max(1, columns - 4),
+    ) }
+  })
+  const hiddenHint = rowWindow.hiddenAbove + rowWindow.hiddenBelow > 0
+    ? `↑${rowWindow.hiddenAbove} ↓${rowWindow.hiddenBelow}` : ''
+  const inlineHint = composerRowBudget(rows, rowsBelow) === 1
+  const anchor = composerFrameAnchor(text, caret, {
     promptWidth: 2 + PROMPT_WIDTH,
     columns,
     rows,
     fullscreen: stdout.isTTY,
     rowsBelow,
+    lineWindow: rowWindow,
   })
   const caretRow = Math.max(1, rows - anchor.up)
-  const caretWindow = windows[caretLine] as (typeof windows)[number]
+  const caretWindow = (visibleLines[caretLine - rowWindow.start] as (typeof visibleLines)[number]).window
   const caretCol = Math.min(columns, 5 + caretWindow.caretColumn)
   setFrameCaret({ row: caretRow, col: caretCol })
 
@@ -191,7 +201,7 @@ export function InputBar({
   useLayoutEffect(() => {
     if (!stdout.isTTY) return
     setFrameCaret({ row: caretRow, col: caretCol })
-    stdout.write(`\x1b[${caretRow};${caretCol}H\x1b[?25h`)
+    writeTerminalControl(stdout, `\x1b[${caretRow};${caretCol}H\x1b[?25h`, 'caret')
   }, [caretRow, caretCol, stdout])
 
   // Park the cursor when the composer unmounts (a full-content panel owns the
@@ -237,34 +247,25 @@ export function InputBar({
       backgroundColor={inkColor('inputBg')}
     >
       <Text wrap="truncate">
-        {paintBackgroundRow(headerParts, 'inputBg', columns)}
+        {paintBackgroundRow(inlineHint && hiddenHint !== '' ? [styled(hiddenHint, 'fgDim')] : headerParts, 'inputBg', columns)}
       </Text>
-      {lines.map((line, lineIndex) => {
-        const window = windows[lineIndex] as (typeof windows)[number]
-        let sourceColumn = 0
-        let sourceOffset = lines.slice(0, lineIndex).reduce((offset, item) => offset + item.length + 1, 0)
-        const endColumn = window.startColumn + displayWidth(window.text)
-        const tokenParts = tokenizeComposer(line).flatMap((token) => {
-          const start = sourceOffset
-          sourceOffset += token.text.length
-          const cuts = [0, ...(selection === undefined ? [] : [selection.start - start, selection.end - start]
-            .filter(offset => offset > 0 && offset < token.text.length)), token.text.length].sort((a, b) => a - b)
-          return cuts.slice(1).map((end, index) => {
-            const begin = cuts[index] as number
-            const safe = escapeContent(token.text.slice(begin, end)).replace(/\t/gu, '\\t')
-            const width = displayWidth(safe)
-            const visible = displayColumnSlice(
-              safe, Math.max(0, window.startColumn - sourceColumn), Math.min(width, endColumn - sourceColumn),
-            )
-            sourceColumn += width
-            const painted = styled(visible, token.kind === 'command' || token.kind === 'mention'
-              ? 'accent'
-              : token.kind === 'image'
-                ? 'fgDim'
-                : 'fg')
-            return selection !== undefined && start + begin >= selection.start && start + begin < selection.end
-              && visible !== '' && currentTier() !== 'none' ? `\x1b[7m${painted}\x1b[27m` : painted
-          })
+      {!inlineHint && hiddenHint !== '' && <Text wrap="truncate">
+        {paintBackgroundRow([styled(`│ ${hiddenHint}`, 'fgDim')], 'inputBg', columns)}
+      </Text>}
+      {visibleLines.map(({ row: lineIndex, window }) => {
+        const lineStart = index.lineStarts[lineIndex] as number
+        const parts: { text: string; kind: (typeof window.glyphs)[number]['kind']; selected: boolean }[] = []
+        for (const glyph of window.glyphs) {
+          const selected = selection !== undefined && lineStart + glyph.start >= selection.start
+            && lineStart + glyph.start < selection.end
+          const previous = parts.at(-1)
+          if (previous?.kind === glyph.kind && previous.selected === selected) previous.text += glyph.text
+          else parts.push({ text: glyph.text, kind: glyph.kind, selected })
+        }
+        const tokenParts = parts.map(part => {
+          const painted = styled(part.text, part.kind === 'command' || part.kind === 'mention'
+            ? 'accent' : part.kind === 'image' ? 'fgDim' : 'fg')
+          return part.selected && currentTier() !== 'none' ? `\x1b[7m${painted}\x1b[27m` : painted
         })
         return (
           <Text key={lineIndex} wrap="truncate">

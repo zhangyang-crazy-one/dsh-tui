@@ -166,6 +166,8 @@ describe('SettingsPane intercept', () => {
     await vi.waitFor(() => expect(listener).toHaveBeenCalled())
     listener.mockClear()
     const model = controller.getModel()
+    const unrelated = [controller.getSessionPane(), controller.getSearchPane(), controller.getModelPane(), controller.getPluginsPane(), controller.getSchedulePane()]
+    const readUnrelated = () => [controller.getSessionPane(), controller.getSearchPane(), controller.getModelPane(), controller.getPluginsPane(), controller.getSchedulePane()]
     const callbacks: (() => void)[] = []
     const queue = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(callback => { callbacks.push(callback) })
     try {
@@ -174,6 +176,7 @@ describe('SettingsPane intercept', () => {
       controller.dispatch({ kind: 'settings-move', delta: -1 })
       expect(controller.getSettingsPane().selectedIndex).toBe(1)
       expect(controller.getModel()).toBe(model)
+      readUnrelated().forEach((snapshot, index) => expect(snapshot).toBe(unrelated[index]))
       expect(listener).not.toHaveBeenCalled()
       expect(callbacks).toHaveLength(1)
       callbacks.shift()!()
@@ -183,6 +186,8 @@ describe('SettingsPane intercept', () => {
       controller.dispatch({ kind: 'settings-move', delta: 1 })
       const stale = callbacks.shift()!
       controller.dispatch({ kind: 'settings-edit' })
+      expect(controller.getModel()).toBe(model)
+      readUnrelated().forEach((snapshot, index) => expect(snapshot).toBe(unrelated[index]))
       await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(2))
       controller.dispatch({ kind: 'settings-cancel-edit' })
       await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(3))
@@ -505,7 +510,9 @@ describe('SettingsPane intercept', () => {
     ctx.provide('sessionProjections', {
       snapshot: () => ({ values: { sessionStats: stats } }),
     } as never)
-    const refresh = () => { controller.dispatch({ kind: 'toggle-reasoning' }) }
+    // Projection data changes on durable session events, independently of UI toggles.
+    let turn = 0
+    const refresh = () => { controller.session?.append('turn/start', { turn: ++turn }) }
     refresh()
     expect(controller.getSessionStats()).toBeUndefined()
     stats = { turns: 1, decodeTokens: 0, llmMs: 0 }

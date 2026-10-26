@@ -1,0 +1,157 @@
+{
+  "node": "v22.23.1",
+  "sourceRoot": "current",
+  "geometry": [
+    80,
+    24
+  ],
+  "repeat": 1,
+  "samples": [
+    {
+      "count": 1000,
+      "firstInteractive": {
+        "ms": 97.36200800000006,
+        "indexedEntries": 64,
+        "pendingEntries": 936
+      },
+      "indexedMs": 477.3240710000001,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 1000,
+        "projectionCache": {
+          "entries": 1000,
+          "rows": 3000,
+          "estimatedBytes": 787780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 1000,
+        "pendingEntries": 0,
+        "settledSignatures": 1000,
+        "descriptorVisits": 1005,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 1000,
+        "rebuildDescriptors": 1001,
+        "revisionOwners": 0,
+        "signatures": 0,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 1001,
+        "cachedRows": 3001,
+        "cachedBytes": 83788,
+        "pinnedBlocks": 8,
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          27.499658999999838,
+          26.38183099999992,
+          26.302971999999954,
+          24.722991000000093,
+          23.070498000000043
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      },
+      "heapBefore": {
+        "used": 37293520,
+        "file": "/home/zhangyangrui/my_programes/dsh-tui/openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-populated.heapsnapshot",
+        "stats": {
+          "generation": 1,
+          "canonicalEntries": 1000,
+          "projectionCache": {
+            "entries": 1000,
+            "rows": 3000,
+            "estimatedBytes": 787780,
+            "pinnedRows": 21,
+            "overBudgetRows": 0,
+            "overBudgetBytes": 0,
+            "rebuilds": 0
+          },
+          "indexedEntries": 1000,
+          "pendingEntries": 0,
+          "settledSignatures": 1000,
+          "descriptorVisits": 1010,
+          "projectedActiveRequests": 6,
+          "settledMapCopies": 0,
+          "projectionOwners": 1000,
+          "rebuildDescriptors": 1001,
+          "revisionOwners": 0,
+          "signatures": 0,
+          "projectorStates": 64,
+          "projectorSources": 1,
+          "lineEntries": 1001,
+          "cachedRows": 3001,
+          "cachedBytes": 83792,
+          "pinnedBlocks": 8,
+          "pendingPresentations": 0,
+          "firstInteractive": true
+        }
+      },
+      "heapAfter": {
+        "used": 33698800,
+        "file": "/home/zhangyangrui/my_programes/dsh-tui/openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-retired.heapsnapshot",
+        "stats": {
+          "generation": 6,
+          "canonicalEntries": 1,
+          "projectionCache": {
+            "entries": 1,
+            "rows": 1,
+            "estimatedBytes": 330,
+            "pinnedRows": 1,
+            "overBudgetRows": 0,
+            "overBudgetBytes": 0,
+            "rebuilds": 0
+          },
+          "indexedEntries": 1,
+          "pendingEntries": 0,
+          "settledSignatures": 1005,
+          "descriptorVisits": 1020,
+          "projectedActiveRequests": 11,
+          "settledMapCopies": 0,
+          "projectionOwners": 1,
+          "rebuildDescriptors": 2,
+          "revisionOwners": 0,
+          "signatures": 0,
+          "projectorStates": 2,
+          "projectorSources": 0,
+          "lineEntries": 2,
+          "cachedRows": 2,
+          "cachedBytes": 40,
+          "pinnedBlocks": 2,
+          "pendingPresentations": 0,
+          "firstInteractive": true
+        },
+        "oldCanonicalOwnerCollected": false
+      }
+    }
+  ],
+  "cacheCandidate": [
+    {
+      "count": 1000,
+      "cold": {
+        "projections": 1000,
+        "ms": 52.792133999999805
+      },
+      "warm": {
+        "lookups": 1000,
+        "projections": 0,
+        "ms": 0.11479200000030687
+      },
+      "retainedHeightMetadata": 1000,
+      "representedRows": 3000,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    }
+  ]
+}
+[?25h

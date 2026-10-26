@@ -794,6 +794,12 @@ describe('TranscriptRenderStore pin semantics and reset', () => {
       cachedBlocks: 0,
       cachedRows: 0,
       cachedBytes: 0,
+      sourceEntries: 0,
+      pinnedBlocks: 0,
+      pinnedRows: 0,
+      pinnedBytes: 0,
+      overBudgetRows: 0,
+      overBudgetBytes: 0,
     })
   })
 })
@@ -903,5 +909,41 @@ describe('TranscriptRenderStore coverage branches', () => {
     store.upsertSource({ blockId: 'b2', source: 'b', scopeKey: '80' })
     store.readBlock({ blockId: 'b2' })
     expect(store.stats().evictions).toBe(0)
+  })
+})
+
+describe('TranscriptRenderStore owner retirement', () => {
+  it('retires source, rows, active revisions and pins together while retaining rebuildable canonical owners', () => {
+    const store = createTranscriptRenderStore({ maxRows: 1, maxBytes: 10_000,
+      rebuild: ({ blockId, source }) => [plainLine(blockId, 0, source, 0, source.length)] })
+    for (const id of ['keep', 'gone']) {
+      store.upsertSource({ blockId: id, source: id, scopeKey: '80' })
+      store.readBlock({ blockId: id })
+    }
+    const active = store.acquireActive({ blockId: 'active-gone', source: 'delta', scopeKey: '80' })
+    active.append([plainLine('active-gone', 0, 'delta', 0, 5)])
+    store.setPins({ pinned: ['keep', 'gone', 'active-gone'] })
+    store.retain(new Set(['keep']))
+    expect(store.stats()).toMatchObject({ sourceEntries: 1, pinnedBlocks: 1 })
+    expect(store.readBlock({ blockId: 'gone' })).toBeUndefined()
+    expect(store.readBlock({ blockId: 'active-gone' })).toBeUndefined()
+    expect(() => active.append([])).toThrow(/settled\/discarded/)
+    expect(store.readBlock({ blockId: 'keep' })?.source).toBe('keep')
+    store.retain(new Set())
+    expect(store.stats()).toMatchObject({ sourceEntries: 0, cachedBlocks: 0, cachedRows: 0, cachedBytes: 0, pinnedBlocks: 0 })
+  })
+
+  it('reports required pins and overshoot separately from the evictable row budget', () => {
+    const store = createTranscriptRenderStore({ maxRows: 1, maxBytes: 10_000,
+      rebuild: ({ blockId, source }) => [plainLine(blockId, 0, source, 0, source.length)] })
+    store.setPins({ pinned: ['a', 'b'] })
+    for (const id of ['a', 'b']) {
+      store.upsertSource({ blockId: id, source: id, scopeKey: '80' })
+      store.readBlock({ blockId: id })
+    }
+    expect(store.stats()).toMatchObject({ pinnedBlocks: 2, pinnedRows: 2, overBudgetRows: 1 })
+    store.clearPins()
+    expect(store.stats()).toMatchObject({ pinnedBlocks: 0, pinnedRows: 0, overBudgetRows: 0, cachedRows: 1 })
+    expect(store.stats().sourceEntries).toBe(2)
   })
 })

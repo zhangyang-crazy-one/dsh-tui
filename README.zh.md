@@ -15,9 +15,9 @@ kind: "package-group"
 
 `@crazyhappyone/dsh-tui` 是 DeepSeek Harness（dsh）的终端界面，以 dsh **插件 bundle** 加 `dsh-tui` launcher 的形式发布。包声明了 `dsh.bundle`，因此 dsh 会像安装其他插件一样把它装进 profile；launcher 只负责自动完成这一安装并启动 profile。本仓库拥有插件源码（`tui/`、`tui-render/`）。Agent、会话、工具、持久化、provider、权限与 profile 组装仍由 DSH 拥有。
 
-## 0.1.0-alpha.53 版本
+## 0.1.0-alpha.55 版本
 
-本预发布版面向 DSH `0.2.1-rc.2`。`defaultInput` 等纯字符串数组改为原位编辑，设置详情按可见行数截断长值，未变化的已完成聊天行复用投影。验证边界见 [changelog](CHANGELOG.md#010-alpha53--2026-10-22)。
+本预发布版面向 DSH `0.2.1-rc.3`，修复跨块终端输出边界与慢输出恢复，限制长草稿绘制范围，并增量准备聊天历史。CI 与 npm 发布共用绑定源码的构建、测试及打包验证链。详见 [changelog](CHANGELOG.md#010-alpha55--2026-10-26) 和[验证记录](docs/upstream-rc3-2026-10-26.md)。
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -35,7 +35,7 @@ dsh-tui
 
 ## 目录
 
-- [版本与升级](#010-alpha53-版本)
+- [版本与升级](#010-alpha55-版本)
 - [Changelog](CHANGELOG.md)
 - [终端能力](#终端能力)
 - [截图](#screenshots)
@@ -75,7 +75,7 @@ dsh-tui
 全局安装官方引擎与 TUI launcher：
 
 ```text
-npm install --global @deepseek-ai/dsh
+npm install --global @deepseek-ai/dsh@0.2.1-rc.3
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui probe
 dsh-tui
@@ -92,7 +92,7 @@ dsh --profile deepseek-tui
 
 探测顺序为绝对路径 `DSH_BIN`、PATH、npm/pnpm 全局包、工作目录和 launcher 目录可解析的本地包；每个探测子进程限时十秒，以覆盖冷启动。显式 `DSH_BIN` 失败时不会选择其他安装。包内 bin 使用 launcher 的 Node 执行。
 
-本 bundle 面向 dsh `0.2` 发布线（基于 `0.2.1-rc.2` 构建，并在 `0.2.1-alpha.2` 上验证）。包把 `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` 声明为可选 peer，因此手动安装时由 dsh 自身的插件兼容性检查把关；launcher 会拒绝其他引擎发布线并给出确切的安装命令，设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过 launcher 的检查。
+本 bundle 面向 dsh `0.2` 发布线（基于 `0.2.1-rc.3` 构建和测试）。包把 `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` 声明为可选 peer，因此手动安装时由 dsh 自身的插件兼容性检查把关；launcher 会拒绝其他引擎发布线并给出确切的安装命令，设置 `DSH_TUI_SKIP_ENGINE_CHECK=1` 可跳过 launcher 的检查。
 
 ### 模式 B：源码模式（开发者调试）
 若需对 TUI 或 DSH 底层代码进行修改与调试：
@@ -142,13 +142,13 @@ dsh-tui update
 <a id="configure-the-source-runtime"></a>
 ## 配置源码运行时
 
-默认使用官方公开仓库的 `dsh-v0.2.1-rc.2` tag。源码模式会将本插件链接到现有 `deepseek-tui` profile，保留用户 patch；缺少 Typert 运行时产物时先调用上游生成器。随后通过 `pnpm exec node` 启动源码 CLI，不运行每次都会安装整个工作区的 `predsh` 钩子。
+默认使用官方公开仓库的 `dsh-v0.2.1-rc.3` tag。源码模式会将本插件链接到现有 `deepseek-tui` profile，保留用户 patch；缺少 Typert 运行时产物时先调用上游生成器。随后通过 `pnpm exec node` 启动源码 CLI，不运行每次都会安装整个工作区的 `predsh` 钩子。
 
 | 环境变量 | 默认值 | 用途 |
 |---|---|---|
 | `DSH_TUI_RUNTIME_DIR` | `~/.local/share/dsh-tui/runtime` | 仅供 launcher 使用的专用 clone |
 | `DSH_TUI_SOURCE_URL` | `https://github.com/deepseek-ai/deepseek-harness.git` | `update` clone 和 fetch 的 Git remote |
-| `DSH_TUI_SOURCE_REF` | `dsh-v0.2.1-rc.2` | `update` fetch 的 branch 或 ref |
+| `DSH_TUI_SOURCE_REF` | `dsh-v0.2.1-rc.3` | `update` fetch 的 branch 或 ref |
 | `DSH_TUI_PNPM` | `pnpm` | 安装和启动所用的 pnpm executable |
 
 所有值都不得为空，运行时目录必须是绝对路径。Launcher 会拒绝 symbolic-link runtime path，也会拒绝不是 Git checkout 的现有目录。Child command 接收参数数组，不使用 shell interpolation。
@@ -241,18 +241,16 @@ attribution `User-Agent`。
 
 `tui/` 与 `tui-render/` 基于上游 dsh checkout 编译，版本为 `src/launcher.js` 中 `COMPATIBLE_DSH_VERSION` 指定的 tag：
 
-```text
-git clone --branch dsh-v0.2.1-rc.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
-(cd ../deepseek-harness && pnpm install)
-npm run build          # 或 DSH_SOURCE=/path/to/checkout npm run build
-(cd ../deepseek-harness && pnpm install) # 链接挂载后的插件开发依赖
-npm run dev:setup      # 同样支持 DSH_SOURCE；生成类型声明并链接编辑器依赖
-npm run typecheck      # 严格检查源码和测试
+```sh
+git clone --branch dsh-v0.2.1-rc.3 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
+# 启用该 checkout 的 packageManager 声明的 pnpm 版本。
+DSH_SOURCE=../deepseek-harness npm run validate
+npm run verify:artifact
 ```
 
-`npm run build` 把插件包与 `cordis.patch.yml` 复制进 checkout 的 `packages/tui/` workspace，用 esbuild 打包 `dist/index.js`、`dist/startup.js`、`dist/settings.js`、`dist/schedule.js` 与 `dist/zen-proxy.js`，并逐个检查导入。插件测试在 checkout 中运行 `npx vitest run packages/tui`，launcher 测试在本仓库运行 `npm test`；发布前运行 `npm run pack:check`。通过 packed tarball 或 `dsh plugin --profile <name> add <本目录>` 测试安装。
+`DSH_SOURCE` 仅用作只读 clone 来源。验证会创建工具拥有的临时 DSH 工作区，挂载当前插件源码、安装固定锁文件、生成依赖声明与原生模块，检查四个 TypeScript 项目、构建五个 bundle、执行根目录和完整 TUI 测试，再从实际 tarball 导入五个入口。provenance 文件绑定源码、DSH commit、工具链、bundle 与 tarball。
 
-本地 `tsconfig.json` 用于独立插件仓库的编辑器检查；构建时使用 `tsconfig.workspace.json` 作为 checkout 中的包配置，保留上游项目引用。`dev:setup` 构建依赖类型声明并链接整个 `node_modules` 目录，保留 pnpm 的相对链接。更新上游或公开类型后重新执行 build 和 setup；编辑器若仍显示旧的缺失模块错误，需要重载 TypeScript 项目。
+增量开发可运行 `npm run build`、`npm run typecheck` 和 `npm run test:tui`，共用上述隔离准备；`npm run dev:setup` 准备编辑器依赖并保留已有链接。源码变化后及发布前执行完整验证。
 
 -----
 
@@ -275,7 +273,7 @@ npx --yes npm@11 trust github @crazyhappyone/dsh-tui \
 每次发布时，先提升 `package.json` 版本，等待 CI 通过并合并，然后创建 tag 与 package version 一致的 GitHub Release：
 
 ```text
-gh release create v0.1.0-alpha.50 --prerelease --notes-file docs/releases/v0.1.0-alpha.50.md
+gh release create v0.1.0-alpha.55 --prerelease --notes-file docs/releases/v0.1.0-alpha.55.md
 ```
 
 `Publish npm` workflow 会在发布前再次运行测试与 packed-package 验证。不要重新运行旧的 release tag：npm version 不可覆盖。提升到 stable 必须使用新版本并发布 non-prerelease GitHub Release。

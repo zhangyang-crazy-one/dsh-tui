@@ -1,0 +1,17 @@
+{
+  "commit": "1d25152831ede97cd2f706967020dd23f1053f1d",
+  "node": "v22.23.1",
+  "platform": "Linux-7.1.6-201.fc44.x86_64-x86_64-with-glibc2.43",
+  "sourceSha256": {
+    "tui-render/src/stream-view.tsx": "96b02d374224c1a929925a54a9b30d07f9f05e7971804e7a1ddb293d689b3e3e",
+    "tui-render/src/history-data.ts": "fbe7739e6bbc63c8d7f16af4f22cefe8f8387b030baee0ed28401004390f6a46",
+    "tui-render/src/transcript-line-store.ts": "f7c23a283959dd8b97ad3cdddd2892b2f2d9bf6e7a424cc8f4d3e4e8dc9063b3",
+    "tui-render/tests/history-benchmark.tsx": "368073ddf9f9a570c9a1af8b6e25810be22eb18763b049e8041a896982f42c9e",
+    "tui-render/tests/history-data.spec.ts": "144f17cfdc1180798c1e45ca124585655fa4fc76926089a4fe580035a65a42c9",
+    "tui-render/tests/stream-history.spec.tsx": "82098e937758113541ac56539f8fd308744571c4264709232a3c8ebc10e752d3",
+    "tui-render/tests/transcript-line-store.spec.ts": "48c42ce92e1ddde86ec74c101a150f4b204b0da0208b50709618d8e0e93c2f65"
+  },
+  "baseline": "HEAD stream-view.tsx and transcript-line-store.ts only; other source and dependencies held current; stream-view transformed with TypeScript jsx=ReactJSX, target=ES2024, module=ESNext into /tmp to run with identical automatic JSX behavior",
+  "configuration": "/tmp/dsh-tui-apply-vitest.config.mjs; direct current-repository source, local upstream dependency links; no upstream files written",
+  "status": "Final frozen history source; this continuation changed stream-view.tsx, history-data.ts, stream-history.spec.tsx only. Full final gate PASS is reported by parent; local targeted-final.log and frozen-source-regression.log were executed here."
+}

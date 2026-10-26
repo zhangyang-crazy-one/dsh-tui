@@ -1,0 +1,16 @@
+{
+  "head": "1d25152831ede97cd2f706967020dd23f1053f1d",
+  "node": "v22.23.1",
+  "files": {
+    "tui-render/src/composer-index.ts": "f85c908d9bf318d4c9b6e4e613dd04e30934d909749acd8e2a1e6db674c2557a",
+    "tui-render/src/composer-cursor.ts": "c4f2506042e5cd52d0aa905b2c1ef2d5163d473e38a70b2ac8506559852a6b52",
+    "tui-render/src/input-bar.tsx": "8b42868e67be9bf8e204e4aa3ccc8fabab9afc6df29284bacde5258e0100c3e2",
+    "tui-render/src/input-selection.ts": "a788862b32e1ec1305e562a5b15799b4785afde28adc085112f67c39ba76f2b0",
+    "tui-render/tests/composer-index.spec.ts": "fb8432461371d4bae48a581d0131cba55ec0d5ddebe3a35a2f5fb146ff996fec",
+    "tui-render/tests/composer-cursor.spec.ts": "549d4b6f07da862768a97a22c5406a294d720841d1d3e68ca3e6b2bd815a3c17",
+    "tui-render/tests/input-bar-window.spec.tsx": "1e3cce30317755f0501ac9a5994922e46f570ab41979680c20400578c2f1bbc3",
+    "tui-render/tests/input-selection.spec.ts": "004c5e1be2bfb39f8d30c39f92f3d3daae123cb77b6ab2e272747ff661bcc649",
+    "tui-render/tests/composer-benchmark.mjs": "5c7fdbba7e0d844260a426d99abf8bf7ebe7ac17c523cb237187ba2205a07e82",
+    "tui-render/tests/composer-pty-fixture.tsx": "24dd960ce4b70b64562c88611bbbd7533e7f41f4df776e1ed7de1e059e6573d5"
+  }
+}

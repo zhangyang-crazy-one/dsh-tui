@@ -1,0 +1,631 @@
+{
+  "node": "v22.23.1",
+  "source": "/tmp/dsh-composer-phase5/baseline/tui-render/src",
+  "ptyMetric": "PTY input write to post-waitUntilRenderFlush acknowledgement; fixture settles pending throttle, maxFps 120; not physical terminal latency",
+  "geometry": [
+    {
+      "columns": 80,
+      "rows": 24
+    },
+    {
+      "columns": 120,
+      "rows": 40
+    }
+  ],
+  "hashes": {
+    "input-bar.tsx": "fda9de5356354d1cbf057dfd82acde53674567f198d742b4c6ba25d36687a44f",
+    "composer-cursor.ts": "029a8a34bed050e72c7ae4b83a855eab09ad2c5e4559a1ce8ed3f480683da621"
+  },
+  "ssr": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 13.727576999999997,
+      "warmSamplesMs": [
+        15.386273000000017,
+        12.102983999999992,
+        11.724064999999996,
+        11.62304499999999,
+        11.666186000000039
+      ],
+      "warmMedianMs": 11.724064999999996
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 81.71122600000012,
+      "warmSamplesMs": [
+        49.01176499999997,
+        58.1678730000001,
+        46.906089000000065,
+        52.59304399999996,
+        54.77277100000015
+      ],
+      "warmMedianMs": 52.59304399999996
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 514.471321,
+      "warmSamplesMs": [
+        455.5362369999998,
+        448.4347229999994,
+        454.6334939999997,
+        409.83903699999973,
+        400.7137480000001
+      ],
+      "warmMedianMs": 448.4347229999994
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 23.716316000001825,
+      "warmSamplesMs": [
+        18.934769000003143,
+        19.289411999998265,
+        19.96935200000007,
+        19.84375899999941,
+        13.741457000000082
+      ],
+      "warmMedianMs": 19.289411999998265
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 89.09806700000263,
+      "warmSamplesMs": [
+        48.35271900000225,
+        53.415439999997034,
+        46.58628900000258,
+        54.20543600000019,
+        53.327987999997276
+      ],
+      "warmMedianMs": 53.327987999997276
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 439.75827800000116,
+      "warmSamplesMs": [
+        410.5922009999995,
+        443.01964299999963,
+        463.08307499999864,
+        470.38278499999797,
+        480.6923420000021
+      ],
+      "warmMedianMs": 463.08307499999864
+    }
+  ],
+  "operations": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 4067,
+      "segmentedSourceUnits": 120175
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 40067,
+      "segmentedSourceUnits": 1200175
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 400067,
+      "segmentedSourceUnits": 12000175
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 4067,
+      "segmentedSourceUnits": 121408
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 40067,
+      "segmentedSourceUnits": 1201408
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 400067,
+      "segmentedSourceUnits": 12001408
+    }
+  ],
+  "pty": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 700,
+          "caret": 699,
+          "ms": 13.51216599999998
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 700,
+          "caret": 698,
+          "ms": 9.470215000000053
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 700,
+          "caret": 697,
+          "ms": 10.890174000000115
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 700,
+          "caret": 695,
+          "ms": 8.438069000000041
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 700,
+          "caret": 694,
+          "ms": 7.9932960000001
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 701,
+          "caret": 695,
+          "ms": 8.892681000000039
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 702,
+          "caret": 696,
+          "ms": 8.935320000000047
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 703,
+          "caret": 697,
+          "ms": 7.677655999999843
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 704,
+          "caret": 698,
+          "ms": 6.996821999999838
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 705,
+          "caret": 699,
+          "ms": 7.923655999999937
+        }
+      ],
+      "moveMedianMs": 9.470215000000053,
+      "insertMedianMs": 7.923655999999937
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 7000,
+          "caret": 6999,
+          "ms": 58.701202000000194
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 7000,
+          "caret": 6998,
+          "ms": 57.46406200000001
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 7000,
+          "caret": 6997,
+          "ms": 52.99047800000017
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 7000,
+          "caret": 6995,
+          "ms": 53.03849200000013
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 7000,
+          "caret": 6994,
+          "ms": 53.1349680000003
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 7001,
+          "caret": 6995,
+          "ms": 49.7061990000002
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 7002,
+          "caret": 6996,
+          "ms": 50.099067000000105
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 7003,
+          "caret": 6997,
+          "ms": 51.18822200000022
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 7004,
+          "caret": 6998,
+          "ms": 49.563596999999845
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 7005,
+          "caret": 6999,
+          "ms": 48.88917199999969
+        }
+      ],
+      "moveMedianMs": 53.1349680000003,
+      "insertMedianMs": 49.7061990000002
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 70000,
+          "caret": 69999,
+          "ms": 406.60905000000093
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 70000,
+          "caret": 69998,
+          "ms": 405.7386869999991
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 70000,
+          "caret": 69997,
+          "ms": 396.5499340000006
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 70000,
+          "caret": 69995,
+          "ms": 416.7609589999993
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 70000,
+          "caret": 69994,
+          "ms": 403.6543160000001
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 70001,
+          "caret": 69995,
+          "ms": 396.0241649999989
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 70002,
+          "caret": 69996,
+          "ms": 390.2193239999997
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 70003,
+          "caret": 69997,
+          "ms": 384.7026450000012
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 70004,
+          "caret": 69998,
+          "ms": 390.0410010000014
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 70005,
+          "caret": 69999,
+          "ms": 382.39265800000067
+        }
+      ],
+      "moveMedianMs": 405.7386869999991,
+      "insertMedianMs": 390.0410010000014
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 700,
+          "caret": 699,
+          "ms": 15.060961999999563
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 700,
+          "caret": 698,
+          "ms": 12.078290000001289
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 700,
+          "caret": 697,
+          "ms": 11.208903999999166
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 700,
+          "caret": 695,
+          "ms": 9.178422000000865
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 700,
+          "caret": 694,
+          "ms": 9.578779999999824
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 701,
+          "caret": 695,
+          "ms": 8.941823999997723
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 702,
+          "caret": 696,
+          "ms": 8.507761999997456
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 703,
+          "caret": 697,
+          "ms": 8.81044699999984
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 704,
+          "caret": 698,
+          "ms": 9.665348999998969
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 705,
+          "caret": 699,
+          "ms": 8.427848999999696
+        }
+      ],
+      "moveMedianMs": 11.208903999999166,
+      "insertMedianMs": 8.81044699999984
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 7000,
+          "caret": 6999,
+          "ms": 51.496823000001314
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 7000,
+          "caret": 6998,
+          "ms": 50.7812780000022
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 7000,
+          "caret": 6997,
+          "ms": 46.87847199999669
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 7000,
+          "caret": 6995,
+          "ms": 47.400776000002224
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 7000,
+          "caret": 6994,
+          "ms": 45.895260000001144
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 7001,
+          "caret": 6995,
+          "ms": 45.10743799999909
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 7002,
+          "caret": 6996,
+          "ms": 43.76432600000044
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 7003,
+          "caret": 6997,
+          "ms": 47.00304699999833
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 7004,
+          "caret": 6998,
+          "ms": 44.61142599999948
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 7005,
+          "caret": 6999,
+          "ms": 43.42596699999922
+        }
+      ],
+      "moveMedianMs": 47.400776000002224,
+      "insertMedianMs": 44.61142599999948
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 70000,
+          "caret": 69999,
+          "ms": 415.67224500000157
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 70000,
+          "caret": 69998,
+          "ms": 409.66030599999795
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 70000,
+          "caret": 69997,
+          "ms": 412.9710219999979
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 70000,
+          "caret": 69995,
+          "ms": 418.76458600000115
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 70000,
+          "caret": 69994,
+          "ms": 421.883259000002
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 70001,
+          "caret": 69995,
+          "ms": 407.4837050000024
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 70002,
+          "caret": 69996,
+          "ms": 399.689314999996
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 70003,
+          "caret": 69997,
+          "ms": 401.142651999995
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 70004,
+          "caret": 69998,
+          "ms": 410.4958869999973
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 70005,
+          "caret": 69999,
+          "ms": 447.495342000002
+        }
+      ],
+      "moveMedianMs": 415.67224500000157,
+      "insertMedianMs": 407.4837050000024
+    }
+  ]
+}

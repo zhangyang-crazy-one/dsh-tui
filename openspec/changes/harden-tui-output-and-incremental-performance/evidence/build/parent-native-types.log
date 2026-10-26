@@ -1,0 +1,2 @@
+build: built linux-x64/bin/glibc/system.node
+Plugin sources and tests passed strict type checking (4 projects).

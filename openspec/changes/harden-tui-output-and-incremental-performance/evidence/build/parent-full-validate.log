@@ -1,0 +1,892 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.54 validate
+> node scripts/validation.js
+
+native/system/packages/darwin-arm64      | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["darwin"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+native/system/packages/darwin-x64        | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["darwin"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+native/system/packages/linux-arm64       | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+Scope: 300 of 369 workspace projects
+.                                        | [WARN] There are cyclic workspace dependencies: /tmp/dsh-tui-validation-FsLbEW/dsh/vendor/cordis, /tmp/dsh-tui-validation-FsLbEW/dsh/vendor/include; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/core/agent-default-model, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/settings/settings; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/core/agent-loop, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/session/session-persistence-jsonl, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/session/session-format-catalog, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/compaction/compaction-image-offload, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/compaction/compaction-basic, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/llm/llm-retry; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/core/tools, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/session/working-directory, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/session/tool-working-directory; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/llm/llm-deepseek-api-key, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/llm/llm-deepseek, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/llm/llm-deepseek-account; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/preset/agent-preset-registry, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/preset/agent-preset; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/extensions/cordis-host-runner, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/api/remote-access, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/ui-renderer, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/test-support/client-runtime, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/bundle/web-app, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/extensions/tool-cordis; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/api/session-controller, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/file-upload, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/api/remotes, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/ui-plugin-manager, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/ui-sidebar, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/ui-workspace, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/client/ui-conversation; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/sandbox/sandbox-local, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/sandbox/sandbox-windows-acl; /tmp/dsh-tui-validation-FsLbEW/dsh/packages/subagent/subagent-spawn-in-process, /tmp/dsh-tui-validation-FsLbEW/dsh/packages/subagent/tool-subagent
+✓ Lockfile passes supply-chain policies (verified 1h ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+.                                        |    +1151 ++++++++++++++++++++++++++++
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/zhangyangrui/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 1151, reused 1147, downloaded 0, added 1151, done
+.../.pnpm/koffi@3.1.1/node_modules/koffi install$ node ./cnoke.cjs -P . -D src/koffi --prebuild --release
+.../.pnpm/koffi@3.1.1/node_modules/koffi install: Done
+.../node_modules/lefthook postinstall$ node postinstall.js
+.../node_modules/lefthook postinstall: sync hooks: ✔️(pre-merge-commit, pre-commit, pre-push)
+.../node_modules/lefthook postinstall: Done
+packages/subprocess/subprocess-local postinstall$ node scripts/ensure-spawn-helper.mjs
+packages/subprocess/subprocess-local postinstall: Done
+. postinstall$ node scripts/install-lefthook.mjs
+. postinstall: sync hooks: ✔️(pre-commit, pre-merge-commit, pre-push)
+. postinstall: Done
+Done in 3.2s using pnpm v11.28.5
+Validation workspace: /tmp/dsh-tui-validation-FsLbEW
+generate-typert: wrote 30 Typert artifact(s) for 30 package(s) in 2.8s
+build: built linux-x64/bin/glibc/system.node
+Plugin sources and tests passed strict type checking (4 projects).
+Building dist/index.js...
+
+  ../../../home/zhangyangrui/my_programes/dsh-tui/dist/index.js  4.3mb ⚠️
+
+⚡ Done in 118ms
+Building dist/startup.js...
+
+  ../../../home/zhangyangrui/my_programes/dsh-tui/dist/startup.js  110.5kb
+
+⚡ Done in 7ms
+Building dist/settings.js...
+
+  ../../../home/zhangyangrui/my_programes/dsh-tui/dist/settings.js  35.3kb
+
+⚡ Done in 5ms
+Building dist/schedule.js...
+
+  ../../../home/zhangyangrui/my_programes/dsh-tui/dist/schedule.js  1.3mb ⚠️
+
+⚡ Done in 35ms
+Building dist/zen-proxy.js...
+
+  ../../../home/zhangyangrui/my_programes/dsh-tui/dist/zen-proxy.js  38.1kb
+
+⚡ Done in 6ms
+dsh-tui bundle built against dsh 0.2.1-rc.2.
+TAP version 13
+# Subtest: the CLI finds a local package without PATH shims and launches its non-executable bin once
+ok 1 - the CLI finds a local package without PATH shims and launches its non-executable bin once
+  ---
+  duration_ms: 105.383012
+  type: 'test'
+  ...
+# Subtest: parses management commands and the pass-through separator
+ok 2 - parses management commands and the pass-through separator
+  ---
+  duration_ms: 1.428289
+  type: 'test'
+  ...
+# Subtest: resolves stable deployment defaults and rejects empty overrides
+ok 3 - resolves stable deployment defaults and rejects empty overrides
+  ---
+  duration_ms: 0.516369
+  type: 'test'
+  ...
+# Subtest: version reports an uninitialized runtime without creating it
+ok 4 - version reports an uninitialized runtime without creating it
+  ---
+  duration_ms: 0.331572
+  type: 'test'
+  ...
+# Subtest: version reports the runtime SHA and DSH package version
+ok 5 - version reports the runtime SHA and DSH package version
+  ---
+  duration_ms: 0.225077
+  type: 'test'
+  ...
+# Subtest: launch forwards arguments and returns the child status
+ok 6 - launch forwards arguments and returns the child status
+  ---
+  duration_ms: 0.302523
+  type: 'test'
+  ...
+# Subtest: launch rejects an absent runtime and a symbolic-link runtime
+ok 7 - launch rejects an absent runtime and a symbolic-link runtime
+  ---
+  duration_ms: 0.844626
+  type: 'test'
+  ...
+# Subtest: update clones an absent runtime and installs frozen dependencies
+ok 8 - update clones an absent runtime and installs frozen dependencies
+  ---
+  duration_ms: 0.350241
+  type: 'test'
+  ...
+# Subtest: update redacts source credentials from clone failures
+ok 9 - update redacts source credentials from clone failures
+  ---
+  duration_ms: 0.183198
+  type: 'test'
+  ...
+# Subtest: update rejects a dirty runtime before fetching
+ok 10 - update rejects a dirty runtime before fetching
+  ---
+  duration_ms: 0.131014
+  type: 'test'
+  ...
+# Subtest: update fast-forwards a clean runtime and refreshes dependencies
+ok 11 - update fast-forwards a clean runtime and refreshes dependencies
+  ---
+  duration_ms: 0.204749
+  type: 'test'
+  ...
+# Subtest: update rejects divergent history before merge
+ok 12 - update rejects divergent history before merge
+  ---
+  duration_ms: 0.123937
+  type: 'test'
+  ...
+# Subtest: update reports dependency recovery after a successful fast-forward
+ok 13 - update reports dependency recovery after a successful fast-forward
+  ---
+  duration_ms: 0.085349
+  type: 'test'
+  ...
+# Subtest: parseLauncherInvocation parses probe, --source, and --lightweight options
+ok 14 - parseLauncherInvocation parses probe, --source, and --lightweight options
+  ---
+  duration_ms: 0.095469
+  type: 'test'
+  ...
+# Subtest: probeInstalledDsh respects DSH_BIN override and inspects exit code
+ok 15 - probeInstalledDsh respects DSH_BIN override and inspects exit code
+  ---
+  duration_ms: 0.271731
+  type: 'test'
+  ...
+# Subtest: probeInstalledDsh probes PATH dsh --version
+ok 16 - probeInstalledDsh probes PATH dsh --version
+  ---
+  duration_ms: 0.170656
+  type: 'test'
+  ...
+# Subtest: probe command outputs probe details
+ok 17 - probe command outputs probe details
+  ---
+  duration_ms: 0.220247
+  type: 'test'
+  ...
+# Subtest: lightweight launch installs this package as the tui bundle, then boots the profile
+ok 18 - lightweight launch installs this package as the tui bundle, then boots the profile
+  ---
+  duration_ms: 0.215019
+  type: 'test'
+  ...
+# Subtest: lightweight launch reports a failed bundle install without booting
+ok 19 - lightweight launch reports a failed bundle install without booting
+  ---
+  duration_ms: 0.104977
+  type: 'test'
+  ...
+# Subtest: default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime
+ok 20 - default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime
+  ---
+  duration_ms: 0.0953
+  type: 'test'
+  ...
+# Subtest: default auto launch rejects a failed env DSH_BIN despite an initialized source runtime
+ok 21 - default auto launch rejects a failed env DSH_BIN despite an initialized source runtime
+  ---
+  duration_ms: 0.042837
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with no override
+ok 22 - default auto launch falls back to initialized source with no override
+  ---
+  duration_ms: 0.211759
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with blank env override
+ok 23 - default auto launch falls back to initialized source with blank env override
+  ---
+  duration_ms: 0.096614
+  type: 'test'
+  ...
+# Subtest: default auto launch falls back to initialized source with blank settings override masking env
+ok 24 - default auto launch falls back to initialized source with blank settings override masking env
+  ---
+  duration_ms: 0.091161
+  type: 'test'
+  ...
+# Subtest: launch with --source forces source mode even if bundled patch and DSH_BIN exist
+ok 25 - launch with --source forces source mode even if bundled patch and DSH_BIN exist
+  ---
+  duration_ms: 0.113092
+  type: 'test'
+  ...
+# Subtest: launch provides friendly installation guidance when dsh is absent and runtime uninitialized
+ok 26 - launch provides friendly installation guidance when dsh is absent and runtime uninitialized
+  ---
+  duration_ms: 0.062668
+  type: 'test'
+  ...
+# Subtest: DSH_BIN requires an absolute path and a failed override does not select another installation
+ok 27 - DSH_BIN requires an absolute path and a failed override does not select another installation
+  ---
+  duration_ms: 0.061821
+  type: 'test'
+  ...
+# Subtest: discovers npm global package bin from its manifest when PATH is unavailable
+ok 28 - discovers npm global package bin from its manifest when PATH is unavailable
+  ---
+  duration_ms: 0.945357
+  type: 'test'
+  ...
+# Subtest: discovers pnpm global package bin from its manifest when PATH is unavailable
+ok 29 - discovers pnpm global package bin from its manifest when PATH is unavailable
+  ---
+  duration_ms: 0.113741
+  type: 'test'
+  ...
+# Subtest: local package launch reuses the probe and preserves profile, app args, and exit status
+ok 30 - local package launch reuses the probe and preserves profile, app args, and exit status
+  ---
+  duration_ms: 0.211983
+  type: 'test'
+  ...
+# Subtest: unusable package candidates are diagnosed and duplicate global roots are only probed once
+ok 31 - unusable package candidates are diagnosed and duplicate global roots are only probed once
+  ---
+  duration_ms: 0.178223
+  type: 'test'
+  ...
+# Subtest: an installed tui bundle is not reinstalled and PATH success stops package discovery
+ok 32 - an installed tui bundle is not reinstalled and PATH success stops package discovery
+  ---
+  duration_ms: 0.130569
+  type: 'test'
+  ...
+# Subtest: engineCompatibility admits the bundle release line and rejects other lines with an install hint
+ok 33 - engineCompatibility admits the bundle release line and rejects other lines with an install hint
+  ---
+  duration_ms: 0.061578
+  type: 'test'
+  ...
+# Subtest: source launch prepares generated contracts, links this bundle into the existing profile, then boots directly
+ok 34 - source launch prepares generated contracts, links this bundle into the existing profile, then boots directly
+  ---
+  duration_ms: 0.163389
+  type: 'test'
+  ...
+# Subtest: ready source launch does not reinstall dependencies or regenerate contracts
+ok 35 - ready source launch does not reinstall dependencies or regenerate contracts
+  ---
+  duration_ms: 0.127309
+  type: 'test'
+  ...
+# Subtest: source contract generation failure stops before plugin installation or terminal boot
+ok 36 - source contract generation failure stops before plugin installation or terminal boot
+  ---
+  duration_ms: 0.140163
+  type: 'test'
+  ...
+# Subtest: lightweight mode reuses the same configured profile as source mode
+ok 37 - lightweight mode reuses the same configured profile as source mode
+  ---
+  duration_ms: 0.119182
+  type: 'test'
+  ...
+# Subtest: profile selection is explicit and leaves app arguments after the separator alone
+ok 38 - profile selection is explicit and leaves app arguments after the separator alone
+  ---
+  duration_ms: 0.143279
+  type: 'test'
+  ...
+# Subtest: both launch modes install and boot the explicitly selected official profile
+ok 39 - both launch modes install and boot the explicitly selected official profile
+  ---
+  duration_ms: 0.17393
+  type: 'test'
+  ...
+# Subtest: real source update clones, fast-forwards, and rejects dirty or divergent runtime state
+ok 40 - real source update clones, fast-forwards, and rejects dirty or divergent runtime state
+  ---
+  duration_ms: 298.893651
+  type: 'test'
+  ...
+# Subtest: launch preserves the shell-visible child signal outcome
+ok 41 - launch preserves the shell-visible child signal outcome
+  ---
+  duration_ms: 198.208806
+  type: 'test'
+  ...
+# TAP version 13
+# \# Subtest: cwd
+# ok 1 - cwd
+#   ---
+#   duration_ms: 0.566647
+#   type: 'test'
+#   ...
+# 1..1
+# \# tests 1
+# \# suites 0
+# \# pass 1
+# \# fail 0
+# \# cancelled 0
+# \# skipped 0
+# \# todo 0
+# \# duration_ms 37.81679
+# TAP version 13
+# \# Subtest: current failure
+# not ok 1 - current failure
+#   ---
+#   duration_ms: 0.457471
+#   type: 'test'
+#   location: '/tmp/dsh-tui-validation-test-aKLqC5/tests/current.test.js:1:22'
+#   failureType: 'testCodeFailure'
+#   error: 'sentinel'
+#   code: 'ERR_TEST_FAILURE'
+#   stack: |-
+#     TestContext.<anonymous> (/tmp/dsh-tui-validation-test-aKLqC5/tests/current.test.js:1:56)
+#     Test.runInAsyncScope (node:async_hooks:214:14)
+#     Test.run (node:internal/test_runner/test:1106:25)
+#     Test.start (node:internal/test_runner/test:1003:17)
+#     startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
+#   ...
+# 1..1
+# \# tests 1
+# \# suites 0
+# \# pass 0
+# \# fail 1
+# \# cancelled 0
+# \# skipped 0
+# \# todo 0
+# \# duration_ms 40.452492
+#  RUN  v4.1.11 /tmp/dsh-tui-validation-test-FvVJKY/old
+#  ✓ packages/tui/tui/tests/sentinel.spec.ts (1 test) 2ms
+#  Test Files  1 passed (1)
+#       Tests  1 passed (1)
+#    Start at  20:34:17
+#    Duration  103ms (transform 8ms, setup 0ms, import 16ms, tests 2ms, environment 0ms)
+# JSON report written to /tmp/dsh-tui-validation-test-FvVJKY/tui-tests.json
+#  RUN  v4.1.11 /tmp/dsh-tui-validation-test-FvVJKY/old
+#  ❯ packages/tui/tui/tests/sentinel.spec.ts (1 test | 1 failed) 2ms
+#    × CURRENT_SOURCE_SENTINEL 2ms
+# ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+#  FAIL  packages/tui/tui/tests/sentinel.spec.ts > CURRENT_SOURCE_SENTINEL
+# Error: CURRENT_SOURCE_SENTINEL
+#  ❯ packages/tui/tui/tests/sentinel.spec.ts:1:72
+#       1| import {test} from 'vitest'; test('CURRENT_SOURCE_SENTINEL',()=>{throw…
+#        |                                                                        ^
+#       2|
+# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+#  Test Files  1 failed (1)
+#       Tests  1 failed (1)
+#    Start at  20:34:18
+#    Duration  119ms (transform 26ms, setup 0ms, import 33ms, tests 2ms, environment 0ms)
+# JSON report written to /tmp/dsh-tui-validation-test-FvVJKY/tui-tests.json
+#  RUN  v4.1.11 /tmp/dsh-tui-validation-test-FvVJKY/old
+# No test files found, exiting with code 1
+# filter: packages/tui/tui/tests, packages/tui/tui-render/tests
+# include: packages/tui/*/tests/**/*.spec.ts
+# exclude:  **/node_modules/**, **/.git/**
+# JSON report written to /tmp/dsh-tui-validation-test-FvVJKY/tui-tests.json
+# file:///tmp/dsh-tui-validation-test-RLoyad/bad/packed/package/dist/runtime.js:1
+# throw Error('PACKED_IMPORT_SENTINEL')
+#       ^
+# Error: PACKED_IMPORT_SENTINEL
+#     at file:///tmp/dsh-tui-validation-test-RLoyad/bad/packed/package/dist/runtime.js:1:7
+#     at ModuleJob.run (node:internal/modules/esm/module_job:413:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:660:26)
+#     at async file:///tmp/dsh-tui-validation-test-RLoyad/bad/packed/package/[eval1]:1:1
+# Node.js v24.13.0
+# Subtest: preparation clones the compatible tag and leaves dirty upstream and symlink targets untouched
+ok 42 - preparation clones the compatible tag and leaves dirty upstream and symlink targets untouched
+  ---
+  duration_ms: 51.955927
+  type: 'test'
+  ...
+# Subtest: test report gate rejects zero tests, failures and skipped-only tests
+ok 43 - test report gate rejects zero tests, failures and skipped-only tests
+  ---
+  duration_ms: 0.285349
+  type: 'test'
+  ...
+# Subtest: root tests run in repository cwd, propagate failure and reject empty suites
+ok 44 - root tests run in repository cwd, propagate failure and reject empty suites
+  ---
+  duration_ms: 128.495145
+  type: 'test'
+  ...
+# Subtest: current failing TUI source cannot be hidden by a passing old workspace mirror
+ok 45 - current failing TUI source cannot be hidden by a passing old workspace mirror
+  ---
+  duration_ms: 878.077217
+  type: 'test'
+  ...
+# Subtest: build tool uses the declared tool link even when the store contains a newer esbuild
+ok 46 - build tool uses the declared tool link even when the store contains a newer esbuild
+  ---
+  duration_ms: 0.880646
+  type: 'test'
+  ...
+# Subtest: publication gate rejects changed source, bundles and tarball despite a matching commit
+ok 47 - publication gate rejects changed source, bundles and tarball despite a matching commit
+  ---
+  duration_ms: 10.012917
+  type: 'test'
+  ...
+# Subtest: packed entrypoints are imported from the archive, including import failures
+ok 48 - packed entrypoints are imported from the archive, including import failures
+  ---
+  duration_ms: 1440.577615
+  type: 'test'
+  ...
+# Subtest: source provenance includes new untracked code even in a source lib directory
+ok 49 - source provenance includes new untracked code even in a source lib directory
+  ---
+  duration_ms: 14.818089
+  type: 'test'
+  ...
+# Subtest: workspace freshness rejects both concurrent repository edits and isolated mirror edits
+ok 50 - workspace freshness rejects both concurrent repository edits and isolated mirror edits
+  ---
+  duration_ms: 43.043184
+  type: 'test'
+  ...
+# Subtest: lock provenance rejects a different upstream version, commit or lock before patching
+ok 51 - lock provenance rejects a different upstream version, commit or lock before patching
+  ---
+  duration_ms: 30.543644
+  type: 'test'
+  ...
+# Subtest: CI checks supported Node versions and the packed package
+ok 52 - CI checks supported Node versions and the packed package
+  ---
+  duration_ms: 0.694232
+  type: 'test'
+  ...
+# Subtest: release publishing uses GitHub OIDC and validates the release tag
+ok 53 - release publishing uses GitHub OIDC and validates the release tag
+  ---
+  duration_ms: 0.245529
+  type: 'test'
+  ...
+# Subtest: zen-proxy exposes the cordis plugin face
+ok 54 - zen-proxy exposes the cordis plugin face
+  ---
+  duration_ms: 2.403689
+  type: 'test'
+  ...
+# Subtest: zen-proxy serves unknown routes with 404 and disposes cleanly
+ok 55 - zen-proxy serves unknown routes with 404 and disposes cleanly
+  ---
+  duration_ms: 120.046553
+  type: 'test'
+  ...
+# Subtest: vendored source carries the official identity headers and dynamic ids
+ok 56 - vendored source carries the official identity headers and dynamic ids
+  ---
+  duration_ms: 0.25583
+  type: 'test'
+  ...
+1..56
+# tests 56
+# suites 0
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2658.72575
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /tmp/dsh-tui-validation-FsLbEW/dsh
+
+ ✓ |thread-safe| packages/tui/tui-render/tests/loop-keys.spec.tsx (119 tests) 27ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/stream-view.spec.tsx (79 tests) 2549ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/settings-pane-integration.spec.ts (56 tests) 1714ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/frame-fill.spec.ts (72 tests) 136ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/projection.spec.ts (34 tests) 21ms
+ ✓ |thread-safe| packages/tui/tui/tests/agent-hub.spec.ts (29 tests) 1540ms
+ ✓ |thread-safe| packages/tui/tui/tests/session-pane-integration.spec.ts (20 tests) 1866ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/markdown-projector.spec.ts (95 tests) 83ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/transcript-line-store.spec.ts (57 tests) 38ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/visual-conformance.spec.tsx (35 tests) 1736ms
+     ✓ keeps decisions and Goal footer visible at 80x24 with long input  387ms
+     ✓ keeps decisions and Goal footer visible at 40x16 with long input  305ms
+     ✓ keeps decisions and Goal footer visible at 120x40 with long input  374ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/loop-input.spec.tsx (46 tests | 1 skipped) 8800ms
+     ✓ preserves the composer byte-for-byte after ✗ 新建会话失败（当前会话保持可用）  376ms
+     ✓ preserves the composer byte-for-byte after ✗ 切换失败：resume unavailable（当前会话保持可用）  302ms
+     ✓ applies mounted timeline, help, and plan-review local scrolling  340ms
+     ✓ arms, clears, and expires the mounted g chord timer  842ms
+     ✓ keeps only the newest controller-owned mention result and aborts on unmount  564ms
+   ✓ preserves the chat draft around credential editing: cancel  330ms
+   ✓ preserves the chat draft around credential editing: failed-save  334ms
+     ✓ advances the footer without rerendering transcript or retokenizing the draft  612ms
+   ✓ stops the local spinner when generation settles and disposes its clock on unmount  716ms
+ ✓ |thread-safe| packages/tui/tui/tests/controller-defensive-coverage.spec.ts (23 tests) 488ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/table-layout.spec.ts (43 tests) 49ms
+ ✓ |thread-safe| packages/tui/tui/tests/resume.spec.ts (12 tests) 617ms
+ ✓ |thread-safe| packages/tui/tui/tests/workspace-pane-integration.spec.ts (26 tests) 2535ms
+ ✓ |thread-safe| packages/tui/tui/tests/notify.spec.ts (37 tests) 53ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/html-design-conformance-pty.spec.tsx (14 tests) 655ms
+     ✓ keeps reasoning, tool, Markdown, metrics, and folds continuous in one TTY  420ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/command-registry.spec.ts (25 tests) 929ms
+ ✓ |thread-safe| packages/tui/tui/tests/settings-rows.spec.ts (29 tests) 14ms
+ ✓ |thread-safe| packages/tui/tui/tests/signal-ownership.spec.ts (7 tests) 159ms
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+                                    ▄▄▄▄▄       █▄
+                        ▄▄▄█████████████       ███▄▄        ▄▄
+                      ▄█████████████████▄▄     ██████▄▄▄▄█████
+                    ▄██████████████████████▄    █████████████
+                   ▄█████████████████████████▄   ▀█████████▀
+                  ▄████████████████████████████▄   ████▀▀
+                  ███       ▀▀███████████▀▀▀███████████
+                  ███           ▀████████▀█  ▀████████▀
+                  ████             ████████▄   ███████
+                  ▀███▄             ▀████████▄███████
+                   ████▄              ██████████████
+                    ████▄       ▄▄     ▀██████████▀
+                     ▀████▄     ▀███▄    ▀███████▀
+                       ▀█████▄▄▄▄█████▄▄   ▀███████▄▄
+                         ▀██████████████████▀▀▀▀▀▀▀▀▀
+                            ▀▀▀█████████▀▀▀
+                                    DeepSeek
+                                有什么可以帮忙的
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+j/k 滚动                                                                ⠋ 生成中
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+                                    ▄▄▄▄▄       █▄
+                        ▄▄▄█████████████       ███▄▄        ▄▄
+                      ▄█████████████████▄▄     ██████▄▄▄▄█████
+                    ▄██████████████████████▄    █████████████
+                   ▄█████████████████████████▄   ▀█████████▀
+                  ▄████████████████████████████▄   ████▀▀
+                  ███       ▀▀███████████▀▀▀███████████
+                  ███           ▀████████▀█  ▀████████▀
+                  ████             ████████▄   ███████
+                  ▀███▄             ▀████████▄███████
+                   ████▄              ██████████████
+                    ████▄       ▄▄     ▀██████████▀
+                     ▀████▄     ▀███▄    ▀███████▀
+                       ▀█████▄▄▄▄█████▄▄   ▀███████▄▄
+                         ▀██████████████████▀▀▀▀▀▀▀▀▀
+                            ▀▀▀█████████▀▀▀
+                                    DeepSeek
+                                有什么可以帮忙的
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                                空闲
+ ✓ |thread-safe| packages/tui/tui-render/tests/mouse-io.spec.ts (27 tests) 20ms
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+                                    ▄▄▄▄▄       █▄
+                        ▄▄▄█████████████       ███▄▄        ▄▄
+                      ▄█████████████████▄▄     ██████▄▄▄▄█████
+                    ▄██████████████████████▄    █████████████
+                   ▄█████████████████████████▄   ▀█████████▀
+                  ▄████████████████████████████▄   ████▀▀
+                  ███       ▀▀███████████▀▀▀███████████
+                  ███           ▀████████▀█  ▀████████▀
+                  ████             ████████▄   ███████
+                  ▀███▄             ▀████████▄███████
+                   ████▄              ██████████████
+                    ████▄       ▄▄     ▀██████████▀
+                     ▀████▄     ▀███▄    ▀███████▀
+                       ▀█████▄▄▄▄█████▄▄   ▀███████▄▄
+                         ▀██████████████████▀▀▀▀▀▀▀▀▀
+                            ▀▀▀█████████▀▀▀
+                                    DeepSeek
+                                有什么可以帮忙的
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+✓ 已新建会话
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+                                    ▄▄▄▄▄       █▄
+                        ▄▄▄█████████████       ███▄▄        ▄▄
+                      ▄█████████████████▄▄     ██████▄▄▄▄█████
+                    ▄██████████████████████▄    █████████████
+                   ▄█████████████████████████▄   ▀█████████▀
+                  ▄████████████████████████████▄   ████▀▀
+                  ███       ▀▀███████████▀▀▀███████████
+                  ███           ▀████████▀█  ▀████████▀
+                  ████             ████████▄   ███████
+                  ▀███▄             ▀████████▄███████
+                   ████▄              ██████████████
+                    ████▄       ▄▄     ▀██████████▀
+                     ▀████▄     ▀███▄    ▀███████▀
+                       ▀█████▄▄▄▄█████▄▄   ▀███████▄▄
+                         ▀██████████████████▀▀▀▀▀▀▀▀▀
+                            ▀▀▀█████████▀▀▀
+                                    DeepSeek
+                                有什么可以帮忙的
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                                空闲
+DeepSeek · deepseek-tui
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                                  agent
+│ >
+────────────────────────────────────────────────────────────────────────────────
+/tmp/dsh-tui-validation-FsLbEW/dsh · 状态 空闲
+/ 命令 · @ 提及
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+                                    ▄▄▄▄▄       █▄
+                        ▄▄▄█████████████       ███▄▄        ▄▄
+                      ▄█████████████████▄▄     ██████▄▄▄▄█████
+                    ▄██████████████████████▄    █████████████
+                   ▄█████████████████████████▄   ▀█████████▀
+                  ▄████████████████████████████▄   ████▀▀
+                  ███       ▀▀███████████▀▀▀███████████
+                  ███           ▀████████▀█  ▀████████▀
+                  ████             ████████▄   ███████
+                  ▀███▄             ▀████████▄███████
+                   ████▄              ██████████████
+                    ████▄       ▄▄     ▀██████████▀
+                     ▀████▄     ▀███▄    ▀███████▀
+                       ▀█████▄▄▄▄█████▄▄   ▀███████▄▄
+                         ▀██████████████████▀▀▀▀▀▀▀▀▀
+                            ▀▀▀█████████▀▀▀
+                                    DeepSeek
+                                有什么可以帮忙的
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+j/k 滚动                                                                ⠧ 生成中
+DeepSeek · deepseek-tui
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+                                    DeepSeek
+                                有什么可以帮忙的
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                                  agent
+│ >
+────────────────────────────────────────────────────────────────────────────────
+/tmp/dsh-tui-validation-FsLbEW/dsh · 状态 空闲
+/ 命令 · @ 提及
+DeepSeek · deepseek-tui                       /tmp/dsh-tui-validation-FsLbEW/dsh
+────────────────────────────────────────────────────────────────────────────────
+  > first task
+  ────────────────────────────────────────────────────────────────────────────
+
+  ● answer one
+
+  turn 1 · 0 ms
+  ── 已完成 ──
+
+
+
+
+
+
+
+
+
+
+
+│ › 输入消息 · Enter 发送                                     agent · test-model
+│ >
+────────────────────────────────────────────────────────────────────────────────
+Ctrl+O 思考关 · /status 指标                                            即将退出
+ ✓ |thread-safe| packages/tui/tui/tests/interaction.spec.ts (11 tests) 1171ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/frame-arbiter.spec.ts (32 tests) 16ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/settings-pane.spec.tsx (20 tests) 117ms
+ ✓ |thread-safe| packages/tui/tui/tests/model-pane-integration.spec.ts (15 tests) 880ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/block-rows.spec.ts (25 tests) 137ms
+ ✓ |thread-safe| packages/tui/tui/tests/approval-answerer.spec.ts (20 tests) 962ms
+ ✓ |thread-safe| packages/tui/tui/tests/export.spec.ts (12 tests) 135ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/markdown.spec.tsx (43 tests) 410ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/table-scanner.spec.ts (32 tests) 8ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-card.spec.tsx (26 tests) 75ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/agent-hub-pane.spec.tsx (22 tests) 497ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/plugins-pane-integration.spec.ts (29 tests) 4066ms
+ ✓ |thread-safe| packages/tui/tui/tests/provider-auto-discover.spec.ts (5 tests) 113ms
+(node:393841) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ |thread-safe| packages/tui/tui/tests/ask-user-provider.spec.ts (11 tests) 81ms
+ ✓ |thread-safe| packages/tui/tui/tests/search-integration.spec.ts (8 tests) 567ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/plugins-pane.spec.tsx (15 tests) 496ms
+     ✓ restores a live terminal reading anchor and draft after install progress while hidden  348ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/screen-atlas.spec.ts (19 tests) 26ms
+ ✓ |thread-safe| packages/tui/tui/tests/message-feedback.spec.ts (14 tests) 615ms
+ ✓ |thread-safe| packages/tui/tui/tests/render-policy.spec.ts (22 tests) 15ms
+ ✓ |thread-safe| packages/tui/tui/tests/reload.spec.ts (12 tests) 861ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/workspace-pane.spec.tsx (42 tests) 376ms
+ ✓ |thread-safe| packages/tui/tui/tests/account-pane.spec.ts (15 tests) 1578ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/hud-layout.spec.ts (49 tests) 51ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/frame-metrics.spec.ts (18 tests) 15ms
+ ✓ |thread-safe| packages/tui/tui/tests/external-editor.spec.ts (12 tests) 101ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/scroll-scheduler.spec.ts (26 tests) 14ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-cards.spec.ts (26 tests) 8ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/loop-selection.spec.tsx (15 tests) 573ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/image-attachment.spec.ts (8 tests) 181ms
+ ✓ |thread-safe| packages/tui/tui/tests/settings-navigation.spec.ts (15 tests) 11ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/interaction-parts.spec.tsx (18 tests) 99ms
+ ✓ |thread-safe| packages/tui/tui/tests/jobs-hud.spec.ts (13 tests) 568ms
+ ✓ |thread-safe| packages/tui/tui/tests/permission-pane-integration.spec.ts (10 tests) 199ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/markdown-render.spec.ts (21 tests) 207ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/stream-queue.spec.ts (19 tests) 9ms
+ ✓ |thread-safe| packages/tui/tui/tests/idle-boot.spec.ts (6 tests) 37ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/session-pane.spec.tsx (24 tests) 132ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/stream-history.spec.tsx (8 tests) 1265ms
+     ✓ publishes an exact interactive tail before indexing 10000 offscreen entries and keeps delta work bounded  563ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/input-bar.spec.tsx (17 tests) 92ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/adaptive-info-footer.spec.ts (24 tests) 24ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/content.spec.ts (28 tests) 24ms
+ ✓ |thread-safe| packages/tui/tui/tests/queue-steer-lifecycle.spec.ts (3 tests) 24ms
+ ✓ |thread-safe| packages/tui/tui/tests/snapshot-identity.spec.ts (6 tests) 38ms
+ ✓ |thread-safe| packages/tui/tui/tests/schedule.spec.ts (5 tests) 2660ms
+   ✓ restores the original Session after a switch and lets the UI borrow the reminder Agent  1125ms
+   ✓ persists tasks through exit, recovers overdue delivery once, and retains its receipt on restart  1222ms
+ ✓ |thread-safe| packages/tui/tui/tests/plan-review.spec.ts (7 tests) 59ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/input-bar-window.spec.tsx (13 tests) 215ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/subagent-controls.spec.ts (13 tests) 26ms
+ ✓ |thread-safe| packages/tui/tui/tests/presets.spec.ts (8 tests) 109ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-body.spec.ts (9 tests) 69ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/transcript-viewport.spec.ts (11 tests) 8ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/theme-wiring.spec.tsx (9 tests) 187ms
+ ✓ |thread-safe| packages/tui/tui/tests/plan-directory.spec.ts (9 tests) 202ms
+ ✓ |thread-safe| packages/tui/tui/tests/terminal-capabilities.spec.ts (28 tests) 8ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/app-shell.spec.tsx (20 tests) 67ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/composer-cursor.spec.ts (23 tests) 22ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/loop-mouse.spec.tsx (4 tests) 664ms
+[?25h ✓ |thread-safe| packages/tui/tui/tests/workflow-hud.spec.ts (9 tests) 37ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/input-selection.spec.ts (12 tests) 54ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/theme.spec.ts (21 tests) 7ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/approval-pane.spec.tsx (9 tests) 148ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/frame-stats.spec.ts (10 tests) 58ms
+ ✓ |thread-safe| packages/tui/tui/tests/queue-submit.spec.ts (5 tests) 15ms
+ ✓ |thread-safe| packages/tui/tui/tests/copy-message.spec.ts (5 tests) 64ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/ask-user-pane.spec.tsx (7 tests) 124ms
+ ✓ |thread-safe| packages/tui/tui/tests/model-capabilities.spec.ts (3 tests) 54ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/terminal-output.spec.ts (7 tests) 15ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/viewport-command-interleaving.spec.tsx (5 tests) 273ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/model-pane.spec.tsx (11 tests) 65ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/pixel-fish-home.spec.tsx (7 tests) 370ms
+ ✓ |thread-safe| packages/tui/tui/tests/reload-argv.spec.ts (13 tests) 7ms
+ ✓ |thread-safe| packages/tui/tui/tests/mention-subagent.spec.ts (4 tests) 31ms
+ ✓ |thread-safe| packages/tui/tui/tests/retry-footer.spec.ts (4 tests) 26ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/permission-pane.spec.tsx (7 tests) 57ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-rows.spec.ts (5 tests) 49ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/plan-directory-pane.spec.tsx (7 tests) 89ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/plan-review-pane.spec.tsx (6 tests) 140ms
+ ✓ |thread-safe| packages/tui/tui/tests/todo-hud.spec.ts (6 tests) 32ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/settings-usability.spec.tsx (11 tests) 73ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/hyperlink.spec.ts (13 tests) 17ms
+ ✓ |thread-safe| packages/tui/tui/tests/goal-footer.spec.ts (6 tests) 29ms
+ ✓ |thread-safe| packages/tui/tui/tests/fixtures/long-session.spec.ts (3 tests) 187ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/markdown-cache.spec.tsx (7 tests) 140ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/composer-index.spec.ts (9 tests) 85ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/mention.spec.tsx (10 tests) 274ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/timeline-view.spec.tsx (10 tests) 62ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/clipboard.spec.ts (10 tests) 7ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/account-pane.spec.tsx (4 tests) 28ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/mount-adapters.spec.tsx (7 tests) 9ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/todo-pane.spec.tsx (5 tests) 106ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/todo-hud.spec.tsx (8 tests) 40ms
+ ✓ |thread-safe| packages/tui/tui/tests/startup.spec.ts (9 tests) 15ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/history-data.spec.ts (6 tests) 9ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/compaction-divider.spec.tsx (2 tests) 47ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/search-pane.spec.tsx (7 tests) 43ms
+ ✓ |thread-safe| packages/tui/tui/tests/signal-semantics.spec.ts (4 tests) 5ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/output-integrity.spec.ts (3 tests) 201ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/feedback-pane.spec.tsx (9 tests) 41ms
+ ✓ |thread-safe| packages/tui/tui/tests/clipboard-image.spec.ts (3 tests) 92ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/acceptance.spec.tsx (2 tests) 72ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/terminal-matrix.spec.ts (6 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui/tests/goal-continuation.spec.ts (2 tests) 176ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/settings-hierarchy-keys.spec.tsx (4 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/help-pane.spec.tsx (6 tests) 45ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/turn-tail.spec.ts (5 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui/tests/capability-browsers.spec.ts (3 tests) 10ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/sticky-header.spec.ts (9 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/frame-snapshot.spec.ts (5 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui/tests/message-feedback-patch.spec.ts (3 tests) 8ms
+ ✓ |thread-safe| packages/tui/tui/tests/workspace-changes.spec.ts (5 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/reasoning.spec.tsx (7 tests) 75ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/sgr-mouse.spec.ts (5 tests) 6ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/mount-theme.spec.tsx (5 tests) 82ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/settings-hierarchy-layout.spec.tsx (12 tests) 60ms
+ ✓ |thread-safe| packages/tui/tui/tests/workspace-observer.spec.ts (3 tests) 504ms
+   ✓ receives a real local filesystem change and releases the watcher before return  498ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/goal-footer.spec.ts (7 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/deliveries.spec.ts (2 tests) 24ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/plain-rows.spec.ts (4 tests) 11ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/ui-copy.spec.ts (5 tests) 17ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/transcript-layout-cache.spec.ts (3 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/overlay-shell.spec.tsx (3 tests) 35ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/workspace-changes-card.spec.ts (3 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/terminal-chunks.spec.ts (4 tests) 5ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/jobs-hud.spec.tsx (5 tests) 32ms
+ ✓ |thread-safe| packages/tui/tui/tests/session-events-compat.spec.ts (5 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/secret-input.spec.tsx (3 tests) 46ms
+ ✓ |thread-safe| packages/tui/tui/tests/browser.spec.ts (2 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/workflow-hud.spec.tsx (5 tests) 31ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/react-timing.spec.ts (1 test) 57ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-presenter-cache.spec.ts (2 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/git-branch.spec.ts (5 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/mouse-map.spec.ts (2 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui/tests/bundle-patch.spec.ts (5 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui/tests/terminal-guard.spec.ts (4 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/open-url.spec.ts (4 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/syntax-tokens.spec.ts (7 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/render-loop.spec.ts (4 tests) 5ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/ansi-injection.spec.tsx (4 tests) 52ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/interaction-state.spec.ts (15 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui/tests/session-browser.spec.ts (2 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/workflow-overlay.spec.tsx (4 tests) 33ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/helpers.spec.tsx (2 tests) 62ms
+[?25h ✓ |thread-safe| packages/tui/tui-render/tests/schedule-pane.spec.tsx (2 tests) 51ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tui-app.spec.tsx (2 tests) 78ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/command-menu-width.spec.tsx (2 tests) 28ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/row-source.spec.ts (2 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/shortcut-bindings.spec.ts (3 tests) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/composer-tokens.spec.ts (3 tests) 5ms
+ ✓ |thread-safe| packages/tui/tui/tests/session-errors.spec.ts (2 tests) 2ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/copy-message.spec.tsx (3 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/tool-details-pane.spec.tsx (2 tests) 36ms
+ ✓ |thread-safe| packages/tui/tui/tests/text-width.spec.ts (3 tests) 6ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/duration-stats.spec.ts (1 test) 4ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/browser-pane.spec.tsx (1 test) 32ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/theme-appearance.spec.ts (4 tests) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/brand.spec.ts (1 test) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/settings-groups.spec.ts (1 test) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/display-revision.spec.ts (1 test) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/locale-registry.spec.ts (1 test) 3ms
+ ✓ |thread-safe| packages/tui/tui-render/tests/queue-chip.spec.tsx (1 test) 26ms
+ ✓ |thread-safe| packages/tui/tui/tests/ansi-styling.spec.ts (2 tests) 2ms
+
+ Test Files  181 passed (181)
+      Tests  2399 passed | 1 skipped (2400)
+   Start at  20:34:21
+   Duration  55.24s (transform 4.24s, setup 1.70s, import 40.31s, tests 50.24s, environment 13ms)
+
+JSON report written to /tmp/dsh-tui-validation-FsLbEW/tui-tests.json
+Verified artifact: /tmp/dsh-tui-validation-FsLbEW/crazyhappyone-dsh-tui-0.1.0-alpha.54.tgz
+Provenance: /tmp/dsh-tui-validation-FsLbEW/provenance.json

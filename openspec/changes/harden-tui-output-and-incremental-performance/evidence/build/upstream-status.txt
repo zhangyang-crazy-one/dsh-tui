@@ -1,0 +1,9 @@
+ M pnpm-lock.yaml
+?? .codebase-memory/
+?? .planning/
+?? .showcase-work/
+?? docs/tui-surface-parity.i18n.yaml
+?? docs/tui-surface-parity.md
+?? docs/tui-surface-parity.zh.md
+?? openspec/
+?? packages/tui/

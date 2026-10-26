@@ -1,0 +1,42 @@
+{
+  "snapshot": "/tmp/dsh-history-parent-heap/history-retired.heapsnapshot",
+  "totalNodes": 283065,
+  "totalShallowBytes": 51656836,
+  "classes": {
+    "HistoryRowCache": {
+      "instances": 1,
+      "shallowBytes": 176
+    },
+    "HistoryOverlay": {
+      "instances": 6,
+      "shallowBytes": 240
+    },
+    "ExactHistoryWindow": {
+      "instances": 1,
+      "shallowBytes": 56
+    },
+    "TranscriptRenderStoreImpl": {
+      "instances": 1,
+      "shallowBytes": 160
+    },
+    "MarkdownProjectorState": {
+      "instances": 0,
+      "shallowBytes": 0
+    },
+    "MutableRevisionImpl": {
+      "instances": 1,
+      "shallowBytes": 72
+    },
+    "Object": {
+      "instances": 38505,
+      "shallowBytes": 1728624
+    },
+    "Array": {
+      "instances": 10967,
+      "shallowBytes": 351232
+    }
+  },
+  "oldestCanonicalObjects": 0,
+  "oldestStrongRootPaths": [],
+  "method": "V8 class/shallow counts and shortest root paths excluding weak edges; not dominator retained-size measurement"
+}

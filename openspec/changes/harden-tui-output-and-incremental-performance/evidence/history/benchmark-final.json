@@ -1,0 +1,661 @@
+{
+  "node": "v22.23.1",
+  "sourceRoot": "current",
+  "geometry": [
+    80,
+    24
+  ],
+  "repeat": 3,
+  "samples": [
+    {
+      "count": 100,
+      "firstInteractive": {
+        "ms": 73.513646,
+        "indexedEntries": 64,
+        "pendingEntries": 36
+      },
+      "indexedMs": 107.03307500000005,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 100,
+        "projectionCache": {
+          "entries": 100,
+          "rows": 300,
+          "estimatedBytes": 78580,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 100,
+        "pendingEntries": 0,
+        "settledSignatures": 100,
+        "descriptorVisits": 102,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 100,
+        "rebuildDescriptors": 101,
+        "revisionOwners": 0,
+        "signatures": 100,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 101,
+        "cachedRows": 301,
+        "cachedBytes": 8188,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 582,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          27.380192999999963,
+          23.912461000000008,
+          24.042075999999952,
+          23.96832500000005,
+          23.476628000000005
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 100,
+      "firstInteractive": {
+        "ms": 9.229996000000028,
+        "indexedEntries": 64,
+        "pendingEntries": 36
+      },
+      "indexedMs": 14.166809000000057,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 100,
+        "projectionCache": {
+          "entries": 100,
+          "rows": 300,
+          "estimatedBytes": 78580,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 100,
+        "pendingEntries": 0,
+        "settledSignatures": 100,
+        "descriptorVisits": 102,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 100,
+        "rebuildDescriptors": 101,
+        "revisionOwners": 0,
+        "signatures": 100,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 101,
+        "cachedRows": 301,
+        "cachedBytes": 8188,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 582,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          23.91910500000006,
+          24.687894999999912,
+          26.651722999999947,
+          24.80712799999992,
+          25.450123000000076
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 100,
+      "firstInteractive": {
+        "ms": 10.947680000000105,
+        "indexedEntries": 64,
+        "pendingEntries": 36
+      },
+      "indexedMs": 17.330776000000014,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 100,
+        "projectionCache": {
+          "entries": 100,
+          "rows": 300,
+          "estimatedBytes": 78580,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 100,
+        "pendingEntries": 0,
+        "settledSignatures": 100,
+        "descriptorVisits": 102,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 100,
+        "rebuildDescriptors": 101,
+        "revisionOwners": 0,
+        "signatures": 100,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 101,
+        "cachedRows": 301,
+        "cachedBytes": 8188,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 582,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          26.550348999999983,
+          24.86208099999999,
+          24.934997000000067,
+          24.78429099999994,
+          24.191291000000092
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 1000,
+      "firstInteractive": {
+        "ms": 36.55191999999988,
+        "indexedEntries": 64,
+        "pendingEntries": 936
+      },
+      "indexedMs": 328.529673,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 1000,
+        "projectionCache": {
+          "entries": 1000,
+          "rows": 3000,
+          "estimatedBytes": 787780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 1000,
+        "pendingEntries": 0,
+        "settledSignatures": 1000,
+        "descriptorVisits": 1005,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 1000,
+        "rebuildDescriptors": 1001,
+        "revisionOwners": 0,
+        "signatures": 1000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 1001,
+        "cachedRows": 3001,
+        "cachedBytes": 83788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 596,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          24.283249999999953,
+          24.479812999999922,
+          24.399715000000015,
+          24.59003699999994,
+          23.99892
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 1000,
+      "firstInteractive": {
+        "ms": 15.271660999999995,
+        "indexedEntries": 64,
+        "pendingEntries": 936
+      },
+      "indexedMs": 154.26780399999984,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 1000,
+        "projectionCache": {
+          "entries": 1000,
+          "rows": 3000,
+          "estimatedBytes": 787780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 1000,
+        "pendingEntries": 0,
+        "settledSignatures": 1000,
+        "descriptorVisits": 1005,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 1000,
+        "rebuildDescriptors": 1001,
+        "revisionOwners": 0,
+        "signatures": 1000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 1001,
+        "cachedRows": 3001,
+        "cachedBytes": 83788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 596,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          26.537674000000152,
+          24.250608000000057,
+          23.546327999999903,
+          24.249901000000136,
+          24.702793000000156
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 1000,
+      "firstInteractive": {
+        "ms": 15.510888000000023,
+        "indexedEntries": 64,
+        "pendingEntries": 936
+      },
+      "indexedMs": 140.64752599999997,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 1000,
+        "projectionCache": {
+          "entries": 1000,
+          "rows": 3000,
+          "estimatedBytes": 787780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 1000,
+        "pendingEntries": 0,
+        "settledSignatures": 1000,
+        "descriptorVisits": 1005,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 1000,
+        "rebuildDescriptors": 1001,
+        "revisionOwners": 0,
+        "signatures": 1000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 1001,
+        "cachedRows": 3001,
+        "cachedBytes": 83788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 596,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          24.20286400000009,
+          22.95666200000005,
+          23.642560000000003,
+          23.540796,
+          22.82653899999991
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 10000,
+      "firstInteractive": {
+        "ms": 24.978415999999925,
+        "indexedEntries": 64,
+        "pendingEntries": 9936
+      },
+      "indexedMs": 2759.277279,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 10000,
+        "projectionCache": {
+          "entries": 10000,
+          "rows": 30000,
+          "estimatedBytes": 7897780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 10000,
+        "pendingEntries": 0,
+        "settledSignatures": 10000,
+        "descriptorVisits": 10040,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 10000,
+        "rebuildDescriptors": 10001,
+        "revisionOwners": 0,
+        "signatures": 10000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 10001,
+        "cachedRows": 30001,
+        "cachedBytes": 857788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 610,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          26.458527999999205,
+          25.595870999999534,
+          24.99096499999996,
+          25.004558999999972,
+          25.64587399999982
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 10000,
+      "firstInteractive": {
+        "ms": 30.81089299999985,
+        "indexedEntries": 64,
+        "pendingEntries": 9936
+      },
+      "indexedMs": 2448.297251,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 10000,
+        "projectionCache": {
+          "entries": 10000,
+          "rows": 30000,
+          "estimatedBytes": 7897780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 10000,
+        "pendingEntries": 0,
+        "settledSignatures": 10000,
+        "descriptorVisits": 10040,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 10000,
+        "rebuildDescriptors": 10001,
+        "revisionOwners": 0,
+        "signatures": 10000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 10001,
+        "cachedRows": 30001,
+        "cachedBytes": 857788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 610,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          25.876494999999522,
+          26.012424000000465,
+          25.447314000000006,
+          24.99706200000037,
+          24.9633759999997
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 10000,
+      "firstInteractive": {
+        "ms": 16.994364000000132,
+        "indexedEntries": 64,
+        "pendingEntries": 9936
+      },
+      "indexedMs": 2462.5061509999996,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 10000,
+        "projectionCache": {
+          "entries": 10000,
+          "rows": 30000,
+          "estimatedBytes": 7897780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 10000,
+        "pendingEntries": 0,
+        "settledSignatures": 10000,
+        "descriptorVisits": 10040,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 10000,
+        "rebuildDescriptors": 10001,
+        "revisionOwners": 0,
+        "signatures": 10000,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 10001,
+        "cachedRows": 30001,
+        "cachedBytes": 857788,
+        "pinnedBlocks": 8,
+        "pinnedRows": 22,
+        "pinnedBytes": 610,
+        "overBudgetRows": 0,
+        "overBudgetBytes": 0,
+        "toolCache": {
+          "entries": 0,
+          "rows": 0,
+          "materialized": 0,
+          "evictions": 0
+        },
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          26.43916800000079,
+          23.559151000001293,
+          24.65987099999984,
+          24.926509000000806,
+          26.112027999999555
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    }
+  ],
+  "cacheCandidate": [
+    {
+      "count": 100,
+      "cold": {
+        "projections": 100,
+        "ms": 3.3565480000002026
+      },
+      "warm": {
+        "lookups": 100,
+        "projections": 0,
+        "ms": 0.056589000000030865
+      },
+      "retainedHeightMetadata": 100,
+      "representedRows": 300,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    },
+    {
+      "count": 1000,
+      "cold": {
+        "projections": 1000,
+        "ms": 29.516603999999916
+      },
+      "warm": {
+        "lookups": 1000,
+        "projections": 0,
+        "ms": 0.11043100000006234
+      },
+      "retainedHeightMetadata": 1000,
+      "representedRows": 3000,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    },
+    {
+      "count": 10000,
+      "cold": {
+        "projections": 10000,
+        "ms": 1236.245723
+      },
+      "warm": {
+        "lookups": 10000,
+        "projections": 0,
+        "ms": 1.0126739999996062
+      },
+      "retainedHeightMetadata": 10000,
+      "representedRows": 30000,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    }
+  ]
+}

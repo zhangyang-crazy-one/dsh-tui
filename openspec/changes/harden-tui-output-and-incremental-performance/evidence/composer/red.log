@@ -1,0 +1,66 @@
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic' }`
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+[?25h ❯ tui-render/tests/input-bar-window.spec.tsx (4 tests | 4 failed) 747ms
+     × bounds mounted rows for 10 lines and sends the complete draft 48ms
+     × bounds mounted rows for 100 lines and sends the complete draft 51ms
+     × bounds mounted rows for 1000 lines and sends the complete draft 268ms
+     × keeps a middle caret and both hidden counts visible 379ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tui-render/tests/input-bar-window.spec.tsx > bounded composer draft window > bounds mounted rows for 10 lines and sends the complete draft
+AssertionError: expected 11 to be less than or equal to 9
+ ❯ tui-render/tests/input-bar-window.spec.tsx:14:39
+     12|       text, caretIndex: text.length, commandMode: false, mentionMode: …
+     13|     }), { columns: 80 }))
+     14|     expect(output.split('\n').length).toBeLessThanOrEqual(9)
+       |                                       ^
+     15|     expect(output).toContain(`ROW_${count - 1}_中文`)
+     16|     expect(output).toContain(`↑${count - 7}`)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tui-render/tests/input-bar-window.spec.tsx > bounded composer draft window > bounds mounted rows for 100 lines and sends the complete draft
+AssertionError: expected 101 to be less than or equal to 9
+ ❯ tui-render/tests/input-bar-window.spec.tsx:14:39
+     12|       text, caretIndex: text.length, commandMode: false, mentionMode: …
+     13|     }), { columns: 80 }))
+     14|     expect(output.split('\n').length).toBeLessThanOrEqual(9)
+       |                                       ^
+     15|     expect(output).toContain(`ROW_${count - 1}_中文`)
+     16|     expect(output).toContain(`↑${count - 7}`)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tui-render/tests/input-bar-window.spec.tsx > bounded composer draft window > bounds mounted rows for 1000 lines and sends the complete draft
+AssertionError: expected 1001 to be less than or equal to 9
+ ❯ tui-render/tests/input-bar-window.spec.tsx:14:39
+     12|       text, caretIndex: text.length, commandMode: false, mentionMode: …
+     13|     }), { columns: 80 }))
+     14|     expect(output.split('\n').length).toBeLessThanOrEqual(9)
+       |                                       ^
+     15|     expect(output).toContain(`ROW_${count - 1}_中文`)
+     16|     expect(output).toContain(`↑${count - 7}`)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tui-render/tests/input-bar-window.spec.tsx > bounded composer draft window > keeps a middle caret and both hidden counts visible
+AssertionError: expected 1001 to be less than or equal to 9
+ ❯ tui-render/tests/input-bar-window.spec.tsx:27:39
+     25|       commandMode: false, mentionMode: false,
+     26|     }), { columns: 80 }))
+     27|     expect(output.split('\n').length).toBeLessThanOrEqual(9)
+       |                                       ^
+     28|     expect(output).toContain('ROW_500_é👩‍💻\\t[图片 #1]')
+     29|     expect(output).not.toContain('ROW_999_')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  4 failed | 42 passed (46)
+   Start at  18:59:54
+   Duration  3.49s (transform 378ms, setup 0ms, import 2.02s, tests 911ms, environment 0ms)
+

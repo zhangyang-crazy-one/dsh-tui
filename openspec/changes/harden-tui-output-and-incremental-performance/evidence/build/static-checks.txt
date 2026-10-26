@@ -1,0 +1,1 @@
+PASS: node --check (4 scripts), git diff --check, CI/publish YAML parse, patch dependency declarations

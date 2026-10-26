@@ -1,0 +1,62 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+ ❯ tui-render/tests/input-selection.spec.ts (11 tests | 2 failed) 77ms
+     × matches the full-draft grapheme reference for stale and reversed selection offsets 6ms
+   × extends and deletes a CRLF as one complete source grapheme 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tui-render/tests/input-selection.spec.ts > indexed selection boundary reuse > matches the full-draft grapheme reference for stale and reversed selection offsets
+AssertionError: expected { start: 1, end: 11 } to deeply equal { start: 1, end: 10 }
+
+- Expected
++ Received
+
+  {
+-   "end": 10,
++   "end": 11,
+    "start": 1,
+  }
+
+ ❯ tui-render/tests/input-selection.spec.ts:102:12
+    100|         const b = reference(anchor)
+    101|         expect(inputSelectionRange({ text, caretIndex: caret, selectio…
+    102|           .toEqual(a === b ? undefined : { start: Math.min(a, b), end:…
+       |            ^
+    103|       }
+    104|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tui-render/tests/input-selection.spec.ts > extends and deletes a CRLF as one complete source grapheme
+AssertionError: expected { text: 'a\r\nb', caretIndex: 2, …(1) } to deeply equal { text: 'a\r\nb', caretIndex: 3, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "caretIndex": 3,
++   "caretIndex": 2,
+    "selectionAnchor": 1,
+    "text": "a
+  b",
+  }
+
+ ❯ tui-render/tests/input-selection.spec.ts:111:17
+    109|   const text = 'a\r\nb'
+    110|   const right = moveInputSelection({ text, caretIndex: 1 }, { directio…
+    111|   expect(right).toEqual({ text, caretIndex: 3, selectionAnchor: 1 })
+       |                 ^
+    112|   expect(selectedInputText(right)).toBe('\r\n')
+    113|   expect(moveInputSelection({ text, caretIndex: 3 }, { direction: 'lef…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 passed (11)
+   Start at  19:15:14
+   Duration  284ms (transform 71ms, setup 0ms, import 103ms, tests 77ms, environment 0ms)
+

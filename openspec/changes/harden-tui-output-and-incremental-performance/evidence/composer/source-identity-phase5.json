@@ -1,0 +1,14 @@
+{
+  "head": "1d25152831ede97cd2f706967020dd23f1053f1d",
+  "node": "v22.23.1",
+  "files": {
+    "tui-render/src/composer-index.ts": "2e7920b9f5d5d04e12fbf8e86870267bfbca425d67a4ef9b462c3cd1cfface58",
+    "tui-render/src/composer-cursor.ts": "c2ed1f1ade393aa5f9b1386eeaabfb186ef9ce08edcba277782df32ee4c4c87c",
+    "tui-render/src/input-bar.tsx": "ccc6bcb57bb3386636e1a58feb30aeef2f4a3505c6ec52590b6b802fabf8b0cd",
+    "tui-render/tests/composer-index.spec.ts": "fb8432461371d4bae48a581d0131cba55ec0d5ddebe3a35a2f5fb146ff996fec",
+    "tui-render/tests/composer-cursor.spec.ts": "549d4b6f07da862768a97a22c5406a294d720841d1d3e68ca3e6b2bd815a3c17",
+    "tui-render/tests/input-bar-window.spec.tsx": "1d596f140bc617ce7b1eab346f5e635ef1e748d8bbc0bb364a5b1074187d384a",
+    "tui-render/tests/composer-benchmark.mjs": "5c7fdbba7e0d844260a426d99abf8bf7ebe7ac17c523cb237187ba2205a07e82",
+    "tui-render/tests/composer-pty-fixture.tsx": "24dd960ce4b70b64562c88611bbbd7533e7f41f4df776e1ed7de1e059e6573d5"
+  }
+}

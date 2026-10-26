@@ -1,0 +1,60 @@
+{
+  "frames": 3439,
+  "compared": 3068,
+  "transitions": 371,
+  "resizeRecovery": 272,
+  "unmatched": 0,
+  "failed": 3068,
+  "examples": [
+    {
+      "offset": 4371,
+      "mismatches": [
+        {
+          "row": 22,
+          "actual": "│ > DRXFT                                                                       ",
+          "expected": "│ > DRAFT                                                                       "
+        }
+      ]
+    },
+    {
+      "offset": 7497,
+      "mismatches": [
+        {
+          "row": 22,
+          "actual": "│ > DRXFT                                                                       ",
+          "expected": "│ > DRAFT                                                                       "
+        }
+      ]
+    },
+    {
+      "offset": 10595,
+      "mismatches": [
+        {
+          "row": 22,
+          "actual": "│ > DRXFT                                                                       ",
+          "expected": "│ > DRAFT                                                                       "
+        }
+      ]
+    },
+    {
+      "offset": 13693,
+      "mismatches": [
+        {
+          "row": 22,
+          "actual": "│ > DRXFT                                                                       ",
+          "expected": "│ > DRAFT                                                                       "
+        }
+      ]
+    },
+    {
+      "offset": 16791,
+      "mismatches": [
+        {
+          "row": 22,
+          "actual": "│ > DRXFT                                                                       ",
+          "expected": "│ > DRAFT                                                                       "
+        }
+      ]
+    }
+  ]
+}

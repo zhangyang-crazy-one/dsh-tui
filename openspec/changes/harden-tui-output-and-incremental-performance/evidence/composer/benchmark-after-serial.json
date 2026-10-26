@@ -1,0 +1,632 @@
+{
+  "node": "v22.23.1",
+  "source": "/home/zhangyangrui/my_programes/dsh-tui/tui-render/src",
+  "ptyMetric": "PTY input write to post-waitUntilRenderFlush acknowledgement; fixture settles pending throttle, maxFps 120; not physical terminal latency",
+  "geometry": [
+    {
+      "columns": 80,
+      "rows": 24
+    },
+    {
+      "columns": 120,
+      "rows": 40
+    }
+  ],
+  "hashes": {
+    "input-bar.tsx": "ccc6bcb57bb3386636e1a58feb30aeef2f4a3505c6ec52590b6b802fabf8b0cd",
+    "composer-cursor.ts": "c2ed1f1ade393aa5f9b1386eeaabfb186ef9ce08edcba277782df32ee4c4c87c",
+    "composer-index.ts": "2e7920b9f5d5d04e12fbf8e86870267bfbca425d67a4ef9b462c3cd1cfface58"
+  },
+  "ssr": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 11.71133199999997,
+      "warmSamplesMs": [
+        9.340595000000008,
+        8.146356000000083,
+        11.07821100000001,
+        10.336325999999985,
+        9.056388999999967
+      ],
+      "warmMedianMs": 9.340595000000008
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 17.61980799999992,
+      "warmSamplesMs": [
+        12.778753999999935,
+        11.055505999999923,
+        10.643121000000065,
+        9.776854000000185,
+        8.43251999999984
+      ],
+      "warmMedianMs": 10.643121000000065
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 58.01412200000004,
+      "warmSamplesMs": [
+        9.659494999999879,
+        9.13242100000025,
+        9.129355999999916,
+        8.796855999999934,
+        9.586169000000154
+      ],
+      "warmMedianMs": 9.13242100000025
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 19.26260699999966,
+      "warmSamplesMs": [
+        10.425122999999985,
+        7.383057000000008,
+        8.616039,
+        7.606827000000067,
+        6.894569000000047
+      ],
+      "warmMedianMs": 7.606827000000067
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 11.670196999999916,
+      "warmSamplesMs": [
+        7.181078999999954,
+        7.08041299999968,
+        6.715011000000231,
+        6.626999000000069,
+        6.237471999999798
+      ],
+      "warmMedianMs": 6.715011000000231
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 24,
+      "note": "Ink renderToString uses a 24-row mock regardless of PTY rows",
+      "coldMs": 39.54216600000018,
+      "warmSamplesMs": [
+        7.42830800000047,
+        14.774382999999943,
+        6.577467999999499,
+        5.687057000000095,
+        6.560956999999689
+      ],
+      "warmMedianMs": 6.577467999999499
+    }
+  ],
+  "operations": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 0,
+      "segmentedSourceUnits": 0
+    }
+  ],
+  "pty": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 700,
+          "caret": 699,
+          "ms": 8.152121999999963
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 700,
+          "caret": 698,
+          "ms": 4.166891999999962
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 700,
+          "caret": 697,
+          "ms": 5.009295000000066
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 700,
+          "caret": 695,
+          "ms": 6.2175620000000436
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 700,
+          "caret": 694,
+          "ms": 3.964866000000029
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 701,
+          "caret": 695,
+          "ms": 5.362690999999813
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 702,
+          "caret": 696,
+          "ms": 5.368397999999843
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 703,
+          "caret": 697,
+          "ms": 5.253238999999894
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 704,
+          "caret": 698,
+          "ms": 4.85015599999997
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 705,
+          "caret": 699,
+          "ms": 3.962530000000015
+        }
+      ],
+      "moveMedianMs": 5.009295000000066,
+      "insertMedianMs": 5.253238999999894
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 7000,
+          "caret": 6999,
+          "ms": 11.146738999999798
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 7000,
+          "caret": 6998,
+          "ms": 5.328331000000162
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 7000,
+          "caret": 6997,
+          "ms": 5.904261000000133
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 7000,
+          "caret": 6995,
+          "ms": 6.038660000000164
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 7000,
+          "caret": 6994,
+          "ms": 3.8114590000000135
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 7001,
+          "caret": 6995,
+          "ms": 11.298115999999936
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 7002,
+          "caret": 6996,
+          "ms": 9.66609200000039
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 7003,
+          "caret": 6997,
+          "ms": 7.570647999999892
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 7004,
+          "caret": 6998,
+          "ms": 7.4108870000000024
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 7005,
+          "caret": 6999,
+          "ms": 6.146436999999878
+        }
+      ],
+      "moveMedianMs": 5.904261000000133,
+      "insertMedianMs": 7.570647999999892
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 70000,
+          "caret": 69999,
+          "ms": 8.439944000000196
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 70000,
+          "caret": 69998,
+          "ms": 4.108948000000055
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 70000,
+          "caret": 69997,
+          "ms": 6.363390999999865
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 70000,
+          "caret": 69995,
+          "ms": 7.068156000000272
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 70000,
+          "caret": 69994,
+          "ms": 5.094312000000173
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 70001,
+          "caret": 69995,
+          "ms": 47.617025999999896
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 70002,
+          "caret": 69996,
+          "ms": 37.0243989999999
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 70003,
+          "caret": 69997,
+          "ms": 33.513024000000314
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 70004,
+          "caret": 69998,
+          "ms": 34.63435799999979
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 70005,
+          "caret": 69999,
+          "ms": 33.069286000000375
+        }
+      ],
+      "moveMedianMs": 6.363390999999865,
+      "insertMedianMs": 34.63435799999979
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 700,
+          "caret": 699,
+          "ms": 9.685508000000027
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 700,
+          "caret": 698,
+          "ms": 7.7144969999999375
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 700,
+          "caret": 697,
+          "ms": 5.762846999999965
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 700,
+          "caret": 695,
+          "ms": 5.769285000000309
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 700,
+          "caret": 694,
+          "ms": 5.142566999999872
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 701,
+          "caret": 695,
+          "ms": 5.193082000000231
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 702,
+          "caret": 696,
+          "ms": 5.820748999999978
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 703,
+          "caret": 697,
+          "ms": 5.410757000000103
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 704,
+          "caret": 698,
+          "ms": 4.561455000000024
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 705,
+          "caret": 699,
+          "ms": 4.4945920000000115
+        }
+      ],
+      "moveMedianMs": 5.769285000000309,
+      "insertMedianMs": 5.193082000000231
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 7000,
+          "caret": 6999,
+          "ms": 9.127688999999918
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 7000,
+          "caret": 6998,
+          "ms": 7.39473100000032
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 7000,
+          "caret": 6997,
+          "ms": 5.8079820000002655
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 7000,
+          "caret": 6995,
+          "ms": 5.030792999999903
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 7000,
+          "caret": 6994,
+          "ms": 5.296656999999868
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 7001,
+          "caret": 6995,
+          "ms": 9.922483999999713
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 7002,
+          "caret": 6996,
+          "ms": 7.428617999999915
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 7003,
+          "caret": 6997,
+          "ms": 8.322191000000203
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 7004,
+          "caret": 6998,
+          "ms": 8.096639000000323
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 7005,
+          "caret": 6999,
+          "ms": 7.504538999999568
+        }
+      ],
+      "moveMedianMs": 5.8079820000002655,
+      "insertMedianMs": 8.096639000000323
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 40,
+      "samples": [
+        {
+          "action": "left",
+          "sequence": 1,
+          "length": 70000,
+          "caret": 69999,
+          "ms": 8.975652000000082
+        },
+        {
+          "action": "left",
+          "sequence": 2,
+          "length": 70000,
+          "caret": 69998,
+          "ms": 5.950582999999824
+        },
+        {
+          "action": "left",
+          "sequence": 3,
+          "length": 70000,
+          "caret": 69997,
+          "ms": 5.639024000000063
+        },
+        {
+          "action": "left",
+          "sequence": 4,
+          "length": 70000,
+          "caret": 69995,
+          "ms": 7.884280000000217
+        },
+        {
+          "action": "left",
+          "sequence": 5,
+          "length": 70000,
+          "caret": 69994,
+          "ms": 7.7863799999995535
+        },
+        {
+          "action": "insert",
+          "sequence": 6,
+          "length": 70001,
+          "caret": 69995,
+          "ms": 46.280273999999736
+        },
+        {
+          "action": "insert",
+          "sequence": 7,
+          "length": 70002,
+          "caret": 69996,
+          "ms": 38.66838100000041
+        },
+        {
+          "action": "insert",
+          "sequence": 8,
+          "length": 70003,
+          "caret": 69997,
+          "ms": 37.563976000000366
+        },
+        {
+          "action": "insert",
+          "sequence": 9,
+          "length": 70004,
+          "caret": 69998,
+          "ms": 37.41607099999965
+        },
+        {
+          "action": "insert",
+          "sequence": 10,
+          "length": 70005,
+          "caret": 69999,
+          "ms": 38.15979300000072
+        }
+      ],
+      "moveMedianMs": 7.7863799999995535,
+      "insertMedianMs": 38.15979300000072
+    }
+  ]
+}

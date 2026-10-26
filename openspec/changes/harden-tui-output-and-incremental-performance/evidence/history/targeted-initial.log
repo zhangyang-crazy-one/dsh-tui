@@ -1,0 +1,10 @@
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic' }`
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+[?25h
+ Test Files  3 passed (3)
+      Tests  71 passed (71)
+   Start at  20:07:54
+   Duration  2.87s (transform 556ms, setup 0ms, import 904ms, tests 1.56s, environment 0ms)
+

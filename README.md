@@ -15,9 +15,9 @@ English | [中文](README.zh.md)
 
 `@crazyhappyone/dsh-tui` is a terminal interface for DeepSeek Harness (dsh), shipped as a dsh **plugin bundle** plus a `dsh-tui` launcher. The package declares `dsh.bundle`, so dsh installs it into a profile like any other plugin; the launcher only automates that install and boots the profile. This repository owns the plugin sources (`tui/`, `tui-render/`). DSH continues to own agents, sessions, tools, persistence, providers, permissions, and profile assembly.
 
-## Release 0.1.0-alpha.53
+## Release 0.1.0-alpha.55
 
-This prerelease targets DSH `0.2.1-rc.2`. String arrays such as `defaultInput` now edit in place, settings details truncate long values at the visible row budget, and settled transcript rows reuse their projection while unchanged. See the [changelog](CHANGELOG.md#010-alpha53--2026-10-22) for the verification boundary.
+This prerelease targets DSH `0.2.1-rc.3`. It hardens split terminal output and slow-output recovery, bounds long-draft rendering, and incrementally prepares chat history. CI and npm publishing now share a source-bound build, test and package-verification chain. See the [changelog](CHANGELOG.md#010-alpha55--2026-10-26) and [verification](docs/upstream-rc3-2026-10-26.md).
 
 ```sh
 npm install --global @crazyhappyone/dsh-tui@next
@@ -35,7 +35,7 @@ In `/settings`, Tab / Shift+Tab switches categories and restores each category's
 
 ## Table of Contents
 
-- [Release and upgrade](#release-010-alpha53)
+- [Release and upgrade](#release-010-alpha55)
 - [Changelog](CHANGELOG.md)
 - [Terminal capabilities](#terminal-capabilities)
 - [Screenshots](#screenshots)
@@ -75,7 +75,7 @@ The unscoped `dsh-tui` package belongs to another maintainer. This project publi
 Install the official engine and the TUI launcher globally:
 
 ```text
-npm install --global @deepseek-ai/dsh
+npm install --global @deepseek-ai/dsh@0.2.1-rc.3
 npm install --global @crazyhappyone/dsh-tui@next
 dsh-tui probe
 dsh-tui
@@ -92,7 +92,7 @@ Installing as a bundle matters in dsh 0.2: `/settings` edits are written to the 
 
 Detection checks an absolute `DSH_BIN` override, PATH, npm and pnpm global packages, then packages resolvable from the working directory and launcher directory. Each probe subprocess has a ten-second timeout, which covers a cold first start. A broken explicit `DSH_BIN` is reported without selecting another installation. Package bin entries run through the launcher's Node executable.
 
-The bundle targets the dsh `0.2` release line (built against `0.2.1-rc.2`, also verified on `0.2.1-alpha.2`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
+The bundle targets the dsh `0.2` release line (built and tested against `0.2.1-rc.3`). The package declares `@deepseek-ai/dsh` `>=0.2.0-rc.2 <0.3.0` as an optional peer, so dsh's own plugin compatibility check covers manual installs, and the launcher refuses another engine line with the exact install command; `DSH_TUI_SKIP_ENGINE_CHECK=1` bypasses the launcher check.
 
 ### Mode B: Source Mode (Developer / Debugging)
 To debug or hack on TUI or DSH source directly:
@@ -142,13 +142,13 @@ dsh-tui update
 <a id="configure-the-source-runtime"></a>
 ## Configure the source runtime
 
-The defaults use the official public repository at tag `dsh-v0.2.1-rc.2`. Source mode links this bundle into the existing `deepseek-tui` profile and preserves its user patch. Missing Typert runtime artifacts are generated with the upstream generator before boot. The source CLI runs through `pnpm exec node`, avoiding the `predsh` hook that reinstalls the entire workspace on every launch.
+The defaults use the official public repository at tag `dsh-v0.2.1-rc.3`. Source mode links this bundle into the existing `deepseek-tui` profile and preserves its user patch. Missing Typert runtime artifacts are generated with the upstream generator before boot. The source CLI runs through `pnpm exec node`, avoiding the `predsh` hook that reinstalls the entire workspace on every launch.
 
 | Environment variable | Default | Purpose |
 |---|---|---|
 | `DSH_TUI_RUNTIME_DIR` | `~/.local/share/dsh-tui/runtime` | Dedicated clone used only by the launcher |
 | `DSH_TUI_SOURCE_URL` | `https://github.com/deepseek-ai/deepseek-harness.git` | Git remote cloned and fetched by `update` |
-| `DSH_TUI_SOURCE_REF` | `dsh-v0.2.1-rc.2` | Branch or ref fetched by `update` |
+| `DSH_TUI_SOURCE_REF` | `dsh-v0.2.1-rc.3` | Branch or ref fetched by `update` |
 | `DSH_TUI_PNPM` | `pnpm` | pnpm executable used for install and launch |
 
 Values must be non-empty, and the runtime directory must be absolute. The launcher refuses a symbolic-link runtime path and an existing directory that is not a Git checkout. Child commands receive argument arrays without shell interpolation.
@@ -242,18 +242,16 @@ The proxy listens on `127.0.0.1:4097` only; add `- id: zen-proxy` with
 
 `tui/` and `tui-render/` compile against an upstream dsh checkout at the tag named by `COMPATIBLE_DSH_VERSION` in `src/launcher.js`:
 
-```text
-git clone --branch dsh-v0.2.1-rc.2 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
-(cd ../deepseek-harness && pnpm install)
-npm run build          # or DSH_SOURCE=/path/to/checkout npm run build
-(cd ../deepseek-harness && pnpm install) # link the mounted plugin's dev dependencies
-npm run dev:setup      # same DSH_SOURCE override; build types and link editor dependencies
-npm run typecheck      # strict checks for sources and tests
+```sh
+git clone --branch dsh-v0.2.1-rc.3 https://github.com/deepseek-ai/deepseek-harness ../deepseek-harness
+# Activate the pnpm version declared in that checkout's packageManager.
+DSH_SOURCE=../deepseek-harness npm run validate
+npm run verify:artifact
 ```
 
-`npm run build` copies the plugin packages and `cordis.patch.yml` into the checkout's `packages/tui/` workspace, bundles `dist/index.js`, `dist/startup.js`, `dist/settings.js`, `dist/schedule.js`, and `dist/zen-proxy.js` with esbuild, and import-checks each output. Run the plugin tests from the checkout with `npx vitest run packages/tui`, and the launcher tests here with `npm test`; run `npm run pack:check` before release. Test installation through a packed tarball or `dsh plugin --profile <name> add <this directory>`.
+`DSH_SOURCE` is a read-only clone source. Validation creates an owned temporary DSH workspace, mounts the current plugin sources, installs the pinned lock, builds dependency declarations and native modules, checks four TypeScript projects, builds five bundles, runs root and complete TUI tests, and imports all five entrypoints from the packed tarball. The provenance file binds the source, DSH commit, toolchain, bundles and tarball.
 
-Local `tsconfig.json` files support editors in this standalone repository. The build mounts `tsconfig.workspace.json` as the checkout's package config to preserve upstream project references. `dev:setup` builds dependency declarations and links whole `node_modules` directories, preserving pnpm's relative links. Re-run build and setup after upstream or public type changes; restart the editor's TypeScript project if it still displays old missing-module diagnostics.
+For incremental work, `npm run build`, `npm run typecheck` and `npm run test:tui` use the same isolated preparation. `npm run dev:setup` prepares editor dependencies while preserving existing links. Run full validation after source changes and before release.
 
 -----
 
@@ -276,7 +274,7 @@ The equivalent npm website settings are organization or user `zhangyang-crazy-on
 For each release, bump `package.json`, merge the change after CI passes, then create a GitHub Release whose tag matches the package version:
 
 ```text
-gh release create v0.1.0-alpha.50 --prerelease --notes-file docs/releases/v0.1.0-alpha.50.md
+gh release create v0.1.0-alpha.55 --prerelease --notes-file docs/releases/v0.1.0-alpha.55.md
 ```
 
 The `Publish npm` workflow runs tests and packed-package verification again before publishing. Do not rerun an old release tag: npm versions are immutable. Promotion to stable is a new version and a non-prerelease GitHub Release.

@@ -1,0 +1,133 @@
+{
+  "frames": 3428,
+  "compared": 3326,
+  "transitions": 99,
+  "failed": 16,
+  "examples": [
+    {
+      "offset": 1118701,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_6 TICK_150 ROW_0                                                                                         ",
+          "expected": "  TURN_6 TICK_151 ROW_0                                                                                         "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_6 TICK_150 ROW_1                                                                                         ",
+          "expected": "  TURN_6 TICK_151 ROW_1                                                                                         "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_6 TICK_150 ROW_2                                                                                         ",
+          "expected": "  TURN_6 TICK_151 ROW_2                                                                                         "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_6 TICK_150 ROW_3                                                                                         ",
+          "expected": "  TURN_6 TICK_151 ROW_3                                                                                         "
+        }
+      ]
+    },
+    {
+      "offset": 3323194,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_17 TICK_449 ROW_0                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_0                                                                                        "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_17 TICK_449 ROW_1                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_1                                                                                        "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_17 TICK_449 ROW_2                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_2                                                                                        "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_17 TICK_449 ROW_3                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_3                                                                                        "
+        }
+      ]
+    },
+    {
+      "offset": 3323280,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_17 TICK_449 ROW_0                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_0                                                                                        "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_17 TICK_449 ROW_1                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_1                                                                                        "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_17 TICK_449 ROW_2                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_2                                                                                        "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_17 TICK_449 ROW_3                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_3                                                                                        "
+        }
+      ]
+    },
+    {
+      "offset": 3323426,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_17 TICK_449 ROW_0                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_0                                                                                        "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_17 TICK_449 ROW_1                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_1                                                                                        "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_17 TICK_449 ROW_2                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_2                                                                                        "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_17 TICK_449 ROW_3                                                                                        ",
+          "expected": "  TURN_18 TICK_450 ROW_3                                                                                        "
+        }
+      ]
+    },
+    {
+      "offset": 5534920,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_29 TICK_749 ROW_0                                                                                        ",
+          "expected": "  TURN_30 TICK_750 ROW_0                                                                                        "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_29 TICK_749 ROW_1                                                                                        ",
+          "expected": "  TURN_30 TICK_750 ROW_1                                                                                        "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_29 TICK_749 ROW_2                                                                                        ",
+          "expected": "  TURN_30 TICK_750 ROW_2                                                                                        "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_29 TICK_749 ROW_3                                                                                        ",
+          "expected": "  TURN_30 TICK_750 ROW_3                                                                                        "
+        }
+      ]
+    }
+  ]
+}

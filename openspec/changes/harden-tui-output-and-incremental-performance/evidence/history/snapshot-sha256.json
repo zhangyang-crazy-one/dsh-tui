@@ -1,0 +1,66 @@
+[
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-populated.heapsnapshot",
+    "bytes": 34853375,
+    "sha256": "e64c86f3f4fab6ea6c11a109c647b9849838e3cbbb319d8da8b9bd115e9fec6f",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-populated.heapsnapshot.gz",
+    "gzipBytes": 6383422,
+    "gzipSha256": "541af63622f8f28a63d9b6891c2fba45cdd6bc1ecda563e7b5dcbdc0dda0d014"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-retired.heapsnapshot",
+    "bytes": 30114021,
+    "sha256": "f5e4090f43482555f9d864c250364e7cf1e2542814a672c3786e273876487250",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-retired.heapsnapshot.gz",
+    "gzipBytes": 5700619,
+    "gzipSha256": "d70e4fc880ef83a3957c751b7732aa369ea9f88ae9c4c3a47a99dba6f22f5d78"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget/history-populated.heapsnapshot",
+    "bytes": 97687678,
+    "sha256": "6809dd31eaa8c1a509d190781f2ff877e4bb411245a90d125b86db3e0e708685",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget/history-populated.heapsnapshot.gz",
+    "gzipBytes": 14381175,
+    "gzipSha256": "2351d951941a43840eec4cf2b3bbde2e6942101db41a394e8b7ef2d35715357d"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget/history-retired.heapsnapshot",
+    "bytes": 75397535,
+    "sha256": "b6381d559253604e6c627f8415dfa923ac9e4a44ba59ee7a2b0d9f95716fd70b",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget/history-retired.heapsnapshot.gz",
+    "gzipBytes": 11577883,
+    "gzipSha256": "559cfc1b3dd46550debc437dbc6a5b9ed2065942b008f6ef2db82fc542a13bc6"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget-fixed/history-populated.heapsnapshot",
+    "bytes": 93906544,
+    "sha256": "84cc688f90f4be987a3235b3e2cc1388b1a691eb72b2af78f79b81192af8227f",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget-fixed/history-populated.heapsnapshot.gz",
+    "gzipBytes": 14846878,
+    "gzipSha256": "b75dc5e78ec666c8728952d05df9309dd93a5dd8a944103b998f36ffa823ef6d"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget-fixed/history-retired.heapsnapshot",
+    "bytes": 37139625,
+    "sha256": "d8d877f964de9bc62ff8d4e7cc93a51609502e4c3dcd14fe4210dd7888959e56",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget-fixed/history-retired.heapsnapshot.gz",
+    "gzipBytes": 6852599,
+    "gzipSha256": "29d389234a6b399fe9bbd879c974b56a5db8100a63efe720d2969a67bccc5411"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-fixed/history-populated.heapsnapshot",
+    "bytes": 35202672,
+    "sha256": "298c12c0b85925395b206fac29f0a7d9fc5950dbb40b3aa69bb45258a8964435",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-fixed/history-populated.heapsnapshot.gz",
+    "gzipBytes": 6365619,
+    "gzipSha256": "15e68f3986bd96cacf6ca66019a19e555ab5227321b1c9176afdfdc30ab4027f"
+  },
+  {
+    "original": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-fixed/history-retired.heapsnapshot",
+    "bytes": 26951690,
+    "sha256": "bb3ece4ecb3703ec5b68bb1d23f70b82e0b1a8d36068089aea9e4cbbc58cc4d5",
+    "gzip": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-fixed/history-retired.heapsnapshot.gz",
+    "gzipBytes": 5188552,
+    "gzipSha256": "5b7c218854d207bdce58a1586813e3fb5a6ac6a2589acff3f5a6d0f77ed69a00"
+  }
+]

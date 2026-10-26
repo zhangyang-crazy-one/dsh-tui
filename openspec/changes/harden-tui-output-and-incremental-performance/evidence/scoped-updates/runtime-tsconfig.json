@@ -1,0 +1,1 @@
+{"extends":"/home/zhangyangrui/my_programes/dsh-tui/tui/tests/tsconfig.json","compilerOptions":{"paths":{"@deepseek-ai/dsh-tui-render":["/home/zhangyangrui/my_programes/dsh-tui/tui-render/src/index.ts"]},"typeRoots":["/home/zhangyangrui/my_programes/dsh-tui/node_modules/@types"],"jsx":"react-jsx"}}

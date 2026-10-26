@@ -1,0 +1,204 @@
+{
+  "snapshot": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap/history-retired.heapsnapshot",
+  "totalNodes": 320893,
+  "totalShallowBytes": 54198844,
+  "classes": {
+    "HistoryRowCache": {
+      "instances": 1,
+      "shallowBytes": 176
+    },
+    "HistoryOverlay": {
+      "instances": 12,
+      "shallowBytes": 480
+    },
+    "ExactHistoryWindow": {
+      "instances": 1,
+      "shallowBytes": 56
+    },
+    "TranscriptRenderStoreImpl": {
+      "instances": 1,
+      "shallowBytes": 160
+    },
+    "MarkdownProjectorState": {
+      "instances": 0,
+      "shallowBytes": 0
+    },
+    "MutableRevisionImpl": {
+      "instances": 1,
+      "shallowBytes": 72
+    },
+    "Object": {
+      "instances": 48714,
+      "shallowBytes": 2227176
+    },
+    "Array": {
+      "instances": 14057,
+      "shallowBytes": 450112
+    }
+  },
+  "oldestCanonicalObjects": 1,
+  "oldestStrongRootPaths": [
+    [
+      {
+        "from": "",
+        "edge": "element:1",
+        "to": "(GC roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(GC roots)",
+        "edge": "element:19",
+        "to": "(Stack roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(Stack roots)",
+        "edge": "internal:50",
+        "to": "PassThrough",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 23044,
+          "script_id": 116,
+          "line": 37,
+          "column": 20
+        }
+      },
+      {
+        "from": "PassThrough",
+        "edge": "property:_events",
+        "to": "Object",
+        "fromLocation": {
+          "object_index": 23044,
+          "script_id": 116,
+          "line": 37,
+          "column": 20
+        },
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:resize",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "element:1",
+        "to": "onResize",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 1747774,
+          "script_id": 215,
+          "line": 10,
+          "column": 25
+        }
+      },
+      {
+        "from": "onResize",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 1747774,
+          "script_id": 215,
+          "line": 10,
+          "column": 25
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "internal:previous",
+        "to": "system / Context",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:setSize",
+        "to": "native_bind",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "native_bind",
+        "edge": "shortcut:bound_argument_0",
+        "to": "FiberNode",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 833196,
+          "script_id": 963,
+          "line": 16432,
+          "column": 22
+        }
+      },
+      {
+        "from": "FiberNode",
+        "edge": "property:updateQueue",
+        "to": "Object",
+        "fromLocation": {
+          "object_index": 833196,
+          "script_id": 963,
+          "line": 16432,
+          "column": 22
+        },
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:lastEffect",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:inst",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:destroy",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 835219,
+          "script_id": 971,
+          "line": 0,
+          "column": 66189
+        }
+      },
+      {
+        "from": "",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 835219,
+          "script_id": 971,
+          "line": 0,
+          "column": 66189
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:history",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "element:0",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      }
+    ]
+  ],
+  "method": "V8 class/shallow counts and shortest root paths excluding weak edges; not dominator retained-size measurement"
+}

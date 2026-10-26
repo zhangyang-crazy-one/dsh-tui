@@ -1,0 +1,129 @@
+{
+  "output": "/tmp/dsh-composer-phase5/benchmark-baseline.json",
+  "ssr": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "coldMs": 15.199062000000026,
+      "warmMedianMs": 12.79198699999995
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "coldMs": 92.97175899999979,
+      "warmMedianMs": 64.57095200000003
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "coldMs": 540.0438100000001,
+      "warmMedianMs": 484.7744840000005
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "coldMs": 19.23595800000112,
+      "warmMedianMs": 18.648073000000295
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "coldMs": 81.3166369999999,
+      "warmMedianMs": 51.65221500000189
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "coldMs": 425.14501999999993,
+      "warmMedianMs": 409.20486699999674
+    }
+  ],
+  "operations": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 4067,
+      "segmentedSourceUnits": 120175
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 40067,
+      "segmentedSourceUnits": 1200175
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "movements": 40,
+      "segmentCalls": 400067,
+      "segmentedSourceUnits": 12000175
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 4067,
+      "segmentedSourceUnits": 121408
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 40067,
+      "segmentedSourceUnits": 1201408
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "movements": 40,
+      "segmentCalls": 400067,
+      "segmentedSourceUnits": 12001408
+    }
+  ],
+  "pty": [
+    {
+      "codeUnits": 700,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 10.12589099999991,
+      "insertMedianMs": 9.053310999999894
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 60.58633499999996,
+      "insertMedianMs": 55.688496000000214
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 80,
+      "rows": 24,
+      "moveMedianMs": 463.1514299999999,
+      "insertMedianMs": 406.4393149999996
+    },
+    {
+      "codeUnits": 700,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 10.124511000001803,
+      "insertMedianMs": 8.45010899999761
+    },
+    {
+      "codeUnits": 7000,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 44.59038299999884,
+      "insertMedianMs": 41.12076900000102
+    },
+    {
+      "codeUnits": 70000,
+      "columns": 120,
+      "rows": 40,
+      "moveMedianMs": 399.3524250000046,
+      "insertMedianMs": 383.0167949999959
+    }
+  ]
+}

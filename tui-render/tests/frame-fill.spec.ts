@@ -129,11 +129,11 @@ describe('wrapStdoutForFrameBg', () => {
     expect(chunks).toEqual(['\x1b[48;5;233m\x1b[2Krow\x1b[49m'])
   })
 
-  it('passes non-string chunks through', () => {
+  it('decodes and transforms Buffer writes through the same boundary', () => {
     const { sink, chunks } = collect()
     const wrapped = wrapStdoutForFrameBg(sink, () => 'truecolor')
     wrapped.write(Buffer.from('\x1b[2Krow'))
-    expect(chunks).toEqual(['\x1b[2Krow'])
+    expect(chunks).toEqual(['\x1b[48;2;21;22;24m\x1b[2Krow\x1b[49m'])
   })
 
   it('delegates non-write properties to the wrapped stream', () => {
@@ -1039,6 +1039,7 @@ it('completes scroll latency only in the write callback carrying its overlay rev
   try {
     publish('before')
     writePublishedFrameSnapshot(wrapped, 'none')
+    expect(metrics.snapshot().writtenCells.total).toBeGreaterThanOrEqual(6)
     callbacks.shift()?.()
     markScrollInput(metrics, 1, performance.now() - 10)
     // Unrelated chrome finishes before the scroll's snapshot is published.
@@ -1052,6 +1053,7 @@ it('completes scroll latency only in the write callback carrying its overlay rev
     markScrollInput(metrics, 2, performance.now() - 5)
     firstPaint?.()
     expect(metrics.snapshot().scrollInputToPaintMs.count).toBe(1)
+    expect(metrics.snapshot().frameIntervalMs.count).toBeGreaterThan(0)
     publish('second', 2)
     // Also cover an overlay appended to Ink's synchronized frame.
     wrapped.write('\x1b[?2026l')

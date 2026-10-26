@@ -1,0 +1,16 @@
+[
+  {
+    "columns": 80,
+    "maxBytesBetweenCompletedFrames": 6705,
+    "maxObservedPendingBytes": 6493,
+    "ticks": 2994,
+    "captureSha256": "e30df08e53bc09342555ec37f9c51a3b656bacd9f13e672c2d2a0237d6fb7030"
+  },
+  {
+    "columns": 120,
+    "maxBytesBetweenCompletedFrames": 14545,
+    "maxObservedPendingBytes": 14742,
+    "ticks": 2995,
+    "captureSha256": "d879e7933d9587e2c662ba0d8401cb5ce1ecc38a3131a08949205be965b07e65"
+  }
+]

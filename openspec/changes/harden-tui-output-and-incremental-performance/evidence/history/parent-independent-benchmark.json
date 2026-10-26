@@ -1,0 +1,229 @@
+{
+  "node": "v22.23.1",
+  "sourceRoot": "current",
+  "geometry": [
+    80,
+    24
+  ],
+  "repeat": 1,
+  "samples": [
+    {
+      "count": 100,
+      "firstInteractive": {
+        "ms": 103.00082799999996,
+        "indexedEntries": 64,
+        "pendingEntries": 36
+      },
+      "indexedMs": 142.03329099999996,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 100,
+        "projectionCache": {
+          "entries": 100,
+          "rows": 300,
+          "estimatedBytes": 78580,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 100,
+        "pendingEntries": 0,
+        "settledSignatures": 100,
+        "descriptorVisits": 102,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 100,
+        "rebuildDescriptors": 101,
+        "revisionOwners": 0,
+        "signatures": 0,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 101,
+        "cachedRows": 301,
+        "cachedBytes": 8188,
+        "pinnedBlocks": 8,
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          27.030070000000023,
+          26.627877000000012,
+          26.59603500000003,
+          26.942602999999963,
+          25.266796
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 1000,
+      "firstInteractive": {
+        "ms": 52.06373700000006,
+        "indexedEntries": 64,
+        "pendingEntries": 936
+      },
+      "indexedMs": 448.32816000000014,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 1000,
+        "projectionCache": {
+          "entries": 1000,
+          "rows": 3000,
+          "estimatedBytes": 787780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 1000,
+        "pendingEntries": 0,
+        "settledSignatures": 1000,
+        "descriptorVisits": 1005,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 1000,
+        "rebuildDescriptors": 1001,
+        "revisionOwners": 0,
+        "signatures": 0,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 1001,
+        "cachedRows": 3001,
+        "cachedBytes": 83788,
+        "pinnedBlocks": 8,
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          26.267425999999887,
+          26.531361999999945,
+          26.13982699999997,
+          28.912316999999803,
+          26.11827399999993
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    },
+    {
+      "count": 10000,
+      "firstInteractive": {
+        "ms": 40.736225000000104,
+        "indexedEntries": 64,
+        "pendingEntries": 9936
+      },
+      "indexedMs": 3601.636289,
+      "initial": {
+        "generation": 1,
+        "canonicalEntries": 10000,
+        "projectionCache": {
+          "entries": 10000,
+          "rows": 30000,
+          "estimatedBytes": 7897780,
+          "pinnedRows": 21,
+          "overBudgetRows": 0,
+          "overBudgetBytes": 0,
+          "rebuilds": 0
+        },
+        "indexedEntries": 10000,
+        "pendingEntries": 0,
+        "settledSignatures": 10000,
+        "descriptorVisits": 10040,
+        "projectedActiveRequests": 1,
+        "settledMapCopies": 0,
+        "projectionOwners": 10000,
+        "rebuildDescriptors": 10001,
+        "revisionOwners": 0,
+        "signatures": 0,
+        "projectorStates": 64,
+        "projectorSources": 0,
+        "lineEntries": 10001,
+        "cachedRows": 30001,
+        "cachedBytes": 857788,
+        "pinnedBlocks": 8,
+        "pendingPresentations": 0,
+        "firstInteractive": true
+      },
+      "delta": {
+        "samples": [
+          31.29094299999997,
+          27.940191000000596,
+          26.572151999999733,
+          27.114668000000165,
+          27.32917599999928
+        ],
+        "externalCounters": {
+          "descriptorIteratorVisits": 5,
+          "descriptorValueVisits": 10,
+          "jsonCalls": 15
+        },
+        "settledSignatures": 0,
+        "descriptorVisits": 5,
+        "projectedRequests": 5
+      }
+    }
+  ],
+  "cacheCandidate": [
+    {
+      "count": 100,
+      "cold": {
+        "projections": 100,
+        "ms": 6.576782999999978
+      },
+      "warm": {
+        "lookups": 100,
+        "projections": 0,
+        "ms": 0.08454799999992701
+      },
+      "retainedHeightMetadata": 100,
+      "representedRows": 300,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    },
+    {
+      "count": 1000,
+      "cold": {
+        "projections": 1000,
+        "ms": 74.733115
+      },
+      "warm": {
+        "lookups": 1000,
+        "projections": 0,
+        "ms": 0.2348099999999249
+      },
+      "retainedHeightMetadata": 1000,
+      "representedRows": 3000,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    },
+    {
+      "count": 10000,
+      "cold": {
+        "projections": 10000,
+        "ms": 1483.4449060000006
+      },
+      "warm": {
+        "lookups": 10000,
+        "projections": 0,
+        "ms": 1.1494599999996353
+      },
+      "retainedHeightMetadata": 10000,
+      "representedRows": 30000,
+      "note": "Pure projector prototype; warm timing is not a mounted interactive-frame measurement."
+    }
+  ]
+}

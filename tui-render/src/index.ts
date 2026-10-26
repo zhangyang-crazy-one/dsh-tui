@@ -24,7 +24,8 @@ import type { FrameProbeHandle } from './frame-stats.ts'
 import type { FrameMetricsHandle } from './frame-metrics.ts'
 import type { ColorTier } from './terminal-capabilities.ts'
 import { applyTheme, currentTier, installTheme, type ThemeAppearance } from './theme.ts'
-import { wrapStdoutForFrameBg } from './frame-fill.ts'
+import { disposeFrameOutput, wrapStdoutForFrameBg } from './frame-fill.ts'
+import { aliasTerminalOutput } from './terminal-output.ts'
 import { attachMouseIo } from './mouse-io.ts'
 import { detectHyperlinks, setHyperlinks } from './hyperlink.ts'
 import { detectBrandRenderTier } from './terminal-capabilities.ts'
@@ -242,6 +243,7 @@ export {
   wrapStdoutForFrameBg,
 } from './frame-fill.ts'
 export type { FrameCaret, FrameRail } from './frame-fill.ts'
+export { writeTerminalControl, terminalOutputSnapshot } from './terminal-output.ts'
 export { goalFooterHead, goalFooterRuns, formatGoalFooter } from './goal-footer.ts'
 export type { GoalFooterRuns, GoalFooterView } from './goal-footer.ts'
 export {
@@ -420,6 +422,8 @@ export function mountTuiRender(
       : { wheelRows: options.renderPolicy.scroll.wheelRows }),
   })
   const releaseTiming = observeReactTiming()
+  const stdout = screenReader ? mouse.stdout : wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics)
+  const releaseAlias = aliasTerminalOutput(stdout, options.stdout ?? process.stdout)
   let instance: ReturnType<typeof render>
   try {
     instance = render(wrapped, {
@@ -429,12 +433,14 @@ export function mountTuiRender(
       patchConsole: false,
       exitOnCtrlC: options.exitOnCtrlC ?? false,
       maxFps: 1000 / Math.min(policy.scroll.frameIntervalMs, policy.stream.frameIntervalMs),
-      stdout: screenReader ? mouse.stdout : wrapStdoutForFrameBg(mouse.stdout, currentTier, options.frameMetrics),
+      stdout,
       stdin: mouse.stdin,
     })
   } catch (error) {
     releaseTiming()
     mouse.dispose()
+    releaseAlias()
+    disposeFrameOutput(stdout)
     throw error
   }
   let disposed = false
@@ -444,6 +450,8 @@ export function mountTuiRender(
     try { instance.unmount() } finally {
       releaseTiming()
       mouse.dispose()
+      releaseAlias()
+      disposeFrameOutput(stdout)
     }
   }
 }

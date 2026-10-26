@@ -1,0 +1,46 @@
+[
+  {
+    "node": "v22.23.1",
+    "icu": "78.2",
+    "segments": [
+      {
+        "segment": "👩‍💻",
+        "index": 0
+      },
+      {
+        "segment": "x",
+        "index": 5
+      },
+      {
+        "segment": "\r\n",
+        "index": 6
+      },
+      {
+        "segment": "b",
+        "index": 8
+      }
+    ]
+  },
+  {
+    "node": "v24.13.0",
+    "icu": "77.1",
+    "segments": [
+      {
+        "segment": "👩‍💻",
+        "index": 0
+      },
+      {
+        "segment": "x",
+        "index": 5
+      },
+      {
+        "segment": "\r\n",
+        "index": 6
+      },
+      {
+        "segment": "b",
+        "index": 8
+      }
+    ]
+  }
+]

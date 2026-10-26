@@ -182,3 +182,45 @@ describe('RuntimeController snapshot identity', () => {
     await ctx.fiber.dispose()
   })
 })
+
+
+describe('dependency scoped snapshots', () => {
+  it('retains unrelated snapshots on panel navigation and feedback', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-scoped-'))
+    roots.push(root)
+    const { ctx, controller } = await bench(root)
+    try {
+      await controller.start()
+      const model = controller.getModel()
+      const search = controller.getSearchPane()
+      const help = controller.getHelpPane()
+      const footer = controller.getAdaptiveInfoFooter()
+      controller.dispatch({ kind: 'session-pane' })
+      expect(controller.getSessionPane().open).toBe(true)
+      expect(controller.getModel()).toBe(model)
+      expect(controller.getSearchPane()).toBe(search)
+      expect(controller.getHelpPane()).toBe(help)
+      expect(controller.getAdaptiveInfoFooter()).toBe(footer)
+      controller.note('scope check')
+      expect(controller.getModel()).toBe(model)
+      expect(controller.getSearchPane()).toBe(search)
+    } finally { await controller.dispose(); await ctx.fiber.dispose() }
+  })
+
+  it('retains directory/search identities across real generation events', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-tui-scoped-'))
+    roots.push(root)
+    const { ctx, controller } = await bench(root)
+    try {
+      await controller.start()
+      const pane = controller.getSessionPane()
+      const search = controller.getSearchPane()
+      const idle = controller.getModel()
+      controller.session?.append('turn/start', { turn: 1 })
+      expect(controller.getModel()).not.toBe(idle)
+      expect(controller.getModel().status).toBe('generating')
+      expect(controller.getSessionPane()).toBe(pane)
+      expect(controller.getSearchPane()).toBe(search)
+    } finally { await controller.dispose(); await ctx.fiber.dispose() }
+  })
+})

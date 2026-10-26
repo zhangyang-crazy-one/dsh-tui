@@ -1,0 +1,457 @@
+{
+  "snapshot": "openspec/changes/harden-tui-output-and-incremental-performance/evidence/history/heap-budget-fixed/history-populated.heapsnapshot",
+  "totalNodes": 947678,
+  "totalShallowBytes": 97148220,
+  "classes": {
+    "HistoryRowCache": {
+      "instances": 1,
+      "shallowBytes": 176
+    },
+    "HistoryOverlay": {
+      "instances": 12,
+      "shallowBytes": 480
+    },
+    "ExactHistoryWindow": {
+      "instances": 1,
+      "shallowBytes": 56
+    },
+    "TranscriptRenderStoreImpl": {
+      "instances": 1,
+      "shallowBytes": 160
+    },
+    "MarkdownProjectorState": {
+      "instances": 0,
+      "shallowBytes": 0
+    },
+    "MutableRevisionImpl": {
+      "instances": 1,
+      "shallowBytes": 72
+    },
+    "Object": {
+      "instances": 270419,
+      "shallowBytes": 15121968
+    },
+    "Array": {
+      "instances": 81507,
+      "shallowBytes": 2608512
+    }
+  },
+  "oldestCanonicalObjects": 4,
+  "oldestStrongRootPaths": [
+    [
+      {
+        "from": "",
+        "edge": "element:1",
+        "to": "(GC roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(GC roots)",
+        "edge": "element:19",
+        "to": "(Stack roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(Stack roots)",
+        "edge": "internal:34",
+        "to": "system / Context",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:history",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "element:0",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      }
+    ],
+    [
+      {
+        "from": "",
+        "edge": "element:1",
+        "to": "(GC roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(GC roots)",
+        "edge": "element:19",
+        "to": "(Stack roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(Stack roots)",
+        "edge": "internal:39",
+        "to": "system / Context",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:StreamView",
+        "to": "StreamView",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 1741019,
+          "script_id": 971,
+          "line": 0,
+          "column": 23697
+        }
+      },
+      {
+        "from": "StreamView",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 1741019,
+          "script_id": 971,
+          "line": 0,
+          "column": 23697
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:baseMarkdownLineCache",
+        "to": "WeakMap",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "WeakMap",
+        "edge": "internal:table",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "",
+        "edge": "internal:1899 / part of key (Object @487475) -> value (Map @1208229) pair in WeakMap (table @1736851)",
+        "to": "Map",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Map",
+        "edge": "internal:table",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "",
+        "edge": "internal:6",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      }
+    ],
+    [
+      {
+        "from": "",
+        "edge": "element:1",
+        "to": "(GC roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(GC roots)",
+        "edge": "element:19",
+        "to": "(Stack roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(Stack roots)",
+        "edge": "internal:39",
+        "to": "system / Context",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:StreamView",
+        "to": "StreamView",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 1741019,
+          "script_id": 971,
+          "line": 0,
+          "column": 23697
+        }
+      },
+      {
+        "from": "StreamView",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 1741019,
+          "script_id": 971,
+          "line": 0,
+          "column": 23697
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:baseMarkdownLineCache",
+        "to": "WeakMap",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "WeakMap",
+        "edge": "internal:table",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "",
+        "edge": "internal:1899 / part of key (Object @487475) -> value (Map @1208229) pair in WeakMap (table @1736851)",
+        "to": "Map",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Map",
+        "edge": "internal:table",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "",
+        "edge": "internal:6",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:spans",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "internal:elements",
+        "to": "(object elements)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(object elements)",
+        "edge": "internal:0",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      }
+    ],
+    [
+      {
+        "from": "",
+        "edge": "element:1",
+        "to": "(GC roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(GC roots)",
+        "edge": "element:19",
+        "to": "(Stack roots)",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "(Stack roots)",
+        "edge": "internal:54",
+        "to": "PassThrough",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 23058,
+          "script_id": 116,
+          "line": 37,
+          "column": 20
+        }
+      },
+      {
+        "from": "PassThrough",
+        "edge": "property:_events",
+        "to": "Object",
+        "fromLocation": {
+          "object_index": 23058,
+          "script_id": 116,
+          "line": 37,
+          "column": 20
+        },
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:resize",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "element:1",
+        "to": "onResize",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 4112633,
+          "script_id": 216,
+          "line": 10,
+          "column": 25
+        }
+      },
+      {
+        "from": "onResize",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 4112633,
+          "script_id": 216,
+          "line": 10,
+          "column": 25
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "internal:previous",
+        "to": "system / Context",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:setSize",
+        "to": "native_bind",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "native_bind",
+        "edge": "shortcut:bound_argument_0",
+        "to": "FiberNode",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 3750194,
+          "script_id": 963,
+          "line": 16432,
+          "column": 22
+        }
+      },
+      {
+        "from": "FiberNode",
+        "edge": "property:updateQueue",
+        "to": "Object",
+        "fromLocation": {
+          "object_index": 3750194,
+          "script_id": 963,
+          "line": 16432,
+          "column": 22
+        },
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:lastEffect",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:create",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 812322,
+          "script_id": 971,
+          "line": 0,
+          "column": 67433
+        }
+      },
+      {
+        "from": "",
+        "edge": "internal:context",
+        "to": "system / Context",
+        "fromLocation": {
+          "object_index": 812322,
+          "script_id": 971,
+          "line": 0,
+          "column": 67433
+        },
+        "toLocation": null
+      },
+      {
+        "from": "system / Context",
+        "edge": "context:historyRows",
+        "to": "HistoryRowCache",
+        "fromLocation": null,
+        "toLocation": {
+          "object_index": 337484,
+          "script_id": 978,
+          "line": 0,
+          "column": 1716
+        }
+      },
+      {
+        "from": "HistoryRowCache",
+        "edge": "property:entries",
+        "to": "Map",
+        "fromLocation": {
+          "object_index": 337484,
+          "script_id": 978,
+          "line": 0,
+          "column": 1716
+        },
+        "toLocation": null
+      },
+      {
+        "from": "Map",
+        "edge": "internal:table",
+        "to": "",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "",
+        "edge": "internal:6945",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Object",
+        "edge": "property:rows",
+        "to": "Array",
+        "fromLocation": null,
+        "toLocation": null
+      },
+      {
+        "from": "Array",
+        "edge": "element:0",
+        "to": "Object",
+        "fromLocation": null,
+        "toLocation": null
+      }
+    ]
+  ],
+  "method": "V8 class/shallow counts and shortest root paths excluding weak edges; not dominator retained-size measurement"
+}

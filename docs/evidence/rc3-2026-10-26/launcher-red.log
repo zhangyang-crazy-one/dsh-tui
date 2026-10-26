@@ -1,0 +1,77 @@
+✔ parses management commands and the pass-through separator (1.159054ms)
+✖ resolves stable deployment defaults and rejects empty overrides (0.935316ms)
+✔ version reports an uninitialized runtime without creating it (0.298179ms)
+✔ version reports the runtime SHA and DSH package version (0.203617ms)
+✔ launch forwards arguments and returns the child status (0.294693ms)
+✔ launch rejects an absent runtime and a symbolic-link runtime (0.195668ms)
+✔ update clones an absent runtime and installs frozen dependencies (0.29159ms)
+✔ update redacts source credentials from clone failures (0.195188ms)
+✔ update rejects a dirty runtime before fetching (0.121976ms)
+✔ update fast-forwards a clean runtime and refreshes dependencies (0.225085ms)
+✔ update rejects divergent history before merge (0.135057ms)
+✔ update reports dependency recovery after a successful fast-forward (0.099173ms)
+✔ parseLauncherInvocation parses probe, --source, and --lightweight options (0.286399ms)
+✔ probeInstalledDsh respects DSH_BIN override and inspects exit code (0.269412ms)
+✔ probeInstalledDsh probes PATH dsh --version (0.171699ms)
+✔ probe command outputs probe details (0.234676ms)
+✔ lightweight launch installs this package as the tui bundle, then boots the profile (0.232572ms)
+✔ lightweight launch reports a failed bundle install without booting (0.102051ms)
+✔ default auto launch rejects a failed settings DSH_BIN despite an initialized source runtime (0.103516ms)
+✔ default auto launch rejects a failed env DSH_BIN despite an initialized source runtime (0.045345ms)
+✔ default auto launch falls back to initialized source with no override (0.230925ms)
+✔ default auto launch falls back to initialized source with blank env override (0.10769ms)
+✔ default auto launch falls back to initialized source with blank settings override masking env (0.094175ms)
+✔ launch with --source forces source mode even if bundled patch and DSH_BIN exist (0.114721ms)
+✔ launch provides friendly installation guidance when dsh is absent and runtime uninitialized (0.064371ms)
+✔ DSH_BIN requires an absolute path and a failed override does not select another installation (0.074723ms)
+✔ discovers npm global package bin from its manifest when PATH is unavailable (0.163481ms)
+✔ discovers pnpm global package bin from its manifest when PATH is unavailable (0.081925ms)
+✔ local package launch reuses the probe and preserves profile, app args, and exit status (0.176843ms)
+✔ unusable package candidates are diagnosed and duplicate global roots are only probed once (0.170447ms)
+✔ an installed tui bundle is not reinstalled and PATH success stops package discovery (0.120526ms)
+✔ engineCompatibility admits the bundle release line and rejects other lines with an install hint (0.072019ms)
+✔ source launch prepares generated contracts, links this bundle into the existing profile, then boots directly (0.136109ms)
+✔ ready source launch does not reinstall dependencies or regenerate contracts (0.119608ms)
+✔ source contract generation failure stops before plugin installation or terminal boot (0.122886ms)
+✔ lightweight mode reuses the same configured profile as source mode (0.126739ms)
+✔ profile selection is explicit and leaves app arguments after the separator alone (0.165101ms)
+✔ both launch modes install and boot the explicitly selected official profile (0.182595ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 37
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 59.361219
+
+✖ failing tests:
+
+test at tests/launcher.test.js:81:1
+✖ resolves stable deployment defaults and rejects empty overrides (0.935316ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      homeDirectory: '/home/test',
+      packageManager: 'pnpm',
+      runtimeDirectory: '/home/test/.local/share/dsh-tui/runtime',
+  +   sourceRef: 'dsh-v0.2.1-rc.2',
+  -   sourceRef: 'dsh-v0.2.1-rc.3',
+      sourceUrl: 'https://github.com/deepseek-ai/deepseek-harness.git'
+    }
+  
+      at TestContext.<anonymous> (file:///home/zhangyangrui/my_programes/dsh-tui/tests/launcher.test.js:82:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { runtimeDirectory: '/home/test/.local/share/dsh-tui/runtime', sourceUrl: 'https://github.com/deepseek-ai/deepseek-harness.git', sourceRef: 'dsh-v0.2.1-rc.2', packageManager: 'pnpm', homeDirectory: '/home/test' },
+    expected: { runtimeDirectory: '/home/test/.local/share/dsh-tui/runtime', sourceUrl: 'https://github.com/deepseek-ai/deepseek-harness.git', sourceRef: 'dsh-v0.2.1-rc.3', packageManager: 'pnpm', homeDirectory: '/home/test' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

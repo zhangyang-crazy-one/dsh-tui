@@ -1,0 +1,39 @@
+{
+  "sourceShaEqual": true,
+  "cleanSourceCommit": null,
+  "bundlesEqual": false,
+  "mainTests": {
+    "root": {
+      "total": 56,
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0
+    },
+    "tui": {
+      "total": 2400,
+      "passed": 2399,
+      "failed": 0,
+      "skipped": 1,
+      "files": 181
+    }
+  },
+  "cleanTests": {
+    "root": {
+      "total": 56,
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0
+    },
+    "tui": {
+      "total": 2400,
+      "passed": 2399,
+      "failed": 0,
+      "skipped": 1,
+      "files": 181
+    }
+  },
+  "mainTarballSha": "6ba67f3f669825b8b01328e7c172af76e9066504c53c727073995563d3379a60",
+  "cleanTarballSha": "92e64f5f6856b2a9b6ce182a6414f2ce3e6b593d6698a74cdc79a6a0c66e18c3",
+  "bundleDifference": "Only zen-proxy.js esbuild source path comment differs; other four bundles identical.",
+  "zenProxyCodeEqualExcludingSourceComment": true
+}

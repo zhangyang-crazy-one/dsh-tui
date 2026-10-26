@@ -1,0 +1,32 @@
+
+> @crazyhappyone/dsh-tui@0.1.0-alpha.54 validate:prepare
+> node scripts/validation.js prepare
+
+native/system/packages/darwin-arm64      | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["darwin"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+native/system/packages/darwin-x64        | [WARN] Unsupported platform: wanted: {"cpu":["x64"],"os":["darwin"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+native/system/packages/linux-arm64       | [WARN] Unsupported platform: wanted: {"cpu":["arm64"],"os":["linux"],"libc":["any"]} (current: {"os":"linux","cpu":"x64","libc":"glibc"})
+Scope: 300 of 369 workspace projects
+.                                        | [WARN] There are cyclic workspace dependencies: /tmp/dsh-tui-validation-21MdYW/dsh/vendor/cordis, /tmp/dsh-tui-validation-21MdYW/dsh/vendor/include; /tmp/dsh-tui-validation-21MdYW/dsh/packages/core/agent-default-model, /tmp/dsh-tui-validation-21MdYW/dsh/packages/settings/settings; /tmp/dsh-tui-validation-21MdYW/dsh/packages/core/agent-loop, /tmp/dsh-tui-validation-21MdYW/dsh/packages/session/session-persistence-jsonl, /tmp/dsh-tui-validation-21MdYW/dsh/packages/session/session-format-catalog, /tmp/dsh-tui-validation-21MdYW/dsh/packages/compaction/compaction-image-offload, /tmp/dsh-tui-validation-21MdYW/dsh/packages/compaction/compaction-basic, /tmp/dsh-tui-validation-21MdYW/dsh/packages/llm/llm-retry; /tmp/dsh-tui-validation-21MdYW/dsh/packages/core/tools, /tmp/dsh-tui-validation-21MdYW/dsh/packages/session/working-directory, /tmp/dsh-tui-validation-21MdYW/dsh/packages/session/tool-working-directory; /tmp/dsh-tui-validation-21MdYW/dsh/packages/llm/llm-deepseek-api-key, /tmp/dsh-tui-validation-21MdYW/dsh/packages/llm/llm-deepseek, /tmp/dsh-tui-validation-21MdYW/dsh/packages/llm/llm-deepseek-account; /tmp/dsh-tui-validation-21MdYW/dsh/packages/preset/agent-preset-registry, /tmp/dsh-tui-validation-21MdYW/dsh/packages/preset/agent-preset; /tmp/dsh-tui-validation-21MdYW/dsh/packages/extensions/cordis-host-runner, /tmp/dsh-tui-validation-21MdYW/dsh/packages/api/remote-access, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/ui-renderer, /tmp/dsh-tui-validation-21MdYW/dsh/packages/test-support/client-runtime, /tmp/dsh-tui-validation-21MdYW/dsh/packages/bundle/web-app, /tmp/dsh-tui-validation-21MdYW/dsh/packages/extensions/tool-cordis; /tmp/dsh-tui-validation-21MdYW/dsh/packages/api/session-controller, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/file-upload, /tmp/dsh-tui-validation-21MdYW/dsh/packages/api/remotes, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/ui-plugin-manager, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/ui-sidebar, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/ui-workspace, /tmp/dsh-tui-validation-21MdYW/dsh/packages/client/ui-conversation; /tmp/dsh-tui-validation-21MdYW/dsh/packages/sandbox/sandbox-local, /tmp/dsh-tui-validation-21MdYW/dsh/packages/sandbox/sandbox-windows-acl; /tmp/dsh-tui-validation-21MdYW/dsh/packages/subagent/subagent-spawn-in-process, /tmp/dsh-tui-validation-21MdYW/dsh/packages/subagent/tool-subagent
+✓ Lockfile passes supply-chain policies (verified 5m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+.                                        |    +1151 ++++++++++++++++++++++++++++
+Packages are copied from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/zhangyangrui/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 1151, reused 1147, downloaded 0, added 101
+Progress: resolved 1151, reused 1147, downloaded 0, added 349
+Progress: resolved 1151, reused 1147, downloaded 0, added 717
+Progress: resolved 1151, reused 1147, downloaded 0, added 1151, done
+.../.pnpm/koffi@3.1.1/node_modules/koffi install$ node ./cnoke.cjs -P . -D src/koffi --prebuild --release
+.../node_modules/lefthook postinstall$ node postinstall.js
+.../.pnpm/koffi@3.1.1/node_modules/koffi install: Done
+.../node_modules/lefthook postinstall: sync hooks: ✔️(pre-push, pre-merge-commit, pre-commit)
+.../node_modules/lefthook postinstall: Done
+packages/subprocess/subprocess-local postinstall$ node scripts/ensure-spawn-helper.mjs
+packages/subprocess/subprocess-local postinstall: Done
+. postinstall$ node scripts/install-lefthook.mjs
+. postinstall: sync hooks: ✔️(pre-commit, pre-push, pre-merge-commit)
+. postinstall: Done
+Done in 7.1s using pnpm v11.28.5
+Prepared current sources: /tmp/dsh-tui-validation-21MdYW/dsh

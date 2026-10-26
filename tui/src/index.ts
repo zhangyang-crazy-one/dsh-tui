@@ -230,6 +230,7 @@ import {
   WORKFLOW_OVERLAY_WINDOW,
   detectNotifyCapability,
   notifyBytes,
+  writeTerminalControl,
   RENDER_POLICY_DEFAULT_CACHE_MAX_BYTES,
   RENDER_POLICY_DEFAULT_CACHE_MAX_ROWS,
   RENDER_POLICY_DEFAULT_SCROLL_CATCH_UP_THRESHOLD,
@@ -1177,17 +1178,17 @@ export class RuntimeController implements TuiController {
   private readonly askUserQueue: QueuedAskUser[] = []
   /** Shared enqueue counter: the older head of the two queues paints. */
   private slotSeq = 0
-  /** Cached composer-slot snapshot; dropped on emit like the other panes. */
+  /** Cached composer-slot snapshot; invalidated by its declared dependencies. */
   private approvalPaneSnapshot: ApprovalPaneState | undefined
-  /** Cached ask-user snapshot; dropped on emit like the other panes. */
+  /** Cached ask-user snapshot; invalidated by its declared dependencies. */
   private askUserPaneSnapshot: AskUserPaneState | undefined
-  /** Cached plan-review snapshot; dropped on emit like the other panes. */
+  /** Cached plan-review snapshot; invalidated by its declared dependencies. */
   private planReviewPaneSnapshot: PlanReviewPaneState | undefined
-  /** Cached goal-footer view; dropped on emit like the other panes (null = no goal). */
+  /** Cached goal-footer view; invalidated by its declared dependencies (null = no goal). */
   private goalFooterSnapshot: GoalFooterView | null | undefined
   /** Cached authoritative info-footer view (null = no bound model). */
   private adaptiveInfoFooterSnapshot: AdaptiveInfoFooterView | null | undefined
-  /** Cached todo HUD rows; dropped on emit like the other panes (null = hidden). */
+  /** Cached todo HUD rows; invalidated by its declared dependencies (null = hidden). */
   private todoHudSnapshot: readonly TodoHudItem[] | null | undefined
   /** Delivery-failure reason for the live plan-review head. */
   private planReviewDeliveryError: string | undefined
@@ -1350,7 +1351,7 @@ export class RuntimeController implements TuiController {
   private feedbackCurrent: MessageFeedbackItem | undefined
   /** The assistant message the overlay targets, captured at open. */
   private feedbackTargetId: MessageId | undefined
-  /** Cached session-stats splice; dropped on emit like the other panes (null = hidden). */
+  /** Cached session-stats splice; invalidated by its declared dependencies (null = hidden). */
   private sessionStatsSnapshot: { turns: number; decodeTokens: number; llmMs: number } | null | undefined
   /** Latest finalized assistant message id from the session event stream. */
   private lastAssistantMessageId: MessageId | undefined
@@ -1390,12 +1391,14 @@ export class RuntimeController implements TuiController {
   /** Provider/model label displayed in the top bar. */
   badge = ''
   /**
-   * Cached snapshot objects for the object-valued getters. Every state
-   * mutation funnels through emit(), which drops them; each getter rebuilds
-   * on the next read, so a read between emissions returns the same reference
-   * (useSyncExternalStore treats a fresh object as an update and re-renders
-   * forever) while a read after a mutation is never stale.
+   * Cached object-valued getters retain their identity until a declared
+   * dependency changes. emit() applies invalidation before its throttled
+   * listener notification, so reads observe the complete current state.
    */
+  // Mutable external sources have explicit revisions; ordinary pane mutations
+  // are tracked by their scalar/immutable-reference dependency keys below.
+  private readonly snapshotRevisions = { projector: 0, session: 0, goal: 0, jobs: 0, workflow: 0, workspace: 0, retry: 0 }
+  private readonly snapshotDependencies = new Map<string, readonly unknown[]>()
   private modelSnapshot: ViewModel | undefined
   private sessionPaneSnapshot: SessionPaneState | undefined
   private searchPaneSnapshot: SearchPaneState | undefined
@@ -1415,9 +1418,9 @@ export class RuntimeController implements TuiController {
   private workspacePaneSnapshot: WorkspacePaneState | undefined
   private feedbackPaneSnapshot: FeedbackPaneState | undefined
   private workflowOverlaySnapshot: WorkflowOverlayState | undefined
-  /** Cached jobs HUD rows; dropped on emit like the other panes (null = hidden). */
+  /** Cached jobs HUD rows; invalidated by its declared dependencies (null = hidden). */
   private jobsHudSnapshot: readonly JobHudItem[] | null | undefined
-  /** Cached workflow HUD snapshot; dropped on emit like the other panes (null = hidden). */
+  /** Cached workflow HUD snapshot; invalidated by its declared dependencies (null = hidden). */
   private workflowHudSnapshot: WorkflowHudState | null | undefined
   /** Latest live workflow run rebuilt from `workflow/*` events (observe-only). */
   private workflowRun:
@@ -1478,6 +1481,8 @@ export class RuntimeController implements TuiController {
         return
       }
       this.projector.push(event)
+      this.snapshotRevisions.projector++
+      this.snapshotRevisions.session++
       if (event.type === 'workspace/changes') this.cacheWorkspaceChange(event.seq)
       if (this.agentHubOpen && (event.type === 'subagent/catalog' || event.type === 'subagent/descriptor')) {
         if (this.agentHubView === 'transcript') this.agentHubCatalogDirty = true
@@ -1512,7 +1517,7 @@ export class RuntimeController implements TuiController {
     })
     const inboxDisposers = [
       ctx.on('goal/activation-changed', ({ sessionId }) => {
-        if (sessionId === this.agent?.id) this.emit()
+        if (sessionId === this.agent?.id) this.emit('goal')
       }),
       ctx.on('subagent/start', info => {
         const child = ctx.sessions.get(info.id)
@@ -1566,6 +1571,7 @@ export class RuntimeController implements TuiController {
           return
         }
         this.projector.pushStreamFrame(frame)
+        this.snapshotRevisions.projector++
         this.emit()
       }),
     ]
@@ -1608,23 +1614,23 @@ export class RuntimeController implements TuiController {
     // The registry contains listener throws; emit() only drops caches and
     // schedules listeners.
     this.disposeJobsChanged = jobs?.events.subscribe({ owners: 'scope' }, (event) => {
-      if (event.type !== 'output') this.emit()
+      if (event.type !== 'output') this.emit('jobs')
     })
     const workflowDisposers = [
       ctx.on('workflow/start', (info) => {
         this.workflowRun = { id: info.id, phase: undefined, members: new Map() }
         this.workflowOverlayOffset = 0
-        this.emit()
+        this.emit('workflow')
       }),
       ctx.on('workflow/phase', (info, title) => {
         if (this.workflowRun?.id !== info.id) return
         this.workflowRun.phase = title
-        this.emit()
+        this.emit('workflow')
       }),
       ctx.on('workflow/agent-start', (info, agent) => {
         if (this.workflowRun?.id !== info.id) return
         this.workflowRun.members.set(agent.seq, { seq: agent.seq, label: agent.label })
-        this.emit()
+        this.emit('workflow')
       }),
       ctx.on('workflow/agent-end', (info, agent) => {
         if (this.workflowRun?.id !== info.id) return
@@ -1633,17 +1639,18 @@ export class RuntimeController implements TuiController {
           label: agent.label,
           outcome: agent.outcome,
         })
-        this.emit()
+        this.emit('workflow')
       }),
       ctx.on('workflow/end', (info) => {
         if (this.workflowRun?.id !== info.id) return
         this.workflowRun = undefined
-        this.emit()
+        this.emit('workflow')
       }),
     ]
     this.disposeWorkflowEvents = () => {
       for (const dispose of workflowDisposers) dispose()
     }
+    this.invalidateSnapshots()
   }
 
   /** Own one asynchronous UI operation until it settles. */
@@ -2349,6 +2356,7 @@ export class RuntimeController implements TuiController {
         if (rootResult?.status === 'rejected') throw rootResult.reason
         for (const [index, result] of results.entries()) {
           const key = String(targets[index]!.targetKey)
+          this.snapshotRevisions.workspace++
           if (result.status === 'fulfilled') this.workspaceChildren.set(key, result.value)
           else { this.workspaceExpanded.delete(key);this.workspaceChildren.delete(key) }
         }
@@ -2370,6 +2378,7 @@ export class RuntimeController implements TuiController {
   private async toggleWorkspaceDirectory(target: FsTarget): Promise<void> {
     const key = String(target.targetKey)
     if (this.workspaceExpanded.has(key)) {
+      this.snapshotRevisions.workspace++
       this.workspaceExpanded.delete(key)
       this.observeWorkspace()
       this.emit()
@@ -2382,6 +2391,7 @@ export class RuntimeController implements TuiController {
       try {
         const children = await fs.listDir(target)
         if (seq !== this.workspaceSeq || !this.workspaceOpen) return
+        this.snapshotRevisions.workspace++
         this.workspaceChildren.set(key, children)
       } catch (error: unknown) {
         this.ctx.logger.warn(`workspace expand failed: ${errorReason(error)}`)
@@ -2389,6 +2399,7 @@ export class RuntimeController implements TuiController {
         return
       }
     }
+    this.snapshotRevisions.workspace++
     this.workspaceExpanded.add(key)
     this.observeWorkspace()
     this.emit()
@@ -2414,6 +2425,7 @@ export class RuntimeController implements TuiController {
   /** Apply one freshly resolved workspace root + children (callers own the seq/workspaceOpen guard). */
   private commitResolvedWorkspaceRoot(root: FsTarget, children: FsDirEntry[]): void {
     this.workspaceRoot = root
+    this.snapshotRevisions.workspace++
     this.workspaceChildren.clear()
     this.workspaceChildren.set(String(root.targetKey), children)
     this.workspaceExpanded.clear()
@@ -3096,6 +3108,7 @@ export class RuntimeController implements TuiController {
 
   /** Force subscribers to rebuild every snapshot after a root remount. */
   redraw(): void {
+    this.snapshotDependencies.clear()
     this.emit()
   }
 
@@ -3163,7 +3176,7 @@ export class RuntimeController implements TuiController {
   private resetSearchState(): void {
     this.invalidateSearch()
     this.searchQuery = ''
-    this.searchResults = []
+    if (this.searchResults.length > 0) this.searchResults = []
     this.searchSelectedIndex = 0
     this.searchStatus = 'idle'
   }
@@ -3171,7 +3184,7 @@ export class RuntimeController implements TuiController {
   /** Reset the model panel transients (filter, rows, selection, phase). */
   private resetModelState(): void {
     this.modelFilter = ''
-    this.modelRows = []
+    if (this.modelRows.length > 0) this.modelRows = []
     this.modelSelectedIndex = 0
     this.modelStatus = 'idle'
     this.modelError = undefined
@@ -3703,8 +3716,10 @@ export class RuntimeController implements TuiController {
       this.accountWatch = undefined
       this.accountPane = { ...this.accountPane, open: false, confirmSignOut: false }
     }
-    this.pluginsPane = { ...this.pluginsPane, open: false, confirmNames: [],
-      mode: this.pluginsPane.mode === 'remove' || this.pluginsPane.mode === 'builds' ? 'inventory' : this.pluginsPane.mode }
+    if (this.pluginsPane.open || this.pluginsPane.confirmNames.length > 0 || this.pluginsPane.mode === 'remove' || this.pluginsPane.mode === 'builds') {
+      this.pluginsPane = { ...this.pluginsPane, open: false, confirmNames: [],
+        mode: this.pluginsPane.mode === 'remove' || this.pluginsPane.mode === 'builds' ? 'inventory' : this.pluginsPane.mode }
+    }
     this.toolDetailsOpen = false
     this.toolDetailsSelected = 0
     this.toolDetailsBody = false
@@ -3737,7 +3752,7 @@ export class RuntimeController implements TuiController {
     this.feedbackOpen = false
     this.workflowOverlayOpen = false
     this.todoPaneOpen = false
-    this.schedulePane = { ...this.schedulePane, open: false, confirmDelete: false }
+    if (this.schedulePane.open || this.schedulePane.confirmDelete) this.schedulePane = { ...this.schedulePane, open: false, confirmDelete: false }
     this.scheduleSeq += 1
     this.confirmDelete = false
     this.deleteUnavailable = false
@@ -3836,7 +3851,7 @@ export class RuntimeController implements TuiController {
       if (this.agentHubOpen && this.agentHubView === 'transcript' && this.inspectedChild !== undefined) {
         this.agentHubTranscript = this.childTranscriptBase + (this.childTranscriptPartial === '' ? '' : `\n● ${this.childTranscriptPartial}`)
       }
-      this.emit()
+      this.emit('jobs')
     }, 50)
     this.childUiTimer.unref()
   }
@@ -4960,7 +4975,7 @@ export class RuntimeController implements TuiController {
       if (this.closed || this.retryFooter !== retry) return
       if (Date.now() >= retry.retryUntil) this.retryFooter = undefined
       else this.armRetryFooterTimer()
-      this.emit()
+      this.emit('retry')
     }, delay)
   }
 
@@ -5048,12 +5063,12 @@ export class RuntimeController implements TuiController {
   private deliverNotify(decision: NotifyDecision): void {
     if (decision === undefined) return
     if (!decision.desktop) {
-      this.io.stdout.write(notifyBytes('bell'))
+      writeTerminalControl(this.io.stdout, notifyBytes('bell'), 'notify')
       return
     }
     const transport = detectNotifyCapability(internals.notifyEnvironment)
     if (transport === 'bell') {
-      this.io.stdout.write(notifyBytes('bell'))
+      writeTerminalControl(this.io.stdout, notifyBytes('bell'), 'notify')
       try {
         internals.notifySpawn('notify-send', ['-u', decision.urgency, decision.title, decision.body])
       } catch {
@@ -5061,7 +5076,7 @@ export class RuntimeController implements TuiController {
       }
       return
     }
-    this.io.stdout.write(notifyBytes(transport, `${decision.title} ${decision.body}`, decision.titleSuffix))
+    writeTerminalControl(this.io.stdout, notifyBytes(transport, `${decision.title} ${decision.body}`, decision.titleSuffix), 'notify')
   }
 
   /** Resolve the notification settings section, defaulting when no section is stored. */
@@ -8130,6 +8145,7 @@ export class RuntimeController implements TuiController {
    */
   private scheduleSettingsSelectionEmit(): void {
     if (this.closed) return
+    this.invalidateSnapshots()
     this.settingsMovePending = true
     if (this.settingsMoveEmit !== undefined) return
     const token = {}
@@ -8143,34 +8159,58 @@ export class RuntimeController implements TuiController {
     })
   }
 
-  private emit(): void {
+  /**
+   * Mutation → snapshot dependency table. Only compare bounded scalar/reference
+   * keys here: never project history, tokenize input, or enumerate job catalogs.
+   * Queue heads are mutable, so their visible fields (not just identity) matter.
+   */
+  private invalidateSnapshots(): void {
+    const revisions = this.snapshotRevisions
+    const head = this.blockingHead()
+    const approval = head?.kind === 'approval' ? head.entry : undefined
+    const ask = head?.kind === 'ask-user' ? head.entry : undefined
+    const model = [this.projector, revisions.projector, this.statusOf(), this.presentationFlag('reasoning'), this.toolCardsExpanded, this.expandedCompactionId]
+    const session = [this.session, revisions.session]
+    const dependencies = {
+      modelSnapshot: model,
+      sessionPaneSnapshot: [this.session?.id, this.sessionList, this.sessionList[this.selectedIndex], this.selectedIndex, this.listOpen, this.confirmDelete, this.deleteUnavailable],
+      searchPaneSnapshot: [this.searchOpen, this.searchQuery, this.searchResults, this.searchSelectedIndex, this.searchStatus],
+      modelPaneSnapshot: [this.modelOpen, this.modelFilter, this.modelRows, this.modelSelectedIndex, this.modelStatus, this.modelError],
+      helpPaneSnapshot: [this.helpOpen, this.helpLines],
+      toolDetailsSnapshot: [this.toolDetailsOpen, this.toolDetailsSelected, this.toolDetailsBody, this.toolDetailsDiagnostics, this.toolDetailCursors.at(-1), this.toolDetailCursors.length, ...model],
+      approvalPaneSnapshot: [approval, approval?.detailsOpen, approval?.request.callId === undefined ? undefined : revisions.projector],
+      askUserPaneSnapshot: [ask, ask?.questionIndex, ask?.selectedIndex, ask?.editingCustom, ask?.customDraft, ask?.customCaretIndex, ask?.customAnswer, ...(ask?.selectedIndices ?? [])],
+      planReviewPaneSnapshot: [ask, this.planReviewDeliveryError],
+      permissionPaneSnapshot: [this.permissionOpen, this.permissionNames, this.permissionSelectedIndex, this.permissionCurrentName, this.permissionConfirmDanger, this.permissionSwitchError, this.permissionDescriptions],
+      settingsPaneSnapshot: [this.settingsOpen, this.settingsRows, this.settingsSelectedIndex, this.settingsSearching, this.settingsEditing, this.settingsOnboarding, this.settingsBusy, this.settingsUpdateError],
+      agentHubPaneSnapshot: [this.agentHubOpen, this.agentHubRows, this.agentHubSelectedIndex, this.agentHubView, this.agentHubError, this.agentHubTranscript, this.agentHubScrollOffset],
+      planDirectoryPaneSnapshot: [this.planDirectoryOpen, this.planDirectorySelectedIndex, this.planDirectoryCurrentActive, this.planDirectorySwitchError, this.planDirectoryStatusError],
+      workspacePaneSnapshot: [this.workspaceOpen, this.workspaceDeliveries, this.workspaceRoot, revisions.workspace, this.workspaceSelectedIndex, this.workspaceEditing, this.workspaceResolveError, this.workspaceWatchError, this.workspacePreview, this.workspaceDeliveries ? revisions.projector : undefined],
+      feedbackPaneSnapshot: [this.feedbackOpen, this.feedbackEditing, this.feedbackCurrent, this.feedbackWriteError, this.feedbackTargetId],
+      workflowOverlaySnapshot: [this.workflowOverlayOpen, this.workflowOverlayOffset, revisions.workflow, this.agent],
+      goalFooterSnapshot: [...session, revisions.goal, this.agent],
+      adaptiveInfoFooterSnapshot: [...session, this.modelSelectionRef?.current, this.machine, this.retryFooter, revisions.retry],
+      todoHudSnapshot: session,
+      sessionStatsSnapshot: session,
+      jobsHudSnapshot: [this.agent, revisions.jobs],
+      workflowHudSnapshot: [revisions.workflow],
+    }
+    for (const key of Object.keys(dependencies) as (keyof typeof dependencies)[]) {
+      const next = dependencies[key]
+      const previous = this.snapshotDependencies.get(key)
+      if (previous !== undefined && previous.length === next.length && next.every((value, index) => Object.is(value, previous[index]))) continue
+      this[key] = undefined
+      this.snapshotDependencies.set(key, next)
+    }
+  }
+
+  private emit(source?: keyof RuntimeController['snapshotRevisions']): void {
     if (this.closed) return
+    if (source !== undefined) this.snapshotRevisions[source]++
     this.settingsMovePending = false
     this.settingsMoveEmit = undefined
-    // Drop the cached snapshots at the mutation point (not at the throttled
-    // listener call), so any read after a change rebuilds current state.
-    this.modelSnapshot = undefined
-    this.sessionPaneSnapshot = undefined
-    this.searchPaneSnapshot = undefined
-    this.modelPaneSnapshot = undefined
-    this.helpPaneSnapshot = undefined
-    this.toolDetailsSnapshot = undefined
-    this.approvalPaneSnapshot = undefined
-    this.askUserPaneSnapshot = undefined
-    this.planReviewPaneSnapshot = undefined
-    this.permissionPaneSnapshot = undefined
-    this.settingsPaneSnapshot = undefined
-    this.agentHubPaneSnapshot = undefined
-    this.planDirectoryPaneSnapshot = undefined
-    this.workspacePaneSnapshot = undefined
-    this.feedbackPaneSnapshot = undefined
-    this.workflowOverlaySnapshot = undefined
-    this.goalFooterSnapshot = undefined
-    this.adaptiveInfoFooterSnapshot = undefined
-    this.todoHudSnapshot = undefined
-    this.sessionStatsSnapshot = undefined
-    this.jobsHudSnapshot = undefined
-    this.workflowHudSnapshot = undefined
+    // Apply every domain's invalidation before any observer can read the cut.
+    this.invalidateSnapshots()
     if (this.emitTimer !== undefined) {
       this.emitPending = true
       return

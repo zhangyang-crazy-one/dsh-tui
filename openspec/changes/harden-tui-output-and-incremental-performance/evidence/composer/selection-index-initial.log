@@ -1,0 +1,37 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.11 /home/zhangyangrui/my_programes/dsh-tui
+
+ ❯ tui-render/tests/input-selection.spec.ts (10 tests | 1 failed) 119ms
+     × matches the full-draft grapheme reference for stale and reversed selection offsets 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tui-render/tests/input-selection.spec.ts > indexed selection boundary reuse > matches the full-draft grapheme reference for stale and reversed selection offsets
+AssertionError: expected { start: 1, end: 11 } to deeply equal { start: 1, end: 10 }
+
+- Expected
++ Received
+
+  {
+-   "end": 10,
++   "end": 11,
+    "start": 1,
+  }
+
+ ❯ tui-render/tests/input-selection.spec.ts:102:12
+    100|         const b = reference(anchor)
+    101|         expect(inputSelectionRange({ text, caretIndex: caret, selectio…
+    102|           .toEqual(a === b ? undefined : { start: Math.min(a, b), end:…
+       |            ^
+    103|       }
+    104|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  19:14:45
+   Duration  445ms (transform 122ms, setup 0ms, import 175ms, tests 119ms, environment 0ms)
+

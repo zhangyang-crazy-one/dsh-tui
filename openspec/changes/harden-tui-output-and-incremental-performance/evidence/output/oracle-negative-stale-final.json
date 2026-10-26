@@ -1,0 +1,141 @@
+{
+  "frames": 3439,
+  "compared": 3068,
+  "transitions": 371,
+  "resizeRecovery": 272,
+  "deferredPresentation": 0,
+  "unmatched": 0,
+  "failed": 3069,
+  "examples": [
+    {
+      "offset": 8819,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_0 TICK_0 ROW_0                                                                                                   ",
+          "expected": "  TURN_0 TICK_2 ROW_0                                                                                                   "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_0 TICK_0 ROW_1                                                                                                   ",
+          "expected": "  TURN_0 TICK_2 ROW_1                                                                                                   "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_0 TICK_0 ROW_2                                                                                                   ",
+          "expected": "  TURN_0 TICK_2 ROW_2                                                                                                   "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_0 TICK_0 ROW_3                                                                                                   ",
+          "expected": "  TURN_0 TICK_2 ROW_3                                                                                                   "
+        }
+      ]
+    },
+    {
+      "offset": 15849,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_0 TICK_1 ROW_0                                                                                                   ",
+          "expected": "  TURN_0 TICK_3 ROW_0                                                                                                   "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_0 TICK_1 ROW_1                                                                                                   ",
+          "expected": "  TURN_0 TICK_3 ROW_1                                                                                                   "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_0 TICK_1 ROW_2                                                                                                   ",
+          "expected": "  TURN_0 TICK_3 ROW_2                                                                                                   "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_0 TICK_1 ROW_3                                                                                                   ",
+          "expected": "  TURN_0 TICK_3 ROW_3                                                                                                   "
+        }
+      ]
+    },
+    {
+      "offset": 22851,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_0 TICK_2 ROW_0                                                                                                   ",
+          "expected": "  TURN_0 TICK_4 ROW_0                                                                                                   "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_0 TICK_2 ROW_1                                                                                                   ",
+          "expected": "  TURN_0 TICK_4 ROW_1                                                                                                   "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_0 TICK_2 ROW_2                                                                                                   ",
+          "expected": "  TURN_0 TICK_4 ROW_2                                                                                                   "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_0 TICK_2 ROW_3                                                                                                   ",
+          "expected": "  TURN_0 TICK_4 ROW_3                                                                                                   "
+        }
+      ]
+    },
+    {
+      "offset": 29853,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_0 TICK_3 ROW_0                                                                                                   ",
+          "expected": "  TURN_0 TICK_5 ROW_0                                                                                                   "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_0 TICK_3 ROW_1                                                                                                   ",
+          "expected": "  TURN_0 TICK_5 ROW_1                                                                                                   "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_0 TICK_3 ROW_2                                                                                                   ",
+          "expected": "  TURN_0 TICK_5 ROW_2                                                                                                   "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_0 TICK_3 ROW_3                                                                                                   ",
+          "expected": "  TURN_0 TICK_5 ROW_3                                                                                                   "
+        }
+      ]
+    },
+    {
+      "offset": 36855,
+      "mismatches": [
+        {
+          "row": 1,
+          "actual": "  TURN_0 TICK_4 ROW_0                                                                                                   ",
+          "expected": "  TURN_0 TICK_6 ROW_0                                                                                                   "
+        },
+        {
+          "row": 2,
+          "actual": "  TURN_0 TICK_4 ROW_1                                                                                                   ",
+          "expected": "  TURN_0 TICK_6 ROW_1                                                                                                   "
+        },
+        {
+          "row": 3,
+          "actual": "  TURN_0 TICK_4 ROW_2                                                                                                   ",
+          "expected": "  TURN_0 TICK_6 ROW_2                                                                                                   "
+        },
+        {
+          "row": 4,
+          "actual": "  TURN_0 TICK_4 ROW_3                                                                                                   ",
+          "expected": "  TURN_0 TICK_6 ROW_3                                                                                                   "
+        }
+      ]
+    },
+    {
+      "error": "Final presentation did not catch up",
+      "lastPresentedTick": -1,
+      "expectedTick": 2998
+    }
+  ]
+}
